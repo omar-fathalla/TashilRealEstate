@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "534001947779",
+    "project_id": "tashil-proptech-os",
+    "storage_bucket": "tashil-proptech-os.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:534001947779:android:a1a8378704bafe807ff7b6",
+        "android_client_info": {
+          "package_name": "com.example.tashil_real_estate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZACv9vQBlEWSubV4YgeqnLCmEHhxWNNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,19 @@
+# Node
+backend/node_modules/
+backend/npm-debug.log
+backend/.env
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
