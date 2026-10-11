@@ -1,8 +1,76 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'SuperAdmin';
+    }
+
+    function isAgencyAdmin() {
+      return isAuthenticated() && getUserData().role == 'AgencyAdmin';
+    }
+
+    function isOwner() {
+      return isAuthenticated() && getUserData().role == 'Owner';
+    }
+
+    function isTenant() {
+      return isAuthenticated() && getUserData().role == 'Tenant';
+    }
+
+    // 1. Users Collection
+    match /Users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+
+      // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
+      match /properties/{propertyId} {
+        allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      }
+    }
+
+    // 2. Properties Collection (Public Marketplace)
+    match /Properties/{propertyId} {
+      // Anyone (including unauthenticated visitors) can read vacant or published properties
+      allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
+      
+      // Agency admins and Owners can create/update properties
+      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
+      allow update, delete: if isSuperAdmin() || 
+        (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
+        (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+    }
+
+    // 3. Agencies Collection
+    match /Agencies/{agencyId} {
+      allow read: if true;
+      allow write: if isSuperAdmin() || (isAgencyAdmin() && request.auth.uid == agencyId);
+    }
+
+    // 4. Leases Collection
+    match /Leases/{leaseId} {
+      allow read: if isSuperAdmin() || 
+        (isAuthenticated() && (
+          resource.data.tenant_id == request.auth.uid ||
+          resource.data.owner_id == request.auth.uid ||
+          (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+        ));
+      allow write: if isSuperAdmin() || isAgencyAdmin();
+    }
+
+    // 5. Maintenance Requests
+    match /Maintenance/{requestId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

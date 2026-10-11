@@ -1,36 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
+import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 
 class CrmView extends StatelessWidget {
   const CrmView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final isMobile = ResponsiveLayout.isMobile(context);
+    final loc = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'CRM Pipeline',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+              loc.tr('crmPipeline'),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isMobile ? 16 : 24),
             Expanded(
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _buildKanbanColumn(context, 'New Leads', colorScheme.primary, 3),
-                  _buildKanbanColumn(context, 'Contacted', Colors.orange.shade600, 2),
-                  _buildKanbanColumn(context, 'Viewing Scheduled', Colors.purple.shade500, 4),
-                  _buildKanbanColumn(context, 'Negotiation', Colors.teal.shade600, 1),
-                  _buildKanbanColumn(context, 'Closed Won', Colors.green.shade600, 5),
+                  _buildKanbanColumn(context, loc.tr('crmNewLeads'), colorScheme.primary, 3, loc, colorScheme),
+                  _buildKanbanColumn(context, loc.tr('crmContacted'), colorScheme.tertiary, 2, loc, colorScheme),
+                  _buildKanbanColumn(context, loc.tr('crmViewingScheduled'), colorScheme.secondary, 4, loc, colorScheme),
+                  _buildKanbanColumn(context, loc.tr('crmNegotiation'), colorScheme.primary, 1, loc, colorScheme),
+                  _buildKanbanColumn(context, loc.tr('crmClosedWon'), colorScheme.secondary, 5, loc, colorScheme),
                 ],
               ),
             ),
@@ -40,15 +46,20 @@ class CrmView extends StatelessWidget {
     );
   }
 
-  Widget _buildKanbanColumn(BuildContext context, String title, Color color, int itemCount) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+  Widget _buildKanbanColumn(
+    BuildContext context,
+    String title,
+    Color color,
+    int itemCount,
+    AppLocalizations loc,
+    ColorScheme colorScheme,
+  ) {
     return Container(
-      width: 320,
-      margin: const EdgeInsets.only(right: 24),
+      width: 300,
+      margin: const EdgeInsetsDirectional.only(end: 20),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
@@ -61,42 +72,53 @@ class CrmView extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
                 ),
-                Chip(
-                  label: Text('$itemCount', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-                  backgroundColor: color.withValues(alpha: 0.1),
-                  side: BorderSide.none,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('$itemCount', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ],
             ),
           ),
+          Divider(height: 1, color: colorScheme.outlineVariant),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(12),
               itemCount: itemCount,
               itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Lead Name', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text('Interested in Villa', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant),
-                            const SizedBox(width: 4),
-                            Text('2 days ago', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                          ],
-                        ),
-                      ],
-                    ),
+                return TashilCard.outlined(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  color: colorScheme.surfaceContainerLowest,
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${loc.tr('leadClientName')} #${index + 1}',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        loc.tr('interestedInRentalUnit'),
+                        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded, size: 12, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            loc.tr('twoDaysAgo'),
+                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
               },

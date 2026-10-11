@@ -1,0 +1,62 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "Properties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "city_code", "order": "ASCENDING" },
+        { "fieldPath": "price_monthly", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Properties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "city_code", "order": "ASCENDING" },
+        { "fieldPath": "price_monthly", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Properties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "is_featured", "order": "DESCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Leases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "tenant_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Leases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "owner_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Leases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "country_code", "order": "ASCENDING" },
+        { "fieldPath": "agency_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

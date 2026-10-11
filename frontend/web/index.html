@@ -41,6 +41,235 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    window.tashilSpeech = {
+      recognition: null,
+      isListening: false,
+      transcript: '',
+      onResult: null,
+      onError: null,
+      onEnd: null,
+
+      isSupported: function() {
+        return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+      },
+
+      start: function(lang) {
+        if (!this.isSupported()) {
+          if (this.onError) this.onError('not_supported');
+          return false;
+        }
+        try {
+          if (this.recognition) {
+            try { this.recognition.abort(); } catch (e) {}
+          }
+          var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          this.recognition = new SpeechRec();
+          this.recognition.continuous = true;
+          this.recognition.interimResults = true;
+          this.recognition.lang = lang || 'ar-EG';
+          this.transcript = '';
+          this.isListening = true;
+
+          var self = this;
+          this.recognition.onresult = function(event) {
+            var interim = '';
+            var finalTranscript = '';
+            for (var i = 0; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            var current = (finalTranscript + interim).trim();
+            self.transcript = current;
+            if (self.onResult) {
+              self.onResult(current);
+            }
+          };
+
+          this.recognition.onerror = function(event) {
+            console.warn('Speech recognition error:', event.error);
+            if (self.onError) {
+              self.onError(event.error);
+            }
+          };
+
+          this.recognition.onend = function() {
+            self.isListening = false;
+            if (self.onEnd) {
+              self.onEnd(self.transcript);
+            }
+          };
+
+          this.recognition.start();
+          return true;
+        } catch (err) {
+          console.error('Speech recognition exception:', err);
+          if (this.onError) this.onError(String(err));
+          return false;
+        }
+      },
+
+      stop: function() {
+        if (this.recognition && this.isListening) {
+          try {
+            this.recognition.stop();
+          } catch (e) {}
+        }
+        this.isListening = false;
+        return this.transcript;
+      }
+    };
+
+    window.tashilSpeechIsSupported = function() {
+      return window.tashilSpeech.isSupported();
+    };
+
+    window.tashilSpeechStart = function(lang) {
+      return window.tashilSpeech.start(lang);
+    };
+
+    window.tashilSpeechStop = function() {
+      return window.tashilSpeech.stop();
+    };
+
+    window.tashilSpeechSetCallbacks = function(onResult, onError, onEnd) {
+      window.tashilSpeech.onResult = onResult;
+      window.tashilSpeech.onError = onError;
+      window.tashilSpeech.onEnd = onEnd;
+    };
+
+    window.tashilGetGpsLocation = function(onSuccess, onError) {
+      function fallbackToIp() {
+        fetch('https://ipwho.is/')
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data && data.success && data.latitude && data.longitude) {
+              if (onSuccess) onSuccess(data.latitude, data.longitude);
+            } else {
+              if (onError) onError('location_unavailable');
+            }
+          })
+          .catch(function(err) {
+            console.warn('IP geolocation fallback failed:', err);
+            if (onError) onError('permission_denied');
+          });
+      }
+
+      if (!navigator.geolocation) {
+        fallbackToIp();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          if (onSuccess) {
+            onSuccess(pos.coords.latitude, pos.coords.longitude);
+          }
+        },
+        function(err) {
+          console.warn('Browser geolocation denied or timed out, activating IP geolocation fallback:', err);
+          fallbackToIp();
+        },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      );
+    };
+
+    window.tashilOpenUrl = function(url) {
+      window.open(url, '_blank');
+    };
+
+    window.tashilPickImages = function(onImagesSelected) {
+      try {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.onchange = function(e) {
+          var files = Array.from(input.files || []);
+          if (files.length === 0) {
+            if (input.parentNode) input.parentNode.removeChild(input);
+            return;
+          }
+          var loadedCount = 0;
+          var dataUrls = [];
+          files.forEach(function(file, idx) {
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+              var rawDataUrl = evt.target.result;
+              var img = new Image();
+              img.onload = function() {
+                try {
+                  var maxDim = 1024;
+                  var width = img.width;
+                  var height = img.height;
+                  if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                      height = Math.round((height * maxDim) / width);
+                      width = maxDim;
+                    } else {
+                      width = Math.round((width * maxDim) / height);
+                      height = maxDim;
+                    }
+                  }
+                  var canvas = document.createElement('canvas');
+                  canvas.width = width;
+                  canvas.height = height;
+                  var ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, width, height);
+                  var compressed = canvas.toDataURL('image/jpeg', 0.72);
+                  dataUrls[idx] = compressed;
+                } catch (canvasErr) {
+                  dataUrls[idx] = rawDataUrl;
+                }
+                loadedCount++;
+                if (loadedCount === files.length) {
+                  if (input.parentNode) input.parentNode.removeChild(input);
+                  if (onImagesSelected) {
+                    onImagesSelected(JSON.stringify(dataUrls.filter(Boolean)));
+                  }
+                }
+              };
+              img.onerror = function() {
+                dataUrls[idx] = rawDataUrl;
+                loadedCount++;
+                if (loadedCount === files.length) {
+                  if (input.parentNode) input.parentNode.removeChild(input);
+                  if (onImagesSelected) {
+                    onImagesSelected(JSON.stringify(dataUrls.filter(Boolean)));
+                  }
+                }
+              };
+              img.src = rawDataUrl;
+            };
+            reader.onerror = function() {
+              loadedCount++;
+              if (loadedCount === files.length && input.parentNode) {
+                input.parentNode.removeChild(input);
+                if (onImagesSelected) {
+                  onImagesSelected(JSON.stringify(dataUrls.filter(Boolean)));
+                }
+              }
+            };
+            reader.readAsDataURL(file);
+          });
+        };
+
+        input.oncancel = function() {
+          if (input.parentNode) input.parentNode.removeChild(input);
+        };
+
+        input.click();
+      } catch (err) {
+        console.error('Error opening file picker in browser:', err);
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
