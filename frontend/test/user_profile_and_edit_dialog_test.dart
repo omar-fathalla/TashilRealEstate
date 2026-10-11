@@ -1,35 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/owner_dashboard.dart';
 
 void main() {
   group('UserProfileData & Service Tests', () {
-    test('Calculates completeness percentage accurately based on Email, Name, and Phone', () {
-      // 1. Only email: 33%
+    test('Calculates completeness percentage accurately across all official identity points (Email, Name, Phone, National ID, Address, Bank)', () {
+      // 1. Only email: 1/6 = 17%
       const p1 = UserProfileData(
         uid: 'user_123',
         email: 'mohamed@gmail.com',
         fullName: '',
         phone: '',
       );
-      expect(p1.completenessPercent, equals(33));
+      expect(p1.completenessPercent, equals(17));
       expect(p1.hasPhone, isFalse);
 
-      // 2. Email & name: 67%
+      // 2. Email & name: 2/6 = 33%
       final p2 = p1.copyWith(fullName: 'Mohamed Fathallah');
-      expect(p2.completenessPercent, equals(67));
+      expect(p2.completenessPercent, equals(33));
       expect(p2.hasFullName, isTrue);
-      expect(p2.hasPhone, isFalse);
 
-      // 3. Fully completed profile (Email, Name, Phone): 100%
+      // 3. Email, Name, and Phone: 3/6 = 50%
       final p3 = p2.copyWith(phone: '+20 100 123 4567');
-      expect(p3.completeness, equals(1.0));
-      expect(p3.completenessPercent, equals(100));
+      expect(p3.completenessPercent, equals(50));
       expect(p3.hasPhone, isTrue);
+
+      // 4. Email, Name, Phone, National ID: 4/6 = 67%
+      final p4 = p3.copyWith(nationalId: '29304150102432');
+      expect(p4.completenessPercent, equals(67));
+      expect(p4.hasNationalId, isTrue);
+
+      // 5. Email, Name, Phone, National ID, Address: 5/6 = 83%
+      final p5 = p4.copyWith(address: 'التجمع الخامس، القاهرة');
+      expect(p5.completenessPercent, equals(83));
+      expect(p5.hasAddress, isTrue);
+
+      // 6. Fully completed profile (Email, Name, Phone, ID, Address, Bank): 6/6 = 100%
+      final p6 = p5.copyWith(bankName: 'البنك الأهلي المصري (NBE)', bankAccountNumber: '1234567890');
+      expect(p6.completeness, equals(1.0));
+      expect(p6.completenessPercent, equals(100));
+      expect(p6.hasBankInfo, isTrue);
     });
 
     test('UserProfileService updates state reactively and derives Name and Surname', () async {
@@ -39,6 +55,10 @@ void main() {
         email: 'fathalla.dev@gmail.com',
         fullName: 'Mohamed Fathallah',
         phone: '+20 10 9876 5432',
+        nationalId: '29304150102432',
+        address: 'التجمع الخامس، القاهرة',
+        bankName: 'البنك الأهلي المصري (NBE)',
+        bankAccountNumber: '1234567890',
       );
 
       service.setMockProfile(mockProfile);
@@ -48,6 +68,9 @@ void main() {
       expect(service.profileNotifier.value.computedFirstName, equals('Mohamed'));
       expect(service.profileNotifier.value.computedSurname, equals('Fathallah'));
       expect(service.profileNotifier.value.phone, equals('+20 10 9876 5432'));
+      expect(service.profileNotifier.value.nationalId, equals('29304150102432'));
+      expect(service.profileNotifier.value.address, equals('التجمع الخامس، القاهرة'));
+      expect(service.profileNotifier.value.bankName, equals('البنك الأهلي المصري (NBE)'));
       expect(service.profileNotifier.value.completenessPercent, equals(100));
     });
   });
@@ -124,6 +147,9 @@ void main() {
           email: 'mohamed.fathalla@gmail.com',
           fullName: 'Mohamed Fathallah',
           phone: '+20 10 9999 8888',
+          nationalId: '29304150102432',
+          address: 'التجمع الخامس، القاهرة',
+          bankName: 'البنك الأهلي المصري (NBE)',
         ),
       );
 
@@ -166,6 +192,18 @@ void main() {
 
       // Verify that the Edit Profile button is now an M3 Icon Button with edit icon
       expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+      // Verify Official Identity & Address Section renders
+      expect(find.text('بيانات الهوية الرسمية والعنوان'), findsOneWidget);
+      expect(find.textContaining('29304150102432'), findsOneWidget);
+      expect(find.textContaining('التجمع الخامس، القاهرة'), findsOneWidget);
+
+      // Verify Bank Payout Details Section renders
+      expect(find.text('بيانات التحويل البنكي للمالك'), findsOneWidget);
+      expect(find.textContaining('البنك الأهلي المصري (NBE)'), findsOneWidget);
+
+      // Verify quick edit button at bottom exists
+      expect(find.byIcon(Icons.edit_note_rounded), findsOneWidget);
     });
 
     testWidgets('EditProfileDialog triggers OTP verification flow and displays OTP input', (tester) async {
@@ -215,6 +253,111 @@ void main() {
 
       // Verify phone is verified
       expect(find.text('موثق'), findsOneWidget);
+    });
+
+    testWidgets('EditProfileDialog renders National ID, Address, Bank fields and AI OCR Scan button', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1100);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      UserProfileService().setMockProfile(
+        const UserProfileData(
+          uid: 'uid_test',
+          email: 'mohamed.fathalla@gmail.com',
+          fullName: 'Mohamed Fathallah',
+          phone: '+20 1012345678',
+          nationalId: '29304150102432',
+          address: 'التجمع الخامس، القاهرة',
+          bankName: 'البنك الأهلي المصري (NBE)',
+          bankAccountNumber: '1234567890',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestableWidget(const EditProfileDialog()));
+      await tester.pumpAndSettle();
+
+      // Verify AI OCR Scan button exists
+      expect(find.text('مسح AI'), findsOneWidget);
+      expect(find.text('مسح البطاقة بالذكاء الاصطناعي'), findsOneWidget);
+
+      // Verify National ID & Address fields render prefilled values
+      expect(find.text('29304150102432'), findsOneWidget);
+      expect(find.text('التجمع الخامس، القاهرة'), findsOneWidget);
+
+      // Verify Bank Payout fields render prefilled values
+      expect(find.text('البنك الأهلي المصري (NBE)'), findsOneWidget);
+      expect(find.text('1234567890'), findsOneWidget);
+
+      // Verify Section headers exist
+      expect(find.text('بيانات الهوية الرسمية والعنوان'), findsOneWidget);
+      expect(find.text('بيانات التحويل البنكي للمالك'), findsOneWidget);
+
+      // Verify TashilDropdownMenu is used for Bank Name
+      expect(find.byType(TashilDropdownMenu<String?>), findsOneWidget);
+    });
+
+    testWidgets('EditProfileDialog bank dropdown adapts to UAE banks when in UAE mode', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1100);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        CountryController.setCountry('EG');
+      });
+
+      CountryController.setCountry('AE');
+      UserProfileService().setMockProfile(
+        const UserProfileData(
+          uid: 'uid_ae_test',
+          email: 'abdullah@tashil.ae',
+          fullName: 'Abdullah Al Nuaimi',
+          phone: '+971 501234567',
+          nationalId: '784-1990-1234567-1',
+          address: 'Downtown Dubai',
+          bankName: 'Emirates NBD',
+          bankAccountNumber: 'AE250260001234567890123',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestableWidget(const EditProfileDialog()));
+      await tester.pumpAndSettle();
+
+      // Verify UAE Emirates NBD is preselected
+      expect(find.text('بنك الإمارات دبي الوطني (Emirates NBD)'), findsOneWidget);
+      expect(find.text('AE250260001234567890123'), findsOneWidget);
+
+      // Verify TashilDropdownMenu is rendered
+      final dropdown = tester.widget<TashilDropdownMenu<String?>>(find.byType(TashilDropdownMenu<String?>));
+      expect(dropdown.isSearchable, isTrue);
+    });
+
+    testWidgets('EditProfileDialog renders custom bank text field when custom bank name is entered', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1100);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      UserProfileService().setMockProfile(
+        const UserProfileData(
+          uid: 'uid_custom_bank',
+          email: 'investor@global.com',
+          fullName: 'International Investor',
+          phone: '+20 1099887766',
+          bankName: 'Swiss International Private Bank',
+          bankAccountNumber: 'CH9300000000001234567',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestableWidget(const EditProfileDialog()));
+      await tester.pumpAndSettle();
+
+      // The custom bank name is displayed in the custom text field
+      expect(find.text('Swiss International Private Bank'), findsWidgets);
     });
   });
 }

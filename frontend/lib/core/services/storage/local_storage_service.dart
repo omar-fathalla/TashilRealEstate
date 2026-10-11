@@ -51,6 +51,14 @@ class LocalStorageService {
     }
   }
 
+  void clear() {
+    try {
+      _engine.clear();
+    } catch (e) {
+      debugPrint('⚠️ LocalStorageService.clear error: $e');
+    }
+  }
+
   Map<String, String>? getStringMap(String key) {
     try {
       final raw = getString(key);

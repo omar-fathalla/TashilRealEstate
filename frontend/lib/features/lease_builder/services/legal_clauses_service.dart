@@ -105,7 +105,9 @@ class LegalClausesService {
 
       // 3. In guest mode without properties or contracts, add sample contracts
       final hasRealProps = properties.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id));
-      if (result.isEmpty && !hasRealProps) {
+      final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+      final hasAuthUser = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+      if (result.isEmpty && !hasRealProps && !hasAuthUser) {
         for (final sample in getSampleContracts()) {
           if (_permanentlyDeletedContractIds.contains(sample.id)) continue;
           if (!seenIds.contains(sample.id)) {

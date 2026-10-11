@@ -15,7 +15,10 @@ import 'package:tashil_real_estate/features/owner_portal/widgets/monthly_payment
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
 
 class OwnerOverviewView extends StatefulWidget {
   const OwnerOverviewView({super.key});
@@ -45,19 +48,24 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
             .where((p) => p.countryCode == targetCountry)
             .toList();
 
-        final int totalUnits = properties.isNotEmpty ? properties.length : (isUAE ? 3 : 4);
+        final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+        final hasAuth = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+
+        final int totalUnits = properties.isNotEmpty
+            ? properties.length
+            : (hasAuth ? 0 : (isUAE ? 3 : 4));
         final int occupiedUnits = properties.isNotEmpty
             ? properties.where((p) => p.isOccupied).length
-            : (isUAE ? 2 : 3);
+            : (hasAuth ? 0 : (isUAE ? 2 : 3));
         final int vacantUnits = properties.isNotEmpty
             ? properties.where((p) => !p.isOccupied).length
-            : 1;
+            : (hasAuth ? 0 : 1);
         final double totalRevenue = properties.isNotEmpty
             ? properties.where((p) => p.isOccupied).fold<double>(0.0, (sum, p) => sum + p.pricePerMonth)
-            : (isUAE ? 38500.0 : 78000.0);
+            : (hasAuth ? 0.0 : (isUAE ? 38500.0 : 78000.0));
         final int occupancyRate = totalUnits > 0
             ? ((occupiedUnits / totalUnits) * 100).toInt()
-            : 80;
+            : (hasAuth ? 0 : 80);
 
         return SingleChildScrollView(
           padding: EdgeInsets.all(isMobile ? 16 : 28),
@@ -582,6 +590,80 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
         );
       }).toList();
     }
+
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuth = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+    final isHydrating = PropertyLifecycleService().isHydratingNotifier.value;
+
+    if (hasAuth) {
+      if (isHydrating) {
+        return [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            alignment: Alignment.center,
+            child: const TashilLoadingIndicator.medium(),
+          ),
+        ];
+      }
+
+      // Empty State for authenticated landlord with 0 properties
+      return [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.6)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.home_work_outlined,
+                  size: 30,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                loc.tr('noPropertiesFound'),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                loc.tr('ownerSubtitle'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TashilButton.filled(
+                icon: Icons.add_home_work_rounded,
+                label: loc.tr('addNewProperty'),
+                onPressed: () {
+                  FastPropertyOnboardingDialog.show(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
     final units = isUAE ? _sampleUAEUnits : _sampleEGUnits;
     final filtered = _selectedStatus == 'all'
         ? units
@@ -740,9 +822,12 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
     List<ManagedPropertyModel> properties,
   ) {
     final realPayouts = PropertyLifecycleService().getRealPayouts(countryCode: isUAE ? 'AE' : 'EG');
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuth = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+
     final payouts = realPayouts.isNotEmpty
         ? realPayouts
-        : (properties.isEmpty ? (isUAE ? _sampleUAEPayouts : _sampleEGPayouts) : <Map<String, dynamic>>[]);
+        : (properties.isEmpty && !hasAuth ? (isUAE ? _sampleUAEPayouts : _sampleEGPayouts) : <Map<String, dynamic>>[]);
 
     final shouldShowEmptyState = payouts.isEmpty;
 

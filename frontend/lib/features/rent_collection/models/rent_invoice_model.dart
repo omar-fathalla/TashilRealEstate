@@ -56,6 +56,22 @@ class OwnerPayoutInfo {
         accountNumber: json['accountNumber'] ?? '',
         walletOrVpa: json['walletOrVpa'] ?? '',
       );
+
+  OwnerPayoutInfo copyWith({
+    String? name,
+    String? bankName,
+    String? iban,
+    String? accountNumber,
+    String? walletOrVpa,
+  }) {
+    return OwnerPayoutInfo(
+      name: name ?? this.name,
+      bankName: bankName ?? this.bankName,
+      iban: iban ?? this.iban,
+      accountNumber: accountNumber ?? this.accountNumber,
+      walletOrVpa: walletOrVpa ?? this.walletOrVpa,
+    );
+  }
 }
 
 class RentInvoiceModel {
@@ -75,6 +91,7 @@ class RentInvoiceModel {
   final double dailyPenaltyRate; // e.g. 50 EGP/day or 100 AED/day
   final String? propertyId;
   final String? monthKey;
+  final String propertyTypeCode;
   
   // Status: 'paid', 'due_soon', 'overdue'
   String status;
@@ -117,6 +134,7 @@ class RentInvoiceModel {
     this.dailyPenaltyRate = 50.0,
     this.propertyId,
     this.monthKey,
+    this.propertyTypeCode = 'apartment',
     required this.status,
     this.paidAt,
     this.paymentMethod,
@@ -188,9 +206,12 @@ class RentInvoiceModel {
     bool? legalWarningIssued,
     String? propertyId,
     String? monthKey,
+    String? propertyTypeCode,
     bool? isDeleted,
     DateTime? deletedAt,
     String? notes,
+    OwnerPayoutInfo? owner,
+    TenantInfo? tenant,
   }) {
     return RentInvoiceModel(
       id: id,
@@ -201,14 +222,15 @@ class RentInvoiceModel {
       unitNumber: unitNumber,
       buildingName: buildingName,
       district: district,
-      tenant: tenant,
-      owner: owner,
+      tenant: tenant ?? this.tenant,
+      owner: owner ?? this.owner,
       baseAmount: baseAmount ?? this.baseAmount,
       dueDate: dueDate ?? this.dueDate,
       gracePeriodDays: gracePeriodDays,
       dailyPenaltyRate: dailyPenaltyRate,
       propertyId: propertyId ?? this.propertyId,
       monthKey: monthKey ?? this.monthKey,
+      propertyTypeCode: propertyTypeCode ?? this.propertyTypeCode,
       status: status ?? this.status,
       paidAt: paidAt ?? this.paidAt,
       paymentMethod: paymentMethod ?? this.paymentMethod,

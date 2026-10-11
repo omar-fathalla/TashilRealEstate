@@ -21,6 +21,8 @@ class TashilDropdownMenu<T> extends StatefulWidget {
   final double height;
   final double maxMenuHeight;
   final bool enabled;
+  final bool isSearchable;
+  final String? searchHintText;
 
   const TashilDropdownMenu({
     super.key,
@@ -33,6 +35,8 @@ class TashilDropdownMenu<T> extends StatefulWidget {
     this.height = 52.0,
     this.maxMenuHeight = 260.0,
     this.enabled = true,
+    this.isSearchable = false,
+    this.searchHintText,
   });
 
   @override
@@ -52,6 +56,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
 
   bool _isOpen = false;
   bool _isHovered = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -78,6 +83,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
 
   @override
   void dispose() {
+    _searchController.dispose();
     _overlayEntry?.remove();
     _overlayEntry = null;
     _isOpen = false;
@@ -101,6 +107,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
 
     final size = renderBox.size;
 
+    _searchController.clear();
     _overlayEntry = _createOverlayEntry(size);
     Overlay.of(context).insert(_overlayEntry!);
 
@@ -167,62 +174,148 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                   child: SizedBox(
                     width: anchorSize.width,
                     child: AnimatedBuilder(
-                  animation: _animController,
-                  builder: (ctx, child) {
-                    return FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: Transform.scale(
-                          scaleY: _scaleAnim.value,
-                          alignment: Alignment.topCenter,
-                          child: child,
+                      animation: _animController,
+                      builder: (ctx, child) {
+                        return FadeTransition(
+                          opacity: _fadeAnim,
+                          child: SlideTransition(
+                            position: _slideAnim,
+                            child: Transform.scale(
+                              scaleY: _scaleAnim.value,
+                              alignment: Alignment.topCenter,
+                              child: child,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Material(
+                        elevation: 6,
+                        shadowColor: Colors.black.withValues(alpha: 0.18),
+                        color: colorScheme.surfaceContainerLowest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+                            width: 1,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  child: Material(
-                    elevation: 6,
-                    shadowColor: Colors.black.withValues(alpha: 0.18),
-                    color: colorScheme.surfaceContainerLowest,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.7),
-                        width: 1,
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: widget.maxMenuHeight,
-                      ),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        shrinkWrap: true,
-                        itemCount: widget.items.length,
-                        itemBuilder: (ctx, idx) {
-                          final item = widget.items[idx];
-                          final isSelected = !item.isDivider && item.value == widget.value;
+                        clipBehavior: Clip.antiAlias,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: widget.maxMenuHeight,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.isSearchable) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    autofocus: true,
+                                    decoration: InputDecoration(
+                                      hintText: widget.searchHintText ?? 'بحث...',
+                                      hintStyle: TextStyle(
+                                        fontSize: 12,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.search_rounded,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      ),
+                                      suffixIcon: _searchController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear_rounded, size: 16),
+                                              onPressed: () {
+                                                _searchController.clear();
+                                                _overlayEntry?.markNeedsBuild();
+                                              },
+                                            )
+                                          : null,
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      filled: true,
+                                      fillColor: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: colorScheme.outlineVariant),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: colorScheme.outlineVariant),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+                                      ),
+                                    ),
+                                    style: const TextStyle(fontSize: 13),
+                                    onChanged: (_) {
+                                      _overlayEntry?.markNeedsBuild();
+                                    },
+                                  ),
+                                ),
+                                Divider(height: 1, color: colorScheme.outlineVariant),
+                              ],
+                              Flexible(
+                                child: Builder(
+                                  builder: (ctx) {
+                                    final query = _searchController.text.trim().toLowerCase();
+                                    final visibleItems = query.isEmpty
+                                        ? widget.items
+                                        : widget.items.where((it) {
+                                            if (it.isDivider) return false;
+                                            return it.label.toLowerCase().contains(query) ||
+                                                (it.supportingText != null &&
+                                                    it.supportingText!.toLowerCase().contains(query));
+                                          }).toList();
 
-                          return TashilMenuItemWidget<T>(
-                            item: item,
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (!item.isDivider) {
-                                _selectItem(item.value);
-                              }
-                            },
-                          );
-                        },
+                                    if (visibleItems.isEmpty) {
+                                      return Container(
+                                        padding: const EdgeInsets.all(20),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'لا توجد نتائج مطابقة',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView.builder(
+                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      shrinkWrap: true,
+                                      itemCount: visibleItems.length,
+                                      itemBuilder: (ctx, idx) {
+                                        final item = visibleItems[idx];
+                                        final isSelected = !item.isDivider && item.value == widget.value;
+
+                                        return TashilMenuItemWidget<T>(
+                                          item: item,
+                                          isSelected: isSelected,
+                                          onTap: () {
+                                            if (!item.isDivider) {
+                                              _selectItem(item.value);
+                                            }
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
           ],
         );
       },

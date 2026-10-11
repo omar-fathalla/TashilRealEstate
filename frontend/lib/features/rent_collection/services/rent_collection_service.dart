@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
@@ -20,6 +21,7 @@ class RentCollectionService {
     _loadPersistedDeletedState();
     _initSampleInvoices();
     PropertyLifecycleService().propertiesNotifier.addListener(syncFromProperties);
+    UserProfileService().profileNotifier.addListener(_onProfileChanged);
     syncFromProperties();
   }
 
@@ -59,7 +61,13 @@ class RentCollectionService {
   }
 
   void _initSampleInvoices() {
-    invoicesNotifier = ValueNotifier<List<RentInvoiceModel>>(_generateSampleInvoices());
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuthUser = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+    if (hasAuthUser) {
+      invoicesNotifier = ValueNotifier<List<RentInvoiceModel>>([]);
+    } else {
+      invoicesNotifier = ValueNotifier<List<RentInvoiceModel>>(_generateSampleInvoices());
+    }
   }
 
   /// Reset invoices to defaults and re-sync (useful for test isolation)
@@ -71,8 +79,59 @@ class RentCollectionService {
     syncFromProperties();
   }
 
+  OwnerPayoutInfo _resolveOwnerPayoutInfo({required String countryCode}) {
+    final profile = UserProfileService().profileNotifier.value;
+    final isAE = countryCode == 'AE';
+    final defaultName = isAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله';
+    final name = profile.hasFullName ? profile.fullName : defaultName;
+    final defaultBank = isAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)';
+    final bankName = profile.bankName.isNotEmpty ? profile.bankName : defaultBank;
+    final defaultIban = isAE ? 'AE250260001234567890123' : 'EG380003000012345678901234567';
+    final iban = profile.iban.isNotEmpty
+        ? profile.iban
+        : (profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : defaultIban);
+    final accountNumber = profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : '1234567890';
+    final walletOrVpa = isAE ? 'owner@enbd' : (profile.hasPhone ? profile.phone : 'owner@instapay');
+
+    return OwnerPayoutInfo(
+      name: name,
+      bankName: bankName,
+      iban: iban,
+      accountNumber: accountNumber,
+      walletOrVpa: walletOrVpa,
+    );
+  }
+
+  void _onProfileChanged() {
+    final profile = UserProfileService().profileNotifier.value;
+    if (invoicesNotifier.value.isEmpty) return;
+    final updatedList = invoicesNotifier.value.map((inv) {
+      final isAE = inv.countryCode == 'AE';
+      final defaultName = isAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله';
+      final newName = profile.hasFullName ? profile.fullName : defaultName;
+      final defaultBank = isAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)';
+      final newBank = profile.bankName.isNotEmpty
+          ? profile.bankName
+          : (inv.owner.bankName.isNotEmpty ? inv.owner.bankName : defaultBank);
+      final newAccount = profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : inv.owner.accountNumber;
+      final newIban = profile.iban.isNotEmpty ? profile.iban : inv.owner.iban;
+
+      return inv.copyWith(
+        owner: inv.owner.copyWith(
+          name: newName,
+          bankName: newBank,
+          accountNumber: newAccount,
+          iban: newIban,
+        ),
+      );
+    }).toList();
+    invoicesNotifier.value = updatedList;
+  }
+
   List<RentInvoiceModel> _generateSampleInvoices() {
     final now = DateTime.now();
+    final egOwner = _resolveOwnerPayoutInfo(countryCode: 'EG');
+    final aeOwner = _resolveOwnerPayoutInfo(countryCode: 'AE');
 
     final rawSamples = <RentInvoiceModel>[
       // --- Egypt Invoices (EGP) ---
@@ -94,13 +153,7 @@ class RentCollectionService {
           email: 'ahmed.kadi@gmail.com',
           idNumber: '29201011234567',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'م. عمر طارق فتح الله',
-          bankName: 'البنك الأهلي المصري (NBE)',
-          iban: 'EG380003000012345678901234567',
-          accountNumber: '1234567890',
-          walletOrVpa: 'omar.fathalla@instapay',
-        ),
+        owner: egOwner,
         baseAmount: 25000.0,
         dueDate: now.subtract(const Duration(days: 15)),
         gracePeriodDays: 5,
@@ -134,13 +187,7 @@ class RentCollectionService {
           email: 'sara.desouky@yahoo.com',
           idNumber: '29505051234568',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'م. عمر طارق فتح الله',
-          bankName: 'البنك التجاري الدولي (CIB)',
-          iban: 'EG450002000098765432109876543',
-          accountNumber: '9876543210',
-          walletOrVpa: '01099887766',
-        ),
+        owner: egOwner,
         baseAmount: 60000.0,
         dueDate: now.subtract(const Duration(days: 22)),
         gracePeriodDays: 5,
@@ -208,13 +255,7 @@ class RentCollectionService {
           email: 'james.wilson@dubai.ae',
           idNumber: '784-1990-1234567-1',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'عبدالله راشد النعيمي',
-          bankName: 'Emirates NBD',
-          iban: 'AE250260001234567890123',
-          accountNumber: '1023456789',
-          walletOrVpa: 'abdullah.nuaimi@enbd',
-        ),
+        owner: aeOwner,
         baseAmount: 18000.0,
         dueDate: now.subtract(const Duration(days: 10)),
         gracePeriodDays: 7,
@@ -331,10 +372,12 @@ class RentCollectionService {
       final now = DateTime.now();
 
     final hasRealProps = properties.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id));
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuthUser = (cachedOwnerId != null && cachedOwnerId.isNotEmpty);
     final validPropIds = properties.map((p) => p.id).toSet();
 
-    // If real properties exist, completely purge mock starter invoices (Ahmed El Kadi, Sara Desouky, etc.)
-    if (hasRealProps) {
+    // If an authenticated owner exists or real properties exist, completely purge mock starter invoices
+    if (hasAuthUser || hasRealProps) {
       currentInvoices.removeWhere((inv) =>
           inv.propertyId == null ||
           !validPropIds.contains(inv.propertyId) ||
@@ -396,9 +439,11 @@ class RentCollectionService {
           continue;
         }
 
-        // 2. Check if soft-deleted in persisted state
-        final isSoftDeleted = _softDeletedInvoices.containsKey(invId) || _softDeletedInvoices.containsKey(key);
-        final deletedAt = isSoftDeleted ? (_softDeletedInvoices[invId] ?? _softDeletedInvoices[key]) : null;
+        // 2. Check if soft-deleted in persisted state or directly from Firestore installment
+        final isSoftDeleted = inst.isDeleted ||
+            _softDeletedInvoices.containsKey(invId) ||
+            _softDeletedInvoices.containsKey(key);
+        final deletedAt = inst.deletedAt ?? (isSoftDeleted ? (_softDeletedInvoices[invId] ?? _softDeletedInvoices[key]) : null);
 
         final isPaid = inst.isPaid;
         final isOverdue = inst.status == InstallmentPaymentStatus.overdue;
@@ -424,6 +469,7 @@ class RentCollectionService {
           currentInvoices[idx] = existing.copyWith(
             baseAmount: inst.amount,
             status: invoiceStatus,
+            propertyTypeCode: prop.propertyTypeCode,
             paidAt: isPaid ? (inst.paidAt ?? existing.paidAt ?? now) : null,
             paymentMethod: inst.paymentMethod ?? existing.paymentMethod,
             transactionReference: inst.transactionRef ?? existing.transactionReference,
@@ -452,19 +498,14 @@ class RentCollectionService {
             district: district,
             propertyId: prop.id,
             monthKey: inst.monthKey,
+            propertyTypeCode: prop.propertyTypeCode,
             tenant: TenantInfo(
               name: tenantName,
               phone: tenantPhone,
               email: '${tenantName.split(" ").first.toLowerCase()}@gmail.com',
               idNumber: prop.countryCode == 'AE' ? '784-1990-1234567-1' : '29201011234567',
             ),
-            owner: OwnerPayoutInfo(
-              name: 'م. عمر طارق فتح الله',
-              bankName: prop.countryCode == 'AE' ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)',
-              iban: prop.countryCode == 'AE' ? 'AE250260001234567890123' : 'EG380003000012345678901234567',
-              accountNumber: '1234567890',
-              walletOrVpa: prop.countryCode == 'AE' ? 'omar.fathalla@enbd' : 'omar.fathalla@instapay',
-            ),
+            owner: _resolveOwnerPayoutInfo(countryCode: prop.countryCode),
             baseAmount: inst.amount,
             dueDate: inst.dueDate,
             gracePeriodDays: 5,
@@ -530,6 +571,14 @@ class RentCollectionService {
         deletedAt: now,
       );
       invoicesNotifier.value = updatedList;
+
+      // Persist soft-deleted state to Firestore for linked property installment
+      if (current.propertyId != null && current.monthKey != null) {
+        PropertyLifecycleService().softDeleteInstallmentForProperty(
+          propertyId: current.propertyId!,
+          monthKey: current.monthKey!,
+        );
+      }
     }
   }
 
@@ -555,6 +604,14 @@ class RentCollectionService {
         deletedAt: null,
       );
       invoicesNotifier.value = updatedList;
+
+      // Restore linked property installment in Firestore
+      if (current.propertyId != null && current.monthKey != null) {
+        PropertyLifecycleService().restoreInstallmentForProperty(
+          propertyId: current.propertyId!,
+          monthKey: current.monthKey!,
+        );
+      }
     }
   }
 

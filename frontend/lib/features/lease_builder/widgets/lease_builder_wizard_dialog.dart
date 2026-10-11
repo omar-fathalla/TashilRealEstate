@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/menus/tashil_dropdown_menu.dart';
+import 'package:tashil_real_estate/core/design_system/menus/tashil_menu_item.dart';
 import 'package:tashil_real_estate/core/design_system/sliders/tashil_slider.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -17,6 +19,7 @@ import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_
 import 'package:tashil_real_estate/features/lease_builder/services/legal_clauses_service.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_document_view.dart';
 import 'package:tashil_real_estate/features/legal_ai_advisor/widgets/ai_legal_clause_advisor_dialog.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 
@@ -59,12 +62,15 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
   // Country State
   late String _countryCode;
 
+  // Selected Property from Landlord Portfolio
+  String _selectedPropertyId = '_custom_property_';
+
   // Step 1: Parties Controllers
-  final _lessorNameCtrl = TextEditingController(text: 'م. عمر طارق فتح الله');
-  final _lessorIdCtrl = TextEditingController(text: '29304150102432');
-  final _lessorPhoneCtrl = TextEditingController(text: '+201002345678');
-  final _lessorEmailCtrl = TextEditingController(text: 'omar.fathalla@tashil.com');
-  final _lessorAddressCtrl = TextEditingController(text: 'التجمع الخامس، القاهرة');
+  final _lessorNameCtrl = TextEditingController();
+  final _lessorIdCtrl = TextEditingController();
+  final _lessorPhoneCtrl = TextEditingController();
+  final _lessorEmailCtrl = TextEditingController();
+  final _lessorAddressCtrl = TextEditingController();
 
   final _tenantNameCtrl = TextEditingController(text: 'كريم عادل الشناوي');
   final _tenantIdCtrl = TextEditingController(text: '29508120104567');
@@ -147,12 +153,13 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
   }
 
   void _initDefaultsForCountry(String country) {
+    final profile = UserProfileService().profileNotifier.value;
     if (country == 'AE') {
-      _lessorNameCtrl.text = 'عبدالله راشد النعيمي';
-      _lessorIdCtrl.text = '784-1985-1234567-1';
-      _lessorPhoneCtrl.text = '+971501234567';
-      _lessorEmailCtrl.text = 'abdullah.nuaimi@tashil.ae';
-      _lessorAddressCtrl.text = 'نخلة جميرا، دبي';
+      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : 'عبدالله راشد النعيمي';
+      _lessorIdCtrl.text = profile.nationalId.isNotEmpty ? profile.nationalId : '784-1985-1234567-1';
+      _lessorPhoneCtrl.text = profile.phone.isNotEmpty ? profile.phone : '+971501234567';
+      _lessorEmailCtrl.text = profile.email.isNotEmpty ? profile.email : 'abdullah.nuaimi@tashil.ae';
+      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : 'نخلة جميرا، دبي';
 
       _tenantNameCtrl.text = 'Sarah Jennifer Parker';
       _tenantIdCtrl.text = '784-1992-9876543-2';
@@ -174,11 +181,11 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       _depositCtrl.text = '12000';
       _annualIncreasePct = 0.0;
     } else {
-      _lessorNameCtrl.text = 'م. عمر طارق فتح الله';
-      _lessorIdCtrl.text = '29304150102432';
-      _lessorPhoneCtrl.text = '+201002345678';
-      _lessorEmailCtrl.text = 'omar.fathalla@tashil.com';
-      _lessorAddressCtrl.text = 'التجمع الخامس، القاهرة';
+      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : 'محمد فتح الله';
+      _lessorIdCtrl.text = profile.nationalId.isNotEmpty ? profile.nationalId : '29304150102432';
+      _lessorPhoneCtrl.text = profile.phone.isNotEmpty ? profile.phone : '+201002345678';
+      _lessorEmailCtrl.text = profile.email.isNotEmpty ? profile.email : 'mohamed.fathalla@gmail.com';
+      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : 'عمارة 42، الحي الأول، التجمع الخامس، القاهرة';
 
       _tenantNameCtrl.text = 'كريم عادل الشناوي';
       _tenantIdCtrl.text = '29508120104567';
@@ -202,15 +209,18 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
     }
 
     if (widget.targetProperty != null) {
-      final p = widget.targetProperty!;
-      _propTitleCtrl.text = p.getTitle(LocaleController.languageCode);
-      _unitNumberCtrl.text = p.unitNumber;
-      _buildingNameCtrl.text = p.buildingName;
-      _districtCtrl.text = p.getLocation(LocaleController.languageCode);
-      _cityCtrl.text = p.cityCode == 'CAI' ? 'القاهرة' : (p.cityCode == 'DXB' ? 'دبي' : p.cityCode);
-      _areaCtrl.text = p.areaSqM.toInt().toString();
-      _rentAmountCtrl.text = (p.pricePerMonth * 12).toInt().toString();
-      _depositCtrl.text = (p.pricePerMonth * 2).toInt().toString();
+      _selectedPropertyId = widget.targetProperty!.id;
+      _applySelectedProperty(widget.targetProperty!);
+    } else {
+      final registered = PropertyLifecycleService().propertiesNotifier.value
+          .where((p) => p.countryCode == country && !PropertyLifecycleService.isMockPropertyId(p.id))
+          .toList();
+      if (registered.isNotEmpty) {
+        _selectedPropertyId = registered.first.id;
+        _applySelectedProperty(registered.first);
+      } else {
+        _selectedPropertyId = '_custom_property_';
+      }
     }
 
     _clauses = LegalClausesService.getStandardClauses(country);
@@ -256,6 +266,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
           if (result.phoneNumber != null) _tenantPhoneCtrl.text = result.phoneNumber!;
           if (result.email != null) _tenantEmailCtrl.text = result.email!;
         } else if (targetParty == 'property') {
+          _selectedPropertyId = '_custom_property_';
           if (result.propertyTitle != null) _propTitleCtrl.text = result.propertyTitle!;
           if (result.unitNumber != null) _unitNumberCtrl.text = result.unitNumber!;
           if (result.buildingName != null) _buildingNameCtrl.text = result.buildingName!;
@@ -897,6 +908,10 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               ],
               const SizedBox(height: 16),
 
+              // Property Selector Dropdown from Portfolio
+              _buildPropertySelectorDropdown(context, loc, theme),
+              const SizedBox(height: 16),
+
               _buildTextField(_propTitleCtrl, loc.tr('propertyTitleField'), Icons.home_work_rounded),
               const SizedBox(height: 12),
               Row(
@@ -997,6 +1012,171 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  void _applySelectedProperty(ManagedPropertyModel p) {
+    final lang = LocaleController.languageCode;
+    _propTitleCtrl.text = p.getTitle(lang);
+    _unitNumberCtrl.text = p.unitNumber;
+    _buildingNameCtrl.text = p.buildingName;
+
+    final locStr = p.getLocation(lang);
+    String district = '';
+    String city = '';
+    if (locStr.contains('،')) {
+      final parts = locStr.split('،');
+      district = parts[0].trim();
+      city = parts.length > 1 ? parts[1].trim() : '';
+    } else if (locStr.contains(',')) {
+      final parts = locStr.split(',');
+      district = parts[0].trim();
+      city = parts.length > 1 ? parts[1].trim() : '';
+    } else {
+      district = locStr.trim();
+      city = '';
+    }
+
+    if (city.isEmpty) {
+      if (p.cityCode == 'ALEX') {
+        city = lang == 'en' ? 'Alexandria' : (lang == 'hi' ? 'अलेक्जेंड्रिया' : 'الإسكندرية');
+      } else if (p.cityCode == 'CAI') {
+        city = lang == 'en' ? 'Cairo' : (lang == 'hi' ? 'काहिरा' : 'القاهرة');
+      } else if (p.cityCode == 'GIZA') {
+        city = lang == 'en' ? 'Giza' : (lang == 'hi' ? 'गीज़ा' : 'الجيزة');
+      } else if (p.cityCode == 'DXB') {
+        city = lang == 'en' ? 'Dubai' : (lang == 'hi' ? 'दुबई' : 'دبي');
+      } else if (p.cityCode == 'AUH') {
+        city = lang == 'en' ? 'Abu Dhabi' : (lang == 'hi' ? 'अबू धाबी' : 'أبوظبي');
+      } else {
+        city = p.cityCode;
+      }
+    }
+
+    _districtCtrl.text = district;
+    _cityCtrl.text = city.isNotEmpty ? city : (p.cityCode == 'ALEX' ? 'الإسكندرية' : 'القاهرة');
+    _areaCtrl.text = p.areaSqM.toInt().toString();
+
+    // Floor derivation: if unit number has digits
+    final digits = RegExp(r'\d+').firstMatch(p.unitNumber)?.group(0);
+    if (digits != null && digits.length >= 3) {
+      _floorCtrl.text = digits.substring(0, digits.length - 2);
+    } else if (digits != null && digits.isNotEmpty) {
+      _floorCtrl.text = digits;
+    }
+
+    // Step 3 Financials auto-fill
+    if (_paymentFrequency == 'monthly') {
+      _rentAmountCtrl.text = p.pricePerMonth.toInt().toString();
+    } else if (_paymentFrequency == 'quarterly') {
+      _rentAmountCtrl.text = (p.pricePerMonth * 3).toInt().toString();
+    } else {
+      _rentAmountCtrl.text = (p.pricePerMonth * 12).toInt().toString();
+    }
+    _depositCtrl.text = (p.pricePerMonth * 2).toInt().toString();
+
+    // Pre-fill tenant if available on property
+    if (p.tenantName != null && p.tenantName!.trim().isNotEmpty) {
+      _tenantNameCtrl.text = p.tenantName!.trim();
+      if (p.tenantPhone != null && p.tenantPhone!.trim().isNotEmpty) {
+        _tenantPhoneCtrl.text = p.tenantPhone!.trim();
+      }
+    }
+  }
+
+  Widget _buildPropertySelectorDropdown(
+    BuildContext context,
+    AppLocalizations loc,
+    ThemeData theme,
+  ) {
+    final lang = LocaleController.languageCode;
+    final allProps = PropertyLifecycleService().propertiesNotifier.value;
+    final registeredProps = allProps
+        .where((p) => p.countryCode == _countryCode && !PropertyLifecycleService.isMockPropertyId(p.id))
+        .toList();
+
+    final items = <TashilDropdownMenuItem<String>>[];
+
+    for (final p in registeredProps) {
+      final locText = p.getLocation(lang);
+      final subtitle = '${loc.tr('unitNumber')}: ${p.unitNumber} • ${p.buildingName} • $locText';
+      items.add(
+        TashilDropdownMenuItem<String>(
+          value: p.id,
+          label: p.getTitle(lang),
+          supportingText: subtitle,
+          icon: Icons.apartment_rounded,
+        ),
+      );
+    }
+
+    if (registeredProps.isNotEmpty) {
+      items.add(const TashilDropdownMenuItem<String>.divider(value: '__divider__'));
+    }
+
+    items.add(
+      TashilDropdownMenuItem<String>(
+        value: '_custom_property_',
+        label: loc.tr('enterCustomProperty'),
+        supportingText: loc.tr('enterCustomPropertySubtitle'),
+        icon: Icons.edit_note_rounded,
+      ),
+    );
+
+    final effectiveValue = items.any((it) => !it.isDivider && it.value == _selectedPropertyId)
+        ? _selectedPropertyId
+        : (registeredProps.isNotEmpty ? registeredProps.first.id : '_custom_property_');
+
+    final isAutoFilled = effectiveValue != '_custom_property_';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TashilDropdownMenu<String>(
+          value: effectiveValue,
+          labelText: loc.tr('selectPropertyFromPortfolio'),
+          hintText: loc.tr('selectPropertyHint'),
+          prefixIcon: Icons.real_estate_agent_rounded,
+          items: items,
+          onChanged: (val) {
+            if (val == null || val == '__divider__') return;
+            setState(() {
+              _selectedPropertyId = val;
+              if (val != '_custom_property_') {
+                final match = registeredProps.firstWhere((p) => p.id == val);
+                _applySelectedProperty(match);
+              }
+            });
+          },
+        ),
+        if (isAutoFilled) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    loc.tr('propertyAutoFilledBanner'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1599,7 +1779,13 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
   void _openAiClauseAdvisor(BuildContext context, AppLocalizations loc) {
     AiLegalClauseAdvisorDialog.show(
       context,
+      onLegalClauseApplied: (newClause) {
+        setState(() {
+          _clauses.add(newClause);
+        });
+      },
       onClauseApplied: (newClauseBody) {
+        if (_clauses.any((c) => c.bodyAr == newClauseBody)) return;
         setState(() {
           _clauses.add(
             LegalClause(

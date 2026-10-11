@@ -23,6 +23,9 @@ class MonthlyInstallment {
   final String? receiptNumber;
   final String? notes;
 
+  final bool isDeleted;
+  final DateTime? deletedAt;
+
   const MonthlyInstallment({
     required this.monthKey,
     required this.monthNumber,
@@ -35,6 +38,8 @@ class MonthlyInstallment {
     this.transactionRef,
     this.receiptNumber,
     this.notes,
+    this.isDeleted = false,
+    this.deletedAt,
   });
 
   bool get isPaid =>
@@ -56,6 +61,8 @@ class MonthlyInstallment {
     String? transactionRef,
     String? receiptNumber,
     String? notes,
+    bool? isDeleted,
+    DateTime? deletedAt,
   }) {
     return MonthlyInstallment(
       monthKey: monthKey ?? this.monthKey,
@@ -69,6 +76,8 @@ class MonthlyInstallment {
       transactionRef: transactionRef ?? this.transactionRef,
       receiptNumber: receiptNumber ?? this.receiptNumber,
       notes: notes ?? this.notes,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -85,6 +94,8 @@ class MonthlyInstallment {
       'transactionRef': transactionRef,
       'receiptNumber': receiptNumber,
       'notes': notes,
+      'isDeleted': isDeleted,
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -138,6 +149,8 @@ class MonthlyInstallment {
       transactionRef: map['transactionRef']?.toString() ?? map['transaction_ref']?.toString(),
       receiptNumber: map['receiptNumber']?.toString() ?? map['receipt_number']?.toString(),
       notes: map['notes']?.toString(),
+      isDeleted: map['isDeleted'] == true || map['is_deleted'] == true,
+      deletedAt: parseNullableDate(map['deletedAt'] ?? map['deleted_at']),
     );
   }
 }

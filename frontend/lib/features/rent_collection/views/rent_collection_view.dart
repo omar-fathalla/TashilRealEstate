@@ -32,11 +32,13 @@ import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_check
 class RentCollectionView extends StatefulWidget {
   final VoidCallback? onBack;
   final bool? showBackButton;
+  final bool showTrashButtonInHeader;
 
   const RentCollectionView({
     super.key,
     this.onBack,
     this.showBackButton,
+    this.showTrashButtonInHeader = false,
   });
 
   @override
@@ -317,16 +319,19 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       ],
     );
 
+    final showTrash = widget.showTrashButtonInHeader;
+
     final actionsBlock = Wrap(
       spacing: 8,
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        TashilButton.tonal(
-          onPressed: () => setState(() => _isTrashView = true),
-          icon: Icons.auto_delete_outlined,
-          label: '${loc.tr('deletedInvoicesTitle')}${deletedCount > 0 ? ' ($deletedCount)' : ''}',
-        ),
+        if (showTrash)
+          TashilButton.tonal(
+            onPressed: () => setState(() => _isTrashView = true),
+            icon: Icons.auto_delete_outlined,
+            label: '${loc.tr('deletedInvoicesTitle')}${deletedCount > 0 ? ' ($deletedCount)' : ''}',
+          ),
         TashilButton(
           onPressed: () => CreateRentInvoiceDialog.show(context),
           icon: Icons.add_rounded,
@@ -806,10 +811,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               if (action == 'pay') {
                 TenantCheckoutDialog.show(context, inv);
               } else if (action == 'remind') {
-                RentCollectionService().sendReminder(inv.id);
-                TashilSnackBar.showSuccess(
+                _confirmSendWhatsAppReminder(
                   context: context,
-                  message: loc.tr('reminderSentViaWhatsAppSuccess'),
+                  loc: loc,
+                  inv: inv,
+                  colorScheme: colorScheme,
+                  currency: currency,
+                  lang: lang,
                 );
               } else if (action == 'warning') {
                 LegalWarningNoticeDialog.show(context, inv);
@@ -1069,6 +1077,265 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     );
   }
 
+  /// Property Type Badge with semantic icon and high contrast styling
+  Widget _buildPropertyTypeBadge({
+    required String typeCode,
+    required AppLocalizations loc,
+    required bool isDark,
+  }) {
+    final lower = typeCode.toLowerCase().trim();
+    final isVilla = lower.contains('villa') || lower.contains('فيلا');
+    final isOffice = lower.contains('office') || lower.contains('مكتب');
+    final isCommercial = lower.contains('commercial') || lower.contains('تجاري');
+    final isChalet = lower.contains('chalet') || lower.contains('شاليه');
+    final isDuplex = lower.contains('duplex') || lower.contains('دوبلكس');
+    final isStudio = lower.contains('studio') || lower.contains('استوديو') || lower.contains('استديو');
+
+    Color bg;
+    Color border;
+    Color text;
+    String label;
+    IconData icon;
+
+    if (isVilla) {
+      bg = isDark ? const Color(0xFF064E3B).withValues(alpha: 0.35) : const Color(0xFFECFDF5);
+      border = isDark ? const Color(0xFF10B981).withValues(alpha: 0.70) : const Color(0xFFA7F3D0);
+      text = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857);
+      label = loc.tr('propTypeVilla');
+      icon = Icons.villa_rounded;
+    } else if (isOffice) {
+      bg = isDark ? const Color(0xFF134E4A).withValues(alpha: 0.35) : const Color(0xFFF0FDFA);
+      border = isDark ? const Color(0xFF14B8A6).withValues(alpha: 0.70) : const Color(0xFF99F6E4);
+      text = isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E);
+      label = loc.tr('propTypeOffice');
+      icon = Icons.business_center_rounded;
+    } else if (isCommercial) {
+      bg = isDark ? const Color(0xFF701A75).withValues(alpha: 0.35) : const Color(0xFFFDF4FF);
+      border = isDark ? const Color(0xFFD946EF).withValues(alpha: 0.70) : const Color(0xFFF5D0FE);
+      text = isDark ? const Color(0xFFF0ABFC) : const Color(0xFFA21CAF);
+      label = loc.tr('propTypeCommercial');
+      icon = Icons.storefront_rounded;
+    } else if (isChalet) {
+      bg = isDark ? const Color(0xFF78350F).withValues(alpha: 0.35) : const Color(0xFFFFFBEB);
+      border = isDark ? const Color(0xFFF59E0B).withValues(alpha: 0.70) : const Color(0xFFFDE68A);
+      text = isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309);
+      label = loc.tr('propTypeChalet');
+      icon = Icons.beach_access_rounded;
+    } else if (isDuplex) {
+      bg = isDark ? const Color(0xFF312E81).withValues(alpha: 0.35) : const Color(0xFFEEF2FF);
+      border = isDark ? const Color(0xFF6366F1).withValues(alpha: 0.70) : const Color(0xFFC7D2FE);
+      text = isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA);
+      label = loc.tr('propTypeDuplex');
+      icon = Icons.holiday_village_rounded;
+    } else if (isStudio) {
+      bg = isDark ? const Color(0xFF4C1D95).withValues(alpha: 0.35) : const Color(0xFFF5F3FF);
+      border = isDark ? const Color(0xFF8B5CF6).withValues(alpha: 0.70) : const Color(0xFFDDD6FE);
+      text = isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9);
+      label = loc.tr('propTypeStudio');
+      icon = Icons.single_bed_rounded;
+    } else {
+      bg = isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.35) : const Color(0xFFEFF6FF);
+      border = isDark ? const Color(0xFF3B82F6).withValues(alpha: 0.70) : const Color(0xFFBFDBFE);
+      text = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+      label = loc.tr('propTypeApartment');
+      icon = Icons.apartment_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border, width: 1.0),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: text),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: text,
+              fontSize: 10.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// M3 Connected Action Button Group for Table Rows (Details | Edit | Delete)
+  Widget _buildInvoiceActionsConnectedGroup({
+    required BuildContext context,
+    required RentInvoiceModel inv,
+    required AppLocalizations loc,
+    required ColorScheme colorScheme,
+    required String currency,
+    required String lang,
+  }) {
+    final outerRadius = BorderRadius.circular(20);
+
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.all(3.5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: outerRadius,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Details Action Pill
+          _TableConnectedActionIconPill(
+            icon: Icons.visibility_outlined,
+            tooltip: loc.tr('viewDetailsBtn'),
+            foregroundColor: colorScheme.onSurface,
+            size: 31.0,
+            onTap: () => _showInvoiceDetailsDialog(
+              context: context,
+              loc: loc,
+              inv: inv,
+              currency: currency,
+              lang: lang,
+              colorScheme: colorScheme,
+            ),
+          ),
+          const SizedBox(width: 4.0),
+          // 2. Edit Action Pill
+          _TableConnectedActionIconPill(
+            icon: Icons.edit_outlined,
+            tooltip: loc.tr('editInvoiceAction'),
+            foregroundColor: colorScheme.onSurface,
+            size: 31.0,
+            onTap: () => _showEditInvoiceDialog(
+              context: context,
+              loc: loc,
+              inv: inv,
+              currency: currency,
+              colorScheme: colorScheme,
+            ),
+          ),
+          const SizedBox(width: 4.0),
+          // 3. Move to Trash Action Pill
+          _TableConnectedActionIconPill(
+            icon: Icons.delete_outline_rounded,
+            tooltip: loc.tr('moveToTrashAction'),
+            foregroundColor: colorScheme.error,
+            hoverColor: colorScheme.error,
+            size: 31.0,
+            onTap: () => _confirmMoveToTrash(
+              context: context,
+              loc: loc,
+              inv: inv,
+              colorScheme: colorScheme,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// M3 Connected Button Group for Payment & Reminder (Pay + WhatsApp Reminder / Official Receipt)
+  Widget _buildPaymentReminderConnectedGroup({
+    required BuildContext context,
+    required RentInvoiceModel inv,
+    required AppLocalizations loc,
+    required ColorScheme colorScheme,
+    required bool isPaid,
+    required bool isOverdue,
+    required String currency,
+    required String lang,
+  }) {
+    final outerRadius = BorderRadius.circular(20);
+
+    if (isPaid) {
+      return Container(
+        height: 38,
+        padding: const EdgeInsets.all(3.5),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh,
+          borderRadius: outerRadius,
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+            width: 1.0,
+          ),
+        ),
+        child: _TableConnectedActionPill(
+          icon: Icons.receipt_long_rounded,
+          label: loc.tr('viewOfficialReceipt'),
+          isFilled: true,
+          filledColor: colorScheme.secondaryContainer,
+          filledTextColor: colorScheme.onSecondaryContainer,
+          height: 31.0,
+          onTap: () => RentReceiptDialog.show(context, inv),
+        ),
+      );
+    }
+
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.all(3.5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: outerRadius,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Pay Pill (Filled Primary stadium capsule matching Connected Button Group)
+          _TableConnectedActionPill(
+            icon: Icons.payment_rounded,
+            label: loc.tr('payRentNowAction'),
+            isFilled: true,
+            filledColor: colorScheme.primary,
+            filledTextColor: colorScheme.onPrimary,
+            height: 31.0,
+            onTap: () => TenantCheckoutDialog.show(context, inv),
+          ),
+          const SizedBox(width: 5.0),
+          // 2. Remind WhatsApp Pill (Shaded stadium capsule with confirmation dialog)
+          _TableConnectedActionPill(
+            icon: Icons.send_to_mobile_rounded,
+            label: loc.tr('sendReminderWhatsApp'),
+            isFilled: false,
+            height: 31.0,
+            onTap: () => _confirmSendWhatsAppReminder(
+              context: context,
+              loc: loc,
+              inv: inv,
+              colorScheme: colorScheme,
+              currency: currency,
+              lang: lang,
+            ),
+          ),
+          if (isOverdue) ...[
+            const SizedBox(width: 5.0),
+            // 3. Legal Warning Pill
+            _TableConnectedActionPill(
+              icon: Icons.gavel_rounded,
+              label: loc.tr('issueLegalWarningAction'),
+              isFilled: true,
+              filledColor: colorScheme.errorContainer,
+              filledTextColor: colorScheme.onErrorContainer,
+              height: 31.0,
+              onTap: () => LegalWarningNoticeDialog.show(context, inv),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // --- 5. High-Density M3 Invoices Table ---
   Widget _buildInvoicesTable({
     required BuildContext context,
@@ -1082,6 +1349,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     if (invoices.isEmpty) {
       return _buildEmptyState(loc, colorScheme);
     }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return TashilCard.outlined(
       borderRadius: BorderRadius.circular(14),
@@ -1131,7 +1400,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             scrollDirection: Axis.horizontal,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minWidth: screenWidth < 1000 ? 980 : screenWidth - 56,
+                minWidth: screenWidth < 1180 ? 1180 : screenWidth - 56,
               ),
               child: DataTable(
                 headingRowHeight: 50,
@@ -1188,6 +1457,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   ),
                   DataColumn(
                     label: Text(
+                      loc.tr('tableHeaderPaymentAndReminder'),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
                       loc.tr('tableHeaderActions'),
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
                     ),
@@ -1224,50 +1499,70 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       colorScheme: colorScheme,
                     ),
                     cells: [
-                      // 1. Unit & Property + Invoice Number Combined
+                      // 1. Unit Type Chip + Location Badge & Invoice Number
                       DataCell(
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.apartment_rounded, size: 14, color: colorScheme.primary),
-                                const SizedBox(width: 6),
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 240),
-                                  child: Text(
-                                    inv.unitTitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Property Type Chip (e.g. شقة سكنية)
+                                  _buildPropertyTypeBadge(
+                                    typeCode: inv.propertyTypeCode,
+                                    loc: loc,
+                                    isDark: isDark,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  inv.invoiceNumber,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 8),
+                                  // Location with Icon (e.g. حي الجمرك - بحري، الإسكندرية)
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 13,
                                     color: colorScheme.primary,
-                                    letterSpacing: 0.2,
                                   ),
-                                ),
-                                Text(
-                                  ' • ${inv.unitNumber}',
-                                  style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  const SizedBox(width: 3),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 180),
+                                    child: Text(
+                                      inv.district.isNotEmpty ? inv.district : inv.buildingName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    inv.invoiceNumber,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.primary,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                  if (inv.unitNumber.isNotEmpty)
+                                    Text(
+                                      ' • ${inv.unitNumber}',
+                                      style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       // 2. Tenant
@@ -1383,106 +1678,28 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           ],
                         ),
                       ),
-                      // 8. Actions Cell
+                      // 8. Payment & Reminder Cell
                       DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TashilIconButton.tonal(
-                              icon: Icons.edit_outlined,
-                              size: 32,
-                              iconSize: 15,
-                              tooltip: loc.tr('editInvoiceAction'),
-                              onPressed: () => _showEditInvoiceDialog(
-                                context: context,
-                                loc: loc,
-                                inv: inv,
-                                currency: currency,
-                                colorScheme: colorScheme,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            TashilIconButton.tonal(
-                              icon: Icons.delete_outline_rounded,
-                              size: 32,
-                              iconSize: 15,
-                              tooltip: loc.tr('moveToTrashAction'),
-                              color: colorScheme.error,
-                              backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.2),
-                              onPressed: () => _confirmMoveToTrash(
-                                context: context,
-                                loc: loc,
-                                inv: inv,
-                                colorScheme: colorScheme,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            if (isPaid) ...[
-                              TashilButton(
-                                variant: TashilButtonVariant.tonal,
-                                width: 106,
-                                height: 32.0,
-                                padding: const EdgeInsetsDirectional.only(start: 10, end: 12),
-                                icon: Icons.receipt_rounded,
-                                label: loc.tr('viewOfficialReceipt'),
-                                onPressed: () => RentReceiptDialog.show(context, inv),
-                              ),
-                              const SizedBox(width: 4),
-                              // Reserved space matching reminder slot to ensure Details icon never shifts
-                              const SizedBox(width: 98),
-                            ] else ...[
-                              TashilButton(
-                                variant: TashilButtonVariant.filled,
-                                width: 106,
-                                height: 32.0,
-                                padding: const EdgeInsetsDirectional.only(start: 10, end: 12),
-                                icon: Icons.payment_rounded,
-                                label: loc.tr('payRentNowAction'),
-                                onPressed: () => TenantCheckoutDialog.show(context, inv),
-                              ),
-                              const SizedBox(width: 4),
-                              TashilButton(
-                                variant: TashilButtonVariant.tonal,
-                                width: 98,
-                                height: 32.0,
-                                padding: const EdgeInsetsDirectional.only(start: 10, end: 12),
-                                icon: Icons.send_to_mobile_rounded,
-                                label: loc.tr('sendReminderWhatsApp'),
-                                onPressed: () {
-                                  RentCollectionService().sendReminder(inv.id);
-                                  TashilSnackBar.showSuccess(
-                                    context: context,
-                                    message: loc.tr('reminderSentViaWhatsAppSuccess'),
-                                  );
-                                },
-                              ),
-                              if (isOverdue) ...[
-                                const SizedBox(width: 4),
-                                TashilButton(
-                                  variant: TashilButtonVariant.tonal,
-                                  height: 32.0,
-                                  icon: Icons.gavel_rounded,
-                                  label: loc.tr('issueLegalWarningAction'),
-                                  onPressed: () => LegalWarningNoticeDialog.show(context, inv),
-                                ),
-                              ],
-                            ],
-                            const SizedBox(width: 6),
-                            TashilIconButton.tonal(
-                              icon: Icons.open_in_new_rounded,
-                              size: 32,
-                              iconSize: 15,
-                              tooltip: loc.tr('viewDetailsBtn'),
-                              onPressed: () => _showInvoiceDetailsDialog(
-                                context: context,
-                                loc: loc,
-                                inv: inv,
-                                currency: currency,
-                                lang: lang,
-                                colorScheme: colorScheme,
-                              ),
-                            ),
-                          ],
+                        _buildPaymentReminderConnectedGroup(
+                          context: context,
+                          inv: inv,
+                          loc: loc,
+                          colorScheme: colorScheme,
+                          isPaid: isPaid,
+                          isOverdue: isOverdue,
+                          currency: currency,
+                          lang: lang,
+                        ),
+                      ),
+                      // 9. Actions Cell (Details | Edit | Delete)
+                      DataCell(
+                        _buildInvoiceActionsConnectedGroup(
+                          context: context,
+                          inv: inv,
+                          loc: loc,
+                          colorScheme: colorScheme,
+                          currency: currency,
+                          lang: lang,
                         ),
                       ),
                     ],
@@ -1776,14 +1993,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                             variant: TashilButtonVariant.tonal,
                             icon: Icons.send_to_mobile_rounded,
                             label: loc.tr('sendReminderWhatsApp'),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              RentCollectionService().sendReminder(inv.id);
-                              TashilSnackBar.showSuccess(
-                                context: context,
-                                message: loc.tr('reminderSentViaWhatsAppSuccess'),
-                              );
-                            },
+                            onPressed: () => _confirmSendWhatsAppReminder(
+                              context: context,
+                              loc: loc,
+                              inv: inv,
+                              colorScheme: colorScheme,
+                              currency: currency,
+                              lang: lang,
+                            ),
                           ),
                           if (isOverdue)
                             TashilButton(
@@ -2271,6 +2488,54 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   }
 
   // --- 9. Confirmation Dialogs ---
+
+  /// Official M3 Connected Button Group for Dialog Action Footers (Cancel + Confirm/Delete)
+  Widget _buildDialogConnectedActionGroup({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required String cancelLabel,
+    required String confirmLabel,
+    required VoidCallback onCancel,
+    required VoidCallback onConfirm,
+    IconData? confirmIcon,
+    Color? confirmColor,
+    Color? confirmTextColor,
+  }) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3.5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _TableConnectedActionPill(
+            label: cancelLabel,
+            height: 33.0,
+            isFilled: false,
+            onTap: onCancel,
+          ),
+          const SizedBox(width: 4.0),
+          _TableConnectedActionPill(
+            icon: confirmIcon,
+            label: confirmLabel,
+            height: 33.0,
+            isFilled: true,
+            filledColor: confirmColor ?? colorScheme.primary,
+            filledTextColor: confirmTextColor ?? colorScheme.onPrimary,
+            onTap: onConfirm,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmMoveToTrash({
     required BuildContext context,
     required AppLocalizations loc,
@@ -2285,15 +2550,16 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           contentText: loc.tr('confirmMoveToTrashDesc'),
           iconData: Icons.delete_outline_rounded,
           actions: [
-            TashilButton.text(
-              label: loc.tr('cancel'),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-            TashilButton(
-              variant: TashilButtonVariant.filled,
-              icon: Icons.delete_rounded,
-              label: loc.tr('moveToTrashAction'),
-              onPressed: () {
+            _buildDialogConnectedActionGroup(
+              context: context,
+              colorScheme: colorScheme,
+              cancelLabel: loc.tr('cancel'),
+              confirmLabel: loc.tr('deleteAction'),
+              confirmIcon: Icons.delete_rounded,
+              confirmColor: colorScheme.error,
+              confirmTextColor: colorScheme.onError,
+              onCancel: () => Navigator.pop(ctx),
+              onConfirm: () {
                 Navigator.pop(ctx);
                 _service.softDeleteInvoice(inv.id);
                 TashilSnackBar.show(
@@ -2326,20 +2592,141 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           contentText: loc.tr('confirmDeletePermanentlyDesc'),
           iconData: Icons.warning_amber_rounded,
           actions: [
-            TashilButton.text(
-              label: loc.tr('cancel'),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-            TashilButton(
-              variant: TashilButtonVariant.filled,
-              icon: Icons.delete_forever_rounded,
-              label: loc.tr('deletePermanentlyAction'),
-              onPressed: () {
+            _buildDialogConnectedActionGroup(
+              context: context,
+              colorScheme: colorScheme,
+              cancelLabel: loc.tr('cancel'),
+              confirmLabel: loc.tr('deletePermanentlyAction'),
+              confirmIcon: Icons.delete_forever_rounded,
+              confirmColor: colorScheme.error,
+              confirmTextColor: colorScheme.onError,
+              onCancel: () => Navigator.pop(ctx),
+              onConfirm: () {
                 Navigator.pop(ctx);
                 _service.permanentlyDeleteInvoice(inv.id);
                 TashilSnackBar.showSuccess(
                   context: context,
                   message: loc.tr('invoicePermanentlyDeletedSuccess'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmSendWhatsAppReminder({
+    required BuildContext context,
+    required AppLocalizations loc,
+    required RentInvoiceModel inv,
+    required ColorScheme colorScheme,
+    required String currency,
+    required String lang,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return TashilAlertDialog(
+          title: loc.tr('confirmSendReminderTitle'),
+          iconData: Icons.send_to_mobile_rounded,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.tr('confirmSendReminderDesc'),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                      : colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+                    width: 1.0,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline_rounded, size: 16, color: colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            inv.tenant.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          inv.tenant.phone,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const TashilDivider.fullWidth(),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.payments_outlined, size: 16, color: colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              loc.tr('tableHeaderAmount'),
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.5,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            _buildDialogConnectedActionGroup(
+              context: context,
+              colorScheme: colorScheme,
+              cancelLabel: loc.tr('cancel'),
+              confirmLabel: loc.tr('sendReminderAction'),
+              confirmIcon: Icons.send_rounded,
+              confirmColor: colorScheme.primary,
+              confirmTextColor: colorScheme.onPrimary,
+              onCancel: () => Navigator.pop(ctx),
+              onConfirm: () {
+                Navigator.pop(ctx);
+                RentCollectionService().sendReminder(inv.id);
+                TashilSnackBar.showSuccess(
+                  context: context,
+                  message: loc.tr('reminderSentViaWhatsAppSuccess'),
                 );
               },
             ),
@@ -2383,6 +2770,207 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Official M3 Table Action Pill for connected button groups
+class _TableConnectedActionPill extends StatefulWidget {
+  final IconData? icon;
+  final String label;
+  final bool isFilled;
+  final Color? filledColor;
+  final Color? filledTextColor;
+  final VoidCallback onTap;
+  final double height;
+
+  const _TableConnectedActionPill({
+    this.icon,
+    required this.label,
+    required this.onTap,
+    this.isFilled = false,
+    this.filledColor,
+    this.filledTextColor,
+    this.height = 31.0,
+  });
+
+  @override
+  State<_TableConnectedActionPill> createState() => _TableConnectedActionPillState();
+}
+
+class _TableConnectedActionPillState extends State<_TableConnectedActionPill> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final baseFilledBg = widget.filledColor ?? colorScheme.primary;
+    final baseFilledFg = widget.filledTextColor ?? colorScheme.onPrimary;
+
+    final hoveredFilledBg = isDark
+        ? (Color.lerp(baseFilledBg, Colors.white, 0.12) ?? baseFilledBg)
+        : (Color.lerp(baseFilledBg, Colors.black, 0.10) ?? baseFilledBg);
+
+    final restingUnselectedBg =
+        colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.70 : 0.85);
+
+    final hoveredUnselectedBg = Color.alphaBlend(
+      (widget.filledColor ?? colorScheme.primary).withValues(alpha: isDark ? 0.22 : 0.14),
+      restingUnselectedBg,
+    );
+
+    final bg = widget.isFilled
+        ? (_isHovered ? hoveredFilledBg : baseFilledBg)
+        : (_isHovered ? hoveredUnselectedBg : restingUnselectedBg);
+
+    final fg = widget.isFilled ? baseFilledFg : colorScheme.onSurface;
+
+    final border = widget.isFilled
+        ? null
+        : Border.all(
+            color: _isHovered
+                ? (widget.filledColor ?? colorScheme.primary).withValues(alpha: isDark ? 0.50 : 0.40)
+                : colorScheme.outlineVariant.withValues(alpha: isDark ? 0.40 : 0.50),
+            width: 1.0,
+          );
+
+    final shadow = widget.isFilled
+        ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _isHovered ? 0.20 : 0.12),
+              blurRadius: _isHovered ? 4.0 : 2.5,
+              offset: Offset(0, _isHovered ? 2.0 : 1.0),
+            ),
+          ]
+        : null;
+
+    final radius = BorderRadius.circular(widget.height / 2);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: radius,
+          border: border,
+          boxShadow: shadow,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 11.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.icon != null) ...[
+                    Icon(widget.icon, size: 14, color: fg),
+                    const SizedBox(width: 5.0),
+                  ],
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: widget.isFilled ? FontWeight.bold : FontWeight.w600,
+                      color: fg,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Official M3 Table Action Icon Pill for connected button groups
+class _TableConnectedActionIconPill extends StatefulWidget {
+  final IconData icon;
+  final String tooltip;
+  final Color? foregroundColor;
+  final Color? hoverColor;
+  final VoidCallback onTap;
+  final double size;
+
+  const _TableConnectedActionIconPill({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.foregroundColor,
+    this.hoverColor,
+    this.size = 31.0,
+  });
+
+  @override
+  State<_TableConnectedActionIconPill> createState() => _TableConnectedActionIconPillState();
+}
+
+class _TableConnectedActionIconPillState extends State<_TableConnectedActionIconPill> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final fg = widget.foregroundColor ?? colorScheme.onSurface;
+    final hoverTint = widget.hoverColor ?? fg;
+
+    final bg = _isHovered
+        ? hoverTint.withValues(alpha: isDark ? 0.20 : 0.12)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.60 : 0.75);
+
+    final border = Border.all(
+      color: _isHovered
+          ? hoverTint.withValues(alpha: isDark ? 0.50 : 0.40)
+          : colorScheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.45),
+      width: 1.0,
+    );
+
+    final radius = BorderRadius.circular(widget.size / 2);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Tooltip(
+        message: widget.tooltip,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: border,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: radius,
+              onTap: widget.onTap,
+              child: Center(
+                child: Icon(widget.icon, size: 15, color: fg),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

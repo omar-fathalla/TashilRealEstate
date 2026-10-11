@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
+import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 
 class PropertyLifecycleService {
@@ -19,6 +21,12 @@ class PropertyLifecycleService {
   StreamSubscription<List<ManagedPropertyModel>>? _cloudSubscription;
   String? _activeOwnerId;
 
+  static const String _lastOwnerKey = 'tashil_last_authenticated_owner_id';
+  static const String _propsCachePrefix = 'tashil_cached_owner_props_v1_';
+
+  /// Reactive indicator signaling when properties are being fetched from Firestore
+  final ValueNotifier<bool> isHydratingNotifier = ValueNotifier<bool>(false);
+
   String get currentOwnerId {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -26,11 +34,15 @@ class PropertyLifecycleService {
         return user.uid;
       }
     } catch (_) {}
+    final cached = LocalStorageService().getString(_lastOwnerKey);
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
     return 'owner_default_portfolio';
   }
 
   PropertyLifecycleService._internal() {
-    _initSampleData();
+    _initLocalOrSampleData();
     propertiesNotifier.addListener(_sanitizePortfolio);
     _initCloudSync();
   }
@@ -38,10 +50,80 @@ class PropertyLifecycleService {
   final ValueNotifier<List<ManagedPropertyModel>> propertiesNotifier =
       ValueNotifier<List<ManagedPropertyModel>>([]);
 
+  void _initLocalOrSampleData() {
+    String? cachedOwnerId;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.uid.isNotEmpty) {
+        cachedOwnerId = user.uid;
+      }
+    } catch (_) {}
+
+    cachedOwnerId ??= LocalStorageService().getString(_lastOwnerKey);
+
+    if (cachedOwnerId != null && cachedOwnerId.isNotEmpty) {
+      _activeOwnerId = cachedOwnerId;
+      // 0ms instant local cache hydration
+      final cachedJson = LocalStorageService().getString('$_propsCachePrefix$cachedOwnerId');
+      if (cachedJson != null && cachedJson.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(cachedJson);
+          if (decoded is List) {
+            final list = decoded
+                .map((e) => ManagedPropertyModel.fromMap(Map<String, dynamic>.from(e as Map)))
+                .where((p) => !isMockPropertyId(p.id))
+                .toList();
+            propertiesNotifier.value = list;
+            isHydratingNotifier.value = false;
+            debugPrint('PropertyLifecycleService: Hydrated ${list.length} properties in 0ms from LocalStorage for [$cachedOwnerId]');
+            return;
+          }
+        } catch (e) {
+          debugPrint('PropertyLifecycleService cache load error: $e');
+        }
+      }
+      // Authenticated owner but no local cache yet: Start empty with hydration spinner, NEVER mock data
+      propertiesNotifier.value = [];
+      isHydratingNotifier.value = true;
+      return;
+    }
+
+    // Unauthenticated guest / demo mode: load sample data
+    _initSampleData();
+  }
+
+  void _persistPropertiesLocally(String ownerId, List<ManagedPropertyModel> props) {
+    try {
+      if (ownerId.isNotEmpty) {
+        LocalStorageService().setString(_lastOwnerKey, ownerId);
+        final cleanProps = props.where((p) => !isMockPropertyId(p.id)).toList();
+        final jsonList = cleanProps.map((p) => p.toMap()).toList();
+        LocalStorageService().setString('$_propsCachePrefix$ownerId', jsonEncode(jsonList));
+        debugPrint('PropertyLifecycleService: Persisted ${cleanProps.length} properties locally for [$ownerId]');
+      }
+    } catch (e) {
+      debugPrint('PropertyLifecycleService._persistPropertiesLocally error: $e');
+    }
+  }
+
+  /// Clears locally cached properties and resets active session
+  void clearLocalCache([String? ownerId]) {
+    try {
+      final id = ownerId ?? _activeOwnerId ?? LocalStorageService().getString(_lastOwnerKey);
+      if (id != null && id.isNotEmpty) {
+        LocalStorageService().remove('$_propsCachePrefix$id');
+      }
+      LocalStorageService().remove(_lastOwnerKey);
+      _activeOwnerId = null;
+      propertiesNotifier.value = [];
+    } catch (_) {}
+  }
+
   void _initCloudSync() {
     try {
       FirebaseAuth.instance.authStateChanges().listen((user) {
         if (user != null && user.uid.isNotEmpty) {
+          LocalStorageService().setString(_lastOwnerKey, user.uid);
           if (_activeOwnerId != user.uid) {
             _syncForOwner(user.uid);
           }
@@ -80,7 +162,14 @@ class PropertyLifecycleService {
       final realOnly = current.where((p) => !isMockPropertyId(p.id)).toList();
       if (realOnly.length != current.length) {
         propertiesNotifier.value = realOnly;
+        return;
       }
+    }
+
+    // Persist real properties automatically when updated
+    final owner = _activeOwnerId ?? LocalStorageService().getString(_lastOwnerKey);
+    if (owner != null && owner.isNotEmpty && current.every((p) => !isMockPropertyId(p.id))) {
+      _persistPropertiesLocally(owner, current);
     }
   }
 
@@ -103,9 +192,12 @@ class PropertyLifecycleService {
       final realProps = cloudProps.where((p) => !isMockPropertyId(p.id)).toList();
 
       propertiesNotifier.value = realProps;
+      _persistPropertiesLocally(ownerId, realProps);
+      isHydratingNotifier.value = false;
       debugPrint('Loaded ${realProps.length} real properties from Firestore for owner [$ownerId]');
     } catch (e) {
       debugPrint('Cloud hydration note: $e');
+      isHydratingNotifier.value = false;
     }
 
     try {
@@ -115,6 +207,8 @@ class PropertyLifecycleService {
           (props) {
             final realProps = props.where((p) => !isMockPropertyId(p.id)).toList();
             propertiesNotifier.value = realProps;
+            _persistPropertiesLocally(ownerId, realProps);
+            isHydratingNotifier.value = false;
           },
           onError: (err) {
             debugPrint('Cloud sync stream note (handled safely): $err');
@@ -829,6 +923,71 @@ class PropertyLifecycleService {
       }
       list[propIdx] = prop.copyWith(installments: installments);
       propertiesNotifier.value = list;
+    }
+  }
+
+  /// Soft delete an installment for a property (when an invoice is moved to trash)
+  Future<void> softDeleteInstallmentForProperty({
+    required String propertyId,
+    required String monthKey,
+  }) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final propIdx = list.indexWhere((p) => p.id == propertyId);
+    if (propIdx != -1) {
+      final prop = list[propIdx];
+      final now = DateTime.now();
+      final installments = List<MonthlyInstallment>.from(prop.installments);
+      final instIdx = installments.indexWhere((i) => i.monthKey == monthKey);
+      if (instIdx != -1) {
+        installments[instIdx] = installments[instIdx].copyWith(
+          isDeleted: true,
+          deletedAt: now,
+        );
+      }
+      final updated = prop.copyWith(installments: installments);
+      list[propIdx] = updated;
+      propertiesNotifier.value = list;
+
+      try {
+        await _firestoreService?.saveOwnerProperty(
+          ownerId: currentOwnerId,
+          property: updated,
+        );
+      } catch (e) {
+        debugPrint('Firestore softDeleteInstallment note: $e');
+      }
+    }
+  }
+
+  /// Restore an installment for a property (when an invoice is restored from trash)
+  Future<void> restoreInstallmentForProperty({
+    required String propertyId,
+    required String monthKey,
+  }) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final propIdx = list.indexWhere((p) => p.id == propertyId);
+    if (propIdx != -1) {
+      final prop = list[propIdx];
+      final installments = List<MonthlyInstallment>.from(prop.installments);
+      final instIdx = installments.indexWhere((i) => i.monthKey == monthKey);
+      if (instIdx != -1) {
+        installments[instIdx] = installments[instIdx].copyWith(
+          isDeleted: false,
+          deletedAt: null,
+        );
+      }
+      final updated = prop.copyWith(installments: installments);
+      list[propIdx] = updated;
+      propertiesNotifier.value = list;
+
+      try {
+        await _firestoreService?.saveOwnerProperty(
+          ownerId: currentOwnerId,
+          property: updated,
+        );
+      } catch (e) {
+        debugPrint('Firestore restoreInstallment note: $e');
+      }
     }
   }
 

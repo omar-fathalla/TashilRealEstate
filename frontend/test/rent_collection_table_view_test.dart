@@ -55,6 +55,7 @@ void main() {
       expect(find.text('القيمة الإجمالية'), findsOneWidget);
       expect(find.text('حالة السداد'), findsOneWidget);
       expect(find.text('التحويل للمالك'), findsOneWidget);
+      expect(find.text('السداد والتذكير'), findsOneWidget);
       expect(find.text('الإجراءات'), findsWidgets);
 
       // Verify view mode switcher buttons
@@ -138,6 +139,8 @@ void main() {
       expect(find.text('Cards View'), findsOneWidget);
       expect(find.text('Unit & Invoice No.'), findsOneWidget);
       expect(find.text('Payment Status'), findsOneWidget);
+      expect(find.text('Payment & Reminder'), findsOneWidget);
+      expect(find.text('Actions'), findsWidgets);
 
       // Test Hindi
       await tester.pumpWidget(buildTestApp(locale: const Locale('hi')));
@@ -146,6 +149,56 @@ void main() {
       expect(find.text('कार्ड दृश्य'), findsOneWidget);
       expect(find.text('इकाई और चालान संख्या'), findsOneWidget);
       expect(find.text('भुगतान स्थिति'), findsOneWidget);
+      expect(find.text('भुगतान और स्मरण'), findsOneWidget);
+      expect(find.text('कार्रवाई'), findsWidgets);
+    });
+
+    testWidgets('Header does not show Trash button by default', (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildTestApp(locale: const Locale('ar')));
+      await tester.pumpAndSettle();
+
+      // Trash button is not in header by default
+      expect(find.byIcon(Icons.auto_delete_outlined), findsNothing);
+      expect(find.text('إنشاء فاتورة'), findsOneWidget);
+    });
+
+    testWidgets('Tapping WhatsApp reminder opens confirmation dialog with Connected Button Group and sends on confirm', (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildTestApp(locale: const Locale('ar')));
+      await tester.pumpAndSettle();
+
+      // Find first 'تذكير' button in the table
+      final remindBtn = find.text('تذكير');
+      expect(remindBtn, findsWidgets);
+
+      await tester.ensureVisible(remindBtn.first);
+      await tester.tap(remindBtn.first);
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog should be shown
+      expect(find.text('تأكيد إرسال التذكير عبر واتساب'), findsOneWidget);
+      expect(find.text('هل ترغب في إرسال إشعار تذكير بالسداد للمستأجر عبر تطبيق واتساب؟'), findsOneWidget);
+
+      // Connected Button Group in dialog actions: 'إلغاء' and 'إرسال التذكير'
+      expect(find.text('إلغاء'), findsOneWidget);
+      final confirmSendBtn = find.text('إرسال التذكير');
+      expect(confirmSendBtn, findsOneWidget);
+
+      // Tap confirm
+      await tester.tap(confirmSendBtn);
+      await tester.pumpAndSettle();
+
+      // Dialog is dismissed and success snackbar appears
+      expect(find.text('تأكيد إرسال التذكير عبر واتساب'), findsNothing);
+      expect(find.text('تم إرسال التذكير الذكي بنجاح للمستأجر عبر واتساب والرسائل القصيرة'), findsOneWidget);
     });
   });
 }
+

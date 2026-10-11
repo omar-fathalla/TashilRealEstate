@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
@@ -12,11 +13,13 @@ void main() {
   setUp(() {
     CountryController.setCountry('EG');
     LocaleController.setLocale(const Locale('ar'));
+    PropertyLifecycleService().resetToSampleData();
     RentCollectionService().resetToDefaults();
   });
 
   tearDown(() {
     RentCollectionService().resetToDefaults();
+    PropertyLifecycleService().resetToSampleData();
   });
 
   group('RentInvoiceModel Trash & 7-Day Retention Tests', () {
@@ -233,7 +236,7 @@ void main() {
   });
 
   group('Rent Collection UI - Trash & Merged Column Tests', () {
-    Widget buildTestApp({Locale locale = const Locale('ar')}) {
+    Widget buildTestApp({Locale locale = const Locale('ar'), bool showTrashInHeader = true}) {
       LocaleController.setLocale(locale);
       return MaterialApp(
         locale: locale,
@@ -255,8 +258,8 @@ void main() {
             primary: const Color(0xFF0F172A),
           ),
         ),
-        home: const Scaffold(
-          body: RentCollectionView(),
+        home: Scaffold(
+          body: RentCollectionView(showTrashButtonInHeader: showTrashInHeader),
         ),
       );
     }
@@ -272,12 +275,12 @@ void main() {
       // Verify merged column header exists
       expect(find.text('الوحدة ورقم الفاتورة'), findsOneWidget);
 
-      // Verify both unit title and invoice Number are rendered
+      // Verify property type/location and invoice Number are rendered
       final service = RentCollectionService();
       final firstInv = service.getInvoicesForCountry('EG').first;
 
-      expect(find.text(firstInv.unitTitle), findsWidgets);
-      expect(find.text(firstInv.invoiceNumber), findsWidgets);
+      expect(find.textContaining(firstInv.district), findsWidgets);
+      expect(find.textContaining(firstInv.invoiceNumber), findsWidgets);
     });
 
     testWidgets('Header displays Trash button and toggles to Trash View', (tester) async {
@@ -376,6 +379,51 @@ void main() {
       expect(find.text('हटाए गए चालान'), findsWidgets);
       expect(find.text('कचरा खाली करें'), findsOneWidget);
       expect(find.byIcon(Icons.restore_rounded), findsOneWidget);
+    });
+
+    testWidgets('Connected button groups render in Actions column and soft-delete persists across sync', (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        LocaleController.setLocale(const Locale('ar'));
+      });
+
+      await tester.pumpWidget(buildTestApp(locale: const Locale('ar')));
+      await tester.pumpAndSettle();
+
+      // Check payment/reminder connected group buttons
+      expect(find.text('سداد'), findsWidgets);
+      expect(find.text('تذكير'), findsWidgets);
+
+      // Check action buttons in connected group
+      expect(find.byIcon(Icons.visibility_outlined), findsWidgets);
+      expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+
+      // Find first delete button and click it to open confirmation dialog
+      final deleteBtn = find.byTooltip('نقل إلى المحذوفات');
+      expect(deleteBtn, findsWidgets);
+      await tester.ensureVisible(deleteBtn.first);
+      await tester.tap(deleteBtn.first);
+      await tester.pumpAndSettle();
+
+      // Confirm dialog appears
+      expect(find.text('تأكيد نقل الفاتورة إلى المحذوفات'), findsOneWidget);
+
+      // Confirm deletion by tapping the action button in the dialog (Connected Button Group 'حذف')
+      await tester.tap(find.text('حذف'));
+      await tester.pumpAndSettle();
+
+      // Invoice is soft-deleted and trash counter is updated
+      expect(find.text('المحذوفات (1)'), findsOneWidget);
+
+      // Simulate hard refresh / syncFromProperties()
+      RentCollectionService().syncFromProperties();
+      await tester.pumpAndSettle();
+
+      // Invoice must STILL be in trash and NOT resurrected
+      expect(find.text('المحذوفات (1)'), findsOneWidget);
     });
   });
 }

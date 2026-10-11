@@ -1,27 +1,33 @@
 import 'package:flutter/material.dart';
 import '../../../core/design_system/buttons/tashil_buttons.dart';
+import '../../../core/design_system/chips/tashil_chips.dart';
+import '../../../core/design_system/loading/tashil_loading_indicator.dart';
 import '../../../core/design_system/motion/tashil_motion.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/country_controller.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/responsive_layout.dart';
+import '../../lease_builder/models/lease_contract_model.dart';
 import '../models/legal_advisor_model.dart';
 import '../services/ai_legal_advisor_service.dart';
 
 class AiLegalClauseAdvisorDialog extends StatefulWidget {
   final String? initialClauseText;
   final ValueChanged<String>? onClauseApplied;
+  final ValueChanged<LegalClause>? onLegalClauseApplied;
 
   const AiLegalClauseAdvisorDialog({
     super.key,
     this.initialClauseText,
     this.onClauseApplied,
+    this.onLegalClauseApplied,
   });
 
   static Future<void> show(
     BuildContext context, {
     String? initialClauseText,
     ValueChanged<String>? onClauseApplied,
+    ValueChanged<LegalClause>? onLegalClauseApplied,
   }) {
     return TashilTransitions.showM3Dialog(
       context: context,
@@ -29,6 +35,7 @@ class AiLegalClauseAdvisorDialog extends StatefulWidget {
       builder: (_) => AiLegalClauseAdvisorDialog(
         initialClauseText: initialClauseText,
         onClauseApplied: onClauseApplied,
+        onLegalClauseApplied: onLegalClauseApplied,
       ),
     );
   }
@@ -49,10 +56,11 @@ class _AiLegalClauseAdvisorDialogState
   void initState() {
     super.initState();
     _clauseController = TextEditingController(
-      text: widget.initialClauseText ??
-          'يلتزم المستأجر بسداد الإيجار في أول كل شهر مع زيادة 10% سنوياً وإخلاء الشقة فوراً عند انتهاء المدة دون حاجة لإنذار.',
+      text: widget.initialClauseText ?? '',
     );
-    _runAudit();
+    if (_clauseController.text.trim().isNotEmpty) {
+      _runAudit();
+    }
   }
 
   @override
@@ -81,6 +89,11 @@ class _AiLegalClauseAdvisorDialogState
     }
   }
 
+  void _applyQuickSuggestion(String suggestion) {
+    _clauseController.text = suggestion;
+    _runAudit();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -91,7 +104,7 @@ class _AiLegalClauseAdvisorDialogState
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
         width: 880,
         height: 720,
@@ -113,14 +126,19 @@ class _AiLegalClauseAdvisorDialogState
                     // Clause Input Box
                     Text(
                       loc.tr('legalClauseDraftInputLabel'),
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _clauseController,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        hintText: loc.tr('enterClauseHint'),
+                        hintText: loc.tr('aiLegalAdvisorPromptHint'),
+                        hintStyle: TextStyle(fontSize: 12.5, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                         border: OutlineInputBorder(
@@ -131,15 +149,64 @@ class _AiLegalClauseAdvisorDialogState
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
+
+                    // Quick Suggestion Chips
+                    Text(
+                      loc.tr('quickSuggestionsLabel'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        TashilAssistChip(
+                          label: loc.tr('clauseSuggestionSublease'),
+                          icon: Icons.hotel_rounded,
+                          onPressed: () => _applyQuickSuggestion(loc.tr('clauseSuggestionSublease')),
+                        ),
+                        TashilAssistChip(
+                          label: loc.tr('clauseSuggestionMaintenance'),
+                          icon: Icons.build_circle_outlined,
+                          onPressed: () => _applyQuickSuggestion(loc.tr('clauseSuggestionMaintenance')),
+                        ),
+                        TashilAssistChip(
+                          label: loc.tr('clauseSuggestionLateFee'),
+                          icon: Icons.receipt_long_rounded,
+                          onPressed: () => _applyQuickSuggestion(loc.tr('clauseSuggestionLateFee')),
+                        ),
+                        TashilAssistChip(
+                          label: loc.tr('clauseSuggestionPets'),
+                          icon: Icons.pets_rounded,
+                          onPressed: () => _applyQuickSuggestion(loc.tr('clauseSuggestionPets')),
+                        ),
+                        TashilAssistChip(
+                          label: loc.tr('clauseSuggestionDeposit'),
+                          icon: Icons.shield_outlined,
+                          onPressed: () => _applyQuickSuggestion(loc.tr('clauseSuggestionDeposit')),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Action Trigger
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TashilButton(
                           onPressed: _isAuditing ? null : _runAudit,
-                          icon: Icons.gavel_rounded,
+                          icon: Icons.auto_awesome_rounded,
                           label: loc.tr('auditClauseWithRagBtn'),
                         ),
                       ],
@@ -178,7 +245,10 @@ class _AiLegalClauseAdvisorDialogState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     loc.tr('legalAiAdvisorTitle'),
@@ -188,7 +258,6 @@ class _AiLegalClauseAdvisorDialogState
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
@@ -197,8 +266,35 @@ class _AiLegalClauseAdvisorDialogState
                       border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      'Gemini 2.0 Pro Legal RAG',
-                      style: TextStyle(color: theme.colorScheme.onSecondaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      'Gemini 2.5 Pro Legal',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSecondaryContainer,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.travel_explore_rounded, size: 12, color: theme.colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Google Search Grounded',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -211,9 +307,9 @@ class _AiLegalClauseAdvisorDialogState
             ],
           ),
         ),
-        TashilIconButton.standard(
+        // M3 Shaded Close Button standard
+        TashilIconButton.close(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icons.close_rounded,
         ),
       ],
     );
@@ -226,11 +322,15 @@ class _AiLegalClauseAdvisorDialogState
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)),
+            const TashilLoadingIndicator(size: 48),
             const SizedBox(height: 16),
             Text(
               loc.tr('geminiAuditingLegalReasoning'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ],
         ),
@@ -265,11 +365,18 @@ class _AiLegalClauseAdvisorDialogState
                   children: [
                     Text(
                       loc.tr('legalComplianceStatusPass'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: theme.colorScheme.onPrimaryContainer),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
                     ),
                     Text(
                       res.getLawReference(lang),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -282,7 +389,11 @@ class _AiLegalClauseAdvisorDialogState
                 ),
                 child: Text(
                   '${(res.legalValidityScore * 100).toStringAsFixed(1)}% ${loc.tr('validityScore')}',
-                  style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 10.5, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -336,9 +447,11 @@ class _AiLegalClauseAdvisorDialogState
                 children: [
                   Icon(Icons.auto_awesome, size: 16, color: theme.colorScheme.primary),
                   const SizedBox(width: 6),
-                  Text(
-                    loc.tr('recommendedLegalClauseHeading'),
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  Expanded(
+                    child: Text(
+                      '${loc.tr('recommendedLegalClauseHeading')} - ${res.getTitle(lang)}',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    ),
                   ),
                 ],
               ),
@@ -356,6 +469,9 @@ class _AiLegalClauseAdvisorDialogState
                       final suggested = res.getSuggestedClause(lang);
                       if (widget.onClauseApplied != null) {
                         widget.onClauseApplied!(suggested);
+                      }
+                      if (widget.onLegalClauseApplied != null) {
+                        widget.onLegalClauseApplied!(res.toLegalClause());
                       }
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(

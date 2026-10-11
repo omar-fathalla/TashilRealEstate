@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
+import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
 import 'views/owner_overview_view.dart';
 import 'views/owner_properties_view.dart';
 import 'views/owner_financials_view.dart';
@@ -26,6 +27,7 @@ import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_nav
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
+import 'package:tashil_real_estate/core/utils/image_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
@@ -266,8 +268,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 final trashBadge = totalTrashCount > 0 ? totalTrashCount.toString() : null;
 
                 // Maintenance count: 0 for real accounts
-                final hasRealProps = countryProps.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id));
-                final maintenanceBadge = hasRealProps ? null : '1';
+                final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+                final hasAuth = countryProps.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id)) ||
+                    (cachedOwnerId != null && cachedOwnerId.isNotEmpty);
+                final maintenanceBadge = hasAuth ? null : '1';
 
                 final currentUser = UserAvatarUtils.safeCurrentUser;
                 final profile = UserProfileService().profileNotifier.value;
@@ -689,6 +693,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false, // Prevents duplicate drag handle in M3 theme
       backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -706,203 +711,491 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             final email = profile.email.isNotEmpty
                 ? profile.email
                 : (currentUser?.email ?? 'user@tashil.com');
+            final isUAE = CountryController.isUAE || profile.phone.startsWith('+971');
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Drag Handle
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colorScheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. Header with Title, Edit Button, and Close Button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 620,
+                  maxHeight: MediaQuery.of(context).size.height * 0.88,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        loc.tr('ownerProfileMenu'),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
+                      // 1. Single Clean Drag Handle
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colorScheme.outlineVariant,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TashilIconButton.tonal(
-                            icon: Icons.edit_outlined,
-                            tooltip: loc.tr('editProfileTitle'),
-                            size: 38,
-                            iconSize: 18,
-                            onPressed: () {
-                              EditProfileDialog.show(context);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          TashilIconButton.close(
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // 3. Identity Card (Right-aligned in Arabic RTL)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: UserAvatarUtils.buildAvatar(
-                      context: context,
-                      photoUrl: profile.photoUrl,
-                      displayName: displayName,
-                      fallbackInitials: initials,
-                      radius: 24,
-                    ),
-                    title: Text(
-                      displayName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    subtitle: Text(roleSubtitle),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      // 2. Header with Title, Edit Button, and Close Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.verified_user_rounded, size: 14, color: colorScheme.primary),
-                          const SizedBox(width: 4),
                           Text(
-                            loc.tr('verifiedOwner'),
+                            loc.tr('ownerProfileMenu'),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer,
+                              color: colorScheme.onSurface,
                             ),
                           ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TashilIconButton.tonal(
+                                icon: Icons.edit_outlined,
+                                tooltip: loc.tr('editProfileTitle'),
+                                size: 38,
+                                iconSize: 18,
+                                onPressed: () {
+                                  EditProfileDialog.show(context);
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              TashilIconButton.close(
+                                onPressed: () => Navigator.pop(ctx),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
-                  // 4. Completeness Progress Indicator (M3 Enhancement)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: profile.completeness == 1.0
-                          ? colorScheme.primaryContainer.withValues(alpha: 0.25)
-                          : colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: profile.completeness == 1.0
-                            ? colorScheme.primary.withValues(alpha: 0.3)
-                            : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      // 3. Identity Card (Right-aligned in Arabic RTL)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: UserAvatarUtils.buildAvatar(
+                          context: context,
+                          photoUrl: profile.photoUrl,
+                          displayName: displayName,
+                          fallbackInitials: initials,
+                          radius: 24,
+                        ),
+                        title: Text(
+                          displayName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        subtitle: Text(roleSubtitle),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.verified_user_rounded, size: 14, color: colorScheme.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                loc.tr('verifiedOwner'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const SizedBox(height: 12),
+
+                      // 4. Completeness Progress Indicator (M3 Enhancement)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: profile.completeness == 1.0
+                              ? colorScheme.primaryContainer.withValues(alpha: 0.25)
+                              : colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: profile.completeness == 1.0
+                                ? colorScheme.primary.withValues(alpha: 0.3)
+                                : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              loc.tr('profileCompleteness'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      profile.completeness == 1.0
+                                          ? Icons.check_circle_rounded
+                                          : Icons.shield_outlined,
+                                      size: 15,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      loc.tr('profileCompleteness'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '${profile.completenessPercent}%',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: profile.completeness,
+                                minHeight: 6,
+                                backgroundColor: colorScheme.surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                               ),
                             ),
-                            Text(
-                              '${profile.completenessPercent}%',
+                            if (profile.completeness < 1.0) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                loc.tr('completeProfileHint'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Preferred Contact Method Tag
+                      Row(
+                        children: [
+                          Icon(
+                            profile.preferredContactMethod == 'whatsapp'
+                                ? Icons.chat_bubble_outline_rounded
+                                : (profile.preferredContactMethod == 'email'
+                                    ? Icons.mail_outline_rounded
+                                    : Icons.phone_outlined),
+                            size: 15,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${loc.tr('preferredContactMethodLabel')}: ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              profile.preferredContactMethod == 'whatsapp'
+                                  ? loc.tr('contactMethodWhatsApp')
+                                  : (profile.preferredContactMethod == 'email'
+                                      ? loc.tr('contactMethodEmail')
+                                      : loc.tr('contactMethodPhone')),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.primary,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: profile.completeness,
-                            minHeight: 6,
-                            backgroundColor: colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                          ),
-                        ),
-                        if (profile.completeness < 1.0) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            loc.tr('completeProfileHint'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 10),
-
-                  // 5. Contact Details Section
-                  // STRICT USER INSTRUCTION (Audio 1):
-                  // Left-aligned (ناحية الشمال) and formatted Left-to-Right (LTR)
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow(
-                            icon: Icons.email_outlined,
-                            text: email,
-                            colorScheme: colorScheme,
-                            onCopy: () => _copyToClipboard(context, email, loc.tr('emailCopied')),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildDetailRow(
-                            icon: Icons.phone_outlined,
-                            text: profile.hasPhone
-                                ? profile.phone
-                                : loc.tr('addPhoneNumberPrompt'),
-                            isPlaceholder: !profile.hasPhone,
-                            colorScheme: colorScheme,
-                            onTap: profile.hasPhone
-                                ? null
-                                : () => EditProfileDialog.show(context),
-                            onCopy: profile.hasPhone
-                                ? () => _copyToClipboard(context, profile.phone, loc.tr('phoneCopied'))
-                                : null,
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 10),
+
+                      // 5. Contact Details Section (Left-aligned & formatted LTR for numbers/emails)
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildDetailRow(
+                                icon: Icons.email_outlined,
+                                text: email,
+                                colorScheme: colorScheme,
+                                onCopy: () => _copyToClipboard(context, email, loc.tr('emailCopied')),
+                              ),
+                              const SizedBox(height: 6),
+                              _buildDetailRow(
+                                icon: Icons.phone_outlined,
+                                text: profile.hasPhone
+                                    ? profile.phone
+                                    : loc.tr('addPhoneNumberPrompt'),
+                                isPlaceholder: !profile.hasPhone,
+                                colorScheme: colorScheme,
+                                onTap: profile.hasPhone
+                                    ? null
+                                    : () => EditProfileDialog.show(context),
+                                onCopy: profile.hasPhone
+                                    ? () => _copyToClipboard(context, profile.phone, loc.tr('phoneCopied'))
+                                    : null,
+                                trailing: profile.isPhoneVerified && profile.hasPhone
+                                    ? Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.verified_rounded, size: 12, color: Colors.green),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              loc.tr('phoneVerifiedBadge'),
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+                      const TashilDivider.middleInset(),
+                      const SizedBox(height: 12),
+
+                      // 6. Official Identity & Address Section
+                      Row(
+                        children: [
+                          Icon(Icons.badge_rounded, size: 16, color: colorScheme.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            loc.tr('officialIdentitySectionTitle'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // National ID Row
+                      _buildDetailRow(
+                        icon: Icons.credit_card_rounded,
+                        text: profile.hasNationalId
+                            ? '${isUAE ? loc.tr('emiratesIdLabel') : loc.tr('nationalIdLabel')}: ${profile.nationalId}'
+                            : loc.tr('addNationalIdPrompt'),
+                        isPlaceholder: !profile.hasNationalId,
+                        colorScheme: colorScheme,
+                        onTap: profile.hasNationalId ? null : () => EditProfileDialog.show(context),
+                        onCopy: profile.hasNationalId
+                            ? () => _copyToClipboard(context, profile.nationalId, loc.tr('nationalIdCopied'))
+                            : null,
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Official Address Row
+                      _buildDetailRow(
+                        icon: Icons.location_on_outlined,
+                        text: profile.hasAddress
+                            ? '${loc.tr('officialAddressLabel')}: ${profile.address}'
+                            : loc.tr('addAddressPrompt'),
+                        isPlaceholder: !profile.hasAddress,
+                        colorScheme: colorScheme,
+                        onTap: profile.hasAddress ? null : () => EditProfileDialog.show(context),
+                        onCopy: profile.hasAddress
+                            ? () => _copyToClipboard(context, profile.address, loc.tr('addressCopied'))
+                            : null,
+                      ),
+
+                      // Scanned ID Card Preview Thumbnail with Zoom Modal
+                      if (profile.idCardPhotoUrl != null && profile.idCardPhotoUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: colorScheme.primary.withValues(alpha: 0.35),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _showFullCardPreview(
+                                  context,
+                                  profile.idCardPhotoUrl!,
+                                  isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: ImageUtils.cachedImage(
+                                        imageUrl: profile.idCardPhotoUrl!,
+                                        width: 80,
+                                        height: 52,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(2),
+                                      margin: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.65),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.zoom_in_rounded,
+                                        size: 13,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.verified_rounded, size: 14, color: colorScheme.primary),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.onSurface,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      loc.tr('tapToViewFullCard'),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 14),
+                      const TashilDivider.middleInset(),
+                      const SizedBox(height: 12),
+
+                      // 7. Landlord Bank Payout Details Section
+                      Row(
+                        children: [
+                          Icon(Icons.account_balance_rounded, size: 16, color: colorScheme.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            loc.tr('bankPayoutSectionTitle'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Bank Name Row
+                      _buildDetailRow(
+                        icon: Icons.account_balance_outlined,
+                        text: profile.bankName.isNotEmpty
+                            ? '${loc.tr('bankNameLabel')}: ${profile.bankName}'
+                            : loc.tr('addBankInfoPrompt'),
+                        isPlaceholder: profile.bankName.isEmpty,
+                        colorScheme: colorScheme,
+                        onTap: profile.bankName.isNotEmpty ? null : () => EditProfileDialog.show(context),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Account Number / IBAN Row
+                      if (profile.bankAccountNumber.isNotEmpty || profile.iban.isNotEmpty) ...[
+                        _buildDetailRow(
+                          icon: Icons.payments_outlined,
+                          text: '${loc.tr('bankAccountOrIbanLabel')}: ${profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban}',
+                          colorScheme: colorScheme,
+                          onCopy: () => _copyToClipboard(
+                            context,
+                            profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban,
+                            loc.tr('bankAccountCopied'),
+                          ),
+                        ),
+                      ] else ...[
+                        _buildDetailRow(
+                          icon: Icons.payments_outlined,
+                          text: loc.tr('bankAccountOrIbanLabel'),
+                          isPlaceholder: true,
+                          colorScheme: colorScheme,
+                          onTap: () => EditProfileDialog.show(context),
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+
+                      // 8. Quick Edit Button
+                      TashilButton.filled(
+                        label: loc.tr('editProfileTitle'),
+                        icon: Icons.edit_note_rounded,
+                        height: 46,
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          EditProfileDialog.show(context);
+                        },
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             );
           },
@@ -911,11 +1204,85 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
+  /// Open full-screen zoomed preview for the scanned ID card image
+  static void _showFullCardPreview(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 680),
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Theme.of(ctx).colorScheme.outlineVariant,
+              width: 1.0,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.badge_rounded, color: Theme.of(ctx).colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(ctx).colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TashilIconButton.close(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      tooltip: 'إغلاق',
+                    ),
+                  ],
+                ),
+              ),
+              const TashilDivider.fullWidth(),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 480),
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 64,
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static Widget _buildDetailRow({
     required IconData icon,
     required String text,
     required ColorScheme colorScheme,
     bool isPlaceholder = false,
+    Widget? trailing,
     VoidCallback? onTap,
     VoidCallback? onCopy,
   }) {
@@ -925,9 +1292,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         borderRadius: BorderRadius.circular(8),
         onTap: onTap ?? onCopy,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
@@ -935,15 +1301,21 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 color: isPlaceholder ? colorScheme.tertiary : colorScheme.primary,
               ),
               const SizedBox(width: 10),
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isPlaceholder ? colorScheme.primary : colorScheme.onSurface,
-                  fontWeight: isPlaceholder ? FontWeight.w600 : FontWeight.w500,
-                  decoration: isPlaceholder ? TextDecoration.underline : TextDecoration.none,
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isPlaceholder ? colorScheme.primary : colorScheme.onSurface,
+                    fontWeight: isPlaceholder ? FontWeight.w600 : FontWeight.w500,
+                    decoration: isPlaceholder ? TextDecoration.underline : TextDecoration.none,
+                  ),
                 ),
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing,
+              ],
               if (onCopy != null) ...[
                 const SizedBox(width: 8),
                 Icon(
@@ -1139,8 +1511,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 final trashBadge = totalTrashCount > 0 ? totalTrashCount.toString() : null;
 
                 // Maintenance count: 0 for real accounts
-                final hasRealProps = countryProps.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id));
-                final maintenanceBadge = hasRealProps ? null : '1';
+                final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+                final hasAuth = countryProps.any((p) => !PropertyLifecycleService.isMockPropertyId(p.id)) ||
+                    (cachedOwnerId != null && cachedOwnerId.isNotEmpty);
+                final maintenanceBadge = hasAuth ? null : '1';
 
                 final currentUser = UserAvatarUtils.safeCurrentUser;
                 final displayName = UserAvatarUtils.getDisplayName(currentUser, loc.tr('ownerProfile'));

@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
@@ -353,13 +354,27 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
         email: _tenantEmailCtrl.text.trim(),
         idNumber: _tenantIdCtrl.text.trim(),
       ),
-      owner: OwnerPayoutInfo(
-        name: isUAE ? 'عبدالله راشد النعيمي' : 'م. عمر طارق فتح الله',
-        bankName: isUAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)',
-        iban: isUAE ? 'AE400330005544332211009' : 'EG380003000012345678901234567',
-        accountNumber: '10994821',
-        walletOrVpa: isUAE ? 'abdullah@enbd' : 'omar.fathalla@instapay',
-      ),
+      owner: () {
+        final profile = UserProfileService().profileNotifier.value;
+        final defaultOwnerName = isUAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله';
+        final ownerName = profile.hasFullName ? profile.fullName : defaultOwnerName;
+        final defaultBank = isUAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)';
+        final ownerBank = profile.bankName.isNotEmpty ? profile.bankName : defaultBank;
+        final defaultIban = isUAE ? 'AE400330005544332211009' : 'EG380003000012345678901234567';
+        final ownerIban = profile.iban.isNotEmpty
+            ? profile.iban
+            : (profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : defaultIban);
+        final ownerAcc = profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : '10994821';
+        final ownerWallet = isUAE ? 'abdullah@enbd' : (profile.hasPhone ? profile.phone : 'owner@instapay');
+
+        return OwnerPayoutInfo(
+          name: ownerName,
+          bankName: ownerBank,
+          iban: ownerIban,
+          accountNumber: ownerAcc,
+          walletOrVpa: ownerWallet,
+        );
+      }(),
       baseAmount: baseAmount,
       dueDate: _dueDate,
       gracePeriodDays: _graceDays,
