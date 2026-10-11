@@ -759,44 +759,47 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                               (widget.currentDistrict!.contains(item.nameAr) ||
                                   widget.currentDistrict!.contains(item.nameEn));
 
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isCurrent
-                                    ? colorScheme.primary
-                                    : colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(10),
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isCurrent
+                                      ? colorScheme.primary
+                                      : colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  item.icon,
+                                  color: isCurrent ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                                  size: 20,
+                                ),
                               ),
-                              child: Icon(
-                                item.icon,
-                                color: isCurrent ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                                size: 20,
+                              title: Text(
+                                localizedName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                                  color: isCurrent ? colorScheme.primary : colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            title: Text(
-                              localizedName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-                                color: isCurrent ? colorScheme.primary : colorScheme.onSurface,
+                              subtitle: Text(
+                                '$localizedCity • ${item.latitude.toStringAsFixed(3)}, ${item.longitude.toStringAsFixed(3)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                            subtitle: Text(
-                              '$localizedCity • ${item.latitude.toStringAsFixed(3)}, ${item.longitude.toStringAsFixed(3)}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.onSurfaceVariant,
+                              trailing: TashilButton.text(
+                                height: 32,
+                                onPressed: () => Navigator.of(context).pop(localizedName),
+                                label: loc.tr('selectCountry').replaceAll('اختر الدولة', 'اختيار').replaceAll('Select Country', 'Select').replaceAll('देश चुनें', 'चुनें'),
                               ),
+                              onTap: () => Navigator.of(context).pop(localizedName),
                             ),
-                            trailing: TashilButton.text(
-                              height: 32,
-                              onPressed: () => Navigator.of(context).pop(localizedName),
-                              label: loc.tr('selectCountry').replaceAll('اختر الدولة', 'اختيار').replaceAll('Select Country', 'Select').replaceAll('देश चुनें', 'चुनें'),
-                            ),
-                            onTap: () => Navigator.of(context).pop(localizedName),
                           );
                         },
                       ),

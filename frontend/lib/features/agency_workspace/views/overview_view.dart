@@ -310,38 +310,41 @@ class OverviewView extends StatelessWidget {
               final item = activities[index];
               final iconColor = item['color'] as Color;
 
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+              return Material(
+                type: MaterialType.transparency,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(item['icon'] as IconData, color: iconColor, size: 20),
                   ),
-                  child: Icon(item['icon'] as IconData, color: iconColor, size: 20),
-                ),
-                title: Text(
-                  item['title'] as String,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 2.0),
-                  child: Text(
-                    item['time'] as String,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                  title: Text(
+                    item['title'] as String,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
                     ),
                   ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: Text(
+                      item['time'] as String,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: colorScheme.outline,
+                  ),
+                  onTap: () {},
                 ),
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 13,
-                  color: colorScheme.outline,
-                ),
-                onTap: () {},
               );
             },
           ),

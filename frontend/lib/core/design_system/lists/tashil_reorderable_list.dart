@@ -162,7 +162,7 @@ class TashilReorderableList<T> extends StatelessWidget {
       padding: padding ?? EdgeInsets.zero,
       header: header,
       footer: footer,
-      onReorder: onReorder,
+      onReorderItem: onReorder,
       // Official M3 Floating Card Proxy Decorator
       proxyDecorator: (child, index, animation) {
         return AnimatedBuilder(

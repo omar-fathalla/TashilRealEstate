@@ -194,33 +194,36 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                         ),
                         itemBuilder: (ctx, i) {
                           final suggestion = widget.suggestions[i];
-                          return ListTile(
-                            dense: true,
-                            horizontalTitleGap: 8,
-                            leading: Icon(
-                              Icons.history_rounded,
-                              size: 18,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            title: Text(
-                              suggestion,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w500,
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              dense: true,
+                              horizontalTitleGap: 8,
+                              leading: Icon(
+                                Icons.history_rounded,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
                               ),
+                              title: Text(
+                                suggestion,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.north_west_rounded,
+                                size: 16,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              ),
+                              onTap: () {
+                                widget.controller.text = suggestion;
+                                widget.onSelectSuggestion?.call(suggestion);
+                                widget.onSubmitted?.call(suggestion);
+                                _focusNode.unfocus();
+                                _hideSuggestionsOverlay();
+                              },
                             ),
-                            trailing: Icon(
-                              Icons.north_west_rounded,
-                              size: 16,
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                            ),
-                            onTap: () {
-                              widget.controller.text = suggestion;
-                              widget.onSelectSuggestion?.call(suggestion);
-                              widget.onSubmitted?.call(suggestion);
-                              _focusNode.unfocus();
-                              _hideSuggestionsOverlay();
-                            },
                           );
                         },
                       ),
