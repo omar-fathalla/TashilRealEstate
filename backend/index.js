@@ -53,6 +53,96 @@ exports.processRentPayment = onCall(async (request) => {
   }
 });
 
+exports.sendRentalReminder = onCall(async (request) => {
+  const data = request.data || {};
+  const auth = request.auth;
+  const tenantId = data.tenantId || (auth ? auth.uid : "tenant_guest");
+  const propertyTitle = data.propertyTitle || "وحدة سكنية";
+  const amount = data.amount || 0;
+  const dueDate = data.dueDate || new Date().toISOString();
+  const countryCode = data.countryCode || "EG";
+  const currency = countryCode === "AE" ? "AED" : "EGP";
+
+  const db = admin.firestore();
+  const notifRef = db.collection("Notifications").doc();
+
+  const notificationPayload = {
+    id: notifRef.id,
+    recipientId: tenantId,
+    type: "rental_due_reminder",
+    title: {
+      ar: "تذكير استحقاق الإيجار الشهري",
+      en: "Monthly Rent Payment Reminder",
+      hi: "मासिक किराया भुगतान अनुस्मारक",
+    },
+    body: {
+      ar: `نحيطكم علماً باستحقاق دفعة الإيجار (${amount} ${currency}) لعقار: ${propertyTitle}`,
+      en: `Friendly reminder: Rent payment (${amount} ${currency}) is due for: ${propertyTitle}`,
+      hi: `अनुस्मारक: ${propertyTitle} के लिए किराया भुगतान (${amount} ${currency}) देय है`,
+    },
+    dueDate: dueDate,
+    amount: amount,
+    currency: currency,
+    status: "delivered",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await notifRef.set(notificationPayload);
+    // Also mirror to user notifications subcollection
+    if (tenantId) {
+      await db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id).set(notificationPayload);
+    }
+    logger.info(`Rental reminder notification created: ${notifRef.id}`);
+    return { success: true, messageId: notifRef.id, payload: notificationPayload };
+  } catch (error) {
+    logger.error("Error creating rental reminder", error);
+    return { success: false, error: error.message };
+  }
+});
+
+exports.generateRentalInvoiceReceipt = onCall(async (request) => {
+  const data = request.data || {};
+  const leaseId = data.leaseId || "lease_demo";
+  const tenantName = data.tenantName || "عميل تسهيل";
+  const amount = Number(data.amount) || 10000;
+  const currencyCode = data.currencyCode || "EGP";
+
+  const platformFee = amount * 0.025; // 2.5% platform fee
+  const agencyFee = amount * 0.08;   // 8% agency fee
+  const vatRate = currencyCode === "AED" ? 0.05 : 0.14;
+  const vatAmount = (platformFee + agencyFee) * vatRate;
+  const totalPaid = amount + vatAmount;
+
+  const invoiceNumber = `TASHIL-INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+  const db = admin.firestore();
+  const invoiceRef = db.collection("Invoices").doc(invoiceNumber);
+
+  const invoiceData = {
+    invoiceNumber: invoiceNumber,
+    leaseId: leaseId,
+    tenantName: tenantName,
+    amount: amount,
+    platformFee: platformFee,
+    agencyFee: agencyFee,
+    vatAmount: vatAmount,
+    totalPaid: totalPaid,
+    currencyCode: currencyCode,
+    status: "Paid_Verified",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await invoiceRef.set(invoiceData);
+    logger.info(`Generated digital rental invoice: ${invoiceNumber}`);
+    return { success: true, invoiceNumber: invoiceNumber, invoice: invoiceData };
+  } catch (error) {
+    logger.error("Error generating rental invoice", error);
+    return { success: false, error: error.message };
+  }
+});
+
+
 exports.seedDatabase = onRequest(async (req, res) => {
   const users = [
     { email: "agency@test.com", password: "password123", role: "AgencyAdmin", name: "Test Agency" },

@@ -8,6 +8,8 @@ import '../../../core/localization/country_controller.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../lease_builder/models/lease_contract_model.dart';
+import '../../ai_engine_hub/models/ai_model_definition.dart';
+import '../../ai_engine_hub/services/ai_engine_config_controller.dart';
 import '../models/legal_advisor_model.dart';
 import '../services/ai_legal_advisor_service.dart';
 
@@ -265,12 +267,15 @@ class _AiLegalClauseAdvisorDialogState
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.3)),
                     ),
-                    child: Text(
-                      'Gemini 2.5 Pro Legal',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSecondaryContainer,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
+                    child: ListenableBuilder(
+                      listenable: AiEngineConfigController(),
+                      builder: (context, _) => Text(
+                        AiEngineConfigController().getActiveModel(AiServiceType.legalAdvisor).name,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSecondaryContainer,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
+import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 
 class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSubPage;
@@ -131,6 +132,43 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                   onTap: () {
                     Navigator.pop(modalContext);
                     AppSettingsDialog.show(context);
+                  },
+                ),
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.cloud_done_rounded,
+                      size: 20,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  title: Text(
+                    loc.tr('firebaseHubTitle'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  subtitle: Text(
+                    loc.tr('firebaseHubSubtitle'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+                  onTap: () {
+                    Navigator.pop(modalContext);
+                    FirebaseEnterpriseHubDialog.show(context);
                   },
                 ),
                 const TashilDivider.fullWidth(),

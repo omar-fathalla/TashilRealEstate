@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/core/design_system/loading/m3_loading_showcas
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 
 /// Minimalist, Icon-First Material Design 3 Settings Dialog for Tashil Real Estate.
 /// Integrates Country, Language, Dark Mode, Color Themes, and Font Themes with zero clutter.
@@ -684,6 +685,15 @@ class AppSettingsDialog extends StatelessWidget {
                     icon: Icons.refresh_rounded,
                     height: 36,
                     onPressed: () => M3LoadingShowcaseDialog.show(context),
+                  ),
+                  TashilButton.filled(
+                    label: loc.tr('firebaseHubButton'),
+                    icon: Icons.cloud_done_rounded,
+                    height: 36,
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      FirebaseEnterpriseHubDialog.show(context);
+                    },
                   ),
                 ],
               ),

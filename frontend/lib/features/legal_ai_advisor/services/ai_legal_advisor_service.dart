@@ -21,7 +21,7 @@ class AiLegalAdvisorService {
   String _buildEndpoint(String model) =>
       'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_apiKey';
 
-  /// Audit a custom lease clause draft using Gemini 2.5 Pro Legal Reasoning & Google Search Grounding
+  /// Audit a custom lease clause draft using Gemini 3.8 Flash Legal Reasoning & Google Search Grounding
   Future<LegalClauseAuditResult> auditAndRefineClause({
     required String clauseDraft,
     required String countryCode,

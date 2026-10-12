@@ -66,6 +66,8 @@ void main() {
       // Reset to defaults
       controller.resetToDefaults();
       expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-3.8-flash'));
+      expect(controller.getModelName(AiServiceType.legalAdvisor), equals('gemini-3.8-flash'));
+      expect(controller.getActiveModel(AiServiceType.legalAdvisor).name, equals('Gemini 3.8 Flash Legal'));
     });
 
     testWidgets('AiEngineHubView renders Hero KPI metrics and 6 AI service cards', (tester) async {

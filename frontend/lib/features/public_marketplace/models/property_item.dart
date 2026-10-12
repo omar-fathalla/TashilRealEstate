@@ -77,9 +77,9 @@ class PropertyItem {
       bathrooms: 2,
       areaSqM: 185,
       imageUrls: [
-        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80',
+        'assets/images/properties/prop_eg_1_1.jpg',
+        'assets/images/properties/prop_eg_1_2.jpg',
+        'assets/images/properties/prop_eg_1_3.jpg',
       ],
       amenitiesMap: {
         'ar': ['مفروش بالكامل', 'تكييف مركزي', 'مصعد', 'موقف خاص', 'أمن وحراسة 24/7', 'شرفة واسعة'],
@@ -122,9 +122,9 @@ class PropertyItem {
       bathrooms: 4,
       areaSqM: 420,
       imageUrls: [
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+        'assets/images/properties/prop_eg_2_1.jpg',
+        'assets/images/properties/prop_eg_2_2.jpg',
+        'assets/images/properties/prop_eg_2_3.jpg',
       ],
       amenitiesMap: {
         'ar': ['حمام سباحة خاص', 'حديقة خاصة', 'غرفة خادمة', 'تكييف مركزي', 'كاميرات مراقبة', 'موقف لسيارتين'],
@@ -167,8 +167,9 @@ class PropertyItem {
       bathrooms: 2,
       areaSqM: 115,
       imageUrls: [
-        'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
+        'assets/images/properties/prop_eg_3_1.jpg',
+        'assets/images/properties/prop_eg_3_2.jpg',
+        'assets/images/properties/prop_eg_3_3.jpg',
       ],
       amenitiesMap: {
         'ar': ['إطلالة مباشرة على البحر', 'شاطئ خاص', 'مفروش بالكامل', 'ألعاب مائية', 'مطاعم وكافيهات'],
@@ -211,8 +212,9 @@ class PropertyItem {
       bathrooms: 3,
       areaSqM: 310,
       imageUrls: [
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+        'assets/images/properties/prop_eg_4_1.jpg',
+        'assets/images/properties/prop_eg_4_2.jpg',
+        'assets/images/properties/prop_eg_4_3.jpg',
       ],
       amenitiesMap: {
         'ar': ['رووف خاص', 'مطبخ مجهز', 'أرضيات باركيه', 'أمن 24 ساعة', 'قريب من المدارس الدولية'],

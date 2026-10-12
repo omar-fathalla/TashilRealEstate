@@ -25,6 +25,7 @@ import 'package:tashil_real_estate/features/rent_collection/views/rent_collectio
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_view.dart';
+import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   final int initialIndex;
@@ -2692,6 +2693,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         'desc': '80dp compact rail with 260dp smooth cubic animated drawer expansion',
         'icon': Icons.view_sidebar_rounded,
         'action': () => M3RailShowcaseDialog.show(context),
+      },
+      {
+        'title': 'Firebase Enterprise Hub',
+        'desc': 'App Check, Cloud Messaging, Remote Config, Performance, and Invoicing Live Hub',
+        'icon': Icons.cloud_done_rounded,
+        'action': () => FirebaseEnterpriseHubDialog.show(context),
       },
     ];
 

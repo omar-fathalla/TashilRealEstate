@@ -9,6 +9,11 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/font_theme_controller.dart';
 import 'package:tashil_real_estate/firebase_options.dart';
+import 'package:tashil_real_estate/core/services/app_check_service.dart';
+import 'package:tashil_real_estate/core/services/remote_config_service.dart';
+import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
+import 'package:tashil_real_estate/core/services/performance_monitoring_service.dart';
+import 'package:tashil_real_estate/core/services/crash_reporting_service.dart';
 
 /// Global M3 ScrollBehavior for Tashil Real Estate.
 /// Enables smooth dragging with mouse, touch, and stylus across all platforms and web,
@@ -39,6 +44,7 @@ void main() async {
       // Benign Flutter Web engine trackpad event discrepancy; ignore and suppress console noise.
       return;
     }
+    CrashReportingService().recordFlutterError(details);
     if (originalOnError != null) {
       originalOnError(details);
     } else {
@@ -50,14 +56,24 @@ void main() async {
     if (error.toString().contains('PointerDeviceKind.trackpad')) {
       return true; // handled
     }
+    CrashReportingService().recordError(error, stack, fatal: true);
     return false;
   };
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize Enterprise Firebase Services
+  CrashReportingService().initialize();
+  await AppCheckService().initialize();
+  await RemoteConfigService().initialize();
+  await FcmNotificationService().initialize();
+  await PerformanceMonitoringService().initialize();
+
   runApp(const TashilRealEstateApp());
 }
+
 
 class TashilRealEstateApp extends StatelessWidget {
   const TashilRealEstateApp({super.key});
