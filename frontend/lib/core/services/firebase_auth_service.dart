@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'cloud_functions_service.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuthService _instance = FirebaseAuthService._internal();
@@ -28,23 +29,12 @@ class FirebaseAuthService {
     }
   }
 
-  /// Sign In with Email and Password (with smart auto-registration fallback)
+  /// Sign In with Email and Password
   Future<UserCredential?> signInWithEmailAndPassword(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(email: email, password: password);
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException during signIn: ${e.code} - ${e.message}');
-      if (e.code == 'user-not-found' || 
-          e.code == 'invalid-credential' || 
-          e.code == 'channel-error' || 
-          e.code == 'INVALID_LOGIN_CREDENTIALS') {
-        try {
-          return await _auth.createUserWithEmailAndPassword(email: email, password: password);
-        } on FirebaseAuthException catch (createErr) {
-          debugPrint('FirebaseAuthException during createUser fallback: ${createErr.code} - ${createErr.message}');
-          rethrow;
-        }
-      }
       rethrow;
     } catch (e) {
       debugPrint('General error in signInWithEmailAndPassword: $e');
@@ -79,13 +69,10 @@ class FirebaseAuthService {
         return null;
       }
       debugPrint('FirebaseAuthException in Google Sign-In: ${e.code} - ${e.message}');
-      final mockEmail = 'google.user.${DateTime.now().millisecondsSinceEpoch % 1000}@tashil-realestate.com';
-      return await signInWithEmailAndPassword(mockEmail, 'GoogleAuthPass2026!');
+      rethrow;
     } catch (e) {
-      debugPrint('Google Sign-In fallback simulation triggered: $e');
-      // If popup is blocked in sandbox, sign in with mock Google credential
-      final mockEmail = 'google.user.${DateTime.now().millisecondsSinceEpoch % 1000}@tashil-realestate.com';
-      return await signInWithEmailAndPassword(mockEmail, 'GoogleAuthPass2026!');
+      debugPrint('Google Sign-In error: $e');
+      rethrow;
     }
   }
 
@@ -106,12 +93,10 @@ class FirebaseAuthService {
         return null;
       }
       debugPrint('FirebaseAuthException in Apple Sign-In: ${e.code} - ${e.message}');
-      final mockEmail = 'apple.user.${DateTime.now().millisecondsSinceEpoch % 1000}@privaterelay.appleid.com';
-      return await signInWithEmailAndPassword(mockEmail, 'AppleAuthPass2026!');
+      rethrow;
     } catch (e) {
-      debugPrint('Apple Sign-In fallback simulation triggered: $e');
-      final mockEmail = 'apple.user.${DateTime.now().millisecondsSinceEpoch % 1000}@privaterelay.appleid.com';
-      return await signInWithEmailAndPassword(mockEmail, 'AppleAuthPass2026!');
+      debugPrint('Apple Sign-In error: $e');
+      rethrow;
     }
   }
 
@@ -293,17 +278,105 @@ class FirebaseAuthService {
       final creds = await _auth.signInWithCredential(credential);
       return creds.user;
     } catch (e) {
-      debugPrint('verifyOtpAndSignIn fallback: $e');
-      final verified = await verifyPhoneOtp(
-        fullPhoneNumber: verificationId,
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-      return verified ? _auth.currentUser : null;
+      debugPrint('verifyOtpAndSignIn error: $e');
+      if (!_isFirebaseReady || verificationId.startsWith('TEST-VERIF-')) {
+        final verified = await verifyPhoneOtp(
+          fullPhoneNumber: verificationId,
+          verificationId: verificationId,
+          smsCode: smsCode,
+        );
+        return verified ? _auth.currentUser : null;
+      }
+      rethrow;
     }
   }
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  /// Sends a real password reset link to the given [email] via Firebase Auth & M3 Cloud Function
+  Future<void> sendPasswordResetEmail(String email) async {
+    final cleanEmail = email.trim();
+    if (!_isFirebaseReady) {
+      debugPrint('ℹ️ [FirebaseAuthService] Mock password reset email dispatched for $cleanEmail');
+      return;
+    }
+    // 1. Dispatch custom M3 branded email template with Action Button via Cloud Function
+    try {
+      await CloudFunctionsService().sendCustomPasswordResetEmail(
+        email: cleanEmail,
+        continueUrl: 'https://tashilaqar.com/admin/login?reset=success',
+      );
+    } catch (e) {
+      debugPrint('ℹ️ Custom email cloud function notice: $e');
+    }
+    // 2. Also execute native Firebase Auth reset action with ActionCodeSettings
+    try {
+      await _auth.sendPasswordResetEmail(
+        email: cleanEmail,
+        actionCodeSettings: ActionCodeSettings(
+          url: 'https://tashilaqar.com/admin/login?reset=success',
+          handleCodeInApp: true,
+        ),
+      );
+    } catch (_) {
+      await _auth.sendPasswordResetEmail(email: cleanEmail);
+    }
+    debugPrint('✅ [FirebaseAuthService] Password reset email sent to $cleanEmail');
+  }
+
+  /// Sends an email verification link to the currently logged in user via M3 Cloud Function
+  Future<void> sendEmailVerification({String? customEmail}) async {
+    if (!_isFirebaseReady) {
+      debugPrint('ℹ️ [FirebaseAuthService] Mock email verification sent (Firebase not initialized)');
+      return;
+    }
+    final user = currentUser;
+    final targetEmail = (customEmail ?? user?.email)?.trim();
+    if (targetEmail != null && targetEmail.isNotEmpty) {
+      // 1. Dispatch custom M3 branded email template with Action Button via Cloud Function
+      try {
+        await CloudFunctionsService().sendCustomVerificationEmail(
+          email: targetEmail,
+          continueUrl: 'https://tashilaqar.com/auth/action?mode=verifyEmail',
+        );
+      } catch (e) {
+        debugPrint('ℹ️ Custom verification email cloud function notice: $e');
+      }
+    }
+
+    if (user != null) {
+      try {
+        final actionCodeSettings = ActionCodeSettings(
+          url: 'https://tashilaqar.com/auth/action?mode=verifyEmail',
+          handleCodeInApp: true,
+        );
+        await user.sendEmailVerification(actionCodeSettings);
+      } catch (_) {
+        await user.sendEmailVerification();
+      }
+      debugPrint('✅ [FirebaseAuthService] Verification email sent to ${user.email}');
+    }
+  }
+
+  /// Reloads current user from Firebase server to refresh emailVerified status
+  Future<User?> reloadCurrentUser() async {
+    if (!_isFirebaseReady) {
+      return null;
+    }
+    final user = currentUser;
+    if (user != null) {
+      await user.reload();
+      return currentUser;
+    }
+    return user;
+  }
+
+  /// Checks if the current user has verified their email address
+  bool get isCurrentUserEmailVerified {
+    final user = currentUser;
+    if (user == null) return false;
+    return user.emailVerified;
   }
 }

@@ -79,7 +79,7 @@ void main() {
       expect(find.text('Explore Units'), findsNothing);
     });
 
-    testWidgets('Renders settings icon in mobile mode and mobile menu has no exploreUnits', (tester) async {
+    testWidgets('Renders clean mobile header with brand and circular login button only', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -87,19 +87,13 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const SizedBox()));
       await tester.pumpAndSettle();
 
-      // On mobile, the settings button and menu button are both available
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      // On mobile, brand English text and apartment icon are on the left
+      expect(find.text('Tashil Aqar'), findsOneWidget);
+      expect(find.byIcon(Icons.apartment_rounded), findsOneWidget);
 
-      // Open mobile menu
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-
-      // Ensure explore units is NOT in mobile menu
-      expect(find.text('استكشف الوحدات'), findsNothing);
-
-      // Ensure Add Property is in mobile menu
-      expect(find.byIcon(Icons.rocket_launch_rounded), findsOneWidget);
+      // On mobile, the circular login button is on the right, and old menu button is removed
+      expect(find.byIcon(Icons.lock_person_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.menu_rounded), findsNothing);
     });
 
     testWidgets('Header icon buttons have descriptive tooltips', (tester) async {

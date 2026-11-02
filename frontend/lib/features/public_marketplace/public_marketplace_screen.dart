@@ -19,6 +19,8 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/search/tashil_search.dart';
 import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import '../../core/design_system/navigation_bar/tashil_navigation_bar.dart';
+import '../../core/widgets/app_settings_dialog.dart';
 
 class PublicMarketplaceScreen extends StatefulWidget {
   const PublicMarketplaceScreen({super.key});
@@ -158,6 +160,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
             return Scaffold(
               backgroundColor: theme.scaffoldBackgroundColor,
               appBar: const PublicHeaderNavbar(isSubPage: false, currentRoute: '/'),
+              bottomNavigationBar: isMobile ? _buildMobileBottomBar(context, loc, colorScheme) : null,
               body: SingleChildScrollView(
                 child: Column(
                   children: [
@@ -211,6 +214,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
                 // Footer
                 _buildFooter(context, loc),
+                if (isMobile) const SizedBox(height: 80),
               ],
             ),
           ),
@@ -218,6 +222,61 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildMobileBottomBar(
+    BuildContext context,
+    AppLocalizations loc,
+    ColorScheme colorScheme,
+  ) {
+    final isUAE = CountryController.isUAE;
+
+    return TashilNavigationBar(
+      destinations: [
+        // 1. Upload Property
+        TashilNavigationDestination(
+          icon: Icons.add_home_work_outlined,
+          selectedIcon: Icons.add_home_work_rounded,
+          label: loc.tr('navUploadProperty'),
+          isSelected: false,
+          tooltip: loc.tr('fastPropertyOnboardingTitle'),
+          onTap: () => context.go('/fast-onboarding'),
+        ),
+
+        // 2. AI Smart Valuation
+        TashilNavigationDestination(
+          icon: Icons.auto_awesome_outlined,
+          selectedIcon: Icons.auto_awesome_rounded,
+          label: loc.tr('navValuation'),
+          badgeLabel: loc.tr('navBadgeAi'),
+          badgeColor: colorScheme.primary,
+          isSelected: false,
+          tooltip: loc.tr('aiValuationTitle'),
+          onTap: () => SmartValuationDialog.show(context),
+        ),
+
+        // 3. Market Index (Aqarmap / DXB Index)
+        TashilNavigationDestination(
+          icon: Icons.analytics_outlined,
+          selectedIcon: Icons.analytics_rounded,
+          label: isUAE ? loc.tr('navMarketIndexAe') : loc.tr('navMarketIndex'),
+          hasBadgeDot: true,
+          isSelected: false,
+          tooltip: isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
+          onTap: () => context.go('/market-index'),
+        ),
+
+        // 4. Settings
+        TashilNavigationDestination(
+          icon: Icons.tune_outlined,
+          selectedIcon: Icons.tune_rounded,
+          label: loc.tr('navSettings'),
+          isSelected: false,
+          tooltip: loc.tr('settings'),
+          onTap: () => AppSettingsDialog.show(context),
+        ),
+      ],
     );
   }
 

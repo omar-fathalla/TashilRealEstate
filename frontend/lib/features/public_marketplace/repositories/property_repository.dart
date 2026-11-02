@@ -74,6 +74,17 @@ class PropertyRepository {
     addProperty(property);
   }
 
+  /// Removes a property from the marketplace (e.g. when rented, unpublished, or deleted)
+  void removeProperty(String id) {
+    bool removed = false;
+    for (final list in _countryCache.values) {
+      final initialLen = list.length;
+      list.removeWhere((p) => p.id == id);
+      if (list.length != initialLen) removed = true;
+    }
+    if (removed) updatesNotifier.value++;
+  }
+
   /// Paginated and filtered property query
   PaginatedResult queryProperties({
     required String countryCode,

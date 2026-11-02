@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -34,14 +35,17 @@ class TashilAppScrollBehavior extends MaterialScrollBehavior {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Suppress known upstream Flutter Web engine assertion for trackpad wheel events:
-  // "Assertion failed: ... !identical(kind, PointerDeviceKind.trackpad)"
+  // Suppress known upstream Flutter Web engine assertions:
+  // 1. Trackpad wheel events: "Assertion failed: ... !identical(kind, PointerDeviceKind.trackpad)"
+  // 2. Hot-restart frame callback: "!isDisposed: Trying to render a disposed EngineFlutterView."
   final originalOnError = FlutterError.onError;
   FlutterError.onError = (FlutterErrorDetails details) {
     final exceptionStr = details.exception.toString();
     if (exceptionStr.contains('PointerDeviceKind.trackpad') ||
-        (details.library == 'gestures library' && exceptionStr.contains('identical(kind, PointerDeviceKind.trackpad)'))) {
-      // Benign Flutter Web engine trackpad event discrepancy; ignore and suppress console noise.
+        (details.library == 'gestures library' && exceptionStr.contains('identical(kind, PointerDeviceKind.trackpad)')) ||
+        exceptionStr.contains('EngineFlutterView') ||
+        exceptionStr.contains('disposed EngineFlutterView')) {
+      // Benign Flutter Web engine hot-restart / trackpad discrepancy; ignore and suppress console noise.
       return;
     }
     CrashReportingService().recordFlutterError(details);
@@ -53,8 +57,11 @@ void main() async {
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
-    if (error.toString().contains('PointerDeviceKind.trackpad')) {
-      return true; // handled
+    final errStr = error.toString();
+    if (errStr.contains('PointerDeviceKind.trackpad') ||
+        errStr.contains('EngineFlutterView') ||
+        errStr.contains('disposed EngineFlutterView')) {
+      return true; // handled benign Flutter Web engine artifact
     }
     CrashReportingService().recordError(error, stack, fatal: true);
     return false;
@@ -64,19 +71,20 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Enterprise Firebase Services
+  // Initialize Enterprise Firebase Services (non-blocking so UI mounts instantly)
   CrashReportingService().initialize();
-  await AppCheckService().initialize();
-  await RemoteConfigService().initialize();
-  await FcmNotificationService().initialize();
-  await PerformanceMonitoringService().initialize();
+  unawaited(AppCheckService().initialize());
+  unawaited(RemoteConfigService().initialize());
+  unawaited(FcmNotificationService().initialize());
+  unawaited(PerformanceMonitoringService().initialize());
 
   runApp(const TashilRealEstateApp());
 }
 
 
 class TashilRealEstateApp extends StatelessWidget {
-  const TashilRealEstateApp({super.key});
+  final RouterConfig<Object>? routerConfig;
+  const TashilRealEstateApp({super.key, this.routerConfig});
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +117,7 @@ class TashilRealEstateApp extends StatelessWidget {
                       ),
                       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
                       scrollBehavior: const TashilAppScrollBehavior(),
-                      routerConfig: appRouter,
+                      routerConfig: routerConfig ?? appRouter,
                       locale: currentLocale,
                       supportedLocales: const [
                         Locale('ar'),

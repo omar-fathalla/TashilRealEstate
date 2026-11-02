@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
+import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
@@ -38,8 +39,11 @@ class TenantPaymentsView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       Text(
                         loc.tr('rentCollectionTitle'),
@@ -110,37 +114,44 @@ class TenantPaymentsView extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            backgroundColor: statusBg,
-                                            radius: 18,
-                                            child: Icon(
-                                              isPaid ? Icons.check_rounded : (isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded),
-                                              color: statusColor,
-                                              size: 20,
-                                            ),
+                                  if (isMobile) ...[
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: statusBg,
+                                          radius: 18,
+                                          child: Icon(
+                                            isPaid ? Icons.check_rounded : (isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded),
+                                            color: statusColor,
+                                            size: 20,
                                           ),
-                                          const SizedBox(width: 12),
-                                          Column(
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 '${inv.unitTitle} (${inv.unitNumber})',
                                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                               Text(
                                                 '${loc.tr('invoiceNo')}: ${inv.invoiceNumber}',
                                                 style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
-                                      Container(
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: AlignmentDirectional.centerStart,
+                                      child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: statusBg,
@@ -155,11 +166,73 @@ class TenantPaymentsView extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  Divider(height: 20, color: colorScheme.outlineVariant),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    ),
+                                  ] else ...[
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                backgroundColor: statusBg,
+                                                radius: 18,
+                                                child: Icon(
+                                                  isPaid ? Icons.check_rounded : (isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded),
+                                                  color: statusColor,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '${inv.unitTitle} (${inv.unitNumber})',
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                    Text(
+                                                      '${loc.tr('invoiceNo')}: ${inv.invoiceNumber}',
+                                                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: statusBg,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              color: statusColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: 12),
+                                  TashilDivider.cardAction(),
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 12,
+                                    runSpacing: 10,
                                     children: [
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,

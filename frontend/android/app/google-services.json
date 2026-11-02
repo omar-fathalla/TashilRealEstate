@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "534001947779-7ta4snfkju9pb8o65cbtc0tuhooolm52.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tashil_real_estate",
+            "certificate_hash": "50139e7e16bb683d4f7dd08cd8154c155338d64c"
+          }
+        },
+        {
           "client_id": "534001947779-7oa47akhh3ieueib2t147tc325bje0qd.apps.googleusercontent.com",
           "client_type": 3
         }

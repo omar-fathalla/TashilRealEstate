@@ -9,7 +9,7 @@ import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
-import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/services/storage/property_draft_cache_service.dart';
@@ -313,8 +313,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = true);
 
     try {
+      if (_verificationId == null || _verificationId!.isEmpty) {
+        if (!mounted) return;
+        TashilSnackBar.showWarning(
+          context: context,
+          message: loc.tr('otpInvalid'),
+        );
+        return;
+      }
+
       final user = await _authService.verifyOtpAndSignIn(
-        verificationId: _verificationId ?? 'demo_verif_id',
+        verificationId: _verificationId!,
         smsCode: smsCode,
       );
 
@@ -330,18 +339,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _loginAsDemo(String email, String pass, String role, AppLocalizations loc) async {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = pass;
-      _selectedRole = role;
-      _selectedAuthMethod = AuthMethod.email;
-      _isSignUpMode = false;
-    });
-
-    await _handleEmailAuth(loc);
   }
 
   @override
@@ -514,19 +511,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               ),
 
-                              const SizedBox(height: 18),
-                              TashilDivider.withLabel(
-                                label: loc.tr('demoAccounts'),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 20),
 
-                              // 5. Quick Demo Accounts Suite (Google Icons Only)
-                              _buildDemoAccountsSuite(loc, colorScheme),
-
-                              const SizedBox(height: 16),
-
-                              // 6. Public Marketplace Visitor Link
+                              // Public Marketplace Visitor Link
                               Center(
                                 child: TashilButton.text(
                                   onPressed: () => context.go('/'),
@@ -578,11 +565,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               value: 'Tenant',
               label: loc.tr('roleTenant'),
               icon: Icons.home_rounded,
-            ),
-            TashilConnectedButtonSegment(
-              value: 'SuperAdmin',
-              label: loc.tr('roleSuperAdmin'),
-              icon: Icons.shield_rounded,
             ),
           ],
         );
@@ -752,23 +734,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
+                  child: TashilTextField.outlined(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     textDirection: TextDirection.ltr,
                     textAlign: TextAlign.left,
-                    decoration: InputDecoration(
-                      labelText: loc.tr('phoneNumberLabel'),
-                      prefixIcon: const Icon(Icons.phone_outlined, size: 18),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerLowest,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                      ),
-                    ),
+                    labelText: loc.tr('phoneNumberLabel'),
+                    prefixIcon: Icons.phone_outlined,
                   ),
                 ),
               ],
@@ -791,25 +763,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             // 6-Digit OTP Field (Strictly LTR across all locales)
             Directionality(
               textDirection: TextDirection.ltr,
-              child: TextField(
+              child: TashilTextField.outlined(
                 controller: _otpController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                counterText: '',
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 6),
-                decoration: InputDecoration(
-                  labelText: loc.tr('enterSixDigitOtpLabel'),
-                  prefixIcon: const Icon(Icons.pin_rounded, size: 18),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerLowest,
-                  counterText: '',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                  ),
-                ),
+                labelText: loc.tr('enterSixDigitOtpLabel'),
+                prefixIcon: Icons.pin_rounded,
               ),
             ),
             const SizedBox(height: 10),
@@ -855,60 +818,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return Column(
       children: [
         if (_isSignUpMode) ...[
-          TextField(
+          TashilTextField.outlined(
             controller: _nameController,
-            decoration: InputDecoration(
-              labelText: loc.tr('fullNameLabel'),
-              prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
-              filled: true,
-              fillColor: colorScheme.surfaceContainerLow,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colorScheme.primary, width: 2),
-              ),
-            ),
+            labelText: loc.tr('fullNameLabel'),
+            prefixIcon: Icons.person_outline_rounded,
           ),
           const SizedBox(height: 12),
         ],
-        TextField(
+        TashilTextField.outlined(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: loc.tr('email'),
-            prefixIcon: const Icon(Icons.email_outlined, size: 18),
-            filled: true,
-            fillColor: colorScheme.surfaceContainerLow,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary, width: 2),
-            ),
-          ),
+          labelText: loc.tr('email'),
+          prefixIcon: Icons.email_outlined,
         ),
         const SizedBox(height: 12),
-        TextField(
+        TashilTextField.outlined(
           controller: _passwordController,
           obscureText: _obscurePassword,
-          decoration: InputDecoration(
-            labelText: loc.tr('password'),
-            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            ),
-            filled: true,
-            fillColor: colorScheme.surfaceContainerLow,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary, width: 2),
-            ),
-          ),
+          labelText: loc.tr('password'),
+          prefixIcon: Icons.lock_outline_rounded,
+          suffixIcon: _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          onSuffixIconTap: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -937,27 +867,4 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  // --- DEMO ACCOUNTS SUITE ---
-  Widget _buildDemoAccountsSuite(AppLocalizations loc, ColorScheme colorScheme) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: [
-        _buildDemoBtn('owner@test.com', 'Owner', loc.tr('roleOwner'), Icons.person_rounded, loc),
-        _buildDemoBtn('agency@test.com', 'AgencyAdmin', loc.tr('roleAgency'), Icons.business_rounded, loc),
-        _buildDemoBtn('tenant@test.com', 'Tenant', loc.tr('roleTenant'), Icons.home_rounded, loc),
-        _buildDemoBtn('admin@test.com', 'SuperAdmin', loc.tr('roleSuperAdmin'), Icons.shield_rounded, loc),
-      ],
-    );
-  }
-
-  Widget _buildDemoBtn(String email, String role, String label, IconData icon, AppLocalizations loc) {
-    return TashilButton.outlined(
-      onPressed: _isLoading ? null : () => _loginAsDemo(email, 'password123', role, loc),
-      icon: icon,
-      label: label,
-      height: 38,
-    );
-  }
 }

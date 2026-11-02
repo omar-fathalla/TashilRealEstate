@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_button_group.dart';
+import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/features/auth/login_screen.dart';
+import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,11 +69,11 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
       expect(find.byType(TashilConnectedButtonGroup<AuthMethod>), findsOneWidget);
 
-      // Verify Role Segments with Google Icons
+      // Verify Role Segments with Google Icons (Owner, Agency, Tenant only - SuperAdmin is isolated to its dedicated portal)
       expect(find.byIcon(Icons.person_rounded), findsWidgets);
       expect(find.byIcon(Icons.business_rounded), findsWidgets);
       expect(find.byIcon(Icons.home_rounded), findsWidgets);
-      expect(find.byIcon(Icons.shield_rounded), findsWidgets);
+      expect(find.byIcon(Icons.shield_rounded), findsNothing);
 
       // Verify Auth Method Segments
       expect(find.byIcon(Icons.g_mobiledata_rounded), findsOneWidget);
@@ -162,6 +164,63 @@ void main() {
       final textField = tester.widget<TextField>(find.byType(TextField));
       expect(textField.textDirection, TextDirection.ltr);
       expect(textField.textAlign, TextAlign.left);
+    });
+
+    testWidgets('Demo accounts suite and hardcoded test credentials are completely removed for production in Arabic', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithApp(locale: const Locale('ar'), child: const LoginScreen()));
+      await tester.pumpAndSettle();
+
+      // Ensure demo accounts section header and quick login credentials are completely absent
+      expect(find.text('حسابات تجريبية سريعة للتجربة:'), findsNothing);
+      expect(find.text('Quick Demo Accounts:'), findsNothing);
+      expect(find.text('owner@test.com'), findsNothing);
+      expect(find.text('agency@test.com'), findsNothing);
+      expect(find.text('tenant@test.com'), findsNothing);
+      expect(find.text('password123'), findsNothing);
+
+      // Verify that the public visitor browsing link remains functional
+      expect(find.byIcon(Icons.travel_explore_rounded), findsOneWidget);
+    });
+
+    testWidgets('Demo accounts suite is completely absent in English LTR mode', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      LocaleController.setLanguage('en');
+      addTearDown(() => LocaleController.setLanguage('ar'));
+
+      await tester.pumpWidget(wrapWithApp(locale: const Locale('en'), child: const LoginScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quick Demo Accounts:'), findsNothing);
+      expect(find.text('owner@test.com'), findsNothing);
+      expect(find.text('agency@test.com'), findsNothing);
+      expect(find.text('tenant@test.com'), findsNothing);
+      expect(find.text('password123'), findsNothing);
+    });
+
+    test('FirebaseAuthService does not synthesize mock credentials on Google, Apple, or Email failures', () async {
+      final auth = FirebaseAuthService();
+      await expectLater(auth.signInWithGoogle(), throwsA(anything));
+      await expectLater(auth.signInWithApple(), throwsA(anything));
+      await expectLater(auth.signInWithEmailAndPassword('test@example.com', 'pass'), throwsA(anything));
+    });
+
+    testWidgets('TenantCheckoutScreen renders official production title without demo prefix', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithApp(child: const TenantCheckoutScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('سداد الإيجار والتحويل الفوري'), findsWidgets);
+      expect(find.text('تجربة الدفع الفوري (Google Pay / Apple Pay)'), findsNothing);
     });
   });
 }

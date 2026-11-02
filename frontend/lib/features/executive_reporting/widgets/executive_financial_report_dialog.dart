@@ -490,14 +490,12 @@ class _ExecutiveFinancialReportDialogState
                       ),
                     ),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (item.netIncome / item.grossIncome).clamp(0.0, 1.0),
-                          minHeight: 8,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-                        ),
+                      child: TashilLinearProgressIndicator.flat(
+                        value: (item.netIncome / item.grossIncome).clamp(0.0, 1.0),
+                        thickness: 8,
+                        trackColor: theme.colorScheme.surfaceContainerHighest,
+                        color: theme.colorScheme.primary,
+                        useContainerInset: false,
                       ),
                     ),
                     const SizedBox(width: 16),

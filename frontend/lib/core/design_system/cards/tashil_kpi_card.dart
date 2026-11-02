@@ -40,7 +40,7 @@ class TashilKpiCard extends StatelessWidget {
       onTap: onTap,
       enableHoverAnimation: true,
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -86,7 +86,7 @@ class TashilKpiCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Icon(subtitleIcon, size: 13, color: colorScheme.onSurfaceVariant),

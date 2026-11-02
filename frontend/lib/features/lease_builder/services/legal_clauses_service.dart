@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
@@ -665,6 +667,22 @@ class LegalClausesService {
       final district = prop.getLocation('ar');
       final title = prop.getTitle('ar');
 
+      final profile = UserProfileService().profileNotifier.value;
+      final currentUser = UserAvatarUtils.safeCurrentUser;
+      final ownerName = profile.hasFullName
+          ? profile.fullName
+          : (currentUser?.displayName ?? (isUAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله'));
+      final ownerEmail = profile.email.isNotEmpty
+          ? profile.email
+          : (currentUser?.email ?? (isUAE ? 'abdullah@tashil.ae' : 'fathlla80800@gmail.com'));
+      final ownerPhone = profile.hasPhone
+          ? profile.phone
+          : (currentUser?.phoneNumber ?? (isUAE ? '+971501234567' : '+201002345678'));
+      final ownerIdNumber = profile.hasNationalId
+          ? profile.nationalId
+          : (isUAE ? '784-1985-1234567-1' : '29304150102432');
+      final ownerAddress = profile.hasAddress ? profile.address : district;
+
       return LeaseContractModel(
         id: 'lease_${prop.id}',
         contractNumber: contractNo,
@@ -673,12 +691,12 @@ class LegalClausesService {
         startDate: startDate,
         endDate: endDate,
         lessor: ContractParty(
-          name: isUAE ? 'عبدالله راشد النعيمي' : 'م. عمر طارق فتح الله',
-          nationalIdOrEmiratesId: isUAE ? '784-1985-1234567-1' : '29304150102432',
+          name: ownerName,
+          nationalIdOrEmiratesId: ownerIdNumber,
           nationality: isUAE ? 'إماراتي' : 'مصري',
-          phone: isUAE ? '+971501234567' : '+201002345678',
-          email: isUAE ? 'abdullah@tashil.ae' : 'omar.fathalla@tashil.com',
-          address: district,
+          phone: ownerPhone,
+          email: ownerEmail,
+          address: ownerAddress,
           isLessor: true,
         ),
         tenant: ContractParty(
@@ -711,9 +729,9 @@ class LegalClausesService {
         ),
         clauses: isUAE ? _getUaeStandardClauses() : _getEgyptStandardClauses(),
         lessorSignature: DigitalSignature(
-          signerName: isUAE ? 'عبدالله راشد النعيمي' : 'م. عمر طارق فتح الله',
+          signerName: ownerName,
           signerRole: 'lessor',
-          nationalIdOrEmiratesId: isUAE ? '784-1985-1234567-1' : '29304150102432',
+          nationalIdOrEmiratesId: ownerIdNumber,
           signedAt: startDate,
           ipAddress: '197.34.12.89',
           verificationHash: '${prop.countryCode}-SEC-SHA256-$shortId',

@@ -156,8 +156,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                  TashilIconButton.close(
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

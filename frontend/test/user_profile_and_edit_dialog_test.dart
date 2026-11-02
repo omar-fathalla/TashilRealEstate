@@ -190,8 +190,12 @@ void main() {
       // Verify Completeness Indicator renders
       expect(find.text('100%'), findsOneWidget);
 
-      // Verify that the Edit Profile button is now an M3 Icon Button with edit icon
-      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      // Verify that the top header has the shaded close button and no redundant edit button
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+      // Verify photo change icon button exists on avatar
+      expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
 
       // Verify Official Identity & Address Section renders
       expect(find.text('بيانات الهوية الرسمية والعنوان'), findsOneWidget);
@@ -202,8 +206,10 @@ void main() {
       expect(find.text('بيانات التحويل البنكي للمالك'), findsOneWidget);
       expect(find.textContaining('البنك الأهلي المصري (NBE)'), findsOneWidget);
 
-      // Verify quick edit button at bottom exists
-      expect(find.byIcon(Icons.edit_note_rounded), findsOneWidget);
+      // Verify full-width quick edit button at bottom exists without icon
+      expect(find.text('تعديل الملف الشخصي'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_note_rounded), findsNothing);
+      expect(find.text('مزامنة بيانات Google'), findsNothing);
     });
 
     testWidgets('EditProfileDialog triggers OTP verification flow and displays OTP input', (tester) async {

@@ -94,13 +94,15 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const FastOnboardingScreen()));
       await tester.pumpAndSettle();
 
-      // Find the payment frequency button group and tap quarterly
-      final quarterlyFinder = find.text('ربع سنوي (4 دفعات / شيكات)');
+      // Find the payment frequency button group and tap quarterly (initially compact 'ربع سنوي')
+      final quarterlyFinder = find.text('ربع سنوي');
       expect(quarterlyFinder, findsOneWidget);
 
       await tester.tap(quarterlyFinder);
       await tester.pumpAndSettle();
 
+      // After selection, it expands smoothly to show full detail
+      expect(find.text('ربع سنوي (4 دفعات)'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -202,6 +204,36 @@ void main() {
       expect(descAr.contains('أمن وحراسة'), isFalse);
       expect(descAr.contains('مسبح'), isFalse);
       expect(descAr.contains('الحيوانات الأليفة'), isFalse);
+    });
+
+    test('generateMarketingCopy generates both title and description across AR, EN, and HI', () async {
+      final draft = FastPropertyDraft(
+        propertyType: 'apartment',
+        city: 'القاهرة',
+        district: 'التجمع الخامس',
+        areaSqm: 180,
+        bedrooms: 3,
+        bathrooms: 2,
+        monthlyRent: 35000,
+        currency: 'EGP',
+        furnishingStatus: FurnishingStatus.fullyFurnished,
+        hasParking: true,
+        hasCentralAc: true,
+        hasPoolGym: false,
+        hasSecurity: true,
+        hasBalconyView: true,
+        isPetFriendly: false,
+      );
+
+      final service = GeminiOnboardingService();
+      final copy = await service.generateMarketingCopy(draft: draft);
+
+      expect(copy.titleAr.isNotEmpty, isTrue);
+      expect(copy.titleEn.isNotEmpty, isTrue);
+      expect(copy.titleHi.isNotEmpty, isTrue);
+      expect(copy.descriptionAr.isNotEmpty, isTrue);
+      expect(copy.descriptionEn.isNotEmpty, isTrue);
+      expect(copy.descriptionHi.isNotEmpty, isTrue);
     });
 
     test('Accurate Alexandria Bahari voice parsing with 2 bedrooms, 1 bathroom, and 5000 rent', () {

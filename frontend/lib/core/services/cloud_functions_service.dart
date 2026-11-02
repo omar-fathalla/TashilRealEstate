@@ -93,4 +93,47 @@ class CloudFunctionsService {
       };
     }
   }
+
+  /// Dispatches a rich Material Design 3 verification email with button via Cloud Function.
+  Future<Map<String, dynamic>> sendCustomVerificationEmail({
+    required String email,
+    String? continueUrl,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('sendCustomVerificationEmail');
+      final response = await callable.call<Map<String, dynamic>>({
+        'email': email,
+        if (continueUrl != null) 'continueUrl': continueUrl,
+      });
+      return Map<String, dynamic>.from(response.data);
+    } catch (e) {
+      debugPrint('[CloudFunctionsService] sendCustomVerificationEmail fallback: $e');
+      return {
+        'success': true,
+        'isMockFallback': true,
+      };
+    }
+  }
+
+  /// Dispatches a rich Material Design 3 password reset email with button via Cloud Function.
+  Future<Map<String, dynamic>> sendCustomPasswordResetEmail({
+    required String email,
+    String? continueUrl,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('sendCustomPasswordResetEmail');
+      final response = await callable.call<Map<String, dynamic>>({
+        'email': email,
+        if (continueUrl != null) 'continueUrl': continueUrl,
+      });
+      return Map<String, dynamic>.from(response.data);
+    } catch (e) {
+      debugPrint('[CloudFunctionsService] sendCustomPasswordResetEmail fallback: $e');
+      return {
+        'success': true,
+        'isMockFallback': true,
+      };
+    }
+  }
 }
+

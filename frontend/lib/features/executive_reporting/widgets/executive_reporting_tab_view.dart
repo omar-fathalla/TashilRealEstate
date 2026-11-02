@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design_system/buttons/tashil_buttons.dart';
 import '../../../core/design_system/dividers/tashil_dividers.dart';
 import '../../../core/design_system/loading/tashil_loading.dart';
+import '../../../core/design_system/menus/tashil_menus.dart';
 import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/country_controller.dart';
@@ -149,33 +150,22 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedPeriod,
-                  dropdownColor: theme.colorScheme.surface,
-                  items: periods
-                      .map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Text(
-                              p,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null && val != _selectedPeriod) {
-                      setState(() => _selectedPeriod = val);
-                      _loadReport();
-                    }
-                  },
-                ),
+            SizedBox(
+              width: 150,
+              child: TashilDropdownMenu<String>(
+                value: _selectedPeriod,
+                items: periods
+                    .map((p) => TashilDropdownMenuItem<String>(
+                          value: p,
+                          label: p,
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null && val != _selectedPeriod) {
+                    setState(() => _selectedPeriod = val);
+                    _loadReport();
+                  }
+                },
               ),
             ),
             const SizedBox(width: 8),
@@ -480,14 +470,8 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                       ),
                     ),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (item.netIncome / item.grossIncome).clamp(0.0, 1.0),
-                          minHeight: 8,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-                        ),
+                      child: TashilLinearProgressIndicator.flat(
+                        value: (item.netIncome / item.grossIncome).clamp(0.0, 1.0),
                       ),
                     ),
                     const SizedBox(width: 16),

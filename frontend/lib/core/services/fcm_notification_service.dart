@@ -75,15 +75,28 @@ class FcmNotificationService {
 
       debugPrint('🔔 FCM Permission status: ${settings.authorizationStatus}');
 
-      // 2. Set Background Message Handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      final isAuthorized = settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
 
-      // 3. Obtain Device Push Token
-      try {
-        _fcmToken = await _messaging!.getToken();
-        debugPrint('🔑 FCM Device Token: $_fcmToken');
-      } catch (tokenErr) {
-        debugPrint('ℹ️ FCM token fetch note (e.g. Web VAPID missing in dev): $tokenErr');
+      // 2. Set Background Message Handler (Non-Web only; Web handles background messages via service worker)
+      if (!kIsWeb) {
+        try {
+          FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        } catch (bgErr) {
+          debugPrint('ℹ️ Background message handler registration note: $bgErr');
+        }
+      }
+
+      // 3. Obtain Device Push Token safely if permitted
+      if (isAuthorized) {
+        try {
+          _fcmToken = await _messaging!.getToken();
+          debugPrint('🔑 FCM Device Token: $_fcmToken');
+        } catch (tokenErr) {
+          debugPrint('ℹ️ FCM token fetch note (e.g. Web VAPID missing in dev): $tokenErr');
+        }
+      } else {
+        debugPrint('ℹ️ FCM: Notification permissions not granted (${settings.authorizationStatus}). Skipping device token fetch.');
       }
 
       // 4. Foreground Message Stream

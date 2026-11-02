@@ -1,3 +1,6 @@
+import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 
 class FinancialKpiService {
@@ -23,6 +26,113 @@ class FinancialKpiService {
 
   FinancialKpiSummary _buildOwnerSummary(bool isUAE, String countryCode) {
     final currencyMultiplier = isUAE ? 1.0 : 1.8;
+    final invoices = RentCollectionService().getInvoicesForCountry(countryCode);
+    final hasRealProps = PropertyLifecycleService().propertiesNotifier.value
+        .any((p) => p.countryCode == countryCode && !PropertyLifecycleService.isMockPropertyId(p.id));
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuth = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+
+    if (invoices.isNotEmpty && (hasRealProps || hasAuth)) {
+      final totalGrossInvoiced = invoices.fold<double>(0.0, (sum, inv) => sum + inv.baseAmount);
+      final totalCollectedNet = invoices
+          .where((inv) => inv.status == 'paid')
+          .fold<double>(0.0, (sum, inv) => sum + inv.baseAmount);
+      final totalOverdueArrears = invoices
+          .where((inv) => inv.status == 'overdue')
+          .fold<double>(0.0, (sum, inv) => sum + inv.totalAmountDue);
+      final totalPending = invoices
+          .where((inv) => inv.status == 'due_soon' || inv.status == 'pending')
+          .fold<double>(0.0, (sum, inv) => sum + inv.totalAmountDue);
+
+      final efficiencyRate = totalGrossInvoiced > 0
+          ? (totalCollectedNet / totalGrossInvoiced) * 100
+          : 100.0;
+
+      final paidInvoices = invoices.where((i) => i.status == 'paid').toList();
+      final overdueInvoices = invoices.where((i) => i.status == 'overdue').toList();
+      final pendingInvoices = invoices.where((i) => i.status == 'due_soon' || i.status == 'pending').toList();
+
+      final paidPct = totalGrossInvoiced > 0 ? (totalCollectedNet / totalGrossInvoiced) * 100 : 0.0;
+      final overduePct = totalGrossInvoiced > 0 ? (totalOverdueArrears / totalGrossInvoiced) * 100 : 0.0;
+      final pendingPct = totalGrossInvoiced > 0 ? (totalPending / totalGrossInvoiced) * 100 : 0.0;
+
+      final Map<String, double> monthlyGross = {};
+      final Map<String, double> monthlyNet = {};
+      for (final inv in invoices) {
+        final key = inv.monthKey ?? '2026-01';
+        monthlyGross[key] = (monthlyGross[key] ?? 0.0) + inv.totalAmountDue;
+        if (inv.status == 'paid') {
+          monthlyNet[key] = (monthlyNet[key] ?? 0.0) + inv.totalAmountDue;
+        }
+      }
+
+      final monthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+      final monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final monthsHi = ['जनवरी', 'फरवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर'];
+
+      final cashFlowPoints = monthlyGross.entries.map((e) {
+        final parts = e.key.split('-');
+        final monthIdx = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+        final safeIdx = (monthIdx - 1).clamp(0, 11);
+        final gross = e.value;
+        final net = monthlyNet[e.key] ?? 0.0;
+        final exp = gross > net ? (gross - net) * 0.1 : 0.0;
+
+        return MonthlyCashFlowPoint(
+          localizedMonth: {'ar': monthsAr[safeIdx], 'en': monthsEn[safeIdx], 'hi': monthsHi[safeIdx]},
+          grossIncome: gross,
+          operationalExpenses: exp,
+          netProfit: net,
+          occupancyRate: 100,
+        );
+      }).toList();
+
+      return FinancialKpiSummary(
+        role: FinancialPortalRole.owner,
+        countryCode: countryCode,
+        totalGrossInvoiced: totalGrossInvoiced,
+        totalCollectedNet: totalCollectedNet,
+        totalOverdueArrears: totalOverdueArrears,
+        collectionEfficiencyRate: efficiencyRate,
+        grossRentalYield: isUAE ? 8.6 : 11.2,
+        netProfitMargin: 84.5,
+        cashFlowHistory: cashFlowPoints,
+        statusDistribution: InvoiceStatusDistribution(
+          paidAmount: totalCollectedNet,
+          paidCount: paidInvoices.length,
+          paidPercentage: paidPct,
+          pendingAmount: totalPending,
+          pendingCount: pendingInvoices.length,
+          pendingPercentage: pendingPct,
+          overdueAmount: totalOverdueArrears,
+          overdueCount: overdueInvoices.length,
+          overduePercentage: overduePct,
+        ),
+        arrearsAging: [
+          ArrearsAgingBucket(
+            localizedRange: {'ar': '1 - 15 يوم', 'en': '1 - 15 Days', 'hi': '1 - 15 दिन'},
+            amount: totalOverdueArrears * 0.6,
+            invoiceCount: overdueInvoices.length,
+            accumulatedPenalties: totalOverdueArrears * 0.05,
+            percentageOfTotalArrears: totalOverdueArrears > 0 ? 60.0 : 0.0,
+          ),
+          ArrearsAgingBucket(
+            localizedRange: {'ar': '16 - 30 يوم', 'en': '16 - 30 Days', 'hi': '16 - 30 दिन'},
+            amount: totalOverdueArrears * 0.4,
+            invoiceCount: overdueInvoices.length,
+            accumulatedPenalties: totalOverdueArrears * 0.08,
+            percentageOfTotalArrears: totalOverdueArrears > 0 ? 40.0 : 0.0,
+          ),
+          ArrearsAgingBucket(
+            localizedRange: {'ar': 'أكثر من 30 يوم', 'en': '30+ Days', 'hi': '30+ दिन'},
+            amount: 0,
+            invoiceCount: 0,
+            accumulatedPenalties: 0,
+            percentageOfTotalArrears: 0.0,
+          ),
+        ],
+      );
+    }
 
     return FinancialKpiSummary(
       role: FinancialPortalRole.owner,

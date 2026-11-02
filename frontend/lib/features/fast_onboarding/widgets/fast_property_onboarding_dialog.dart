@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
@@ -15,6 +16,8 @@ import 'package:tashil_real_estate/features/public_marketplace/models/property_i
 import 'package:tashil_real_estate/features/public_marketplace/repositories/property_repository.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -79,7 +82,6 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
   late TextEditingController _videoTourCtrl;
   late TextEditingController _addressSearchCtrl;
 
-  final PropertyMarketingTone _selectedTone = PropertyMarketingTone.luxuryExecutive;
   bool _isGeneratingDesc = false;
   bool _isSubmitting = false;
   bool _isLocatingGps = false;
@@ -327,17 +329,31 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
     _syncControllersToDraft();
     setState(() => _isGeneratingDesc = true);
     try {
-      final descriptions = await _service.generateMarketingDescriptions(
+      final copy = await _service.generateMarketingCopy(
         draft: _draft,
-        tone: _selectedTone,
       );
       if (mounted) {
         setState(() {
-          _descArCtrl.text = descriptions['ar'] ?? _draft.descriptionAr;
-          _descEnCtrl.text = descriptions['en'] ?? _draft.descriptionEn;
-          _draft.descriptionAr = _descArCtrl.text;
-          _draft.descriptionEn = _descEnCtrl.text;
-          _draft.descriptionHi = descriptions['hi'] ?? '';
+          if (copy.titleAr.isNotEmpty) {
+            _titleArCtrl.text = copy.titleAr;
+            _draft.titleAr = copy.titleAr;
+          }
+          if (copy.titleEn.isNotEmpty) {
+            _titleEnCtrl.text = copy.titleEn;
+            _draft.titleEn = copy.titleEn;
+          }
+          _draft.titleHi = copy.titleHi;
+
+          if (copy.descriptionAr.isNotEmpty) {
+            _descArCtrl.text = copy.descriptionAr;
+            _draft.descriptionAr = copy.descriptionAr;
+          }
+          if (copy.descriptionEn.isNotEmpty) {
+            _descEnCtrl.text = copy.descriptionEn;
+            _draft.descriptionEn = copy.descriptionEn;
+          }
+          _draft.descriptionHi = copy.descriptionHi;
+
           _isGeneratingDesc = false;
         });
       }
@@ -677,54 +693,35 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               // 1. Google Maps Search Bar with GPS Option Suffix Action
-                              TextFormField(
+                              TashilTextField.outlined(
                                 controller: _addressSearchCtrl,
-                                style: const TextStyle(fontSize: 12.5),
-                                decoration: InputDecoration(
-                                  hintText: loc.tr('searchAddressPlaceholder'),
-                                  hintStyle: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant),
-                                  prefixIcon: Icon(Icons.search_rounded, size: 18, color: theme.colorScheme.primary),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-                                  ),
-                                  filled: true,
-                                  fillColor: theme.colorScheme.surface,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  suffixIcon: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // GPS Location Option Button
-                                      IconButton(
-                                        tooltip: loc.tr('useGpsOptionBtn'),
-                                        icon: _isLocatingGps
-                                            ? const SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                              )
-                                            : Icon(Icons.my_location_rounded, size: 18, color: theme.colorScheme.primary),
-                                        onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
-                                      ),
-                                      // Submit Search Button
-                                      _isSearchingAddress
-                                          ? const Padding(
-                                              padding: EdgeInsets.symmetric(horizontal: 10),
-                                              child: SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                              ),
-                                            )
-                                          : IconButton(
-                                              tooltip: loc.tr('searchAddressBtn'),
-                                              icon: Icon(Icons.arrow_forward_rounded, size: 18, color: theme.colorScheme.onSurface),
-                                              onPressed: () => _handleSearchAddress(loc),
-                                            ),
-                                    ],
-                                  ),
+                                hintText: loc.tr('searchAddressPlaceholder'),
+                                prefixIcon: Icons.search_rounded,
+                                suffix: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // GPS Location Option Button
+                                    IconButton(
+                                      tooltip: loc.tr('useGpsOptionBtn'),
+                                      icon: _isLocatingGps
+                                          ? const TashilLoadingIndicator.small()
+                                          : Icon(Icons.my_location_rounded, size: 18, color: theme.colorScheme.primary),
+                                      onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
+                                    ),
+                                    // Submit Search Button
+                                    _isSearchingAddress
+                                        ? const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 10),
+                                            child: TashilLoadingIndicator.small(),
+                                          )
+                                        : IconButton(
+                                            tooltip: loc.tr('searchAddressBtn'),
+                                            icon: Icon(Icons.arrow_forward_rounded, size: 18, color: theme.colorScheme.onSurface),
+                                            onPressed: () => _handleSearchAddress(loc),
+                                          ),
+                                  ],
                                 ),
-                                onFieldSubmitted: (_) => _handleSearchAddress(loc),
+                                onSubmitted: (_) => _handleSearchAddress(loc),
                               ),
 
                               // Optional Quick GPS Assist Chip
@@ -836,28 +833,20 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _cityCtrl,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('cityLabel')} (إجباري 🔴)',
-                                  prefixIcon: const Icon(Icons.location_city_rounded, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                labelText: '${loc.tr('cityLabel')} (إجباري 🔴)',
+                                prefixIcon: Icons.location_city_rounded,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.city = v,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _districtCtrl,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('districtLabel')} (إجباري 🔴)',
-                                  prefixIcon: const Icon(Icons.map_rounded, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                labelText: '${loc.tr('districtLabel')} (إجباري 🔴)',
+                                prefixIcon: Icons.map_rounded,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.district = v,
                               ),
@@ -868,27 +857,19 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _buildingNameCtrl,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('buildingCompoundLabel')} (اختياري 🟢)',
-                                  prefixIcon: const Icon(Icons.domain_rounded, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                labelText: '${loc.tr('buildingCompoundLabel')} (اختياري 🟢)',
+                                prefixIcon: Icons.domain_rounded,
                                 onChanged: (v) => _draft.buildingName = v,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _unitNumberCtrl,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('unitNumberFieldLabel')} (اختياري 🟢)',
-                                  prefixIcon: const Icon(Icons.meeting_room_rounded, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                labelText: '${loc.tr('unitNumberFieldLabel')} (اختياري 🟢)',
+                                prefixIcon: Icons.meeting_room_rounded,
                                 onChanged: (v) => _draft.unitNumber = v,
                               ),
                             ),
@@ -903,17 +884,14 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           children: [
                             Expanded(
                               flex: 2,
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _rentCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('rentPriceFieldLabel')} (إجباري 🔴)',
-                                  prefixIcon: const Icon(Icons.payments_outlined, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                inputFormatters: const [ArabicToEnglishDigitsFormatter()],
+                                labelText: '${loc.tr('rentPriceFieldLabel')} (إجباري 🔴)',
+                                prefixIcon: Icons.payments_outlined,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
-                                onChanged: (v) => _draft.monthlyRent = double.tryParse(v) ?? _draft.monthlyRent,
+                                onChanged: (v) => _draft.monthlyRent = DigitUtils.tryParseDouble(v) ?? _draft.monthlyRent,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -978,45 +956,39 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _areaCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('areaSqmFieldLabel')} (إجباري 🔴)',
-                                  suffixText: 'م²',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                inputFormatters: const [ArabicToEnglishDigitsFormatter()],
+                                labelText: '${loc.tr('areaSqmFieldLabel')} (إجباري 🔴)',
+                                suffix: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text('م²', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
-                                onChanged: (v) => _draft.areaSqm = int.tryParse(v) ?? _draft.areaSqm,
+                                onChanged: (v) => _draft.areaSqm = DigitUtils.tryParseInt(v) ?? _draft.areaSqm,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _bedroomsCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('bedroomsLabel')} 🔴',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                inputFormatters: const [ArabicToEnglishDigitsFormatter()],
+                                labelText: '${loc.tr('bedroomsLabel')} 🔴',
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
-                                onChanged: (v) => _draft.bedrooms = int.tryParse(v) ?? _draft.bedrooms,
+                                onChanged: (v) => _draft.bedrooms = DigitUtils.tryParseInt(v) ?? _draft.bedrooms,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: TextFormField(
+                              child: TashilTextField.outlined(
                                 controller: _bathroomsCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: '${loc.tr('bathroomsLabel')} 🔴',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                ),
+                                inputFormatters: const [ArabicToEnglishDigitsFormatter()],
+                                labelText: '${loc.tr('bathroomsLabel')} 🔴',
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
-                                onChanged: (v) => _draft.bathrooms = int.tryParse(v) ?? _draft.bathrooms,
+                                onChanged: (v) => _draft.bathrooms = DigitUtils.tryParseInt(v) ?? _draft.bathrooms,
                               ),
                             ),
                           ],
@@ -1115,39 +1087,36 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         ),
                         const SizedBox(height: 14),
 
-                        TextFormField(
-                          controller: _titleArCtrl,
-                          decoration: InputDecoration(
-                            labelText: '${loc.tr('propertyTitleField')} (إجباري 🔴)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        // AI Title & Description Generation Button (Gemini 3.8 Flash)
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: TashilButton.tonal(
+                            onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
+                            icon: Icons.auto_awesome_rounded,
+                            label: _isGeneratingDesc
+                                ? loc.tr('savingListing')
+                                : loc.tr('generateTitleAndDescAiBtn'),
+                            fontSize: 12.5,
+                            height: 36,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Listing Title (Positioned directly above description)
+                        TashilTextField.outlined(
+                          controller: _titleArCtrl,
+                          labelText: '${loc.tr('propertyTitleField')} *',
                           validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                           onChanged: (v) => _draft.titleAr = v,
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('${loc.tr('detailedDescriptionLabel')} (إجباري 🔴)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            TashilAssistChip(
-                              onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
-                              isLoading: _isGeneratingDesc,
-                              icon: Icons.auto_awesome_rounded,
-                              label: loc.tr('generateWithAiBtn'),
-                              variant: TashilChipVariant.tonal,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
+                        const SizedBox(height: 12),
+
+                        // Detailed Marketing Description
+                        TashilTextField.outlined(
                           controller: _descArCtrl,
                           maxLines: 3,
-                          decoration: InputDecoration(
-                            hintText: loc.tr('detailedDescriptionHint'),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            contentPadding: const EdgeInsets.all(12),
-                          ),
+                          labelText: '${loc.tr('detailedDescriptionLabel')} *',
+                          hintText: loc.tr('detailedDescriptionHint'),
                           validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                           onChanged: (v) => _draft.descriptionAr = v,
                         ),

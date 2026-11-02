@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
+import 'package:tashil_real_estate/features/public_marketplace/repositories/property_repository.dart';
 
 class PropertyLifecycleService {
   static final PropertyLifecycleService _instance = PropertyLifecycleService._internal();
@@ -34,6 +36,10 @@ class PropertyLifecycleService {
         return user.uid;
       }
     } catch (_) {}
+    final profileUid = UserProfileService().profileNotifier.value.uid;
+    if (profileUid.isNotEmpty) {
+      return profileUid;
+    }
     final cached = LocalStorageService().getString(_lastOwnerKey);
     if (cached != null && cached.isNotEmpty) {
       return cached;
@@ -271,8 +277,9 @@ class PropertyLifecycleService {
         leaseEndDate: DateTime(2026, 12, 31),
         installments: _generateInstallmentsFor2026(
           monthlyAmount: 22000,
-          paidMonthsCount: 3,
-          dueMonthIndex: 3, // April
+          paidMonthsCount: 2,
+          dueMonthIndex: 2, // March overdue
+          hasOverdue: true,
         ),
       ),
 
@@ -680,6 +687,13 @@ class PropertyLifecycleService {
     list.insert(0, property);
     propertiesNotifier.value = list;
 
+    // Synchronize immediately with Public Marketplace repository
+    if (property.isPublished && property.rentalStatus == PropertyRentalStatus.available && !property.isDeleted) {
+      PropertyRepository().addProperty(property.toPropertyItem());
+    } else {
+      PropertyRepository().removeProperty(property.id);
+    }
+
     // Persist to Owner's dedicated Firestore tree & Marketplace (safely caught in test/offline environments)
     try {
       await _firestoreService?.saveOwnerProperty(
@@ -701,6 +715,13 @@ class PropertyLifecycleService {
       list.insert(0, property);
     }
     propertiesNotifier.value = list;
+
+    // Synchronize with Public Marketplace repository
+    if (property.isPublished && property.rentalStatus == PropertyRentalStatus.available && !property.isDeleted) {
+      PropertyRepository().addProperty(property.toPropertyItem());
+    } else {
+      PropertyRepository().removeProperty(property.id);
+    }
 
     // Persist to Owner's dedicated Firestore tree & Marketplace
     try {
@@ -725,6 +746,9 @@ class PropertyLifecycleService {
       list[idx] = updated;
       propertiesNotifier.value = list;
 
+      // Add to public marketplace repository
+      PropertyRepository().addProperty(updated.toPropertyItem());
+
       try {
         await _firestoreService?.saveOwnerProperty(
           ownerId: currentOwnerId,
@@ -746,6 +770,9 @@ class PropertyLifecycleService {
       );
       list[idx] = updated;
       propertiesNotifier.value = list;
+
+      // Remove from public marketplace repository
+      PropertyRepository().removeProperty(propertyId);
 
       try {
         await _firestoreService?.saveOwnerProperty(
@@ -794,6 +821,9 @@ class PropertyLifecycleService {
       );
       list[idx] = updated;
       propertiesNotifier.value = list;
+
+      // Automatically remove rented property from the public marketplace
+      PropertyRepository().removeProperty(propertyId);
 
       try {
         await _firestoreService?.saveOwnerProperty(
@@ -1045,6 +1075,13 @@ class PropertyLifecycleService {
       list[idx] = updated;
       propertiesNotifier.value = list;
 
+      // Update Public Marketplace
+      if (republishToMarketplace) {
+        PropertyRepository().addProperty(updated.toPropertyItem());
+      } else {
+        PropertyRepository().removeProperty(propertyId);
+      }
+
       try {
         await _firestoreService?.saveOwnerProperty(
           ownerId: currentOwnerId,
@@ -1054,6 +1091,102 @@ class PropertyLifecycleService {
         debugPrint('Firestore end lease note (safe in test/offline): $e');
       }
     }
+  }
+
+  /// Soft-delete a property (Move to Trash for 7 days)
+  Future<void> softDeleteProperty(String propertyId) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final idx = list.indexWhere((p) => p.id == propertyId);
+    if (idx != -1) {
+      final updated = list[idx].copyWith(
+        isDeleted: true,
+        deletedAt: DateTime.now(),
+      );
+      list[idx] = updated;
+      propertiesNotifier.value = list;
+
+      // Remove immediately from Public Marketplace
+      PropertyRepository().removeProperty(propertyId);
+
+      try {
+        await _firestoreService?.saveOwnerProperty(
+          ownerId: currentOwnerId,
+          property: updated,
+        );
+      } catch (e) {
+        debugPrint('Firestore softDeleteProperty note: $e');
+      }
+    }
+  }
+
+  /// Restore a property from trash back to active managed list
+  Future<void> restoreProperty(String propertyId) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final idx = list.indexWhere((p) => p.id == propertyId);
+    if (idx != -1) {
+      final updated = list[idx].copyWith(
+        isDeleted: false,
+        deletedAt: null,
+      );
+      list[idx] = updated;
+      propertiesNotifier.value = list;
+
+      // Republish to marketplace if it was marked published & available
+      if (updated.isPublished && updated.rentalStatus == PropertyRentalStatus.available) {
+        PropertyRepository().addProperty(updated.toPropertyItem());
+      }
+
+      try {
+        await _firestoreService?.saveOwnerProperty(
+          ownerId: currentOwnerId,
+          property: updated,
+        );
+      } catch (e) {
+        debugPrint('Firestore restoreProperty note: $e');
+      }
+    }
+  }
+
+  /// Permanently delete a property from memory, cache, and cloud
+  Future<void> permanentlyDeleteProperty(String propertyId) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    list.removeWhere((p) => p.id == propertyId);
+    propertiesNotifier.value = list;
+
+    // Purge from Public Marketplace
+    PropertyRepository().removeProperty(propertyId);
+
+    try {
+      await _firestoreService?.deleteOwnerProperty(
+        ownerId: currentOwnerId,
+        propertyId: propertyId,
+      );
+    } catch (e) {
+      debugPrint('Firestore permanentlyDeleteProperty note: $e');
+    }
+  }
+
+  /// Empty all soft-deleted properties from trash
+  Future<void> emptyTrash({String? countryCode}) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final toDelete = list.where((p) => p.isDeleted && (countryCode == null || p.countryCode == countryCode)).toList();
+    for (final prop in toDelete) {
+      await permanentlyDeleteProperty(prop.id);
+    }
+  }
+
+  /// Returns active (non-deleted) properties for a country
+  List<ManagedPropertyModel> getActivePropertiesForCountry(String countryCode) {
+    return propertiesNotifier.value
+        .where((p) => !p.isDeleted && p.countryCode == countryCode)
+        .toList();
+  }
+
+  /// Returns soft-deleted properties in trash for a country
+  List<ManagedPropertyModel> getDeletedPropertiesForCountry(String countryCode) {
+    return propertiesNotifier.value
+        .where((p) => p.isDeleted && p.countryCode == countryCode)
+        .toList();
   }
 
   /// Reorder properties via drag-and-drop within a specific country portfolio

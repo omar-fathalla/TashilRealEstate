@@ -26,6 +26,7 @@ class TashilButton extends StatelessWidget {
   final Color? customColor;
   final String? tooltip;
   final EdgeInsetsGeometry? padding;
+  final double? fontSize;
 
   const TashilButton({
     super.key,
@@ -40,6 +41,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   });
 
   const TashilButton.filled({
@@ -54,6 +56,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   }) : variant = TashilButtonVariant.filled;
 
   const TashilButton.tonal({
@@ -68,6 +71,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   }) : variant = TashilButtonVariant.tonal;
 
   const TashilButton.outlined({
@@ -82,6 +86,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   }) : variant = TashilButtonVariant.outlined;
 
   const TashilButton.elevated({
@@ -96,6 +101,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   }) : variant = TashilButtonVariant.elevated;
 
   const TashilButton.text({
@@ -110,6 +116,7 @@ class TashilButton extends StatelessWidget {
     this.customColor,
     this.tooltip,
     this.padding,
+    this.fontSize,
   }) : variant = TashilButtonVariant.text;
 
   @override
@@ -183,6 +190,7 @@ class TashilButton extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelLarge?.copyWith(
+              fontSize: fontSize,
               fontWeight: FontWeight.w600,
               color: foregroundColor, // Strict M3 Contrast Enforcer: Never dark-on-dark
             ),

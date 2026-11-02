@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
-import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/services/media/media_picker_service.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
@@ -48,41 +47,6 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
     }
   }
 
-  void _showAddUrlDialog(AppLocalizations loc) {
-    if (widget.photoUrls.length >= widget.maxPhotos) return;
-    final controller = TextEditingController();
-    TashilAlertDialog.show(
-      context: context,
-      iconData: Icons.add_link_rounded,
-      title: loc.tr('enterImageUrlDialogTitle'),
-      content: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: loc.tr('imageUrlInputHint'),
-          prefixIcon: const Icon(Icons.link_rounded),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        keyboardType: TextInputType.url,
-      ),
-      actions: [
-        TashilButton.text(
-          onPressed: () => Navigator.of(context).pop(),
-          label: loc.tr('cancelBtn'),
-        ),
-        TashilButton(
-          onPressed: () {
-            final text = controller.text.trim();
-            if (text.isNotEmpty && !widget.photoUrls.contains(text) && widget.photoUrls.length < widget.maxPhotos) {
-              final updated = List<String>.from(widget.photoUrls)..add(text);
-              widget.onPhotosChanged(updated);
-            }
-            Navigator.of(context).pop();
-          },
-          label: loc.tr('confirmAddBtn'),
-        ),
-      ],
-    );
-  }
 
   void _removePhoto(int index) {
     final updated = List<String>.from(widget.photoUrls)..removeAt(index);
@@ -227,53 +191,57 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
           ),
           const SizedBox(height: 14),
 
-          // Upload Actions Toolbar
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              TashilButton.tonal(
-                onPressed: (_isUploading || isMaxReached) ? null : _pickFromDevice,
-                icon: Icons.file_upload_outlined,
-                label: loc.tr('uploadFromDeviceBtn'),
-              ),
-              TashilButton.outlined(
-                onPressed: isMaxReached ? null : () => _showAddUrlDialog(loc),
-                icon: Icons.add_link_rounded,
-                label: loc.tr('addPhotoByUrlBtn'),
-              ),
-            ],
+          // Upload Action Button (M3 Chic Action Button)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TashilButton.filled(
+              onPressed: (_isUploading || isMaxReached) ? null : _pickFromDevice,
+              icon: Icons.add_photo_alternate_rounded,
+              label: loc.tr('uploadPhotosBtn'),
+              isLoading: _isUploading,
+            ),
           ),
           const SizedBox(height: 14),
 
           // Gallery View
           if (widget.photoUrls.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: (_isUploading || isMaxReached) ? null : _pickFromDevice,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.cloud_upload_outlined, size: 36, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(height: 8),
-                  Text(
-                    loc.tr('minPhotosNotice'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurfaceVariant,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant,
+                      style: BorderStyle.solid,
                     ),
                   ),
-                ],
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 38,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        loc.tr('minPhotosNotice'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ).animate().fadeIn(duration: 300.ms)
           else

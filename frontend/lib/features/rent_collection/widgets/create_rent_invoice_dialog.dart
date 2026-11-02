@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
@@ -751,33 +753,20 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
     bool isEmail = false,
     String? Function(String?)? validator,
   }) {
-    final theme = Theme.of(context);
     final isLtr = isNumber ||
         isPhone ||
         isEmail ||
         keyboardType == TextInputType.number ||
         keyboardType == TextInputType.phone ||
         keyboardType == TextInputType.emailAddress;
-    return TextFormField(
+    return TashilTextField.outlined(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: const [ArabicToEnglishDigitsFormatter()],
       validator: validator,
       textDirection: isLtr ? TextDirection.ltr : null,
       textAlign: isLtr ? TextAlign.left : TextAlign.start,
-      style: TextStyle(
-        fontSize: 13,
-        color: theme.colorScheme.onSurface,
-        fontWeight: isLtr ? FontWeight.w600 : FontWeight.normal,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-      ),
+      labelText: label,
     );
   }
 }

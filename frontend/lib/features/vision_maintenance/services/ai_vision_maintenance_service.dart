@@ -1,10 +1,178 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import '../../../core/services/storage/local_storage_service.dart';
 import '../models/vision_maintenance_model.dart';
 
 class AiVisionMaintenanceService {
   static final AiVisionMaintenanceService _instance =
       AiVisionMaintenanceService._internal();
   factory AiVisionMaintenanceService() => _instance;
-  AiVisionMaintenanceService._internal();
+
+  final ValueNotifier<List<Map<String, dynamic>>> ticketsNotifier =
+      ValueNotifier<List<Map<String, dynamic>>>([]);
+
+  static const String _storageKey = 'tashil_maintenance_tickets_v1';
+
+  AiVisionMaintenanceService._internal() {
+    _loadTickets();
+  }
+
+  void _loadTickets() {
+    final raw = LocalStorageService().getString(_storageKey);
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          ticketsNotifier.value = decoded
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+          return;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error decoding maintenance tickets: $e');
+      }
+    }
+    // Default demo tickets
+    ticketsNotifier.value = List.from(_defaultDemoTickets);
+  }
+
+  void _saveTickets() {
+    try {
+      LocalStorageService().setString(_storageKey, jsonEncode(ticketsNotifier.value));
+    } catch (e) {
+      debugPrint('⚠️ Error saving maintenance tickets: $e');
+    }
+  }
+
+  void resetForTesting() {
+    ticketsNotifier.value = List.from(_defaultDemoTickets);
+    LocalStorageService().remove(_storageKey);
+  }
+
+  List<Map<String, dynamic>> getTicketsForCountry(
+    String countryCode, {
+    bool hasRealProps = false,
+  }) {
+    final list = ticketsNotifier.value
+        .where((t) => t['countryCode'] == countryCode)
+        .toList();
+    if (hasRealProps) {
+      return list.where((t) => t['isDemo'] != true).toList();
+    }
+    return list;
+  }
+
+  List<Map<String, dynamic>> getPendingTicketsForCountry(
+    String countryCode, {
+    bool hasRealProps = false,
+  }) {
+    return getTicketsForCountry(countryCode, hasRealProps: hasRealProps)
+        .where((t) => t['status'] == 'pending')
+        .toList();
+  }
+
+  Map<String, dynamic> createTicketFromDiagnosis({
+    required VisionMaintenanceDiagnosisResult diagnosis,
+    required String countryCode,
+    String? propertyId,
+    Map<String, String>? propertyTitle,
+  }) {
+    final randomSuffix = (DateTime.now().millisecondsSinceEpoch % 9000) + 1000;
+    final newId = 'MNT-$countryCode-$randomSuffix';
+    final ticket = <String, dynamic>{
+      'id': newId,
+      'titles': Map<String, String>.from(diagnosis.detectedProblemTitle),
+      'units': propertyTitle != null
+          ? Map<String, String>.from(propertyTitle)
+          : {
+              'ar': 'الوحدة المحددة',
+              'en': 'Selected Property Unit',
+              'hi': 'चयनित संपत्ति इकाई',
+            },
+      'cost': diagnosis.estimatedCostMax,
+      'status': 'pending',
+      'countryCode': countryCode,
+      'propertyId': propertyId,
+      'photoUrl': diagnosis.photoUrl,
+      'isSafetyHazard': diagnosis.isSafetyHazard,
+      'technicianType': Map<String, String>.from(diagnosis.assignedTechnicianType),
+      'urgency': diagnosis.urgency.name,
+      'createdAt': DateTime.now().toIso8601String(),
+      'isDemo': false,
+    };
+    ticketsNotifier.value = [ticket, ...ticketsNotifier.value];
+    _saveTickets();
+    return ticket;
+  }
+
+  void resolveTicket(String ticketId) {
+    ticketsNotifier.value = ticketsNotifier.value.map((t) {
+      if (t['id'] == ticketId) {
+        final updated = Map<String, dynamic>.from(t);
+        updated['status'] = 'resolved';
+        return updated;
+      }
+      return t;
+    }).toList();
+    _saveTickets();
+  }
+
+  static final List<Map<String, dynamic>> _defaultDemoTickets = [
+    {
+      'id': 'MNT-EG-1021',
+      'titles': {
+        'ar': 'صيانة وتغيير فلتر التكييف المركزي',
+        'en': 'Central AC Duct & Filter Maintenance',
+        'hi': 'केंद्रीय एसी डक्ट और फिल्टर रखरखाव',
+      },
+      'units': {
+        'ar': 'فيلا بيفرلي هيلز - الشيخ زايد',
+        'en': 'Beverly Hills Villa - Sheikh Zayed',
+        'hi': 'बेवर्ली हिल्स विला - शेख जायद',
+      },
+      'cost': 1200.0,
+      'status': 'pending',
+      'countryCode': 'EG',
+      'isDemo': true,
+      'createdAt': '2025-01-15T10:00:00.000Z',
+    },
+    {
+      'id': 'MNT-EG-1018',
+      'titles': {
+        'ar': 'إصلاح تسريب مياه بحمام الضيوف',
+        'en': 'Guest Bathroom Plumbing Leak Repair',
+        'hi': 'अतिथि बाथरूम प्लंबिंग रिसाव मरम्मत',
+      },
+      'units': {
+        'ar': 'شقة التجمع الخامس - النرجس',
+        'en': '5th Settlement Apartment - El Narges',
+        'hi': '5वां सेटलमेंट अपार्टमेंट - अल नरगिस',
+      },
+      'cost': 850.0,
+      'status': 'resolved',
+      'countryCode': 'EG',
+      'isDemo': true,
+      'createdAt': '2025-01-10T14:30:00.000Z',
+    },
+    {
+      'id': 'MNT-AE-401',
+      'titles': {
+        'ar': 'صيانة دورية للمكيف المركزي وتنظيف الفلاتر',
+        'en': 'HVAC Duct Cleaning & AC Filter Service',
+        'hi': 'एचवीएसी डक्ट सफाई और एसी फिल्टर सेवा',
+      },
+      'units': {
+        'ar': 'شقة مارينا كراون - دبي مارينا',
+        'en': 'Marina Crown Apartment - Dubai Marina',
+        'hi': 'मरीना क्राउन अपार्टमेंट - दुबई मरीना',
+      },
+      'cost': 450.0,
+      'status': 'pending',
+      'countryCode': 'AE',
+      'isDemo': true,
+      'createdAt': '2025-01-16T11:00:00.000Z',
+    },
+  ];
 
   /// Preset visual samples for testing
   List<MaintenanceVisualSample> get samplePhotos => const [

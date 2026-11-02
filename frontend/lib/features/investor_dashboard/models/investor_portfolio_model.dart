@@ -4,6 +4,8 @@ enum AssetType {
   penthouse,
   commercial,
   office,
+  chalet,
+  studio,
 }
 
 enum AssetStatus {

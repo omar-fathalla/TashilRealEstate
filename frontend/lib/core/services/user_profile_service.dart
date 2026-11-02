@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import '../utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 
 /// Immutable model representing the active user's PropTech profile
@@ -110,22 +111,22 @@ class UserProfileData {
     return UserProfileData(
       uid: (map['uid'] ?? '').toString(),
       email: (map['email'] ?? '').toString(),
-      fullName: (map['fullName'] ?? '').toString(),
-      firstName: (map['firstName'] ?? '').toString(),
+      fullName: (map['fullName'] ?? map['full_name'] ?? '').toString(),
+      firstName: (map['firstName'] ?? map['first_name'] ?? '').toString(),
       surname: (map['surname'] ?? '').toString(),
-      photoUrl: map['photoUrl']?.toString(),
-      phone: (map['phone'] ?? '').toString(),
+      photoUrl: (map['photoUrl'] ?? map['photo_url'])?.toString(),
+      phone: DigitUtils.normalize((map['phone'] ?? '').toString()),
       role: (map['role'] ?? 'Owner').toString(),
-      preferredContactMethod: (map['preferredContactMethod'] ?? 'phone').toString(),
-      isVerified: map['isVerified'] != false,
-      isPhoneVerified: map['isPhoneVerified'] == true,
-      memberSince: parseDate(map['memberSince']),
-      nationalId: (map['nationalId'] ?? '').toString(),
-      address: (map['address'] ?? '').toString(),
-      idCardPhotoUrl: map['idCardPhotoUrl']?.toString(),
-      bankName: (map['bankName'] ?? '').toString(),
-      bankAccountNumber: (map['bankAccountNumber'] ?? '').toString(),
-      iban: (map['iban'] ?? '').toString(),
+      preferredContactMethod: (map['preferredContactMethod'] ?? map['preferred_contact_method'] ?? 'phone').toString(),
+      isVerified: map['isVerified'] != false && map['verified'] != false,
+      isPhoneVerified: map['isPhoneVerified'] == true || map['phone_verified'] == true,
+      memberSince: parseDate(map['memberSince'] ?? map['created_at']),
+      nationalId: DigitUtils.normalize((map['nationalId'] ?? map['national_id'] ?? '').toString()),
+      address: DigitUtils.normalize((map['address'] ?? '').toString()),
+      idCardPhotoUrl: (map['idCardPhotoUrl'] ?? map['id_card_photo_url'])?.toString(),
+      bankName: (map['bankName'] ?? map['bank_name'] ?? '').toString(),
+      bankAccountNumber: DigitUtils.normalize((map['bankAccountNumber'] ?? map['bank_account_number'] ?? '').toString()),
+      iban: DigitUtils.normalize((map['iban'] ?? '').toString()),
     );
   }
 
@@ -204,15 +205,27 @@ class UserProfileService {
 
     // Instant 0ms synchronous local cache hydration
     try {
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
       final cachedJson = LocalStorageService().getString(_profileCacheKey);
       if (cachedJson != null && cachedJson.trim().isNotEmpty) {
         final decoded = jsonDecode(cachedJson);
-        if (decoded is Map<String, dynamic>) {
-          profileNotifier.value = UserProfileData.fromMap(decoded);
-          debugPrint('UserProfileService: Hydrated profile in 0ms from LocalStorage for [${profileNotifier.value.fullName}]');
-        } else if (decoded is Map) {
-          profileNotifier.value = UserProfileData.fromMap(Map<String, dynamic>.from(decoded));
-          debugPrint('UserProfileService: Hydrated profile in 0ms from LocalStorage for [${profileNotifier.value.fullName}]');
+        if (decoded is Map<String, dynamic> || decoded is Map) {
+          final profileMap = Map<String, dynamic>.from(decoded as Map);
+          final cachedUid = profileMap['uid']?.toString() ?? '';
+          // Only hydrate from cache if it matches the current user or if not authenticated yet
+          if (currentUid == null || cachedUid.isEmpty || cachedUid == currentUid) {
+            final authUser = FirebaseAuth.instance.currentUser;
+            var hydratedProfile = UserProfileData.fromMap(profileMap);
+            // If cached profile lacks a photo, auto-fill from Google auth if available
+            if ((hydratedProfile.photoUrl == null || hydratedProfile.photoUrl!.isEmpty) && authUser != null) {
+              final googlePhoto = UserAvatarUtils.getPhotoUrl(authUser);
+              if (googlePhoto != null && googlePhoto.isNotEmpty) {
+                hydratedProfile = hydratedProfile.copyWith(photoUrl: googlePhoto);
+              }
+            }
+            profileNotifier.value = hydratedProfile;
+            debugPrint('UserProfileService: Hydrated profile in 0ms from LocalStorage for [${profileNotifier.value.fullName}] (Photo: ${profileNotifier.value.photoUrl != null})');
+          }
         }
       }
     } catch (e) {
@@ -283,12 +296,20 @@ class UserProfileService {
     String email = user.email ?? '';
     String? photoUrl = UserAvatarUtils.getPhotoUrl(user);
 
-    // Prioritize Google's display name if provided (e.g. "Mohamed Fathallah")
+    // Prioritize Google's display name if provided (e.g. "Mohamed Fathallah" / "omar fathalla")
     String fullName = '';
     if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
       fullName = user.displayName!.trim();
-    } else if (email.isNotEmpty) {
-      fullName = email.split('@').first;
+    } else {
+      for (final provider in user.providerData) {
+        if (provider.displayName != null && provider.displayName!.trim().isNotEmpty) {
+          fullName = provider.displayName!.trim();
+          break;
+        }
+      }
+      if (fullName.isEmpty && email.isNotEmpty) {
+        fullName = email.split('@').first;
+      }
     }
 
     String firstName = UserAvatarUtils.getFirstName(fullName);
@@ -322,13 +343,11 @@ class UserProfileService {
         final dbName = data['full_name']?.toString().trim();
         final emailPrefix = email.split('@').first.trim();
 
-        // If Google provides a real display name, do not let an old email prefix fallback in DB override it
-        if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
-          if (dbName != null && dbName.isNotEmpty && dbName != emailPrefix) {
-            fullName = dbName;
-          } else {
-            fullName = user.displayName!.trim();
-          }
+        // The user's ID Card and saved profile data take strict priority over Google Auth display name
+        if (dbName != null && dbName.isNotEmpty && dbName != emailPrefix) {
+          fullName = dbName;
+        } else if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+          fullName = user.displayName!.trim();
         } else if (dbName != null && dbName.isNotEmpty) {
           fullName = dbName;
         }
@@ -374,12 +393,12 @@ class UserProfileService {
           phoneVerified = data['phone_verified'] == true;
         }
 
-        final nationalId = data['national_id']?.toString().trim() ?? '';
-        final address = data['address']?.toString().trim() ?? '';
+        final nationalId = DigitUtils.normalize(data['national_id']?.toString().trim() ?? '');
+        final address = DigitUtils.normalize(data['address']?.toString().trim() ?? '');
         final idCardPhotoUrl = data['id_card_photo_url']?.toString().trim();
         final bankName = data['bank_name']?.toString().trim() ?? '';
-        final bankAccountNumber = data['bank_account_number']?.toString().trim() ?? '';
-        final iban = data['iban']?.toString().trim() ?? '';
+        final bankAccountNumber = DigitUtils.normalize(data['bank_account_number']?.toString().trim() ?? '');
+        final iban = DigitUtils.normalize(data['iban']?.toString().trim() ?? '');
 
         profileNotifier.value = UserProfileData(
           uid: user.uid,
@@ -402,6 +421,7 @@ class UserProfileService {
           iban: iban,
         );
         _persistProfileLocally(profileNotifier.value);
+        debugPrint('UserProfileService: Loaded profile for [${profileNotifier.value.fullName}] (Photo: ${profileNotifier.value.photoUrl != null})');
       }
     } catch (e) {
       debugPrint('UserProfileService.loadProfile fetch error: $e');
@@ -409,16 +429,49 @@ class UserProfileService {
   }
 
   /// Explicitly re-syncs profile photo and data from Google / Firebase Auth
-  Future<bool> syncFromGoogleAuth() async {
+  Future<bool> syncFromGoogleAuth({bool overrideName = true}) async {
     final user = UserAvatarUtils.safeCurrentUser;
     if (user == null) return false;
     try {
       await user.reload();
       final freshPhoto = UserAvatarUtils.getPhotoUrl(user);
-      if (freshPhoto != null && freshPhoto.isNotEmpty) {
-        await updateProfile(photoUrl: freshPhoto);
-        return true;
+      String? freshName;
+      if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+        freshName = user.displayName!.trim();
+      } else {
+        for (final provider in user.providerData) {
+          if (provider.displayName != null && provider.displayName!.trim().isNotEmpty) {
+            freshName = provider.displayName!.trim();
+            break;
+          }
+        }
       }
+
+      final updates = <String, dynamic>{
+        'updated_at': FieldValue.serverTimestamp(),
+      };
+      if (freshPhoto != null && freshPhoto.isNotEmpty) {
+        updates['photo_url'] = freshPhoto;
+      }
+      if (overrideName && freshName != null && freshName.isNotEmpty) {
+        updates['full_name'] = freshName;
+        updates['first_name'] = UserAvatarUtils.getFirstName(freshName);
+        updates['surname'] = UserAvatarUtils.getSurname(freshName);
+      }
+      if (user.email != null && user.email!.isNotEmpty) {
+        updates['email'] = user.email!;
+      }
+
+      await FirebaseFirestore.instance.collection('Users').doc(user.uid).set(updates, SetOptions(merge: true));
+
+      await updateProfile(
+        photoUrl: freshPhoto,
+        fullName: overrideName ? freshName : null,
+        firstName: overrideName && freshName != null ? UserAvatarUtils.getFirstName(freshName) : null,
+        surname: overrideName && freshName != null ? UserAvatarUtils.getSurname(freshName) : null,
+      );
+      debugPrint('UserProfileService.syncFromGoogleAuth: Successfully synced [name: $freshName, photo: $freshPhoto]');
+      return true;
     } catch (e) {
       debugPrint('UserProfileService.syncFromGoogleAuth error: $e');
     }
@@ -452,20 +505,26 @@ class UserProfileService {
       resolvedFullName = '$resolvedFirstName $resolvedSurname'.trim();
     }
 
+    final normPhone = phone != null ? DigitUtils.normalize(phone.trim()) : null;
+    final normNationalId = nationalId != null ? DigitUtils.normalize(nationalId.trim()) : null;
+    final normAddress = address != null ? DigitUtils.normalize(address.trim()) : null;
+    final normBankAccount = bankAccountNumber != null ? DigitUtils.normalize(bankAccountNumber.trim()) : null;
+    final normIban = iban != null ? DigitUtils.normalize(iban.trim()) : null;
+
     final updated = current.copyWith(
       fullName: resolvedFullName,
       firstName: resolvedFirstName,
       surname: resolvedSurname,
-      phone: phone,
+      phone: normPhone,
       preferredContactMethod: preferredContactMethod,
       photoUrl: photoUrl,
       isPhoneVerified: isPhoneVerified,
-      nationalId: nationalId,
-      address: address,
+      nationalId: normNationalId,
+      address: normAddress,
       idCardPhotoUrl: idCardPhotoUrl,
       bankName: bankName,
-      bankAccountNumber: bankAccountNumber,
-      iban: iban,
+      bankAccountNumber: normBankAccount,
+      iban: normIban,
     );
 
     profileNotifier.value = updated;
@@ -488,18 +547,18 @@ class UserProfileService {
           'first_name': resolvedFirstName,
           'surname': resolvedSurname,
         };
-        if (phone != null) updateMap['phone'] = phone.trim();
+        if (normPhone != null) updateMap['phone'] = normPhone;
         if (isPhoneVerified != null) updateMap['phone_verified'] = isPhoneVerified;
         if (preferredContactMethod != null) {
           updateMap['preferred_contact_method'] = preferredContactMethod;
         }
         if (photoUrl != null) updateMap['photo_url'] = photoUrl;
-        if (nationalId != null) updateMap['national_id'] = nationalId.trim();
-        if (address != null) updateMap['address'] = address.trim();
+        if (normNationalId != null) updateMap['national_id'] = normNationalId;
+        if (normAddress != null) updateMap['address'] = normAddress;
         if (idCardPhotoUrl != null) updateMap['id_card_photo_url'] = idCardPhotoUrl;
         if (bankName != null) updateMap['bank_name'] = bankName.trim();
-        if (bankAccountNumber != null) updateMap['bank_account_number'] = bankAccountNumber.trim();
-        if (iban != null) updateMap['iban'] = iban.trim();
+        if (normBankAccount != null) updateMap['bank_account_number'] = normBankAccount;
+        if (normIban != null) updateMap['iban'] = normIban;
 
         await FirebaseFirestore.instance
             .collection('Users')
@@ -507,6 +566,29 @@ class UserProfileService {
             .set(updateMap, SetOptions(merge: true));
       } catch (e) {
         debugPrint('Error updating Firestore profile: $e');
+      }
+    }
+  }
+
+  /// Direct fast update for user avatar photo (Data URI or URL)
+  Future<void> updateAvatarPhoto(String photoDataOrUrl) async {
+    final cleanPhoto = photoDataOrUrl.trim();
+    if (cleanPhoto.isEmpty) return;
+
+    final current = profileNotifier.value;
+    final updated = current.copyWith(photoUrl: cleanPhoto);
+    profileNotifier.value = updated;
+    _persistProfileLocally(updated);
+
+    final user = UserAvatarUtils.safeCurrentUser;
+    if (user != null && user.uid.isNotEmpty) {
+      try {
+        await FirebaseFirestore.instance.collection('Users').doc(user.uid).set({
+          'photo_url': cleanPhoto,
+          'updated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('UserProfileService.updateAvatarPhoto Firestore error: $e');
       }
     }
   }

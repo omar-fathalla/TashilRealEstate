@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import '../buttons/tashil_buttons.dart';
 import 'tashil_text_field.dart';
 
@@ -181,6 +182,7 @@ class _TashilPhoneTextFieldState extends State<TashilPhoneTextField> {
         textDirection: TextDirection.ltr,
         enabled: widget.enabled,
         inputFormatters: [
+          const ArabicToEnglishDigitsFormatter(),
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(11),
         ],

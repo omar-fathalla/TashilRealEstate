@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
+import 'package:tashil_real_estate/features/rent_collection/models/contract_invoice_group_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/create_rent_invoice_dialog.dart';
@@ -49,6 +50,9 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   final _service = RentCollectionService();
   String _selectedFilter = 'all'; // 'all', 'paid', 'due_soon', 'overdue'
   String _viewMode = 'table'; // 'table' (default) or 'cards'
+  bool _groupByContracts = true; // Group 12-month lease invoices under a single expandable unit row
+  final Set<String> _expandedGroupIds = {}; // Tracks expanded contract groups
+  bool _hasInitializedExpandedGroups = false;
   bool _isTrashView = false;
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -550,7 +554,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     );
 
     // Responsive arrangement
-    if (screenWidth < 1180) {
+    if (screenWidth < 1320) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -669,6 +673,36 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     ],
                   ),
                 ),
+                if (ContractInvoiceGroup.isCurrentMonth(inv.dueDate))
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.25),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.stars_rounded, size: 12, color: colorScheme.onPrimary),
+                        const SizedBox(width: 4),
+                        Text(
+                          loc.tr('currentMonthSpot'),
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1336,7 +1370,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     );
   }
 
-  // --- 5. High-Density M3 Invoices Table ---
+  // --- 5. High-Density M3 Invoices Table & Contract Grouping ---
   Widget _buildInvoicesTable({
     required BuildContext context,
     required AppLocalizations loc,
@@ -1351,364 +1385,940 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final groups = ContractInvoiceGroup.groupInvoices(invoices);
 
-    return TashilCard.outlined(
-      borderRadius: BorderRadius.circular(14),
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.table_chart_rounded, size: 20, color: colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      loc.tr('navCollection'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${invoices.length}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const TashilDivider.fullWidth(),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: screenWidth < 1180 ? 1180 : screenWidth - 56,
-              ),
-              child: DataTable(
-                headingRowHeight: 50,
-                dataRowMinHeight: 64,
-                dataRowMaxHeight: 74,
-                horizontalMargin: 18,
-                columnSpacing: 18,
-                showCheckboxColumn: false,
-                headingRowColor: WidgetStateProperty.all(
-                  colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
-                ),
-                columns: [
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderUnitAndInvoice'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderTenant'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('landlord'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderDueDate'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderAmount'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderPaymentStatus'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderPayout'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderPaymentAndReminder'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      loc.tr('tableHeaderActions'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
-                    ),
-                  ),
-                ],
-                rows: invoices.map((inv) {
-                  final isPaid = inv.status == 'paid';
-                  final isOverdue = inv.status == 'overdue';
+    // Expand the first group on initial load for immediate clarity
+    if (!_hasInitializedExpandedGroups && groups.isNotEmpty) {
+      _expandedGroupIds.add(groups.first.groupId);
+      _hasInitializedExpandedGroups = true;
+    }
 
-                  Color statusBg = colorScheme.tertiaryContainer;
-                  Color statusText = colorScheme.onTertiaryContainer;
-                  IconData statusIcon = Icons.schedule_rounded;
-                  String statusLabel = loc.tr('statusDueSoon');
-
-                  if (isPaid) {
-                    statusBg = colorScheme.primaryContainer;
-                    statusText = colorScheme.onPrimaryContainer;
-                    statusIcon = Icons.check_circle_rounded;
-                    statusLabel = loc.tr('statusPaid');
-                  } else if (isOverdue) {
-                    statusBg = colorScheme.errorContainer;
-                    statusText = colorScheme.onErrorContainer;
-                    statusIcon = Icons.error_rounded;
-                    statusLabel = '${loc.tr('statusOverdue')} (${inv.overdueDays} ${loc.tr('days')})';
-                  }
-
-                  return DataRow(
-                    onSelectChanged: (_) => _showInvoiceDetailsDialog(
-                      context: context,
-                      loc: loc,
-                      inv: inv,
-                      currency: currency,
-                      lang: lang,
-                      colorScheme: colorScheme,
-                    ),
-                    cells: [
-                      // 1. Unit Type Chip + Location Badge & Invoice Number
-                      DataCell(
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Property Type Chip (e.g. شقة سكنية)
-                                  _buildPropertyTypeBadge(
-                                    typeCode: inv.propertyTypeCode,
-                                    loc: loc,
-                                    isDark: isDark,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Location with Icon (e.g. حي الجمرك - بحري، الإسكندرية)
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    size: 13,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(maxWidth: 180),
-                                    child: Text(
-                                      inv.district.isNotEmpty ? inv.district : inv.buildingName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    inv.invoiceNumber,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.primary,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                  if (inv.unitNumber.isNotEmpty)
-                                    Text(
-                                      ' • ${inv.unitNumber}',
-                                      style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // 2. Tenant
-                      DataCell(
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              inv.tenant.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                            ),
-                            Text(
-                              inv.tenant.phone,
-                              style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 3. Landlord / Owner
-                      DataCell(
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              inv.owner.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                            ),
-                            Text(
-                              inv.owner.bankName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 4. Due Date
-                      DataCell(
-                        Text(
-                          '${inv.dueDate.year}-${inv.dueDate.month.toString().padLeft(2, '0')}-${inv.dueDate.day.toString().padLeft(2, '0')}',
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-                        ),
-                      ),
-                      // 5. Total Amount
-                      DataCell(
-                        Text(
-                          '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      // 6. Status Chip
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(statusIcon, size: 12, color: statusText),
-                              const SizedBox(width: 4),
-                              Text(
-                                statusLabel,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // 7. Payout Status
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              inv.payoutStatus == 'transferred_to_owner'
-                                  ? Icons.account_balance_rounded
-                                  : Icons.history_toggle_off_rounded,
-                              size: 14,
-                              color: inv.payoutStatus == 'transferred_to_owner'
-                                  ? colorScheme.primary
-                                  : colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              inv.payoutStatus == 'transferred_to_owner'
-                                  ? '${CurrencyFormatter.formatAmount(inv.netPayoutToOwner, langCode: lang)} $currency'
-                                  : loc.tr('scheduledPayoutToOwner'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: inv.payoutStatus == 'transferred_to_owner'
-                                    ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 8. Payment & Reminder Cell
-                      DataCell(
-                        _buildPaymentReminderConnectedGroup(
-                          context: context,
-                          inv: inv,
-                          loc: loc,
-                          colorScheme: colorScheme,
-                          isPaid: isPaid,
-                          isOverdue: isOverdue,
-                          currency: currency,
-                          lang: lang,
-                        ),
-                      ),
-                      // 9. Actions Cell (Details | Edit | Delete)
-                      DataCell(
-                        _buildInvoiceActionsConnectedGroup(
-                          context: context,
-                          inv: inv,
-                          loc: loc,
-                          colorScheme: colorScheme,
-                          currency: currency,
-                          lang: lang,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Table Toolbar: Counts, Expand/Collapse All & Grouping Switcher
+        TashilCard.outlined(
+          borderRadius: BorderRadius.circular(14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              // Left / Start: Title + Counts
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.table_chart_rounded, size: 20, color: colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        loc.tr('navCollection'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ],
-                  );
-                }).toList(),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _groupByContracts
+                          ? '${groups.length} ${loc.tr('navContracts')} • ${invoices.length} ${loc.tr('contractInstallmentsCount')}'
+                          : '${invoices.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
+              // Right / End: Expand/Collapse All + Mode Switcher
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (_groupByContracts && groups.length > 1) ...[
+                    TashilButton.text(
+                      label: loc.tr('expandAll'),
+                      icon: Icons.unfold_more_rounded,
+                      onPressed: () {
+                        setState(() {
+                          _expandedGroupIds.addAll(groups.map((g) => g.groupId));
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    TashilButton.text(
+                      label: loc.tr('collapseAll'),
+                      icon: Icons.unfold_less_rounded,
+                      onPressed: () {
+                        setState(() {
+                          _expandedGroupIds.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  TashilConnectedButtonGroup<bool>(
+                    selectedValue: _groupByContracts,
+                    onSelectionChanged: (val) => setState(() => _groupByContracts = val),
+                    segments: [
+                      TashilConnectedButtonSegment(
+                        value: true,
+                        icon: Icons.account_tree_rounded,
+                        label: loc.tr('groupByContract'),
+                      ),
+                      TashilConnectedButtonSegment(
+                        value: false,
+                        icon: Icons.list_alt_rounded,
+                        label: loc.tr('flatInvoices'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // 2. Table Body: Grouped Contract Cards vs Flat Invoices Table
+        if (_groupByContracts) ...[
+          ...groups.map((group) => _buildContractGroupItem(
+                context: context,
+                loc: loc,
+                group: group,
+                currency: currency,
+                lang: lang,
+                screenWidth: screenWidth,
+                colorScheme: colorScheme,
+                isDark: isDark,
+              )),
+        ] else ...[
+          TashilCard.outlined(
+            borderRadius: BorderRadius.circular(14),
+            padding: EdgeInsets.zero,
+            child: _buildInstallmentsDataTable(
+              context: context,
+              loc: loc,
+              invoices: invoices,
+              currency: currency,
+              lang: lang,
+              screenWidth: screenWidth,
+              colorScheme: colorScheme,
+              isDark: isDark,
+              totalInGroup: null,
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  /// Helper widget for the radiant current month spotlight badge on contract group headers
+  Widget _buildHeaderSpotlightBadge({
+    required AppLocalizations loc,
+    required ColorScheme colorScheme,
+    required bool isCurrentMonthPaid,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isCurrentMonthPaid
+            ? colorScheme.primaryContainer
+            : colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCurrentMonthPaid ? colorScheme.primary : colorScheme.tertiary,
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isCurrentMonthPaid ? colorScheme.primary : colorScheme.tertiary)
+                .withValues(alpha: 0.25),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isCurrentMonthPaid ? Icons.stars_rounded : Icons.schedule_rounded,
+            size: 13,
+            color: isCurrentMonthPaid
+                ? colorScheme.onPrimaryContainer
+                : colorScheme.onTertiaryContainer,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '${loc.tr('currentMonthSpot')}: ${isCurrentMonthPaid ? loc.tr('statusPaid') : loc.tr('statusDueSoon')}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isCurrentMonthPaid
+                    ? colorScheme.onPrimaryContainer
+                    : colorScheme.onTertiaryContainer,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Single Contract / Unit Expandable Accordion Card
+  Widget _buildContractGroupItem({
+    required BuildContext context,
+    required AppLocalizations loc,
+    required ContractInvoiceGroup group,
+    required String currency,
+    required String lang,
+    required double screenWidth,
+    required ColorScheme colorScheme,
+    required bool isDark,
+  }) {
+    final isExpanded = _expandedGroupIds.contains(group.groupId);
+    final currentMonthInv = group.currentMonthInvoice;
+    final isCurrentMonthPaid = currentMonthInv?.status == 'paid';
+    final progress = group.progressRatio;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isExpanded
+              ? colorScheme.primary.withValues(alpha: 0.55)
+              : colorScheme.outlineVariant,
+          width: isExpanded ? 1.5 : 1.0,
+        ),
+        boxShadow: isExpanded
+            ? [
+                BoxShadow(
+                  color: colorScheme.primary.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Contract Group Master Header (Tappable to Expand / Collapse)
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedGroupIds.remove(group.groupId);
+                } else {
+                  _expandedGroupIds.add(group.groupId);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Meta Area: Arrow, Property Badge, Location, Current Month Spotlight
+                  if (screenWidth < 920) ...[
+                    Row(
+                      children: [
+                        AnimatedRotation(
+                          turns: isExpanded ? 0.5 : 0.0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeInOutCubic,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHigh,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        _buildPropertyTypeBadge(
+                          typeCode: group.propertyTypeCode,
+                          loc: loc,
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            group.district.isNotEmpty ? group.district : group.buildingName,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (group.hasCurrentMonthInvoice)
+                          _buildHeaderSpotlightBadge(
+                            loc: loc,
+                            colorScheme: colorScheme,
+                            isCurrentMonthPaid: isCurrentMonthPaid,
+                          ),
+                        Text(
+                          isExpanded ? loc.tr('hideInstallments') : loc.tr('viewInstallments'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        AnimatedRotation(
+                          turns: isExpanded ? 0.5 : 0.0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeInOutCubic,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHigh,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        _buildPropertyTypeBadge(
+                          typeCode: group.propertyTypeCode,
+                          loc: loc,
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            group.district.isNotEmpty ? group.district : group.buildingName,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+
+                        if (group.hasCurrentMonthInvoice) ...[
+                          const SizedBox(width: 8),
+                          _buildHeaderSpotlightBadge(
+                            loc: loc,
+                            colorScheme: colorScheme,
+                            isCurrentMonthPaid: isCurrentMonthPaid,
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+
+                        Text(
+                          isExpanded ? loc.tr('hideInstallments') : loc.tr('viewInstallments'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+
+                  // Middle Metadata Grid: Duration, Tenant, Landlord, Total & Progress
+                  Wrap(
+                    spacing: 18,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      // Contract Duration
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: screenWidth < 600 ? screenWidth - 72 : 380),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.date_range_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                '${group.dateRangeFormatted} (${group.totalCount} ${loc.tr('contractInstallmentsCount')})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Tenant
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: screenWidth < 600 ? screenWidth - 72 : 380),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${loc.tr('tableHeaderTenant')}: ',
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                            Flexible(
+                              child: Text(
+                                group.tenant.name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Landlord / Owner
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: screenWidth < 600 ? screenWidth - 72 : 380),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.account_balance_outlined, size: 15, color: colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${loc.tr('landlord')}: ',
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                            Flexible(
+                              child: Text(
+                                group.owner.name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Total Contract Value
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.payments_outlined, size: 15, color: colorScheme.primary),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${CurrencyFormatter.formatAmount(group.totalContractAmount, langCode: lang)} $currency',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Progress Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${group.paidCount}/${group.totalCount} ${loc.tr('statusPaid')}',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              width: 48,
+                              height: 5,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(3),
+                                child: LinearProgressIndicator(
+                                  value: progress,
+                                  backgroundColor: colorScheme.outlineVariant,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Sub-Table of Installments when Expanded
+          if (isExpanded) ...[
+            const TashilDivider.fullWidth(),
+            Container(
+              color: colorScheme.surfaceContainerLowest,
+              child: _buildInstallmentsDataTable(
+                context: context,
+                loc: loc,
+                invoices: group.invoices,
+                currency: currency,
+                lang: lang,
+                screenWidth: screenWidth,
+                colorScheme: colorScheme,
+                isDark: isDark,
+                totalInGroup: group.totalCount,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// High-Density M3 Installments Data Table with Current Month Spotlight
+  Widget _buildInstallmentsDataTable({
+    required BuildContext context,
+    required AppLocalizations loc,
+    required List<RentInvoiceModel> invoices,
+    required String currency,
+    required String lang,
+    required double screenWidth,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    int? totalInGroup,
+  }) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: screenWidth < 1180 ? 1180 : screenWidth - 56,
+        ),
+        child: DataTable(
+          headingRowHeight: 50,
+          dataRowMinHeight: 64,
+          dataRowMaxHeight: 74,
+          horizontalMargin: 18,
+          columnSpacing: 18,
+          showCheckboxColumn: false,
+          headingRowColor: WidgetStateProperty.all(
+            colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+          ),
+          columns: [
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderUnitAndInvoice'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderTenant'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('landlord'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderDueDate'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderAmount'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderPaymentStatus'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderPayout'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderPaymentAndReminder'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                loc.tr('tableHeaderActions'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+              ),
+            ),
+          ],
+          rows: invoices.asMap().entries.map((entry) {
+            final index = entry.key;
+            final inv = entry.value;
+            final isPaid = inv.status == 'paid';
+            final isOverdue = inv.status == 'overdue';
+            final isCurrentMonth = ContractInvoiceGroup.isCurrentMonth(inv.dueDate);
+
+            Color statusBg = colorScheme.tertiaryContainer;
+            Color statusText = colorScheme.onTertiaryContainer;
+            IconData statusIcon = Icons.schedule_rounded;
+            String statusLabel = loc.tr('statusDueSoon');
+
+            if (isPaid) {
+              statusBg = colorScheme.primaryContainer;
+              statusText = colorScheme.onPrimaryContainer;
+              statusIcon = Icons.check_circle_rounded;
+              statusLabel = loc.tr('statusPaid');
+            } else if (isOverdue) {
+              statusBg = colorScheme.errorContainer;
+              statusText = colorScheme.onErrorContainer;
+              statusIcon = Icons.error_rounded;
+              statusLabel = '${loc.tr('statusOverdue')} (${inv.overdueDays} ${loc.tr('days')})';
+            }
+
+            return DataRow(
+              color: WidgetStateProperty.resolveWith((states) {
+                if (isCurrentMonth) {
+                  return colorScheme.primaryContainer.withValues(alpha: 0.18);
+                }
+                return null;
+              }),
+              onSelectChanged: (_) => _showInvoiceDetailsDialog(
+                context: context,
+                loc: loc,
+                inv: inv,
+                currency: currency,
+                lang: lang,
+                colorScheme: colorScheme,
+              ),
+              cells: [
+                // 1. Unit Type Chip + Location Badge & Invoice Number + Current Month Spot
+                DataCell(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Property Type Chip (e.g. شقة سكنية)
+                            _buildPropertyTypeBadge(
+                              typeCode: inv.propertyTypeCode,
+                              loc: loc,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 8),
+                            // Location with Icon (e.g. حي الجمرك - بحري، الإسكندرية)
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 13,
+                              color: colorScheme.primary,
+                            ),
+                            const SizedBox(width: 3),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: Text(
+                                inv.district.isNotEmpty ? inv.district : inv.buildingName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            // ⭐ Current Month Spotlight Badge
+                            if (isCurrentMonth) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withValues(alpha: 0.25),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.stars_rounded, size: 12, color: colorScheme.onPrimary),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      loc.tr('currentMonthSpot'),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              inv.invoiceNumber,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.primary,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            if (totalInGroup != null && totalInGroup > 1)
+                              Text(
+                                ' • ${loc.tr('installmentNumber')} ${index + 1} ${loc.tr('ofInstallments')} $totalInGroup',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                                ),
+                              )
+                            else if (inv.unitNumber.isNotEmpty)
+                              Text(
+                                ' • ${inv.unitNumber}',
+                                style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 2. Tenant
+                DataCell(
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        inv.tenant.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                      Text(
+                        inv.tenant.phone,
+                        style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                // 3. Landlord / Owner
+                DataCell(
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        inv.owner.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                      Text(
+                        inv.owner.bankName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                // 4. Due Date
+                DataCell(
+                  Text(
+                    '${inv.dueDate.year}-${inv.dueDate.month.toString().padLeft(2, '0')}-${inv.dueDate.day.toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isCurrentMonth ? FontWeight.bold : FontWeight.normal,
+                      color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                // 5. Total Amount
+                DataCell(
+                  Text(
+                    '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                // 6. Status Chip
+                DataCell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, size: 12, color: statusText),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusLabel,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: statusText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 7. Payout Status
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        inv.payoutStatus == 'transferred_to_owner'
+                            ? Icons.account_balance_rounded
+                            : Icons.history_toggle_off_rounded,
+                        size: 14,
+                        color: inv.payoutStatus == 'transferred_to_owner'
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        inv.payoutStatus == 'transferred_to_owner'
+                            ? '${CurrencyFormatter.formatAmount(inv.netPayoutToOwner, langCode: lang)} $currency'
+                            : loc.tr('scheduledPayoutToOwner'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: inv.payoutStatus == 'transferred_to_owner'
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 8. Payment & Reminder Cell
+                DataCell(
+                  _buildPaymentReminderConnectedGroup(
+                    context: context,
+                    inv: inv,
+                    loc: loc,
+                    colorScheme: colorScheme,
+                    isPaid: isPaid,
+                    isOverdue: isOverdue,
+                    currency: currency,
+                    lang: lang,
+                  ),
+                ),
+                // 9. Actions Cell (Details | Edit | Delete)
+                DataCell(
+                  _buildInvoiceActionsConnectedGroup(
+                    context: context,
+                    inv: inv,
+                    loc: loc,
+                    colorScheme: colorScheme,
+                    currency: currency,
+                    lang: lang,
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class TashilConnectedButtonSegment<T> {
   final T value;
   final String label;
+  final String? selectedLabel;
   final IconData? icon;
   final Widget? leading;
   final String? badge;
@@ -17,6 +18,7 @@ class TashilConnectedButtonSegment<T> {
   const TashilConnectedButtonSegment({
     required this.value,
     required this.label,
+    this.selectedLabel,
     this.icon,
     this.leading,
     this.badge,
@@ -98,6 +100,7 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
   final Color? activeForegroundColor;
   final bool isFullWidth;
   final bool showCheckmark;
+  final bool isAnimatedFlex;
 
   const TashilConnectedButtonGroup({
     super.key,
@@ -111,15 +114,54 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
     this.activeForegroundColor,
     this.isFullWidth = false,
     this.showCheckmark = false,
+    this.isAnimatedFlex = false,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final outerRadius = borderRadius ?? BorderRadius.circular(height / 2);
+  Widget _buildGroupContent({
+    required BuildContext context,
+    required double? maxWidth,
+  }) {
+    if (isAnimatedFlex && maxWidth != null && maxWidth > 0) {
+      final totalSpacing = (segments.length - 1) * 5.0;
+      final availableWidth = (maxWidth - 7.0 - totalSpacing).clamp(0.0, double.infinity);
+      const selectedWeight = 5.0;
+      const unselectedWeight = 3.0;
+      final totalWeight = segments.fold<double>(
+        0.0,
+        (sum, seg) => sum + (seg.value == selectedValue ? selectedWeight : unselectedWeight),
+      );
 
-    final groupContent = Row(
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          for (int i = 0; i < segments.length; i++) ...[
+            if (i > 0) const SizedBox(width: 5.0),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOutCubic,
+              width: totalWeight > 0
+                  ? availableWidth *
+                      ((segments[i].value == selectedValue ? selectedWeight : unselectedWeight) /
+                          totalWeight)
+                  : availableWidth / segments.length,
+              child: _ConnectedGroupSegmentItem<T>(
+                segment: segments[i],
+                isSelected: segments[i].value == selectedValue,
+                onTap: () => onSelectionChanged(segments[i].value),
+                height: height - 7.0,
+                isTonal: isTonal,
+                activeColor: activeColor,
+                activeForegroundColor: activeForegroundColor,
+                showCheckmark: showCheckmark,
+                isFullWidth: true,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Row(
       mainAxisSize: isFullWidth ? MainAxisSize.max : MainAxisSize.min,
       children: [
         for (int i = 0; i < segments.length; i++) ...[
@@ -153,6 +195,13 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final outerRadius = borderRadius ?? BorderRadius.circular(height / 2);
 
     return Container(
       height: height,
@@ -167,12 +216,20 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
           width: 1.0,
         ),
       ),
-      child: isFullWidth
-          ? groupContent
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: groupContent,
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final content = _buildGroupContent(
+            context: context,
+            maxWidth: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+          );
+          return isFullWidth || isAnimatedFlex
+              ? content
+              : SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: content,
+                );
+        },
+      ),
     );
   }
 }
@@ -357,15 +414,27 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                     const SizedBox(width: 4.0),
                   ],
                   Flexible(
-                    child: Text(
-                      widget.segment.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: currentFg,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0.2,
-                        fontSize: widget.height <= 38.0 ? 11.5 : 12.0,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeInOutCubic,
+                      switchOutCurve: Curves.easeInOutCubic,
+                      child: Text(
+                        (isSelected && widget.segment.selectedLabel != null)
+                            ? widget.segment.selectedLabel!
+                            : widget.segment.label,
+                        key: ValueKey<String>(
+                          (isSelected && widget.segment.selectedLabel != null)
+                              ? widget.segment.selectedLabel!
+                              : widget.segment.label,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: currentFg,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          letterSpacing: 0.2,
+                          fontSize: widget.height <= 38.0 ? 11.0 : (isSelected ? 11.5 : 12.0),
+                        ),
                       ),
                     ),
                   ),

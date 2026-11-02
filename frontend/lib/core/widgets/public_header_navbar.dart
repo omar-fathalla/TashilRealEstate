@@ -7,10 +7,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
-import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
-import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 
 class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSubPage;
@@ -48,299 +46,167 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
     return '${loc.tr('settings')} ($countryName • $langName)';
   }
 
-  void _showMobileMenu(BuildContext context, AppLocalizations loc) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: colorScheme.surfaceContainerLowest,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (modalContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Title
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      loc.tr('appName'),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    TashilIconButton.close(
-                      onPressed: () => Navigator.pop(modalContext),
-                    ),
-                  ],
-                ),
-                const TashilDivider.fullWidth(),
-
-                // Unified App Settings Tile (Country, Language, Theme & Fonts)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.tune_rounded,
-                      size: 20,
-                      color: colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                  title: Text(
-                    loc.tr('settings'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${CountryController.isUAE ? loc.tr('country_ae') : loc.tr('country_eg')} • ${_getLanguageName(loc.locale.languageCode)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-                  onTap: () {
-                    Navigator.pop(modalContext);
-                    AppSettingsDialog.show(context);
-                  },
-                ),
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.cloud_done_rounded,
-                      size: 20,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  title: Text(
-                    loc.tr('firebaseHubTitle'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  subtitle: Text(
-                    loc.tr('firebaseHubSubtitle'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-                  onTap: () {
-                    Navigator.pop(modalContext);
-                    FirebaseEnterpriseHubDialog.show(context);
-                  },
-                ),
-                const TashilDivider.fullWidth(),
-
-                // Navigation List Tiles (Explore Units removed as requested)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.rocket_launch_rounded, color: colorScheme.primary),
-                  title: Text(loc.tr('fastPropertyOnboardingTitle'), style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-                  onTap: () {
-                    Navigator.pop(modalContext);
-                    _navigateSafely(context, '/fast-onboarding');
-                  },
-                ),
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.auto_awesome_rounded, color: colorScheme.primary),
-                  title: Text(loc.tr('aiValuationTitle'), style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-                  onTap: () {
-                    Navigator.pop(modalContext);
-                    SmartValuationDialog.show(context);
-                  },
-                ),
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.analytics_rounded, color: colorScheme.tertiary),
-                  title: Text(
-                    CountryController.isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                    style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
-                  ),
-                  trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-                  onTap: () {
-                    Navigator.pop(modalContext);
-                    _navigateSafely(context, '/market-index');
-                  },
-                ),
-
-
-                const SizedBox(height: 16),
-
-                // Full-width Smart Account / Login CTA
-                _buildMobileAuthSection(context, loc, colorScheme, modalContext),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMobileAuthSection(
+  Widget _buildMobileCircularLoginButton(
     BuildContext context,
     AppLocalizations loc,
     ColorScheme colorScheme,
-    BuildContext modalContext,
   ) {
     try {
       return StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         initialData: FirebaseAuth.instance.currentUser,
-        builder: (ctx, snapshot) {
+        builder: (context, snapshot) {
           final user = snapshot.data;
           if (user != null) {
             final info = _resolveUserInfo(user, loc);
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.outlineVariant),
-                  ),
+            return PopupMenuButton<String>(
+              tooltip: '${info.displayName} (${info.roleTitle})',
+              offset: const Offset(0, 44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
+              color: colorScheme.surfaceContainerLowest,
+              elevation: 6,
+              onSelected: (action) async {
+                if (action == 'dashboard') {
+                  _navigateSafely(context, info.dashboardRoute);
+                } else if (action == 'logout') {
+                  await FirebaseAuthService().signOut();
+                  if (context.mounted) {
+                    _navigateSafely(context, '/');
+                  }
+                }
+              },
+              itemBuilder: (menuContext) => [
+                PopupMenuItem<String>(
+                  value: 'dashboard',
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: colorScheme.primaryContainer,
-                        radius: 18,
-                        child: Text(
-                          info.initials,
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      Icon(Icons.dashboard_rounded, size: 18, color: colorScheme.primary),
                       const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              info.displayName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              info.roleTitle,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      Text(loc.tr('backToDashboard'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TashilButton(
-                  width: double.infinity,
-                  onPressed: () {
-                    Navigator.pop(modalContext);
-                    _navigateSafely(context, info.dashboardRoute);
-                  },
-                  icon: Icons.dashboard_rounded,
-                  label: loc.tr('backToDashboard'),
-                  height: 44,
-                ),
-                const SizedBox(height: 8),
-                TashilButton.outlined(
-                  width: double.infinity,
-                  onPressed: () async {
-                    Navigator.pop(modalContext);
-                    await FirebaseAuthService().signOut();
-                    if (context.mounted) {
-                      _navigateSafely(context, '/');
-                    }
-                  },
-                  icon: Icons.logout_rounded,
-                  label: loc.tr('logout'),
-                  customColor: colorScheme.error,
-                  height: 44,
+                const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout_rounded, size: 18, color: colorScheme.error),
+                      const SizedBox(width: 10),
+                      Text(loc.tr('logout'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.error)),
+                    ],
+                  ),
                 ),
               ],
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primaryContainer,
+                  border: Border.all(color: colorScheme.outlineVariant, width: 1),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  info.initials,
+                  style: TextStyle(
+                    color: colorScheme.onPrimaryContainer,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             );
           }
 
-          return _buildMobileLoginButton(context, loc, modalContext);
+          return TashilIconButton.tonal(
+            icon: Icons.lock_person_outlined,
+            size: 38,
+            iconSize: 19,
+            tooltip: loc.tr('portalLogin'),
+            onPressed: () => _navigateSafely(context, '/login'),
+          );
         },
       );
     } catch (_) {
-      return _buildMobileLoginButton(context, loc, modalContext);
+      return TashilIconButton.tonal(
+        icon: Icons.lock_person_outlined,
+        size: 38,
+        iconSize: 19,
+        tooltip: loc.tr('portalLogin'),
+        onPressed: () => _navigateSafely(context, '/login'),
+      );
     }
   }
 
-  Widget _buildMobileLoginButton(
+  Widget _buildMobileAppBarContent(
     BuildContext context,
     AppLocalizations loc,
-    BuildContext modalContext,
+    ColorScheme colorScheme,
   ) {
-    return TashilButton(
-      width: double.infinity,
-      onPressed: () {
-        Navigator.pop(modalContext);
-        _navigateSafely(context, '/login');
-      },
-      icon: Icons.lock_person_outlined,
-      label: loc.tr('portalLogin'),
-      height: 44,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // PHYSICAL LEFT: Brand Icon + English "Tashil Aqar"
+            InkWell(
+              onTap: () => _navigateSafely(context, '/'),
+              borderRadius: BorderRadius.circular(10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isSubPage) ...[
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+                      tooltip: loc.tr('browseAsVisitor'),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/');
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 2),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.apartment_rounded,
+                      color: colorScheme.onPrimary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tashil Aqar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // PHYSICAL RIGHT: Circular Login / Account Button Only
+            _buildMobileCircularLoginButton(context, loc, colorScheme),
+          ],
+        ),
+      ),
     );
   }
 
@@ -351,12 +217,25 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
     final colorScheme = theme.colorScheme;
     final isMobile = ResponsiveLayout.isMobile(context);
 
+    if (isMobile) {
+      return AppBar(
+        backgroundColor: colorScheme.surfaceContainerLowest,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.08),
+        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        title: _buildMobileAppBarContent(context, loc, colorScheme),
+      );
+    }
+
     return AppBar(
       backgroundColor: colorScheme.surfaceContainerLowest,
       elevation: 0,
       scrolledUnderElevation: 1,
       shadowColor: Colors.black.withValues(alpha: 0.08),
-      titleSpacing: isMobile ? 8 : 16,
+      titleSpacing: 16,
       automaticallyImplyLeading: false,
       centerTitle: false,
       title: InkWell(
@@ -410,22 +289,21 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: isMobile ? 15 : 18,
+                        fontSize: 18,
                         color: colorScheme.onSurface,
                         letterSpacing: -0.5,
                       ),
                     ),
-                    if (!isMobile)
-                      Text(
-                        loc.tr('appSlogan'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    Text(
+                      loc.tr('appSlogan'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -434,28 +312,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         ),
       ),
       actions: [
-        if (isMobile) ...[
-          // Mobile Mode: Settings Icon Button + Menu Hamburger
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: TashilIconButton.tonal(
-              icon: Icons.tune_rounded,
-              size: 38,
-              iconSize: 18,
-              tooltip: _getSettingsTooltip(loc),
-              onPressed: () => AppSettingsDialog.show(context),
-            ),
-          ),
-          IconButton.filledTonal(
-            icon: Icon(Icons.menu_rounded, color: colorScheme.onSurface),
-            tooltip: loc.tr('smartServicesMenu'),
-            onPressed: () => _showMobileMenu(context, loc),
-          ),
-          const SizedBox(width: 8),
-        ] else ...[
-          // Desktop & Tablet Mode: Official M3 Expressive Connected Button Group
-          _buildDesktopConnectedActions(context, loc, colorScheme),
-        ],
+        // Desktop & Tablet Mode: Official M3 Expressive Connected Button Group
+        _buildDesktopConnectedActions(context, loc, colorScheme),
       ],
     );
   }

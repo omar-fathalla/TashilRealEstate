@@ -9,6 +9,7 @@ import '../../../core/utils/image_utils.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/vision_maintenance_model.dart';
 import '../services/ai_vision_maintenance_service.dart';
+import '../../owner_portal/services/property_lifecycle_service.dart';
 
 class AiVisionMaintenanceDialog extends StatefulWidget {
   final String? initialPhotoUrl;
@@ -563,6 +564,19 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
             width: double.infinity,
             child: TashilButton(
               onPressed: () {
+                final country = CountryController.countryCode;
+                final userProps = PropertyLifecycleService().propertiesNotifier.value
+                    .where((p) => p.countryCode == country)
+                    .toList();
+                final linkedProp = userProps.firstOrNull;
+
+                _service.createTicketFromDiagnosis(
+                  diagnosis: res,
+                  countryCode: country,
+                  propertyId: linkedProp?.id,
+                  propertyTitle: linkedProp?.titles,
+                );
+
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

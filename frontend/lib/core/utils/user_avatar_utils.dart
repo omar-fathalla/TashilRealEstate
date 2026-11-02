@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -100,7 +101,7 @@ class UserAvatarUtils {
     return fallbackRole;
   }
 
-  /// Builds a standard M3 circle avatar that uses Google photoURL when available,
+  /// Builds a standard M3 circle avatar that supports Base64 Data URIs and Google photo URLs,
   /// with a graceful fallback to user initials.
   static Widget buildAvatar({
     required BuildContext context,
@@ -113,16 +114,59 @@ class UserAvatarUtils {
     final colorScheme = theme.colorScheme;
     final initials = getInitials(displayName, fallbackInitials);
 
+    Widget buildFallback() {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: colorScheme.primary,
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: radius * 0.72,
+          ),
+        ),
+      );
+    }
+
     if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+      final cleanUrl = photoUrl.trim();
+
+      // Check if photo is a base64 Data URI
+      if (cleanUrl.startsWith('data:image')) {
+        try {
+          final commaIndex = cleanUrl.indexOf(',');
+          final base64String = commaIndex != -1 ? cleanUrl.substring(commaIndex + 1) : cleanUrl;
+          final bytes = base64Decode(base64String.trim());
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: colorScheme.surfaceContainerHighest,
+            child: ClipOval(
+              child: Image.memory(
+                bytes,
+                width: radius * 2,
+                height: radius * 2,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => buildFallback(),
+              ),
+            ),
+          );
+        } catch (_) {
+          return buildFallback();
+        }
+      }
+
+      // Otherwise network URL (e.g. Google photo)
       return CircleAvatar(
         radius: radius,
         backgroundColor: colorScheme.surfaceContainerHighest,
         child: ClipOval(
           child: Image.network(
-            photoUrl,
+            cleanUrl,
             width: radius * 2,
             height: radius * 2,
             fit: BoxFit.cover,
+            headers: const {'Referrer-Policy': 'no-referrer'},
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return Center(
@@ -137,35 +181,14 @@ class UserAvatarUtils {
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              return CircleAvatar(
-                radius: radius,
-                backgroundColor: colorScheme.primary,
-                child: Text(
-                  initials,
-                  style: TextStyle(
-                    color: colorScheme.onPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: radius * 0.72,
-                  ),
-                ),
-              );
+              debugPrint('UserAvatarUtils.buildAvatar error: $error for $cleanUrl');
+              return buildFallback();
             },
           ),
         ),
       );
     }
 
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: colorScheme.primary,
-      child: Text(
-        initials,
-        style: TextStyle(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.bold,
-          fontSize: radius * 0.72,
-        ),
-      ),
-    );
+    return buildFallback();
   }
 }

@@ -55,7 +55,7 @@ class TenantCheckoutScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        loc.tr('instantCheckoutDemoBtn'),
+                        loc.tr('automatedRentCheckoutTitle'),
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 13 : 16, color: colorScheme.onSurface),
                         overflow: TextOverflow.ellipsis,
                       ),

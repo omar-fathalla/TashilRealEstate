@@ -26,6 +26,7 @@ import 'package:tashil_real_estate/features/investor_dashboard/views/investor_da
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_view.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   final int initialIndex;
@@ -258,6 +259,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  _buildEmailVerificationBadge(context, loc, colorScheme),
+                  const SizedBox(width: 8),
                   TashilIconButton.tonal(
                     icon: Icons.smart_toy_rounded,
                     size: 38,
@@ -303,7 +306,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 tooltip: loc.tr('logout'),
                 onPressed: () async {
                   await FirebaseAuthService().signOut();
-                  if (context.mounted) context.go('/login');
+                  if (context.mounted) context.go('/admin/login');
                 },
               ),
             ],
@@ -651,7 +654,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       onPressed: () async {
                         Navigator.of(dialogCtx).pop();
                         await FirebaseAuthService().signOut();
-                        if (context.mounted) context.go('/login');
+                        if (context.mounted) context.go('/admin/login');
                       },
                     ),
                   ),
@@ -690,6 +693,139 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         ),
       ],
     );
+  }
+
+  Widget _buildEmailVerificationBadge(
+    BuildContext context,
+    AppLocalizations loc,
+    ColorScheme colorScheme,
+  ) {
+    final isVerified = FirebaseAuthService().isCurrentUserEmailVerified;
+    final badgeColor = isVerified ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
+    final icon = isVerified ? Icons.verified_user_rounded : Icons.mark_email_unread_rounded;
+    final label = isVerified ? loc.tr('emailVerifiedBadge') : loc.tr('emailPendingVerificationBadge');
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => _showEmailVerificationDialog(context, loc, isVerified),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: badgeColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: badgeColor.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: badgeColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: badgeColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEmailVerificationDialog(
+    BuildContext context,
+    AppLocalizations loc,
+    bool isVerified,
+  ) async {
+    final auth = FirebaseAuthService();
+    if (isVerified) {
+      await TashilAlertDialog.show(
+        context: context,
+        iconData: Icons.verified_user_rounded,
+        title: loc.tr('verifyEmailTitle'),
+        contentText: loc.tr('emailVerifiedSuccess'),
+        actions: [
+          TashilButton.filled(
+            label: loc.tr('close'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      );
+    } else {
+      bool isActionLoading = false;
+      await showDialog(
+        context: context,
+        builder: (dialogCtx) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            return TashilAlertDialog(
+              iconData: Icons.mark_email_unread_rounded,
+              title: loc.tr('verifyEmailTitle'),
+              contentText: loc.tr('verifyEmailNotice'),
+              actions: [
+                TashilButton.text(
+                  label: loc.tr('cancel'),
+                  onPressed: isActionLoading ? null : () => Navigator.pop(dialogCtx),
+                ),
+                TashilButton.tonal(
+                  label: loc.tr('resendVerificationBtn'),
+                  icon: Icons.send_rounded,
+                  isLoading: isActionLoading,
+                  onPressed: isActionLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isActionLoading = true);
+                          try {
+                            await auth.sendEmailVerification();
+                            if (!dialogCtx.mounted) return;
+                            Navigator.pop(dialogCtx);
+                            TashilSnackBar.showSuccess(
+                              context: context,
+                              message: loc.tr('verifyEmailNotice'),
+                            );
+                          } catch (e) {
+                            setDialogState(() => isActionLoading = false);
+                            TashilSnackBar.showError(
+                              context: context,
+                              message: e.toString(),
+                            );
+                          }
+                        },
+                ),
+                TashilButton.filled(
+                  label: loc.tr('checkVerificationStatus'),
+                  icon: Icons.sync_rounded,
+                  isLoading: isActionLoading,
+                  onPressed: isActionLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isActionLoading = true);
+                          await auth.reloadCurrentUser();
+                          if (!dialogCtx.mounted) return;
+                          Navigator.pop(dialogCtx);
+                          setState(() {});
+                          if (auth.isCurrentUserEmailVerified) {
+                            TashilSnackBar.showSuccess(
+                              context: context,
+                              message: loc.tr('emailVerifiedSuccess'),
+                            );
+                          } else {
+                            TashilSnackBar.showWarning(
+                              context: context,
+                              message: loc.tr('emailNotYetVerified'),
+                            );
+                          }
+                        },
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    }
   }
 
   /// Mobile Layout: Scaffold with Top AppBar + End Drawer + Bottom NavigationBar
@@ -737,6 +873,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           ],
         ),
         actions: [
+          _buildEmailVerificationBadge(context, loc, colorScheme),
+          const SizedBox(width: 4),
           TashilIconButton.tonal(
             icon: Icons.tune_rounded,
             size: 38,

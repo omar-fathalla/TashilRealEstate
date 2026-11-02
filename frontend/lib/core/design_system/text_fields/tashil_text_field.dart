@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 
 /// Material Design 3 Text Field Variants
 enum TashilTextFieldVariant {
@@ -52,6 +53,9 @@ class TashilTextField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final FocusNode? focusNode;
   final TextDirection? textDirection;
+  final TextAlign textAlign;
+  final TextStyle? style;
+  final String? counterText;
   final bool autofocus;
 
   const TashilTextField({
@@ -82,6 +86,9 @@ class TashilTextField extends StatefulWidget {
     this.inputFormatters,
     this.focusNode,
     this.textDirection,
+    this.textAlign = TextAlign.start,
+    this.style,
+    this.counterText,
     this.autofocus = false,
   });
 
@@ -113,6 +120,9 @@ class TashilTextField extends StatefulWidget {
     this.inputFormatters,
     this.focusNode,
     this.textDirection,
+    this.textAlign = TextAlign.start,
+    this.style,
+    this.counterText,
     this.autofocus = false,
   }) : variant = TashilTextFieldVariant.outlined;
 
@@ -144,6 +154,9 @@ class TashilTextField extends StatefulWidget {
     this.inputFormatters,
     this.focusNode,
     this.textDirection,
+    this.textAlign = TextAlign.start,
+    this.style,
+    this.counterText,
     this.autofocus = false,
   }) : variant = TashilTextFieldVariant.filled;
 
@@ -271,15 +284,18 @@ class _TashilTextFieldState extends State<TashilTextField> {
         onChanged: widget.onChanged,
         onFieldSubmitted: widget.onSubmitted,
         validator: widget.validator,
-        inputFormatters: widget.inputFormatters,
+        inputFormatters: [
+          const ArabicToEnglishDigitsFormatter(),
+          ...?widget.inputFormatters,
+        ],
         textDirection: widget.textDirection,
+        textAlign: widget.textAlign,
         autofocus: widget.autofocus,
-        style: TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w600,
-          color: widget.enabled
-              ? colorScheme.onSurface
-              : colorScheme.onSurface.withValues(alpha: 0.38),
+        style: (widget.style ?? const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)).copyWith(
+          color: widget.style?.color ??
+              (widget.enabled
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withValues(alpha: 0.38)),
         ),
         decoration: InputDecoration(
           isDense: false,
@@ -290,6 +306,7 @@ class _TashilTextFieldState extends State<TashilTextField> {
           hintText: widget.hintText,
           helperText: widget.helperText,
           errorText: widget.errorText,
+          counterText: widget.counterText,
           labelStyle: TextStyle(
             fontSize: 14.0,
             fontWeight: FontWeight.w500,

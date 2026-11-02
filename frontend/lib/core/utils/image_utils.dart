@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../design_system/loading/tashil_loading_indicator.dart';
 
 class ImageUtils {
   static String resolveUrl(String url) {
     if (url.startsWith('assets/')) return url;
+    if (url.startsWith('data:image')) return url;
     if (url.contains('images.unsplash.com')) {
       if (url.contains('1502672260266')) return 'assets/images/properties/prop_eg_6_1.jpg';
       if (url.contains('1540518614846')) return 'assets/images/properties/prop_eg_6_2.jpg';
@@ -31,7 +33,32 @@ class ImageUtils {
     int? cacheWidth = 600,
     int? cacheHeight = 400,
     BorderRadius? borderRadius,
+    FilterQuality filterQuality = FilterQuality.high,
   }) {
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        final commaIndex = imageUrl.indexOf(',');
+        final base64String = commaIndex != -1 ? imageUrl.substring(commaIndex + 1) : imageUrl;
+        final bytes = base64Decode(base64String.trim());
+        final Widget memoryWidget = Image.memory(
+          bytes,
+          width: width,
+          height: height,
+          fit: fit,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
+          filterQuality: filterQuality,
+          errorBuilder: (context, error, stackTrace) => _buildErrorPlaceholder(context, width, height),
+        );
+        if (borderRadius != null) {
+          return ClipRRect(borderRadius: borderRadius, child: memoryWidget);
+        }
+        return memoryWidget;
+      } catch (_) {
+        return Builder(builder: (ctx) => _buildErrorPlaceholder(ctx, width, height));
+      }
+    }
+
     final resolvedUrl = resolveUrl(imageUrl);
     final isAsset = resolvedUrl.startsWith('assets/') || !resolvedUrl.startsWith('http');
     final Widget imageWidget = isAsset
@@ -42,6 +69,7 @@ class ImageUtils {
             fit: fit,
             cacheWidth: cacheWidth,
             cacheHeight: cacheHeight,
+            filterQuality: filterQuality,
             errorBuilder: (context, error, stackTrace) => _buildErrorPlaceholder(context, width, height),
           )
         : Image.network(
@@ -51,6 +79,7 @@ class ImageUtils {
             fit: fit,
             cacheWidth: cacheWidth,
             cacheHeight: cacheHeight,
+            filterQuality: filterQuality,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               final theme = Theme.of(context);
@@ -72,6 +101,7 @@ class ImageUtils {
                 width: width,
                 height: height,
                 fit: fit,
+                filterQuality: filterQuality,
                 errorBuilder: (c, e, s) => _buildErrorPlaceholder(context, width, height),
               );
             },

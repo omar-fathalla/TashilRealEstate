@@ -212,7 +212,12 @@ class ManagedPropertyModel {
     this.leaseEndDate,
     this.installments = const [],
     this.archivedInstallments = const [],
+    this.isDeleted = false,
+    this.deletedAt,
   });
+
+  final bool isDeleted;
+  final DateTime? deletedAt;
 
   String getTitle(String lang) => titles[lang] ?? titles['ar'] ?? '';
   String getDescription(String lang) => descriptions[lang] ?? descriptions['ar'] ?? '';
@@ -257,6 +262,8 @@ class ManagedPropertyModel {
     DateTime? leaseEndDate,
     List<MonthlyInstallment>? installments,
     List<MonthlyInstallment>? archivedInstallments,
+    bool? isDeleted,
+    DateTime? deletedAt,
   }) {
     return ManagedPropertyModel(
       id: id ?? this.id,
@@ -283,6 +290,8 @@ class ManagedPropertyModel {
       leaseEndDate: clearTenant ? null : (leaseEndDate ?? this.leaseEndDate),
       installments: installments ?? this.installments,
       archivedInstallments: archivedInstallments ?? this.archivedInstallments,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -389,6 +398,8 @@ class ManagedPropertyModel {
       'leaseEndDate': leaseEndDate?.toIso8601String(),
       'installments': installments.map((i) => i.toMap()).toList(),
       'archivedInstallments': archivedInstallments.map((i) => i.toMap()).toList(),
+      'isDeleted': isDeleted,
+      'deletedAt': deletedAt?.toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -506,6 +517,8 @@ class ManagedPropertyModel {
       leaseEndDate: parseNullableDate(map['leaseEndDate'] ?? map['lease_end_date']),
       installments: instList,
       archivedInstallments: archivedList,
+      isDeleted: map['isDeleted'] == true || map['is_deleted'] == true,
+      deletedAt: parseNullableDate(map['deletedAt'] ?? map['deleted_at']),
     );
   }
 }

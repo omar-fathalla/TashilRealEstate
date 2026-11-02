@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/chips/tashil_assist_chip.d
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_modal_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -13,6 +14,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/bank_directory_service.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/features/document_ocr/models/document_ocr_result_model.dart';
@@ -84,16 +86,16 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _surnameController = TextEditingController(text: profile.computedSurname);
     _emailController = TextEditingController(text: profile.email);
     _otpController = TextEditingController();
-    _nationalIdController = TextEditingController(text: profile.nationalId);
-    _addressController = TextEditingController(text: profile.address);
+    _nationalIdController = TextEditingController(text: DigitUtils.normalize(profile.nationalId));
+    _addressController = TextEditingController(text: DigitUtils.normalize(profile.address));
     _bankNameController = TextEditingController(text: profile.bankName);
     _bankAccountNumberController = TextEditingController(
-      text: profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban,
+      text: DigitUtils.normalize(profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban),
     );
     _customBankController = TextEditingController();
 
     // Parse country code from phone if present
-    String rawPhone = profile.phone.trim();
+    String rawPhone = DigitUtils.normalize(profile.phone.trim());
     if (rawPhone.startsWith('+971')) {
       _countryCode = '+971';
       rawPhone = rawPhone.replaceFirst('+971', '').trim();
@@ -101,7 +103,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       _countryCode = '+20';
       rawPhone = rawPhone.replaceFirst('+20', '').trim();
     }
-    _phoneController = TextEditingController(text: rawPhone);
+    _phoneController = TextEditingController(text: DigitUtils.normalize(rawPhone));
     _preferredContactMethod = profile.preferredContactMethod;
     _isPhoneVerified = profile.isPhoneVerified && rawPhone.isNotEmpty;
 
@@ -161,15 +163,23 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   Future<void> _handleSyncGooglePhoto(AppLocalizations loc) async {
     setState(() => _isSyncingPhoto = true);
     try {
-      final success = await UserProfileService().syncFromGoogleAuth();
+      final success = await UserProfileService().syncFromGoogleAuth(overrideName: true);
       if (!mounted) return;
       if (success) {
+        final updated = UserProfileService().profileNotifier.value;
         setState(() {
-          _photoUrl = UserProfileService().profileNotifier.value.photoUrl;
+          _photoUrl = updated.photoUrl;
+          if (updated.hasFullName) {
+            _firstNameController.text = updated.computedFirstName;
+            _surnameController.text = updated.computedSurname;
+          }
+          if (updated.email.isNotEmpty) {
+            _emailController.text = updated.email;
+          }
         });
         TashilSnackBar.showSuccess(
           context: context,
-          message: loc.tr('photoSyncedSuccess'),
+          message: loc.tr('googleDataSyncedSuccess'),
         );
       } else {
         TashilSnackBar.showWarning(
@@ -326,10 +336,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
             _surnameController.text = UserAvatarUtils.getSurname(extractedName);
           }
           if (result.idNumber.isNotEmpty) {
-            _nationalIdController.text = result.idNumber;
+            _nationalIdController.text = DigitUtils.normalize(result.idNumber);
           }
           if (result.address.isNotEmpty) {
-            _addressController.text = result.address;
+            _addressController.text = DigitUtils.normalize(result.address);
           }
           if (result.documentImageUrl.isNotEmpty) {
             _idCardPhotoUrl = result.documentImageUrl;
@@ -346,77 +356,226 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     }
   }
 
-  /// Open full-screen zoomed preview for the scanned ID card image
+  /// Open full-screen zoomed preview for the scanned ID card image with full native resolution, zoom in/out, rotation and flip controls
   void _showFullCardPreview(BuildContext context, String imageUrl, String title) {
+    final loc = AppLocalizations.of(context);
+    final transformationController = TransformationController();
+    int quarterTurns = 0;
+    bool flipHorizontal = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 680),
-          decoration: BoxDecoration(
-            color: Theme.of(ctx).colorScheme.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Theme.of(ctx).colorScheme.outlineVariant,
-              width: 1.0,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final colorScheme = Theme.of(ctx).colorScheme;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 740),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colorScheme.outlineVariant,
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. Header with title and shaded close button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.badge_rounded, color: Theme.of(ctx).colorScheme.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(ctx).colorScheme.onSurface,
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.badge_rounded, color: colorScheme.primary, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TashilIconButton.close(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          tooltip: loc.tr('close'),
                         ),
                       ],
                     ),
-                    TashilIconButton.close(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      tooltip: 'إغلاق',
-                    ),
-                  ],
-                ),
-              ),
-              const TashilDivider.fullWidth(),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 480),
-                child: InteractiveViewer(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Padding(
-                      padding: const EdgeInsets.all(40),
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        size: 64,
-                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                  const TashilDivider.fullWidth(),
+
+                  // 2. Interactive Image Area with Dark Document Backdrop & Native Resolution (between the 2 lines)
+                  Container(
+                    width: double.infinity,
+                    height: 520,
+                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    child: ClipRect(
+                      child: InteractiveViewer(
+                        transformationController: transformationController,
+                        minScale: 0.4,
+                        maxScale: 6.0,
+                        boundaryMargin: const EdgeInsets.all(80),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationY(flipHorizontal ? 3.1415926535 : 0),
+                              child: RotatedBox(
+                                quarterTurns: quarterTurns,
+                                child: ImageUtils.cachedImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.contain,
+                                  cacheWidth: null,
+                                  cacheHeight: null,
+                                  filterQuality: FilterQuality.high,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+
+                  const TashilDivider.fullWidth(),
+
+                  // 3. Control Toolbar: Zoom In (+), Zoom Out (-), Rotate Left, Rotate Right, Flip, Reset
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHigh,
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Zoom In (+)
+                          TashilIconButton.tonal(
+                            icon: Icons.zoom_in_rounded,
+                            tooltip: loc.tr('zoomIn'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                transformationController.value = Matrix4.copy(transformationController.value)
+                                  ..multiply(Matrix4.diagonal3Values(1.25, 1.25, 1.0));
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Zoom Out (-)
+                          TashilIconButton.tonal(
+                            icon: Icons.zoom_out_rounded,
+                            tooltip: loc.tr('zoomOut'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                transformationController.value = Matrix4.copy(transformationController.value)
+                                  ..multiply(Matrix4.diagonal3Values(0.8, 0.8, 1.0));
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 14),
+
+                          // Rotate Left 90°
+                          TashilIconButton.tonal(
+                            icon: Icons.rotate_left_rounded,
+                            tooltip: loc.tr('rotateLeft'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                quarterTurns = (quarterTurns - 1) % 4;
+                                if (quarterTurns < 0) quarterTurns += 4;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Rotate Right 90°
+                          TashilIconButton.tonal(
+                            icon: Icons.rotate_right_rounded,
+                            tooltip: loc.tr('rotateRight'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                quarterTurns = (quarterTurns + 1) % 4;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Flip Horizontal
+                          TashilIconButton.tonal(
+                            icon: Icons.flip_rounded,
+                            tooltip: loc.tr('flipHorizontal'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                flipHorizontal = !flipHorizontal;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 14),
+
+                          // Reset View & Orientation
+                          TashilIconButton.tonal(
+                            icon: Icons.restart_alt_rounded,
+                            tooltip: loc.tr('resetOrientation'),
+                            size: 40,
+                            iconSize: 20,
+                            onPressed: () {
+                              setModalState(() {
+                                transformationController.value = Matrix4.identity();
+                                quarterTurns = 0;
+                                flipHorizontal = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
-    );
+    ).then((_) {
+      transformationController.dispose();
+    });
   }
 
   Future<void> _handleSave(AppLocalizations loc) async {
@@ -426,14 +585,14 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     try {
       final firstName = _firstNameController.text.trim();
       final surname = _surnameController.text.trim();
-      final localPhone = _phoneController.text.trim();
+      final localPhone = DigitUtils.normalize(_phoneController.text.trim());
       final phone = localPhone.isNotEmpty ? '$_countryCode $localPhone' : '';
-      final nationalId = _nationalIdController.text.trim();
-      final address = _addressController.text.trim();
+      final nationalId = DigitUtils.normalize(_nationalIdController.text.trim());
+      final address = DigitUtils.normalize(_addressController.text.trim());
       final bankName = _isCustomBank
           ? _customBankController.text.trim()
           : _bankNameController.text.trim();
-      final bankAccountNumber = _bankAccountNumberController.text.trim();
+      final bankAccountNumber = DigitUtils.normalize(_bankAccountNumberController.text.trim());
 
       await UserProfileService().updateProfile(
         firstName: firstName,
@@ -544,13 +703,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_isSaving)
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colorScheme.onPrimary,
-                            ),
+                          TashilLoadingIndicator(
+                            size: 14,
+                            color: colorScheme.onPrimary,
                           )
                         else
                           Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary),
@@ -723,14 +878,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: completenessRatio,
-                        minHeight: 6,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                      ),
+                    TashilLinearProgressIndicator.flat(
+                      value: completenessRatio,
+                      thickness: 6,
+                      color: colorScheme.primary,
+                      trackColor: colorScheme.surfaceContainerHighest,
+                      showStopIndicator: false,
+                      useContainerInset: false,
                     ),
                   ],
                 ),

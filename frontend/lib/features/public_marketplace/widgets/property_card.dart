@@ -65,7 +65,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.payments_outlined, size: 18, color: colorScheme.primary),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     RichText(
                       text: TextSpan(
                         children: [
@@ -90,7 +90,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -113,7 +113,7 @@ class _PropertyCardState extends State<PropertyCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
             // Official Google M3 Card Text Hierarchy with Linked Text:
             TashilCardText(
@@ -127,14 +127,14 @@ class _PropertyCardState extends State<PropertyCard> {
               supportingTextMaxLines: 1,
               spacing: 3.5,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             // M3 Rule 2: Use inset dividers to separate related content inside a card
             TashilDivider.middleInset(
               inset: 4.0,
               color: colorScheme.outlineVariant,
               height: 1,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
             // Specs Icons (Bedrooms, Bathrooms, Area, Furnished)
             Row(
@@ -149,13 +149,13 @@ class _PropertyCardState extends State<PropertyCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
             // Agency / Broker row with dedicated M3 business icon
             Row(
               children: [
                 Icon(Icons.business_rounded, size: 13, color: colorScheme.onSurfaceVariant),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     widget.property.getAgencyName(lang),
@@ -172,7 +172,7 @@ class _PropertyCardState extends State<PropertyCard> {
             ),
 
             if (widget.semanticResult != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -183,7 +183,7 @@ class _PropertyCardState extends State<PropertyCard> {
                 child: Row(
                   children: [
                     Icon(Icons.auto_awesome, size: 13, color: colorScheme.primary),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         widget.semanticResult!.getMatchReason(lang),
@@ -247,7 +247,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   );
                 },
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               TashilIconButton.outlined(
                 icon: Icons.chat_bubble_outline_rounded,
                 size: 38.0,
@@ -469,7 +469,7 @@ class _PropertyCardState extends State<PropertyCard> {
                       AiVirtualStagingDialog.show(context, property: widget.property);
                     },
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   _HeaderActionPill(
                     icon: Icons.mic_rounded,
                     label: 'Gemini Live',
@@ -484,7 +484,7 @@ class _PropertyCardState extends State<PropertyCard> {
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           // 2. Trailing Quick Controls (Favorite & Settings/More Options)
           Row(
             mainAxisSize: MainAxisSize.min,

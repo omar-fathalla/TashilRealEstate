@@ -5,7 +5,33 @@ import 'package:tashil_real_estate/core/config/ai_config.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/models/ai_model_definition.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/services/ai_engine_config_controller.dart';
+import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
+
+/// Encapsulates AI-generated high-converting titles and marketing descriptions across AR, EN, and HI
+class GeneratedMarketingCopy {
+  final String titleAr;
+  final String titleEn;
+  final String titleHi;
+  final String descriptionAr;
+  final String descriptionEn;
+  final String descriptionHi;
+
+  const GeneratedMarketingCopy({
+    required this.titleAr,
+    required this.titleEn,
+    required this.titleHi,
+    required this.descriptionAr,
+    required this.descriptionEn,
+    required this.descriptionHi,
+  });
+
+  Map<String, String> toDescriptionMap() => {
+    'ar': descriptionAr,
+    'en': descriptionEn,
+    'hi': descriptionHi,
+  };
+}
 
 class GeminiOnboardingService {
   static final GeminiOnboardingService _instance = GeminiOnboardingService._internal();
@@ -23,15 +49,9 @@ class GeminiOnboardingService {
   String get _copywritingModel =>
       AiEngineConfigController().getModelName(AiServiceType.marketingCopywriting);
 
-  /// Converts Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) to standard Western digits (0-9)
+  /// Converts Eastern Arabic and Persian numerals (٠١٢٣٤٥٦٧٨٩) to standard Western digits (0-9)
   static String normalizeArabicDigits(String input) {
-    const arabic = '٠١٢٣٤٥٦٧٨٩';
-    const english = '0123456789';
-    var output = input;
-    for (int i = 0; i < arabic.length; i++) {
-      output = output.replaceAll(arabic[i], english[i]);
-    }
-    return output;
+    return DigitUtils.normalize(input);
   }
 
   /// Synchronous heuristic parsing for real-time live preview & guidance in voice modal
@@ -151,22 +171,17 @@ Only output the raw JSON object without markdown fences.
     return _fallbackParseVoice(voiceTranscription, isEgypt);
   }
 
-  /// Automatically generates high-converting marketing descriptions across 3 languages
-  Future<Map<String, String>> generateMarketingDescriptions({
+  /// Automatically generates high-converting marketing title and description across 3 languages
+  /// using Gemini 3.8 Flash based on the full property specifications and amenities
+  Future<GeneratedMarketingCopy> generateMarketingCopy({
     required FastPropertyDraft draft,
-    required PropertyMarketingTone tone,
+    PropertyMarketingTone? tone,
   }) async {
     final quotaManager = AiQuotaManager();
     final currency = draft.currency;
 
     if (quotaManager.hasAvailableQuota) {
       try {
-        final toneName = tone == PropertyMarketingTone.luxuryExecutive
-            ? 'Luxury, prestigious, VIP executive tone'
-            : tone == PropertyMarketingTone.cozyFamily
-                ? 'Warm, family-friendly, comfortable and safe neighborhood tone'
-                : 'High-yield investment, prime expat location, turnkey rental tone';
-
         final amenitiesList = <String>[];
         if (draft.hasParking) amenitiesList.add('Private Parking');
         if (draft.hasCentralAc) amenitiesList.add('Central AC');
@@ -185,32 +200,42 @@ Only output the raw JSON object without markdown fences.
           FurnishingStatus.unfurnished => 'Unfurnished',
         };
 
+        final locationDetails = [
+          if (draft.district.isNotEmpty) draft.district,
+          if (draft.city.isNotEmpty) draft.city,
+          if (draft.buildingName != null && draft.buildingName!.isNotEmpty) draft.buildingName!,
+          if (draft.streetAddress != null && draft.streetAddress!.isNotEmpty) draft.streetAddress!,
+        ].join(', ');
+
         final prompt = '''
-You are an expert real estate copywriter.
-Generate 3 distinct marketing descriptions for this property in Arabic (فصحى راقية وجذابة), English, and Hindi.
-Tone: $toneName
+You are an expert PropTech real estate copywriter.
+Based on the following property specifications, generate BOTH a concise, catchy property title (5-9 words) AND a compelling, detailed marketing description in Arabic (فصحى راقية وجذابة), English, and Hindi.
 
 Specs:
-- Title: ${draft.titleAr} / ${draft.titleEn}
-- Type: ${draft.propertyType}
-- Location: ${draft.district}, ${draft.city} ${draft.buildingName != null && draft.buildingName!.isNotEmpty ? "(${draft.buildingName})" : ""}
+- Property Type: ${draft.propertyType.isNotEmpty ? draft.propertyType : "Apartment"}
+- Location: $locationDetails
 - Area: ${draft.areaSqm} m²
 - Bedrooms: ${draft.bedrooms}, Bathrooms: ${draft.bathrooms}, Floor: ${draft.floor ?? "Ground"}
 - Furnishing: $furnishingDesc
-- Rent: ${draft.monthlyRent} $currency / month (${draft.paymentFrequency.name})
+- Price / Rent: ${draft.monthlyRent} $currency (${draft.paymentFrequency.name})
 - Bills Included: ${draft.isBillsIncluded ? "Yes" : "No"}, Negotiable: ${draft.isNegotiable ? "Yes" : "No"}
 - Available Amenities: $amenitiesSummary
 
-STRICT AMENITIES RULE:
-Only mention the amenities explicitly listed as Available above. If 'NONE' is indicated, or an amenity is not in the list, you are strictly FORBIDDEN from inventing or mentioning unlisted amenities (such as parking, central air conditioning, pool, security, balcony, or pets). Reflect ONLY what is explicitly provided.
+STRICT GUIDELINES:
+1. TITLE: Must be concise (5-9 words), catchy, professional, and clear. Example Arabic: "شقة فاخرة 3 غرف في التجمع الخامس مع شرفة وإطلالة مفتوحة"
+2. DESCRIPTION: Rich, persuasive, highlights key specs and neighborhood lifestyle, ends with a call to contact.
+3. AMENITIES: Strictly include ONLY amenities explicitly listed as Available above. If 'NONE' or not in list, strictly FORBIDDEN from inventing or mentioning unlisted amenities (parking, AC, pool, gym, security, balcony, pets).
+4. No language mixing inside fields.
 
 Output STRICT JSON:
 {
-  "ar": "الوصف العقاري التسويقي باللغة العربية مع إبراز المميزات ونقاط القوة ودعوة للتواصل...",
-  "en": "Engaging English real estate description highlighting prime features and call to action...",
-  "hi": "आकर्षक हिंदी रियल एस्टेट विवरण जो प्रमुख विशेषताओं और संपर्क करने के आह्वान को उजागर करता है..."
+  "title_ar": "عنوان العقار الجذاب والموجز بالعربية...",
+  "title_en": "Catchy and concise English property headline...",
+  "title_hi": "आकर्षक और संक्षिप्त हिंदी संपत्ति शीर्षक...",
+  "desc_ar": "الوصف العقاري التسويقي التفصيلي باللغة العربية...",
+  "desc_en": "Engaging detailed English real estate description...",
+  "desc_hi": "आकर्षक विस्तृत हिंदी रियल एस्टेट विवरण..."
 }
-Do not mix languages inside each field.
 ''';
 
         final response = await http.post(
@@ -229,7 +254,7 @@ Do not mix languages inside each field.
               'responseMimeType': 'application/json',
             }
           }),
-        ).timeout(const Duration(milliseconds: 4000));
+        ).timeout(const Duration(milliseconds: 6000));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -237,11 +262,14 @@ Do not mix languages inside each field.
           if (content != null) {
             quotaManager.recordUsage();
             final parsed = jsonDecode(content.trim());
-            return {
-              'ar': parsed['ar'] ?? '',
-              'en': parsed['en'] ?? '',
-              'hi': parsed['hi'] ?? '',
-            };
+            return GeneratedMarketingCopy(
+              titleAr: parsed['title_ar']?.toString().replaceAll('*', '').trim() ?? '',
+              titleEn: parsed['title_en']?.toString().replaceAll('*', '').trim() ?? '',
+              titleHi: parsed['title_hi']?.toString().replaceAll('*', '').trim() ?? '',
+              descriptionAr: parsed['desc_ar']?.toString().trim() ?? '',
+              descriptionEn: parsed['desc_en']?.toString().trim() ?? '',
+              descriptionHi: parsed['desc_hi']?.toString().trim() ?? '',
+            );
           }
         }
       } catch (e) {
@@ -249,8 +277,17 @@ Do not mix languages inside each field.
       }
     }
 
-    // High quality heuristic fallback descriptions
-    return _generateFallbackDescriptions(draft, tone);
+    // High quality heuristic fallback copy
+    return _generateFallbackMarketingCopy(draft, tone ?? PropertyMarketingTone.luxuryExecutive);
+  }
+
+  /// Automatically generates high-converting marketing descriptions across 3 languages (Legacy compatibility)
+  Future<Map<String, String>> generateMarketingDescriptions({
+    required FastPropertyDraft draft,
+    required PropertyMarketingTone tone,
+  }) async {
+    final copy = await generateMarketingCopy(draft: draft, tone: tone);
+    return copy.toDescriptionMap();
   }
 
   FastPropertyDraft _jsonToDraft(Map<String, dynamic> json, String countryCode) {
@@ -885,6 +922,59 @@ Do not mix languages inside each field.
       titleEn: titleEn,
       titleHi: titleHi,
       countryCode: isEgypt ? 'EG' : 'AE',
+    );
+  }
+
+  GeneratedMarketingCopy _generateFallbackMarketingCopy(FastPropertyDraft draft, PropertyMarketingTone tone) {
+    final propTypeAr = switch (draft.propertyType.toLowerCase()) {
+      'villa' => 'فيلا راقية',
+      'studio' => 'استوديو عصري',
+      'chalet' => 'شاليه متميز',
+      'penthouse' => 'بنتهاوس فاخر',
+      'office' => 'مكتب إداري مجهز',
+      _ => 'شقة مصممة بعناية فائقة',
+    };
+
+    final propTypeEn = switch (draft.propertyType.toLowerCase()) {
+      'villa' => 'luxury villa',
+      'studio' => 'modern studio',
+      'chalet' => 'prime chalet',
+      'penthouse' => 'exclusive penthouse',
+      'office' => 'commercial office space',
+      _ => 'beautifully appointed apartment',
+    };
+
+    final propTypeHi = switch (draft.propertyType.toLowerCase()) {
+      'villa' => 'शानदार विला',
+      'studio' => 'आधुनिक स्टूडियो',
+      'chalet' => 'प्रमुख शैले',
+      'penthouse' => 'विशेष पेंटहाउस',
+      'office' => 'वाणिज्यिक कार्यालय',
+      _ => 'सुंदर अपार्टमेंट',
+    };
+
+    final areaPart = draft.areaSqm > 0 ? '${draft.areaSqm} م² ' : '';
+    final bedPart = draft.bedrooms > 0 ? '${draft.bedrooms} غرف ' : '';
+    final locPart = draft.district.isNotEmpty ? draft.district : (draft.city.isNotEmpty ? draft.city : '');
+    final fallbackTitleAr = '$propTypeAr $bedPart$areaPart${locPart.isNotEmpty ? "في $locPart" : ""}'.trim();
+
+    final bedPartEn = draft.bedrooms > 0 ? '${draft.bedrooms}-Bedroom ' : '';
+    final locPartEn = draft.district.isNotEmpty ? draft.district : (draft.city.isNotEmpty ? draft.city : '');
+    final fallbackTitleEn = '$bedPartEn$propTypeEn${locPartEn.isNotEmpty ? " in $locPartEn" : ""}'.trim();
+
+    final bedPartHi = draft.bedrooms > 0 ? '${draft.bedrooms} बेडरूम ' : '';
+    final locPartHi = draft.district.isNotEmpty ? draft.district : (draft.city.isNotEmpty ? draft.city : '');
+    final fallbackTitleHi = '$locPartHi में $bedPartHi$propTypeHi'.trim();
+
+    final descMap = _generateFallbackDescriptions(draft, tone);
+
+    return GeneratedMarketingCopy(
+      titleAr: fallbackTitleAr,
+      titleEn: fallbackTitleEn,
+      titleHi: fallbackTitleHi,
+      descriptionAr: descMap['ar'] ?? '',
+      descriptionEn: descMap['en'] ?? '',
+      descriptionHi: descMap['hi'] ?? '',
     );
   }
 

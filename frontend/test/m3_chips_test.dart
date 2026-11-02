@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/property_media_gallery_uploader.dart';
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
@@ -168,10 +169,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify presence of status badge chip and upload buttons
+      // Verify presence of status badge chip and chic M3 upload button
       expect(find.byType(TashilAssistChip), findsOneWidget);
-      expect(find.byIcon(Icons.file_upload_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.add_link_rounded), findsOneWidget);
+      expect(find.widgetWithIcon(TashilButton, Icons.add_photo_alternate_rounded), findsOneWidget);
+      expect(find.text('رفع الصور'), findsOneWidget);
+      expect(find.byIcon(Icons.add_link_rounded), findsNothing);
 
       // Verify architectural presets are completely removed
       expect(find.text('نماذج معمارية جاهزة بنقرة واحدة'), findsNothing);

@@ -103,7 +103,7 @@ exports.sendRentalReminder = onCall(async (request) => {
 
 exports.generateRentalInvoiceReceipt = onCall(async (request) => {
   const data = request.data || {};
-  const leaseId = data.leaseId || "lease_demo";
+  const leaseId = data.leaseId || `lease_${Date.now()}`;
   const tenantName = data.tenantName || "عميل تسهيل";
   const amount = Number(data.amount) || 10000;
   const currencyCode = data.currencyCode || "EGP";
@@ -144,6 +144,12 @@ exports.generateRentalInvoiceReceipt = onCall(async (request) => {
 
 
 exports.seedDatabase = onRequest(async (req, res) => {
+  // Reject execution in production environment to prevent test accounts injection
+  if (process.env.NODE_ENV === "production" || process.env.FUNCTIONS_EMULATOR !== "true") {
+    res.status(403).json({ error: "Forbidden: Database seeding is disabled in production environment." });
+    return;
+  }
+
   const users = [
     { email: "agency@test.com", password: "password123", role: "AgencyAdmin", name: "Test Agency" },
     { email: "owner@test.com", password: "password123", role: "Owner", name: "Test Owner" },
@@ -517,6 +523,51 @@ exports.syncMarketIndexManual = onRequest(async (req, res) => {
   } catch (err) {
     logger.error("Error in syncMarketIndexManual", err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+const {
+  sendBrandedVerificationEmail,
+  sendBrandedPasswordResetEmail,
+} = require("./email_service");
+
+/**
+ * Callable Cloud Function: Dispatches a rich Material Design 3 verification email with a button
+ */
+exports.sendCustomVerificationEmail = onCall(async (request) => {
+  const email = request.data?.email;
+  if (!email) {
+    throw new Error("Missing email address");
+  }
+
+  try {
+    const result = await sendBrandedVerificationEmail(email, {
+      url: request.data?.continueUrl,
+    });
+    return result;
+  } catch (error) {
+    logger.error("Error sending custom verification email", error);
+    throw new Error(error.message || "Failed to send verification email");
+  }
+});
+
+/**
+ * Callable Cloud Function: Dispatches a rich Material Design 3 password reset email with a button
+ */
+exports.sendCustomPasswordResetEmail = onCall(async (request) => {
+  const email = request.data?.email;
+  if (!email) {
+    throw new Error("Missing email address");
+  }
+
+  try {
+    const result = await sendBrandedPasswordResetEmail(email, {
+      url: request.data?.continueUrl,
+    });
+    return result;
+  } catch (error) {
+    logger.error("Error sending custom password reset email", error);
+    throw new Error(error.message || "Failed to send password reset email");
   }
 });
 

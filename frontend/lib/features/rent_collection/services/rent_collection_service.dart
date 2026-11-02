@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
@@ -81,8 +82,16 @@ class RentCollectionService {
 
   OwnerPayoutInfo _resolveOwnerPayoutInfo({required String countryCode}) {
     final profile = UserProfileService().profileNotifier.value;
+    String? currentEmail;
+    String? currentDisplay;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      currentEmail = user?.email;
+      currentDisplay = user?.displayName;
+    } catch (_) {}
+
     final isAE = countryCode == 'AE';
-    final defaultName = isAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله';
+    final defaultName = isAE ? 'عبدالله راشد النعيمي' : (currentDisplay ?? 'محمد فتح الله');
     final name = profile.hasFullName ? profile.fullName : defaultName;
     final defaultBank = isAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)';
     final bankName = profile.bankName.isNotEmpty ? profile.bankName : defaultBank;
@@ -91,7 +100,9 @@ class RentCollectionService {
         ? profile.iban
         : (profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : defaultIban);
     final accountNumber = profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : '1234567890';
-    final walletOrVpa = isAE ? 'owner@enbd' : (profile.hasPhone ? profile.phone : 'owner@instapay');
+    final walletOrVpa = isAE
+        ? 'owner@enbd'
+        : (profile.hasPhone ? profile.phone : (currentEmail ?? 'fathlla80800@gmail.com'));
 
     return OwnerPayoutInfo(
       name: name,
@@ -173,22 +184,22 @@ class RentCollectionService {
       RentInvoiceModel(
         id: 'inv_eg_002',
         invoiceNumber: 'INV-EG-2026-0802',
-        contractNumber: 'EG-2026-ZAYED-1104',
+        contractNumber: 'EG-2026-CAI-8821',
         countryCode: 'EG',
-        unitTitle: 'فيلا مستقلة بحمام سباحة',
-        unitNumber: 'Villa 12',
-        buildingName: 'كمبوند الربوة',
-        district: 'الشيخ زايد',
-        propertyId: 'prop-eg-102',
+        unitTitle: 'شقة فاخرة بإطلالة مفتوحة',
+        unitNumber: '402',
+        buildingName: 'برج الياسمين',
+        district: 'القاهرة الجديدة',
+        propertyId: 'prop-eg-101',
         monthKey: '2026-03',
         tenant: const TenantInfo(
-          name: 'سارة خالد الدسوقي',
-          phone: '+201123456789',
-          email: 'sara.desouky@yahoo.com',
-          idNumber: '29505051234568',
+          name: 'أحمد محمود القاضي',
+          phone: '+201012345678',
+          email: 'ahmed.kadi@gmail.com',
+          idNumber: '29201011234567',
         ),
         owner: egOwner,
-        baseAmount: 60000.0,
+        baseAmount: 25000.0,
         dueDate: now.subtract(const Duration(days: 22)),
         gracePeriodDays: 5,
         dailyPenaltyRate: 100.0,
@@ -204,28 +215,22 @@ class RentCollectionService {
       RentInvoiceModel(
         id: 'inv_eg_003',
         invoiceNumber: 'INV-EG-2026-0901',
-        contractNumber: 'EG-2026-OCT-3391',
+        contractNumber: 'EG-2026-CAI-8821',
         countryCode: 'EG',
-        unitTitle: 'دوبلكس حديث بحديقة خاصة',
-        unitNumber: 'D-101',
-        buildingName: 'كمبوند بالم هيلز',
-        district: 'السادس من أكتوبر',
-        propertyId: 'prop-eg-103',
+        unitTitle: 'شقة فاخرة بإطلالة مفتوحة',
+        unitNumber: '402',
+        buildingName: 'برج الياسمين',
+        district: 'القاهرة الجديدة',
+        propertyId: 'prop-eg-101',
         monthKey: '2026-04',
         tenant: const TenantInfo(
-          name: 'كريم عصام الشناوي',
-          phone: '+201234567890',
-          email: 'karim.chennawy@gmail.com',
-          idNumber: '28803031234569',
+          name: 'أحمد محمود القاضي',
+          phone: '+201012345678',
+          email: 'ahmed.kadi@gmail.com',
+          idNumber: '29201011234567',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'شركة الأفق للاستثمار العقاري',
-          bankName: 'بنك مصر (Banque Misr)',
-          iban: 'EG120004000044556677889900112',
-          accountNumber: '4455667788',
-          walletOrVpa: 'alofok@instapay',
-        ),
-        baseAmount: 32000.0,
+        owner: egOwner,
+        baseAmount: 25000.0,
         dueDate: now.add(const Duration(days: 3)),
         gracePeriodDays: 5,
         dailyPenaltyRate: 60.0,
@@ -275,28 +280,22 @@ class RentCollectionService {
       RentInvoiceModel(
         id: 'inv_ae_002',
         invoiceNumber: 'INV-AE-2026-0802',
-        contractNumber: 'AE-2026-DOWNTOWN-4412',
+        contractNumber: 'AE-2026-DXB-9021',
         countryCode: 'AE',
-        unitTitle: 'Executive 1BR Suite near Burj Khalifa',
-        unitNumber: 'Suite 1805',
-        buildingName: 'The Address Downtown',
-        district: 'Downtown Dubai',
-        propertyId: 'prop-ae-102',
+        unitTitle: 'Luxury 2BR Apartment with Marina View',
+        unitNumber: 'Unit 2204',
+        buildingName: 'Marina Gate 2',
+        district: 'Dubai Marina',
+        propertyId: 'prop-ae-101',
         monthKey: '2026-03',
         tenant: const TenantInfo(
-          name: 'Vikram Rajesh Sharma',
-          phone: '+971559876543',
-          email: 'vikram.sharma@techdxb.com',
-          idNumber: '784-1988-7654321-2',
+          name: 'James Arthur Wilson',
+          phone: '+971501234567',
+          email: 'james.wilson@dubai.ae',
+          idNumber: '784-1990-1234567-1',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'فاطمة سلطان المزروعي',
-          bankName: 'Abu Dhabi Commercial Bank (ADCB)',
-          iban: 'AE610210009876543210987',
-          accountNumber: '2098765432',
-          walletOrVpa: 'fatima.mazrouei@adcb',
-        ),
-        baseAmount: 14500.0,
+        owner: aeOwner,
+        baseAmount: 18000.0,
         dueDate: now.subtract(const Duration(days: 20)),
         gracePeriodDays: 5,
         dailyPenaltyRate: 100.0,
@@ -312,28 +311,22 @@ class RentCollectionService {
       RentInvoiceModel(
         id: 'inv_ae_003',
         invoiceNumber: 'INV-AE-2026-0901',
-        contractNumber: 'AE-2026-JBR-5510',
+        contractNumber: 'AE-2026-DXB-9021',
         countryCode: 'AE',
-        unitTitle: 'Beachfront 3BR Penthouse',
-        unitNumber: 'Penthouse 45',
-        buildingName: 'Rimal 1',
-        district: 'Jumeirah Beach Residence (JBR)',
-        propertyId: 'prop-ae-103',
+        unitTitle: 'Luxury 2BR Apartment with Marina View',
+        unitNumber: 'Unit 2204',
+        buildingName: 'Marina Gate 2',
+        district: 'Dubai Marina',
+        propertyId: 'prop-ae-101',
         monthKey: '2026-04',
         tenant: const TenantInfo(
-          name: 'Elena Rostova',
-          phone: '+971521122334',
-          email: 'elena.rostova@consult.ae',
-          idNumber: '784-1994-3344556-3',
+          name: 'James Arthur Wilson',
+          phone: '+971501234567',
+          email: 'james.wilson@dubai.ae',
+          idNumber: '784-1990-1234567-1',
         ),
-        owner: const OwnerPayoutInfo(
-          name: 'عبدالله راشد النعيمي',
-          bankName: 'First Abu Dhabi Bank (FAB)',
-          iban: 'AE400330005544332211009',
-          accountNumber: '3055443322',
-          walletOrVpa: 'abdullah.nuaimi@fab',
-        ),
-        baseAmount: 35000.0,
+        owner: aeOwner,
+        baseAmount: 18000.0,
         dueDate: now.add(const Duration(days: 4)),
         gracePeriodDays: 5,
         dailyPenaltyRate: 200.0,

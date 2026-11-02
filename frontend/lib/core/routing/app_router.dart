@@ -17,16 +17,35 @@ import 'package:tashil_real_estate/features/fast_onboarding/models/property_onbo
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/financial_kpi_screen.dart';
 import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_screen.dart';
 import 'package:tashil_real_estate/features/owner_portal/payment_schedule_screen.dart';
+import 'package:tashil_real_estate/features/super_admin/super_admin_login_screen.dart';
+import 'package:tashil_real_estate/features/auth/views/email_action_handler_screen.dart';
 
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/',
+GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
+  initialLocation: initialLocation,
   redirect: (context, state) {
     final bool isLoggedIn = FirebaseAuth.instance.currentUser != null;
     final String location = state.matchedLocation;
-    final bool isPublicRoute = location == '/' || location == '/login' || location == '/valuation' || location == '/lease-builder' || location == '/rent-collection' || location == '/image-moderation' || location == '/investor-dashboard' || location == '/market-index' || location == '/fast-onboarding' || location == '/financial-dashboard' || location == '/checkout' || location == '/payment-schedule';
+    final bool isAdminRoute = location == '/admin' || location == '/admin/login' || location == '/super-admin';
+    final bool isPublicRoute = location == '/' ||
+        location == '/login' ||
+        location == '/admin' ||
+        location == '/admin/login' ||
+        location == '/valuation' ||
+        location == '/lease-builder' ||
+        location == '/rent-collection' ||
+        location == '/image-moderation' ||
+        location == '/investor-dashboard' ||
+        location == '/market-index' ||
+        location == '/fast-onboarding' ||
+        location == '/financial-dashboard' ||
+        location == '/checkout' ||
+        location == '/payment-schedule';
 
     if (!isLoggedIn && !isPublicRoute) {
-      return '/login'; // Redirect unauthenticated users to login
+      if (isAdminRoute) {
+        return '/admin/login';
+      }
+      return '/login'; // Redirect unauthenticated users to client login
     }
     
     return null;
@@ -87,6 +106,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
+      path: '/admin',
+      redirect: (context, state) => '/admin/login',
+    ),
+    GoRoute(
+      path: '/admin/login',
+      builder: (context, state) => const SuperAdminLoginScreen(),
+    ),
+    GoRoute(
       path: '/super-admin',
       builder: (context, state) => const SuperAdminDashboard(),
     ),
@@ -102,5 +129,29 @@ final GoRouter appRouter = GoRouter(
       path: '/tenant',
       builder: (context, state) => const TenantDashboard(),
     ),
+    GoRoute(
+      path: '/auth/action',
+      builder: (context, state) {
+        final mode = state.uri.queryParameters['mode'] ?? 'verifyEmail';
+        final oobCode = state.uri.queryParameters['oobCode'] ?? '';
+        final apiKey = state.uri.queryParameters['apiKey'];
+        return EmailActionHandlerScreen(
+          mode: mode,
+          oobCode: oobCode,
+          apiKey: apiKey,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/auth/verify',
+      redirect: (context, state) {
+        final oobCode = state.uri.queryParameters['oobCode'] ?? '';
+        return '/auth/action?mode=verifyEmail&oobCode=$oobCode';
+      },
+    ),
   ],
 );
+
+final GoRouter appRouter = createAppRouter(initialLocation: '/');
+final GoRouter superAdminAppRouter = createAppRouter(initialLocation: '/admin');
+

@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/models/investor_portfolio_model.dart';
 
 class InvestmentSimulationResult {
@@ -37,6 +40,10 @@ class InvestorAnalyticsService {
   factory InvestorAnalyticsService() => _instance;
   InvestorAnalyticsService._internal() {
     _initData();
+    try {
+      PropertyLifecycleService().propertiesNotifier.addListener(syncFromProperties);
+      syncFromProperties();
+    } catch (_) {}
   }
 
   final ValueNotifier<InvestorPortfolioSummary> _egSummaryNotifier =
@@ -56,8 +63,74 @@ class InvestorAnalyticsService {
     return countryCode == 'AE' ? _aeSummaryNotifier.value : _egSummaryNotifier.value;
   }
 
+  void syncFromProperties() {
+    final allProperties = PropertyLifecycleService().propertiesNotifier.value;
+    final realEgProps = allProperties
+        .where((p) => p.countryCode == 'EG' && !PropertyLifecycleService.isMockPropertyId(p.id))
+        .toList();
+    final realAeProps = allProperties
+        .where((p) => p.countryCode == 'AE' && !PropertyLifecycleService.isMockPropertyId(p.id))
+        .toList();
+    final cachedOwnerId = LocalStorageService().getString('tashil_last_authenticated_owner_id');
+    final hasAuth = cachedOwnerId != null && cachedOwnerId.isNotEmpty;
+
+    if (realEgProps.isNotEmpty) {
+      final assets = realEgProps.map((p) => _mapPropertyToAsset(p)).toList();
+      _updateSummaryList('EG', assets);
+    } else if (hasAuth) {
+      _updateSummaryList('EG', []);
+    } else {
+      _recomputeSummary('EG');
+    }
+
+    if (realAeProps.isNotEmpty) {
+      final assets = realAeProps.map((p) => _mapPropertyToAsset(p)).toList();
+      _updateSummaryList('AE', assets);
+    } else if (hasAuth) {
+      _updateSummaryList('AE', []);
+    } else {
+      _recomputeSummary('AE');
+    }
+  }
+
+  PortfolioAssetItem _mapPropertyToAsset(ManagedPropertyModel prop) {
+    final rent = prop.pricePerMonth;
+    final purchasePrice = rent * 120;
+    final marketValue = rent * 140;
+
+    AssetType assetType;
+    if (prop.propertyTypeCode == 'villa') {
+      assetType = AssetType.villa;
+    } else if (prop.propertyTypeCode == 'chalet') {
+      assetType = AssetType.chalet;
+    } else if (prop.propertyTypeCode == 'studio') {
+      assetType = AssetType.studio;
+    } else {
+      assetType = AssetType.apartment;
+    }
+
+    return PortfolioAssetItem(
+      id: prop.id,
+      name: prop.titles,
+      location: prop.locations,
+      assetType: assetType,
+      status: prop.isOccupied ? AssetStatus.occupied : AssetStatus.vacant,
+      purchasePrice: purchasePrice,
+      currentMarketValue: marketValue,
+      monthlyRent: rent,
+      annualMaintenanceCost: rent * 0.4,
+      annualServiceCharges: rent * 0.4,
+      annualPropertyTax: rent * 0.2,
+      tenantName: prop.tenantName ?? '',
+      leaseEndDate: prop.leaseEndDate != null
+          ? '${prop.leaseEndDate!.year}-${prop.leaseEndDate!.month.toString().padLeft(2, '0')}-${prop.leaseEndDate!.day.toString().padLeft(2, '0')}'
+          : '',
+      countryCode: prop.countryCode,
+      imageUrl: prop.image,
+    );
+  }
+
   void _initData() {
-    // Recompute initial summaries
     _recomputeSummary('EG');
     _recomputeSummary('AE');
   }

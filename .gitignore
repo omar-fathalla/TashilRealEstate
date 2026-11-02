@@ -21,3 +21,6 @@ Thumbs.db
 # Build artifacts
 build/
 
+
+# Built APKs (too large for git)
+apk/

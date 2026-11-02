@@ -194,19 +194,17 @@ class TashilAlertDialog extends StatelessWidget {
                 const SizedBox(height: 24.0),
               ],
 
-              // 4. Action Buttons (End-aligned, 8dp spacing)
+              // 4. Action Buttons (End-aligned, 8dp spacing, responsive wrap)
               if (actions != null && actions!.isNotEmpty)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions!.map((action) {
-                    final index = actions!.indexOf(action);
-                    return Padding(
-                      padding: EdgeInsetsDirectional.only(
-                        start: index > 0 ? 8.0 : 0.0,
-                      ),
-                      child: action,
-                    );
-                  }).toList(),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: actions!,
+                  ),
                 ),
             ],
           ),

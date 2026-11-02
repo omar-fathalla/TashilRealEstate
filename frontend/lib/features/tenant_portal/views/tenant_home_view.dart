@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_button.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
+import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -48,25 +49,29 @@ class TenantHomeView extends StatelessWidget {
                 child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AiTranslationService.getLocalizedText({
-                      'ar': 'مرحباً، كريم سامي',
-                      'en': 'Welcome, Karim Sami',
-                      'hi': 'स्वागत है, करीम सामी',
-                    }, lang),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AiTranslationService.getLocalizedText({
+                        'ar': 'مرحباً، كريم سامي',
+                        'en': 'Welcome, Karim Sami',
+                        'hi': 'स्वागत है, करीم सामी',
+                      }, lang),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    loc.tr('tenant'),
-                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                  ),
-                ],
+                    Text(
+                      loc.tr('tenant'),
+                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -141,13 +146,13 @@ class TenantHomeView extends StatelessWidget {
                   loc.tr('unit'),
                   AiTranslationService.getLocalizedText(propertyTitle, lang),
                 ),
-                Divider(color: colorScheme.outlineVariant, height: 20),
+                TashilDivider.middleInset(),
                 _buildDetailRow(
                   context,
                   loc.tr('leasePeriod'),
                   '2026-01-01 -> 2027-12-31',
                 ),
-                Divider(color: colorScheme.outlineVariant, height: 20),
+                TashilDivider.middleInset(),
                 _buildDetailRow(
                   context,
                   loc.tr('statusActive'),
@@ -172,12 +177,18 @@ class TenantHomeView extends StatelessWidget {
           label,
           style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: valueColor ?? colorScheme.onSurface,
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: valueColor ?? colorScheme.onSurface,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

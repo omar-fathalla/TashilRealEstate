@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/speech_recognition/speech_recognition_service.dart';
@@ -1218,16 +1219,12 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 ],
               ),
               const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isAllComplete ? theme.colorScheme.primary : theme.colorScheme.tertiary,
-                  ),
-                ),
+              TashilLinearProgressIndicator.flat(
+                value: progress,
+                thickness: 6,
+                trackColor: theme.colorScheme.surfaceContainerHighest,
+                color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.tertiary,
+                useContainerInset: false,
               ),
             ],
           ),

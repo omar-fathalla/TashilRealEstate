@@ -1,11 +1,11 @@
 {
-    "name": "tashil_real_estate",
-    "short_name": "tashil_real_estate",
+    "name": "تسهيل عقار | Tashil Aqar",
+    "short_name": "تسهيل عقار",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F172A",
+    "theme_color": "#0F172A",
+    "description": "تسهيل عقار — منصة التكنولوجيا العقارية الذكية لإدارة المحافظ والعقود والتحصيل.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

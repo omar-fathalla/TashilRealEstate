@@ -320,7 +320,11 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
 
     final randNum = Random().nextInt(9000) + 1000;
     final isEdit = widget.initialContract != null;
-    final contractId = isEdit ? widget.initialContract!.id : 'lease_${DateTime.now().millisecondsSinceEpoch}';
+    final targetPropId = widget.targetProperty?.id ??
+        (_selectedPropertyId != '_custom_property_' ? _selectedPropertyId : null);
+    final contractId = isEdit
+        ? widget.initialContract!.id
+        : (targetPropId != null ? 'lease_$targetPropId' : 'lease_${DateTime.now().millisecondsSinceEpoch}');
     final contractNum = isEdit ? widget.initialContract!.contractNumber : (isAE ? 'AE-DXB-EJARI-$randNum' : 'EG-2026-CAI-$randNum');
     final createdAt = isEdit ? widget.initialContract!.createdAt : DateTime.now();
     final registryId = isEdit ? widget.initialContract!.registeredRegistryId : (isAE ? 'Ejari No: 2026-$randNum-DXB' : 'توثيق شهر عقاري: $randNum/2026');
@@ -1962,10 +1966,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     : TashilButton(
                         onPressed: () async {
                           final contract = _buildContractModel();
-                          if (widget.targetProperty != null) {
+                          final targetPropId = widget.targetProperty?.id ??
+                              (_selectedPropertyId != '_custom_property_' ? _selectedPropertyId : null);
+                          if (targetPropId != null) {
                             final duration = ((contract.endDate.difference(contract.startDate).inDays) / 30).round();
                             await PropertyLifecycleService().markAsRented(
-                              propertyId: widget.targetProperty!.id,
+                              propertyId: targetPropId,
                               tenantName: contract.tenant.name,
                               tenantPhone: contract.tenant.phone,
                               monthlyRent: contract.financialTerms.monthlyRentEquivalent,

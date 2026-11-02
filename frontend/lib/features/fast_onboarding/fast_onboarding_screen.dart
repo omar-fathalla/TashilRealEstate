@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
+import 'package:tashil_real_estate/core/design_system/checkboxes/tashil_checkboxes.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -10,6 +11,8 @@ import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
+import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -75,7 +78,6 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
   late TextEditingController _videoTourCtrl;
   late TextEditingController _addressSearchCtrl;
 
-  final PropertyMarketingTone _selectedTone = PropertyMarketingTone.luxuryExecutive;
   bool _isGeneratingDesc = false;
   bool _isSubmitting = false;
   bool _isLocatingGps = false;
@@ -392,9 +394,15 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     if (_draft.latitude != 0.0 && _draft.longitude != 0.0) {
       _locationService.openInGoogleMaps(_draft.latitude, _draft.longitude);
     } else {
-      final query = '${_draft.district} ${_draft.city}'.trim();
+      final query = _addressSearchCtrl.text.trim().isNotEmpty
+          ? _addressSearchCtrl.text.trim()
+          : '${_draft.district} ${_draft.city}'.trim();
       if (query.isNotEmpty) {
         GpsService().openUrl('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}');
+      } else {
+        final isUAE = CountryController.isUAE;
+        final defaultQuery = isUAE ? 'Dubai, United Arab Emirates' : 'Cairo, Egypt';
+        GpsService().openUrl('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(defaultQuery)}');
       }
     }
   }
@@ -419,17 +427,31 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     _syncControllersToDraft();
     setState(() => _isGeneratingDesc = true);
     try {
-      final descriptions = await _service.generateMarketingDescriptions(
+      final copy = await _service.generateMarketingCopy(
         draft: _draft,
-        tone: _selectedTone,
       );
       if (mounted) {
         setState(() {
-          _descArCtrl.text = descriptions['ar'] ?? _draft.descriptionAr;
-          _descEnCtrl.text = descriptions['en'] ?? _draft.descriptionEn;
-          _draft.descriptionAr = _descArCtrl.text;
-          _draft.descriptionEn = _descEnCtrl.text;
-          _draft.descriptionHi = descriptions['hi'] ?? '';
+          if (copy.titleAr.isNotEmpty) {
+            _titleArCtrl.text = copy.titleAr;
+            _draft.titleAr = copy.titleAr;
+          }
+          if (copy.titleEn.isNotEmpty) {
+            _titleEnCtrl.text = copy.titleEn;
+            _draft.titleEn = copy.titleEn;
+          }
+          _draft.titleHi = copy.titleHi;
+
+          if (copy.descriptionAr.isNotEmpty) {
+            _descArCtrl.text = copy.descriptionAr;
+            _draft.descriptionAr = copy.descriptionAr;
+          }
+          if (copy.descriptionEn.isNotEmpty) {
+            _descEnCtrl.text = copy.descriptionEn;
+            _draft.descriptionEn = copy.descriptionEn;
+          }
+          _draft.descriptionHi = copy.descriptionHi;
+
           _isGeneratingDesc = false;
         });
       }
@@ -708,8 +730,41 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             return Scaffold(
               backgroundColor: theme.colorScheme.surface,
               appBar: const PublicHeaderNavbar(isSubPage: true, currentRoute: '/fast-onboarding'),
+              bottomNavigationBar: isMobile
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLowest,
+                        border: Border(
+                          top: BorderSide(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, -3),
+                          ),
+                        ],
+                      ),
+                      child: SafeArea(
+                        child: SizedBox(
+                          height: 50,
+                          child: TashilButton.filled(
+                            onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
+                            icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
+                            label: _isSubmitting
+                                ? loc.tr('savingListing')
+                                : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
               body: SingleChildScrollView(
-                padding: EdgeInsets.all(isMobile ? 12 : 24),
+                padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),
@@ -725,7 +780,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                               margin: const EdgeInsets.only(bottom: 16),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: theme.colorScheme.secondary.withValues(alpha: 0.3),
                                   width: 1,
@@ -761,41 +816,42 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                             const SizedBox(height: 16),
                           ],
 
-                          // 1. HERO AI VOICE ACTION BANNER
+                          // 1. HERO AI VOICE ACTION BANNER (M3 Filled Card + M3 High-Emphasis Filled Button)
                           _buildVoiceAutofillBanner(loc, isMobile, theme),
                           const SizedBox(height: 20),
 
-                          // 2. SECTION 1: THE LOCATION
-                          _buildSection1Location(loc, theme),
+                          // 2. SECTION 1: THE LOCATION (M3 Outlined Card + M3 Outlined Text Fields + M3 Assist Chips)
+                          _buildSection1Location(loc, isMobile, theme),
                           const SizedBox(height: 20),
 
-                          // 3. SECTION 2: FINANCIAL TRANSPARENCY
-                          _buildSection2Financials(loc, theme),
+                          // 3. SECTION 2: FINANCIAL TRANSPARENCY (M3 Outlined Card + M3 Connected Group + M3 Checkboxes)
+                          _buildSection2Financials(loc, isMobile, theme),
                           const SizedBox(height: 20),
 
-                          // 4. SECTION 3: TECHNICAL SPECS
-                          _buildSection3TechnicalSpecs(loc, theme),
+                          // 4. SECTION 3: TECHNICAL SPECS (M3 Filter Chips + M3 Outlined Text Fields + M3 Connected Group)
+                          _buildSection3TechnicalSpecs(loc, isMobile, theme),
                           const SizedBox(height: 20),
 
-                          // 5. SECTION 4: AMENITIES
-                          _buildSection4Amenities(loc, theme),
+                          // 5. SECTION 4: AMENITIES (M3 Connected Group + M3 Checkboxes Suite)
+                          _buildSection4Amenities(loc, isMobile, theme),
                           const SizedBox(height: 20),
 
-                          // 6. SECTION 5: MEDIA & DESCRIPTION
+                          // 6. SECTION 5: MEDIA & DESCRIPTION (M3 Suggestion Chips + M3 Tonal Button + M3 Outlined Fields)
                           _buildSection5MediaAndDescription(loc, isMobile, theme),
                           const SizedBox(height: 28),
 
-                          // SUBMIT BUTTON
-                          SizedBox(
-                            height: 52,
-                            child: TashilButton(
-                              onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
-                              icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
-                              label: _isSubmitting
-                                  ? loc.tr('savingListing')
-                                  : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
+                          // SUBMIT BUTTON (on Tablet / Desktop when not in bottom bar)
+                          if (!isMobile)
+                            SizedBox(
+                              height: 52,
+                              child: TashilButton.filled(
+                                onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
+                                icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
+                                label: _isSubmitting
+                                    ? loc.tr('savingListing')
+                                    : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 40),
                         ],
                       ),
@@ -816,7 +872,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: theme.colorScheme.primary.withValues(alpha: 0.4),
           width: 1,
@@ -856,23 +912,26 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     );
   }
 
-  // --- HERO VOICE AUTOFILL BANNER ---
+  // --- 1. HERO VOICE AUTOFILL BANNER (M3 Filled Card + M3 Filled Button) ---
   Widget _buildVoiceAutofillBanner(AppLocalizations loc, bool isMobile, ThemeData theme) {
     return TashilCard.filled(
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
-      borderRadius: BorderRadius.circular(20),
-      padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(12),
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.55),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.mic_rounded, color: theme.colorScheme.primary, size: 28),
+                child: Icon(Icons.mic_rounded, color: theme.colorScheme.primary, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -919,11 +978,12 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       loc.tr('voiceAutofillHeroDesc'),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.85),
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -935,7 +995,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           SizedBox(
             width: double.infinity,
             height: 44,
-            child: TashilButton(
+            child: TashilButton.filled(
               onPressed: _handleVoiceAutofill,
               icon: Icons.record_voice_over_rounded,
               label: loc.tr('startVoiceDictationBtn'),
@@ -946,39 +1006,40 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     );
   }
 
-  // --- SECTION CONTAINER HELPER ---
+  // --- M3 OUTLINED SECTION CONTAINER HELPER ---
   Widget _buildSectionCard({
     required int sectionIndex,
     required String title,
     required IconData icon,
     required Widget child,
+    required bool isMobile,
     required ThemeData theme,
   }) {
     return TashilCard.outlined(
-      borderRadius: BorderRadius.circular(20),
-      padding: const EdgeInsets.all(22),
+      borderRadius: BorderRadius.circular(12),
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
-                  child: Icon(icon, color: theme.colorScheme.onSecondaryContainer, size: 20),
+                  child: Icon(icon, color: theme.colorScheme.onSecondaryContainer, size: 18),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: theme.colorScheme.primary.withValues(alpha: 0.2),
                     width: 0.5,
@@ -1004,142 +1065,75 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           const TashilDivider.cardAction(),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           child,
         ],
       ),
     );
   }
 
-  Widget _buildFieldBadge({
-    required bool isMandatory,
-    required String label,
-    required AppLocalizations loc,
-    required ThemeData theme,
-  }) {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 6,
-      runSpacing: 4,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-          decoration: BoxDecoration(
-            color: isMandatory
-                ? theme.colorScheme.errorContainer.withValues(alpha: 0.75)
-                : theme.colorScheme.secondaryContainer.withValues(alpha: 0.75),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: isMandatory
-                  ? theme.colorScheme.error.withValues(alpha: 0.3)
-                  : theme.colorScheme.secondary.withValues(alpha: 0.3),
-              width: 0.5,
-            ),
-          ),
-          child: Text(
-            isMandatory ? loc.tr('fieldRequiredBadge') : loc.tr('fieldOptionalBadge'),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: isMandatory
-                  ? theme.colorScheme.onErrorContainer
-                  : theme.colorScheme.onSecondaryContainer,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // --- 1. THE LOCATION ---
-  Widget _buildSection1Location(AppLocalizations loc, ThemeData theme) {
+  // --- 1. THE LOCATION (M3 Outlined Fields + M3 Assist Chips) ---
+  Widget _buildSection1Location(AppLocalizations loc, bool isMobile, ThemeData theme) {
     return _buildSectionCard(
       sectionIndex: 1,
       title: loc.tr('section1LocationTitle'),
       icon: Icons.location_on_rounded,
+      isMobile: isMobile,
       theme: theme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mandatory Map Pin Coordinates
-          _buildFieldBadge(isMandatory: true, label: loc.tr('mapPinCoordinatesLabel'), loc: loc, theme: theme),
-          const SizedBox(height: 8),
+          // GPS & Map Quick Actions
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isNarrow = constraints.maxWidth < 460;
-                    final gpsBtn = TashilButton.tonal(
-                      onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
-                      icon: Icons.my_location_rounded,
-                      label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
-                    );
-                    final mapBtn = TashilButton.outlined(
-                      onPressed: _handleOpenInGoogleMaps,
-                      icon: Icons.map_rounded,
-                      label: loc.tr('viewOnGoogleMapsBtn'),
-                    );
-                    if (isNarrow) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          gpsBtn,
-                          const SizedBox(height: 8),
-                          mapBtn,
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: gpsBtn),
-                        const SizedBox(width: 10),
-                        mapBtn,
-                      ],
-                    );
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: TashilAssistChip(
+                        icon: Icons.my_location_rounded,
+                        label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
+                        onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TashilAssistChip(
+                        icon: Icons.map_rounded,
+                        label: loc.tr('viewOnGoogleMapsBtn'),
+                        onPressed: _handleOpenInGoogleMaps,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
-                TextFormField(
+                TashilTextField.outlined(
                   controller: _addressSearchCtrl,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: loc.tr('searchAddressPlaceholder'),
-                    hintStyle: const TextStyle(fontSize: 12),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    suffixIcon: _isSearchingAddress
-                        ? const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                            onPressed: () => _handleSearchAddress(loc),
+                  labelText: loc.tr('searchAddressPlaceholderCompact'),
+                  prefixIcon: Icons.search_rounded,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                  suffixIcon: _isSearchingAddress ? null : Icons.arrow_forward_rounded,
+                  suffix: _isSearchingAddress
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: TashilLoadingIndicator.small(),
                           ),
-                  ),
-                  onFieldSubmitted: (_) => _handleSearchAddress(loc),
+                        )
+                      : null,
+                  onSuffixIconTap: () => _handleSearchAddress(loc),
+                  onSubmitted: (_) => _handleSearchAddress(loc),
                 ),
                 if (_draft.latitude != 0.0 && _draft.longitude != 0.0) ...[
                   const SizedBox(height: 8),
@@ -1150,7 +1144,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                       Expanded(
                         child: Text(
                           '${_draft.latitude.toStringAsFixed(4)}, ${_draft.longitude.toStringAsFixed(4)} (${_draft.city} - ${_draft.district})',
-                          style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1162,594 +1160,476 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Mandatory City & District
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 560;
-              final cityWidget = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('cityLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+          // City & District (Responsive Row on Tablet/Desktop, Column on Mobile)
+          if (isMobile) ...[
+            TashilTextField.outlined(
+              controller: _cityCtrl,
+              labelText: '${loc.tr('cityLabel')} *',
+              hintText: loc.tr('cityHint'),
+              prefixIcon: Icons.location_city_rounded,
+              validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+              onChanged: (v) => _draft.city = v,
+            ),
+            const SizedBox(height: 14),
+            TashilTextField.outlined(
+              controller: _districtCtrl,
+              labelText: '${loc.tr('districtLabel')} *',
+              hintText: loc.tr('districtHint'),
+              prefixIcon: Icons.map_rounded,
+              validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+              onChanged: (v) => _draft.district = v,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _cityCtrl,
-                    decoration: InputDecoration(
-                      hintText: loc.tr('cityHint'),
-                      prefixIcon: const Icon(Icons.location_city_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
+                    labelText: '${loc.tr('cityLabel')} *',
+                    hintText: loc.tr('cityHint'),
+                    prefixIcon: Icons.location_city_rounded,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.city = v,
                   ),
-                ],
-              );
-
-              final districtWidget = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('districtLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _districtCtrl,
-                    decoration: InputDecoration(
-                      hintText: loc.tr('districtHint'),
-                      prefixIcon: const Icon(Icons.map_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
+                    labelText: '${loc.tr('districtLabel')} *',
+                    hintText: loc.tr('districtHint'),
+                    prefixIcon: Icons.map_rounded,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.district = v,
                   ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    cityWidget,
-                    const SizedBox(height: 14),
-                    districtWidget,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: cityWidget),
-                  const SizedBox(width: 12),
-                  Expanded(child: districtWidget),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
 
-          // Optional Compound/Tower & Unit Number
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 560;
-              final buildingWidget = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: false, label: loc.tr('buildingCompoundLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+          // Building / Compound & Unit Number (Responsive)
+          if (isMobile) ...[
+            TashilTextField.outlined(
+              controller: _buildingNameCtrl,
+              labelText: loc.tr('buildingCompoundLabel'),
+              hintText: loc.tr('buildingCompoundHint'),
+              prefixIcon: Icons.domain_rounded,
+              onChanged: (v) => _draft.buildingName = v,
+            ),
+            const SizedBox(height: 14),
+            TashilTextField.outlined(
+              controller: _unitNumberCtrl,
+              labelText: loc.tr('unitNumberFieldLabel'),
+              hintText: loc.tr('unitNumberFieldHint'),
+              prefixIcon: Icons.meeting_room_rounded,
+              onChanged: (v) => _draft.unitNumber = v,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _buildingNameCtrl,
-                    decoration: InputDecoration(
-                      hintText: loc.tr('buildingCompoundHint'),
-                      prefixIcon: const Icon(Icons.domain_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
+                    labelText: loc.tr('buildingCompoundLabel'),
+                    hintText: loc.tr('buildingCompoundHint'),
+                    prefixIcon: Icons.domain_rounded,
                     onChanged: (v) => _draft.buildingName = v,
                   ),
-                ],
-              );
-
-              final unitWidget = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: false, label: loc.tr('unitNumberFieldLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _unitNumberCtrl,
-                    decoration: InputDecoration(
-                      hintText: loc.tr('unitNumberFieldHint'),
-                      prefixIcon: const Icon(Icons.meeting_room_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
+                    labelText: loc.tr('unitNumberFieldLabel'),
+                    hintText: loc.tr('unitNumberFieldHint'),
+                    prefixIcon: Icons.meeting_room_rounded,
                     onChanged: (v) => _draft.unitNumber = v,
                   ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    buildingWidget,
-                    const SizedBox(height: 14),
-                    unitWidget,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: buildingWidget),
-                  const SizedBox(width: 12),
-                  Expanded(child: unitWidget),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // --- 2. FINANCIAL TRANSPARENCY ---
-  Widget _buildSection2Financials(AppLocalizations loc, ThemeData theme) {
+  // --- 2. FINANCIAL TRANSPARENCY (M3 Outlined Field + M3 Connected Group + M3 Checkboxes) ---
+  Widget _buildSection2Financials(AppLocalizations loc, bool isMobile, ThemeData theme) {
     return _buildSectionCard(
       sectionIndex: 2,
       title: loc.tr('section2FinancialsTitle'),
       icon: Icons.account_balance_wallet_rounded,
+      isMobile: isMobile,
       theme: theme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Rent Price & Currency (decoupled from Payment Frequency)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 480;
-              final rentField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('rentPriceFieldLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    controller: _rentCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.payments_outlined, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                    validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
-                    onChanged: (v) => _draft.monthlyRent = double.tryParse(v) ?? _draft.monthlyRent,
-                  ),
-                ],
-              );
-
-              final currencyField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('currencyLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: _draft.currency,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.currency_exchange_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'EGP', child: Text('ج.م (EGP)')),
-                      DropdownMenuItem(value: 'AED', child: Text('د.إ (AED)')),
-                      DropdownMenuItem(value: 'USD', child: Text('\$ (USD)')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _draft.currency = v);
-                    },
-                  ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    rentField,
-                    const SizedBox(height: 14),
-                    currencyField,
+          // Row 1: Rent Price & Currency
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: TashilTextField.outlined(
+                  controller: _rentCtrl,
+                  labelText: '${loc.tr('rentPriceFieldLabel')} *',
+                  prefixIcon: Icons.payments_outlined,
+                  keyboardType: TextInputType.number,
+                  validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+                  onChanged: (v) => _draft.monthlyRent = double.tryParse(v) ?? _draft.monthlyRent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: TashilDropdownMenu<String>(
+                  value: _draft.currency,
+                  height: 56.0,
+                  prefixIcon: Icons.currency_exchange_rounded,
+                  items: const [
+                    TashilDropdownMenuItem(value: 'EGP', label: 'EGP'),
+                    TashilDropdownMenuItem(value: 'AED', label: 'AED'),
+                    TashilDropdownMenuItem(value: 'USD', label: 'USD'),
                   ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 3, child: rentField),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 2, child: currencyField),
-                ],
-              );
-            },
+                  onChanged: (v) {
+                    if (v != null) setState(() => _draft.currency = v);
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 18),
 
-          // Row 2: Payment Frequency (Connected Button Group!)
-          _buildFieldBadge(isMandatory: true, label: loc.tr('paymentFrequencyLabel'), loc: loc, theme: theme),
+          // Row 2: Payment Frequency (Connected Button Group with Animated Flex)
+          Text(
+            loc.tr('paymentFrequencyLabel'),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 8),
           TashilConnectedButtonGroup<PaymentFrequency>(
             isFullWidth: true,
+            isAnimatedFlex: true,
             height: 44,
             selectedValue: _draft.paymentFrequency,
             onSelectionChanged: (freq) => setState(() => _draft.paymentFrequency = freq),
             segments: [
               TashilConnectedButtonSegment(
                 value: PaymentFrequency.monthly,
-                label: loc.tr('freq_monthly'),
+                label: loc.tr('freq_monthly_short'),
+                selectedLabel: loc.tr('freq_monthly_full'),
                 icon: Icons.calendar_month_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: PaymentFrequency.quarterly,
-                label: loc.tr('freq_quarterly'),
+                label: loc.tr('freq_quarterly_short'),
+                selectedLabel: loc.tr('freq_quarterly_full'),
                 icon: Icons.date_range_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: PaymentFrequency.annual,
-                label: loc.tr('freq_annual'),
+                label: loc.tr('freq_annual_short'),
+                selectedLabel: loc.tr('freq_annual_full'),
                 icon: Icons.event_available_rounded,
               ),
             ],
           ),
           const SizedBox(height: 18),
 
-          // Optional Security Deposit
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFieldBadge(isMandatory: false, label: loc.tr('securityDepositLabel'), loc: loc, theme: theme),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _depositCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: loc.tr('securityDepositHint'),
-                  prefixIcon: const Icon(Icons.shield_outlined, size: 18),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          // Security Deposit
+          TashilTextField.outlined(
+            controller: _depositCtrl,
+            labelText: loc.tr('securityDepositLabel'),
+            hintText: loc.tr('securityDepositHint'),
+            prefixIcon: Icons.shield_outlined,
+            keyboardType: TextInputType.number,
+            onChanged: (v) => _draft.securityDeposit = double.tryParse(v),
+          ),
+          const SizedBox(height: 16),
+
+          // Financial Switch Options (M3 Boolean Toggles with Compact Typography)
+          if (isMobile) ...[
+            TashilSwitchListTile(
+              title: Text(
+                loc.tr('billsIncludedOption'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
                 ),
-                onChanged: (v) => _draft.securityDeposit = double.tryParse(v),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // M3 Switches for Financial Options
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 600;
-              final billsTile = TashilSwitchListTile(
-                title: Text(
-                  loc.tr('billsIncludedOption'),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              secondary: Icon(Icons.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
+              value: _draft.isBillsIncluded,
+              onChanged: (v) => setState(() => _draft.isBillsIncluded = v),
+            ),
+            const SizedBox(height: 8),
+            TashilSwitchListTile(
+              title: Text(
+                loc.tr('isNegotiableOption'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
                 ),
-                secondary: Icon(Icons.receipt_long_rounded, color: theme.colorScheme.primary, size: 22),
-                value: _draft.isBillsIncluded,
-                onChanged: (v) => setState(() => _draft.isBillsIncluded = v),
-              );
-              final negotiableTile = TashilSwitchListTile(
-                title: Text(
-                  loc.tr('isNegotiableOption'),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              secondary: Icon(Icons.handshake_outlined, color: theme.colorScheme.secondary, size: 20),
+              value: _draft.isNegotiable,
+              onChanged: (v) => setState(() => _draft.isNegotiable = v),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TashilSwitchListTile(
+                    title: Text(
+                      loc.tr('billsIncludedOption'),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    secondary: Icon(Icons.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
+                    value: _draft.isBillsIncluded,
+                    onChanged: (v) => setState(() => _draft.isBillsIncluded = v),
+                  ),
                 ),
-                secondary: Icon(Icons.handshake_outlined, color: theme.colorScheme.secondary, size: 22),
-                value: _draft.isNegotiable,
-                onChanged: (v) => setState(() => _draft.isNegotiable = v),
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    billsTile,
-                    const SizedBox(height: 4),
-                    negotiableTile,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: billsTile),
-                  const SizedBox(width: 8),
-                  Expanded(child: negotiableTile),
-                ],
-              );
-            },
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TashilSwitchListTile(
+                    title: Text(
+                      loc.tr('isNegotiableOption'),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    secondary: Icon(Icons.handshake_outlined, color: theme.colorScheme.secondary, size: 20),
+                    value: _draft.isNegotiable,
+                    onChanged: (v) => setState(() => _draft.isNegotiable = v),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  IconData _getPropertyTypeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'villa':
-        return Icons.villa_rounded;
-      case 'studio':
-        return Icons.single_bed_rounded;
-      case 'office':
-        return Icons.business_center_rounded;
-      case 'chalet':
-        return Icons.beach_access_rounded;
-      case 'apartment':
-      default:
-        return Icons.apartment_rounded;
-    }
-  }
+  // --- 3. TECHNICAL SPECS (M3 Filter Chips + M3 Outlined Fields + M3 Connected Group) ---
+  Widget _buildSection3TechnicalSpecs(AppLocalizations loc, bool isMobile, ThemeData theme) {
+    final safePropertyType = ['apartment', 'villa', 'studio', 'office', 'chalet']
+            .contains(_draft.propertyType.toLowerCase())
+        ? _draft.propertyType.toLowerCase()
+        : 'apartment';
 
-  // --- 3. TECHNICAL SPECS ---
-  Widget _buildSection3TechnicalSpecs(AppLocalizations loc, ThemeData theme) {
+    final propertyTypes = [
+      {'key': 'apartment', 'label': loc.tr('propTypeApartment'), 'icon': Icons.apartment_rounded},
+      {'key': 'villa', 'label': loc.tr('propTypeVilla'), 'icon': Icons.villa_rounded},
+      {'key': 'studio', 'label': loc.tr('propTypeStudio'), 'icon': Icons.single_bed_rounded},
+      {'key': 'office', 'label': loc.tr('propTypeOffice'), 'icon': Icons.business_center_rounded},
+      {'key': 'chalet', 'label': loc.tr('propTypeChalet'), 'icon': Icons.beach_access_rounded},
+    ];
+
     return _buildSectionCard(
       sectionIndex: 3,
       title: loc.tr('section3TechnicalSpecsTitle'),
       icon: Icons.tune_rounded,
+      isMobile: isMobile,
       theme: theme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mandatory Property Type & Area
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 560;
-              final safePropertyType = ['apartment', 'villa', 'studio', 'office', 'chalet']
-                      .contains(_draft.propertyType.toLowerCase())
-                  ? _draft.propertyType.toLowerCase()
-                  : 'apartment';
-
-              final propTypeField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('propertyTypeLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TashilDropdownMenu<String>(
-                    value: safePropertyType,
-                    height: 48.0,
-                    prefixIcon: _getPropertyTypeIcon(safePropertyType),
-                    items: [
-                      TashilDropdownMenuItem<String>(
-                        value: 'apartment',
-                        label: loc.tr('propTypeApartment'),
-                        icon: Icons.apartment_rounded,
-                      ),
-                      TashilDropdownMenuItem<String>(
-                        value: 'villa',
-                        label: loc.tr('propTypeVilla'),
-                        icon: Icons.villa_rounded,
-                      ),
-                      TashilDropdownMenuItem<String>(
-                        value: 'studio',
-                        label: loc.tr('propTypeStudio'),
-                        icon: Icons.single_bed_rounded,
-                      ),
-                      TashilDropdownMenuItem<String>(
-                        value: 'office',
-                        label: loc.tr('propTypeOffice'),
-                        icon: Icons.business_center_rounded,
-                      ),
-                      TashilDropdownMenuItem<String>(
-                        value: 'chalet',
-                        label: loc.tr('propTypeChalet'),
-                        icon: Icons.beach_access_rounded,
-                      ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() {
-                          _draft.propertyType = v;
-                        });
-                      }
-                    },
-                  ),
-                ],
+          // Property Type Filter Chips
+          Text(
+            '${loc.tr('propertyTypeLabel')} *',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: propertyTypes.map((pt) {
+              final isSelected = safePropertyType == pt['key'];
+              return TashilFilterChip(
+                label: pt['label'] as String,
+                icon: pt['icon'] as IconData,
+                selected: isSelected,
+                onSelected: (val) {
+                  if (val) {
+                    setState(() => _draft.propertyType = pt['key'] as String);
+                  }
+                },
               );
+            }).toList(),
+          ),
+          const SizedBox(height: 18),
 
-              final areaField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('areaSqmFieldLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+          // Area & Floor
+          if (isMobile) ...[
+            TashilTextField.outlined(
+              controller: _areaCtrl,
+              labelText: '${loc.tr('areaSqmFieldLabel')} (م²) *',
+              prefixIcon: Icons.square_foot_rounded,
+              keyboardType: TextInputType.number,
+              validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+              onChanged: (v) => _draft.areaSqm = int.tryParse(v) ?? _draft.areaSqm,
+            ),
+            const SizedBox(height: 14),
+            TashilTextField.outlined(
+              controller: _floorCtrl,
+              labelText: loc.tr('floorNumberLabel'),
+              hintText: loc.tr('floorNumberHint'),
+              prefixIcon: Icons.layers_rounded,
+              keyboardType: TextInputType.number,
+              onChanged: (v) => _draft.floor = int.tryParse(v),
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _areaCtrl,
+                    labelText: '${loc.tr('areaSqmFieldLabel')} (م²) *',
+                    prefixIcon: Icons.square_foot_rounded,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      suffixText: 'م²',
-                      prefixIcon: const Icon(Icons.square_foot_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.areaSqm = int.tryParse(v) ?? _draft.areaSqm,
                   ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    propTypeField,
-                    const SizedBox(height: 14),
-                    areaField,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: propTypeField),
-                  const SizedBox(width: 12),
-                  Expanded(child: areaField),
-                ],
-              );
-            },
-          ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TashilTextField.outlined(
+                    controller: _floorCtrl,
+                    labelText: loc.tr('floorNumberLabel'),
+                    hintText: loc.tr('floorNumberHint'),
+                    prefixIcon: Icons.layers_rounded,
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => _draft.floor = int.tryParse(v),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
 
-          // Mandatory Bedrooms & Bathrooms
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 560;
-              final bedsField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('bedroomsLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+          // Bedrooms & Bathrooms
+          if (isMobile) ...[
+            TashilTextField.outlined(
+              controller: _bedroomsCtrl,
+              labelText: '${loc.tr('bedroomsLabel')} *',
+              prefixIcon: Icons.bed_rounded,
+              keyboardType: TextInputType.number,
+              validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+              onChanged: (v) => _draft.bedrooms = int.tryParse(v) ?? _draft.bedrooms,
+            ),
+            const SizedBox(height: 14),
+            TashilTextField.outlined(
+              controller: _bathroomsCtrl,
+              labelText: '${loc.tr('bathroomsLabel')} *',
+              prefixIcon: Icons.bathtub_rounded,
+              keyboardType: TextInputType.number,
+              validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
+              onChanged: (v) => _draft.bathrooms = int.tryParse(v) ?? _draft.bathrooms,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _bedroomsCtrl,
+                    labelText: '${loc.tr('bedroomsLabel')} *',
+                    prefixIcon: Icons.bed_rounded,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.bed_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.bedrooms = int.tryParse(v) ?? _draft.bedrooms,
                   ),
-                ],
-              );
-
-              final bathsField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: true, label: loc.tr('bathroomsLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TashilTextField.outlined(
                     controller: _bathroomsCtrl,
+                    labelText: '${loc.tr('bathroomsLabel')} *',
+                    prefixIcon: Icons.bathtub_rounded,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.bathtub_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.bathrooms = int.tryParse(v) ?? _draft.bathrooms,
                   ),
-                ],
-              );
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 18),
 
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    bedsField,
-                    const SizedBox(height: 14),
-                    bathsField,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: bedsField),
-                  const SizedBox(width: 12),
-                  Expanded(child: bathsField),
-                ],
-              );
-            },
+          // Building Age (Connected Button Group)
+          Text(
+            loc.tr('buildingAgeLabel'),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
-          const SizedBox(height: 16),
-
-          // Optional Floor & Building Age
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 560;
-              final floorField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: false, label: loc.tr('floorNumberLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    controller: _floorCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: loc.tr('floorNumberHint'),
-                      prefixIcon: const Icon(Icons.layers_rounded, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                    onChanged: (v) => _draft.floor = int.tryParse(v),
-                  ),
-                ],
-              );
-
-              final ageField = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldBadge(isMandatory: false, label: loc.tr('buildingAgeLabel'), loc: loc, theme: theme),
-                  const SizedBox(height: 6),
-                  TashilConnectedButtonGroup<BuildingAge>(
-                    isFullWidth: true,
-                    height: 42,
-                    selectedValue: _draft.buildingAge ?? BuildingAge.brandNew,
-                    onSelectionChanged: (age) => setState(() => _draft.buildingAge = age),
-                    segments: [
-                      TashilConnectedButtonSegment(
-                        value: BuildingAge.brandNew,
-                        label: loc.tr('ageBrandNew'),
-                        icon: Icons.fiber_new_rounded,
-                      ),
-                      TashilConnectedButtonSegment(
-                        value: BuildingAge.oneToFive,
-                        label: loc.tr('ageOneToFive'),
-                        icon: Icons.history_rounded,
-                      ),
-                      TashilConnectedButtonSegment(
-                        value: BuildingAge.older,
-                        label: loc.tr('ageOlder'),
-                        icon: Icons.domain_verification_rounded,
-                      ),
-                    ],
-                  ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    floorField,
-                    const SizedBox(height: 14),
-                    ageField,
-                  ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 2, child: floorField),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 3, child: ageField),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 14),
-
-          // Maid's Room switch
-          TashilSwitchListTile(
-            title: Text(loc.tr('hasMaidsRoomOption'), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-            secondary: Icon(Icons.person_outline_rounded, color: theme.colorScheme.secondary, size: 22),
-            value: _draft.hasMaidsRoom,
-            onChanged: (v) => setState(() => _draft.hasMaidsRoom = v),
+          const SizedBox(height: 8),
+          TashilConnectedButtonGroup<BuildingAge>(
+            isFullWidth: true,
+            height: 42,
+            selectedValue: _draft.buildingAge ?? BuildingAge.brandNew,
+            onSelectionChanged: (age) => setState(() => _draft.buildingAge = age),
+            segments: [
+              TashilConnectedButtonSegment(
+                value: BuildingAge.brandNew,
+                label: loc.tr('ageBrandNew'),
+                icon: Icons.fiber_new_rounded,
+              ),
+              TashilConnectedButtonSegment(
+                value: BuildingAge.oneToFive,
+                label: loc.tr('ageOneToFive'),
+                icon: Icons.history_rounded,
+              ),
+              TashilConnectedButtonSegment(
+                value: BuildingAge.older,
+                label: loc.tr('ageOlder'),
+                icon: Icons.domain_verification_rounded,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // --- 4. AMENITIES ---
-  Widget _buildSection4Amenities(AppLocalizations loc, ThemeData theme) {
+  // --- 4. AMENITIES (M3 Connected Group + M3 Checkboxes Suite) ---
+  Widget _buildSection4Amenities(AppLocalizations loc, bool isMobile, ThemeData theme) {
     return _buildSectionCard(
       sectionIndex: 4,
       title: loc.tr('section4AmenitiesTitle'),
       icon: Icons.auto_awesome_rounded,
+      isMobile: isMobile,
       theme: theme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mandatory Furnishing Status
-          _buildFieldBadge(isMandatory: true, label: loc.tr('furnishingStatusLabel'), loc: loc, theme: theme),
+          // Furnishing Status
+          Text(
+            '${loc.tr('furnishingStatusLabel')} *',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 8),
           TashilConnectedButtonGroup<FurnishingStatus>(
             isFullWidth: true,
@@ -1776,135 +1656,200 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Optional Amenities Filter Chips
-          _buildFieldBadge(isMandatory: false, label: loc.tr('optionalAmenitiesTitle'), loc: loc, theme: theme),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              TashilFilterChip(
-                label: loc.tr('parkingAmenity'),
-                icon: Icons.local_parking_rounded,
-                selected: _draft.hasParking,
-                onSelected: (v) => setState(() => _draft.hasParking = v),
-              ),
-              TashilFilterChip(
-                label: loc.tr('centralAcAmenity'),
-                icon: Icons.ac_unit_rounded,
-                selected: _draft.hasCentralAc,
-                onSelected: (v) => setState(() => _draft.hasCentralAc = v),
-              ),
-              TashilFilterChip(
-                label: loc.tr('poolGymAmenity'),
-                icon: Icons.pool_rounded,
-                selected: _draft.hasPoolGym,
-                onSelected: (v) => setState(() => _draft.hasPoolGym = v),
-              ),
-              TashilFilterChip(
-                label: loc.tr('securityAmenity'),
-                icon: Icons.security_rounded,
-                selected: _draft.hasSecurity,
-                onSelected: (v) => setState(() => _draft.hasSecurity = v),
-              ),
-              TashilFilterChip(
-                label: loc.tr('balconyViewAmenity'),
-                icon: Icons.balcony_rounded,
-                selected: _draft.hasBalconyView,
-                onSelected: (v) => setState(() => _draft.hasBalconyView = v),
-              ),
-              TashilFilterChip(
-                label: loc.tr('petFriendlyAmenity'),
-                icon: Icons.pets_rounded,
-                selected: _draft.isPetFriendly,
-                onSelected: (v) => setState(() => _draft.isPetFriendly = v),
-              ),
-            ],
+          // M3 Checkboxes for Amenities
+          Text(
+            loc.tr('optionalAmenitiesTitle'),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
+          const SizedBox(height: 10),
+
+          if (isMobile) ...[
+            TashilCheckboxListTile(
+              title: Text(loc.tr('parkingAmenity')),
+              secondary: Icon(Icons.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasParking,
+              onChanged: (v) => setState(() => _draft.hasParking = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('centralAcAmenity')),
+              secondary: Icon(Icons.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasCentralAc,
+              onChanged: (v) => setState(() => _draft.hasCentralAc = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('poolGymAmenity')),
+              secondary: Icon(Icons.pool_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasPoolGym,
+              onChanged: (v) => setState(() => _draft.hasPoolGym = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('securityAmenity')),
+              secondary: Icon(Icons.security_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasSecurity,
+              onChanged: (v) => setState(() => _draft.hasSecurity = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('balconyViewAmenity')),
+              secondary: Icon(Icons.balcony_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasBalconyView,
+              onChanged: (v) => setState(() => _draft.hasBalconyView = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('petFriendlyAmenity')),
+              secondary: Icon(Icons.pets_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.isPetFriendly,
+              onChanged: (v) => setState(() => _draft.isPetFriendly = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            TashilCheckboxListTile(
+              title: Text(loc.tr('hasMaidsRoomOption')),
+              secondary: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
+              value: _draft.hasMaidsRoom,
+              onChanged: (v) => setState(() => _draft.hasMaidsRoom = v ?? false),
+            ),
+          ] else ...[
+            // Responsive 2-column grid for Checkboxes
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('parkingAmenity')),
+                        secondary: Icon(Icons.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasParking,
+                        onChanged: (v) => setState(() => _draft.hasParking = v ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('poolGymAmenity')),
+                        secondary: Icon(Icons.pool_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasPoolGym,
+                        onChanged: (v) => setState(() => _draft.hasPoolGym = v ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('balconyViewAmenity')),
+                        secondary: Icon(Icons.balcony_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasBalconyView,
+                        onChanged: (v) => setState(() => _draft.hasBalconyView = v ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('hasMaidsRoomOption')),
+                        secondary: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasMaidsRoom,
+                        onChanged: (v) => setState(() => _draft.hasMaidsRoom = v ?? false),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    children: [
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('centralAcAmenity')),
+                        secondary: Icon(Icons.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasCentralAc,
+                        onChanged: (v) => setState(() => _draft.hasCentralAc = v ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('securityAmenity')),
+                        secondary: Icon(Icons.security_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.hasSecurity,
+                        onChanged: (v) => setState(() => _draft.hasSecurity = v ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      TashilCheckboxListTile(
+                        title: Text(loc.tr('petFriendlyAmenity')),
+                        secondary: Icon(Icons.pets_rounded, color: theme.colorScheme.primary, size: 22),
+                        value: _draft.isPetFriendly,
+                        onChanged: (v) => setState(() => _draft.isPetFriendly = v ?? false),
+                      ),
+                      const SizedBox(height: 56),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // --- 5. MEDIA & DESCRIPTION ---
+  // --- 5. MEDIA & DESCRIPTION (M3 Suggestion Chips + M3 Tonal Button + M3 Outlined Fields) ---
   Widget _buildSection5MediaAndDescription(AppLocalizations loc, bool isMobile, ThemeData theme) {
     return _buildSectionCard(
       sectionIndex: 5,
       title: loc.tr('section5MediaTitle'),
       icon: Icons.photo_library_rounded,
+      isMobile: isMobile,
       theme: theme,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mandatory Minimum 3 Images - Animated Gallery System
+          // Minimum 3 Images Gallery
           PropertyMediaGalleryUploader(
             photoUrls: _draft.photoUrls,
             onPhotosChanged: (urls) => setState(() => _draft.photoUrls = urls),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          // Mandatory Listing Title
-          _buildFieldBadge(isMandatory: true, label: loc.tr('propertyTitleField'), loc: loc, theme: theme),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _titleArCtrl,
-            decoration: InputDecoration(
-              hintText: loc.tr('propertyTitleHint'),
-              prefixIcon: const Icon(Icons.title_rounded, size: 18),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          // AI Title & Description Generation Button (Gemini 3.8 Flash)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TashilButton.tonal(
+              onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
+              icon: Icons.auto_awesome_rounded,
+              label: _isGeneratingDesc
+                  ? loc.tr('savingListing')
+                  : loc.tr('generateTitleAndDescAiBtn'),
+              fontSize: 13,
+              height: 40,
             ),
+          ),
+          const SizedBox(height: 14),
+
+          // Listing Title (Positioned directly above description)
+          TashilTextField.outlined(
+            controller: _titleArCtrl,
+            labelText: '${loc.tr('propertyTitleField')} *',
+            hintText: loc.tr('propertyTitleHint'),
+            prefixIcon: Icons.title_rounded,
             validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
             onChanged: (v) => _draft.titleAr = v,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Mandatory AI-Assisted Detailed Description
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              _buildFieldBadge(isMandatory: true, label: loc.tr('detailedDescriptionLabel'), loc: loc, theme: theme),
-              TashilButton.tonal(
-                onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
-                icon: Icons.auto_awesome_rounded,
-                label: loc.tr('generateWithAiBtn'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
+          // Detailed Marketing Description
+          TashilTextField.outlined(
             controller: _descArCtrl,
+            labelText: '${loc.tr('detailedDescriptionLabel')} *',
+            hintText: loc.tr('detailedDescriptionHint'),
             maxLines: 4,
-            decoration: InputDecoration(
-              hintText: loc.tr('detailedDescriptionHint'),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.all(12),
-            ),
             validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
             onChanged: (v) => _draft.descriptionAr = v,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
-          // Optional Video Tour
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFieldBadge(isMandatory: false, label: loc.tr('videoTourUrlLabel'), loc: loc, theme: theme),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _videoTourCtrl,
-                decoration: InputDecoration(
-                  hintText: loc.tr('videoTourUrlHint'),
-                  prefixIcon: const Icon(Icons.videocam_outlined, size: 18),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-                onChanged: (v) => _draft.videoTourUrl = v,
-              ),
-            ],
+          // Video Tour
+          TashilTextField.outlined(
+            controller: _videoTourCtrl,
+            labelText: loc.tr('videoTourUrlLabel'),
+            hintText: loc.tr('videoTourUrlHint'),
+            prefixIcon: Icons.videocam_outlined,
+            onChanged: (v) => _draft.videoTourUrl = v,
           ),
         ],
       ),
