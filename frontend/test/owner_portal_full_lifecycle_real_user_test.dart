@@ -330,7 +330,7 @@ void main() {
 
       // Investor Dashboard analytics verification
       InvestorAnalyticsService().syncFromProperties();
-      final metrics = InvestorAnalyticsService().currentSummary;
+      final metrics = InvestorAnalyticsService().getSummaryForCountry('EG');
       expect(metrics.occupancyRate, equals(100.0), reason: 'Single rented property gives 100% occupancy');
       expect(metrics.occupiedUnitsCount, equals(1));
       expect(metrics.totalUnitsCount, equals(1));

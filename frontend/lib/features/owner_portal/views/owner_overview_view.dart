@@ -325,7 +325,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       TashilKpiCard(
                         title: loc.tr('occupiedUnits'),
                         value: '$occupiedUnits',
-                        subtitle: '$occupancyRate% ${loc.tr('occupancyRateSubtitle')}',
+                        subtitle: loc.tr('occupancyRateWithValue', {'rate': '$occupancyRate'}),
                         icon: Icons.check_circle_outline_rounded,
                         subtitleIcon: Icons.trending_up_rounded,
                         iconColor: colorScheme.primary,

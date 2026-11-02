@@ -135,7 +135,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify title & GPS button presence
-      expect(find.text('اختر الحي أو الكمبوند'), findsOneWidget);
+      expect(find.text('اختر المنطقة أو المجمع'), findsOneWidget);
       expect(find.text('خرائط Google والأحياء'), findsOneWidget);
       expect(find.text('تحديد موقعي عبر GPS'), findsOneWidget);
 
@@ -173,7 +173,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Choose District or Compound'), findsOneWidget);
+      expect(find.text('Choose area or community'), findsOneWidget);
       expect(find.text('Dubai Marina'), findsOneWidget);
       expect(find.text('Downtown Dubai'), findsOneWidget);
       expect(find.text('Business Bay'), findsOneWidget);
@@ -201,16 +201,15 @@ void main() {
 
       // Verify popular areas chips row exists
       expect(find.text('المناطق الأكثر طلباً:'), findsOneWidget);
-      expect(find.text('الشيخ زايد'), findsOneWidget);
-      expect(find.text('المعادي'), findsOneWidget);
-      expect(find.text('مصر الجديدة'), findsOneWidget);
+      expect(find.text('دبي مارينا'), findsOneWidget);
+      expect(find.text('داون تاون دبي'), findsOneWidget);
+      expect(find.text('الخليج التجاري'), findsOneWidget);
 
-      // Tap on 'الشيخ زايد' chip to autofill city
-      await tester.tap(find.text('الشيخ زايد'));
+      await tester.tap(find.text('دبي مارينا'));
       await tester.pumpAndSettle();
 
       final cityField = tester.widget<TextField>(find.byType(TextField).first);
-      expect(cityField.controller?.text, equals('الشيخ زايد'));
+      expect(cityField.controller?.text, equals('دبي مارينا'));
     });
 
     testWidgets('Completes valuation and displays Google Search Grounding badge with verified portal comps', (tester) async {
@@ -245,7 +244,7 @@ void main() {
       );
 
       // Verify neighbor comps with real portal tags (Aqarmap or Property Finder)
-      expect(find.text('عقارات مقارنة في نفس الحي والمحيط'), findsOneWidget);
+      expect(find.text('عقارات مشابهة في المنطقة'), findsOneWidget);
       expect(find.text('عقار ماب (Aqarmap)'), findsWidgets);
       expect(find.text('عرض الإعلان في المصدر'), findsWidgets);
     });
@@ -256,14 +255,14 @@ void main() {
       final enLoc = AppLocalizations(const Locale('en'));
       expect(enLoc.tr('googleSearchGroundingTitle'), contains('Google Search'));
       expect(enLoc.tr('useCurrentGpsLocation'), contains('GPS'));
-      expect(enLoc.tr('pickDistrictOrCompound'), contains('District'));
+      expect(enLoc.tr('pickDistrictOrCompound'), contains('area'));
 
       // Hindi
       LocaleController.currentLocale.value = const Locale('hi');
       final hiLoc = AppLocalizations(const Locale('hi'));
       expect(hiLoc.tr('googleSearchGroundingTitle'), contains('गूगल खोज'));
       expect(hiLoc.tr('useCurrentGpsLocation'), contains('जीपीएस'));
-      expect(hiLoc.tr('pickDistrictOrCompound'), contains('कंपाउंड'));
+      expect(hiLoc.tr('pickDistrictOrCompound'), contains('क्षेत्र'));
     });
   });
 }

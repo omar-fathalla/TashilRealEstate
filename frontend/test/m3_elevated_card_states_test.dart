@@ -395,7 +395,7 @@ void main() {
       expect(find.text('تأثيث افتراضي متاح'), findsNothing);
 
       // 2. Verify Gemini Live pill
-      expect(find.text('Gemini Live'), findsOneWidget);
+      expect(find.text('المساعد الصوتي'), findsOneWidget);
 
       // 3. Verify Favorite Heart Icon button and toggle behavior
       expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);

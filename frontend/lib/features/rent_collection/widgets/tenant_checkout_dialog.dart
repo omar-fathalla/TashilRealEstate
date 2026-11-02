@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -79,8 +80,9 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: $e')),
+      TashilSnackBar.showError(
+        context: context,
+        message: AppLocalizations.of(context).tr('paymentFailedRetry'),
       );
     }
   }

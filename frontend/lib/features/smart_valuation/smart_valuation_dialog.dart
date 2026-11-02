@@ -89,6 +89,13 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
 
   List<String> get _quickDistricts {
     if (_countryCode == 'AE') {
+      final lang = LocaleController.languageCode;
+      if (lang == 'ar') {
+        return const ['دبي مارينا', 'داون تاون دبي', 'الخليج التجاري', 'نخلة جميرا', 'قرية جميرا', 'دبي هيلز'];
+      }
+      if (lang == 'hi') {
+        return const ['दुबई मरीना', 'डाउनटाउन दुबई', 'बिज़नेस बे', 'पाम जुमेराह', 'जेवीसी', 'दुबई हिल्स'];
+      }
       return const ['Dubai Marina', 'Downtown Dubai', 'Business Bay', 'Palm Jumeirah', 'JVC', 'Dubai Hills'];
     }
     return const ['التجمع الخامس', 'الشيخ زايد', 'المعادي', 'مصر الجديدة', '6 أكتوبر', 'الرحاب', 'مدينتي', 'بيت الوطن'];
@@ -538,13 +545,16 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
               });
             },
             segments: [
-              TashilConnectedButtonSegment(
-                value: 'EG',
-                label: '🇪🇬 ${loc.tr('country_eg')}',
-              ),
+              if (_countryCode == 'EG')
+                TashilConnectedButtonSegment(
+                  value: 'EG',
+                  label: loc.tr('country_eg'),
+                  icon: Icons.flag_rounded,
+                ),
               TashilConnectedButtonSegment(
                 value: 'AE',
-                label: '🇦🇪 ${loc.tr('country_ae')}',
+                label: loc.tr('country_ae'),
+                icon: Icons.flag_rounded,
               ),
             ],
           ),

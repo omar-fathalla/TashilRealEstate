@@ -66,7 +66,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Ensure investor dashboard title is NOT in the public navbar
-      expect(find.text('لوحة المستثمر وتحليلات المحفظة العقارية'), findsNothing);
+      expect(find.text('لوحة تحكم المستثمر'), findsNothing);
       expect(find.text('Investor & Portfolio Analytics'), findsNothing);
     });
 
@@ -97,7 +97,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the Investor Dashboard destination is present in Agency Navigation
-      expect(find.text('لوحة المستثمر وتحليلات المحفظة العقارية'), findsWidgets);
+      expect(find.text('لوحة تحكم المستثمر'), findsWidgets);
     });
 
     testWidgets('SuperAdminDashboard includes and renders Investor Dashboard at index 5', (tester) async {
@@ -113,7 +113,7 @@ void main() {
 
       // Verify InvestorDashboardView is actively rendered
       expect(find.byType(InvestorDashboardView), findsOneWidget);
-      expect(find.text('لوحة المستثمر وتحليلات المحفظة العقارية'), findsWidgets);
+      expect(find.text('لوحة تحكم المستثمر'), findsWidgets);
     });
 
     testWidgets('InvestorDashboardView renders M3 Connected Button Group and Elevated Cards', (tester) async {

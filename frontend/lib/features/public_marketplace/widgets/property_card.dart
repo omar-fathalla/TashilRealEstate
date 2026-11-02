@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/market_display.dart';
 import '../../semantic_search/models/semantic_search_result_model.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
@@ -70,7 +71,7 @@ class _PropertyCardState extends State<PropertyCard> {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '${CurrencyFormatter.formatAmount(widget.property.pricePerMonth, langCode: lang)} ',
+                            text: '${CurrencyFormatter.formatAmount(MarketDisplay.rentAmount(pricePerMonth: widget.property.pricePerMonth, currencyCode: widget.property.currencyCode), langCode: lang)} ',
                             style: TextStyle(
                               fontSize: 18.5,
                               fontWeight: FontWeight.bold,
@@ -78,7 +79,7 @@ class _PropertyCardState extends State<PropertyCard> {
                             ),
                           ),
                           TextSpan(
-                            text: '${widget.property.currencyCode == 'AED' ? loc.tr('currency_ae') : loc.tr('currency_eg')} / ${loc.tr('perMonth')}',
+                            text: '${widget.property.currencyCode == 'AED' ? loc.tr('currency_ae') : loc.tr('currency_eg')} / ${loc.tr(MarketDisplay.rentPeriodKey(widget.property.currencyCode))}',
                             style: TextStyle(
                               fontSize: 11.5,
                               color: colorScheme.onSurfaceVariant,
@@ -142,7 +143,10 @@ class _PropertyCardState extends State<PropertyCard> {
               children: [
                 _buildFeatureIcon(Icons.bed_outlined, '${widget.property.bedrooms} ${loc.tr('bedrooms')}'),
                 _buildFeatureIcon(Icons.bathtub_outlined, '${widget.property.bathrooms} ${loc.tr('bathrooms')}'),
-                _buildFeatureIcon(Icons.square_foot_outlined, '${widget.property.areaSqM.toInt()} ${loc.tr('sqm')}'),
+                _buildFeatureIcon(
+                  Icons.square_foot_outlined,
+                  '${MarketDisplay.areaAmount(areaSqM: widget.property.areaSqM, countryCode: widget.property.countryCode).round()} ${loc.tr(MarketDisplay.areaUnitKey(widget.property.countryCode))}',
+                ),
                 _buildFeatureIcon(
                   widget.property.isFurnished ? Icons.weekend_outlined : Icons.chair_outlined,
                   widget.property.isFurnished ? loc.tr('furnished') : loc.tr('unfurnished'),
@@ -472,7 +476,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   const SizedBox(width: 8),
                   _HeaderActionPill(
                     icon: Icons.mic_rounded,
-                    label: 'Gemini Live',
+                    label: loc.tr('voiceAssistantBadge'),
                     backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.55),
                     foregroundColor: colorScheme.onPrimaryContainer,
                     borderColor: colorScheme.primary.withValues(alpha: 0.25),

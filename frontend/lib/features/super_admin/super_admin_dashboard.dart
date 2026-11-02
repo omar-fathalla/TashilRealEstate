@@ -1213,7 +1213,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   _buildAgencyMetricCard(
                     title: '99.4%',
                     subtitle: loc.tr('complianceRate'),
-                    badgeText: 'ISO 27001',
+                    badgeText: loc.tr('complianceUnderReview'),
                     badgeColor: Colors.teal,
                     icon: Icons.verified_user_rounded,
                     colorScheme: colorScheme,
@@ -1896,7 +1896,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       _buildRegistryRow(
                         icon: Icons.verified_rounded,
                         label: loc.tr('auditComplianceLevel'),
-                        value: 'ISO 27001 / AML Tier 1',
+                        value: loc.tr('complianceUnderReview'),
                         colorScheme: colorScheme,
                       ),
                       const Divider(height: 16),

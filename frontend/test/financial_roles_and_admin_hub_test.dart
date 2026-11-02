@@ -77,7 +77,7 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const FinancialKpiDashboardView(role: FinancialPortalRole.superAdmin)));
       await tester.pumpAndSettle();
 
-      expect(find.text('مؤشرات الأداء المالي العام للمنصة'), findsOneWidget);
+      expect(find.text('مؤشرات المنصة المالية وإجمالي قيمة المعاملات'), findsOneWidget);
       expect(find.text('التقرير المالي والتحليلي التنفيذي'), findsOneWidget);
     });
 

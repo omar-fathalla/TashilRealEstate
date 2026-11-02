@@ -50,7 +50,7 @@ void main() {
       // Verify Column Headers
       expect(find.text('الوحدة ورقم الفاتورة'), findsOneWidget);
       expect(find.text('المستأجر'), findsOneWidget);
-      expect(find.text('المالك / المؤجر'), findsWidgets);
+      expect(find.text('المالك'), findsWidgets);
       expect(find.text('تاريخ الاستحقاق'), findsOneWidget);
       expect(find.text('القيمة الإجمالية'), findsOneWidget);
       expect(find.text('حالة السداد'), findsOneWidget);
@@ -197,7 +197,7 @@ void main() {
 
       // Dialog is dismissed and success snackbar appears
       expect(find.text('تأكيد إرسال التذكير عبر واتساب'), findsNothing);
-      expect(find.text('تم إرسال التذكير الذكي بنجاح للمستأجر عبر واتساب والرسائل القصيرة'), findsOneWidget);
+      expect(find.text('أُرسل التذكير إلى المستأجر عبر واتساب والرسائل النصية'), findsOneWidget);
     });
   });
 }

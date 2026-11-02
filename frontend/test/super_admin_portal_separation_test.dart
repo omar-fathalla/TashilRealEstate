@@ -51,7 +51,7 @@ void main() {
 
       // Verify the 3 allowed client roles exist
       expect(find.text('مالك عقار'), findsWidgets);
-      expect(find.text('وكالة عقارية'), findsWidgets);
+      expect(find.text('شركة وساطة عقارية'), findsWidgets);
       expect(find.text('مستأجر'), findsWidgets);
 
       // Verify Super Admin is completely absent from public login
@@ -125,9 +125,10 @@ void main() {
 
     test('SuperAdminSecurityConfig implements zero-plaintext salted cryptographic verification', () {
       // Authorized credentials verification
+      // The offline hash is injected with --dart-define and is empty in source.
       expect(
         SuperAdminSecurityConfig.verifyOfflineCredentials('support@sw-point.com', '481636100Aa!'),
-        isTrue,
+        isFalse,
       );
 
       // Wrong email rejection
@@ -188,14 +189,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Celebratory Headline and Badge
-      expect(find.text('تم تأكيد وتفعيل البريد الإلكتروني بنجاح'), findsOneWidget);
-      expect(find.text('البريد موثق ومفعل'), findsOneWidget);
+      expect(find.text('تم تأكيد البريد الإلكتروني'), findsOneWidget);
+      expect(find.text('البريد مؤكد'), findsOneWidget);
       expect(find.text('المتابعة إلى لوحة التحكم الإدارية'), findsOneWidget);
       expect(find.text('العودة إلى المنصة العامة'), findsOneWidget);
 
       // Verify Strategic Partnership Note (Egypt & UAE)
       expect(
-        find.text('بالتعاون مع الشركاء العقاريين المعتمدين في مصر ودولة الإمارات العربية المتحدة'),
+        find.text('تسهيل عقار — لإدارة العقارات في الإمارات'),
         findsOneWidget,
       );
     });
@@ -213,9 +214,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Email Verified & Activated Successfully'), findsOneWidget);
-      expect(find.text('Email Verified & Active'), findsOneWidget);
-      expect(find.text('Proceed to Admin Dashboard'), findsOneWidget);
+      expect(find.text('Email verified'), findsWidgets);
+      expect(find.text('Continue to dashboard'), findsOneWidget);
     });
 
     test('GoRouter has dedicated /auth/action and /auth/verify routes', () {

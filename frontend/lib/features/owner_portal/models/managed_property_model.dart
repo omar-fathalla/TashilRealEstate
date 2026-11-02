@@ -320,11 +320,11 @@ class ManagedPropertyModel {
       isFurnished: true,
       isFeatured: true,
       agencyNames: const {
-        'ar': 'شركة تسهيل لإدارة الأملاك',
-        'en': 'Tashil Property Management',
-        'hi': 'तशिल संपत्ति प्रबंधन',
+        'ar': 'تسهيل عقار',
+        'en': 'Tashil Aqar',
+        'hi': 'ताशيل अकार',
       },
-      agencyPhone: '+20 100 123 4567',
+      agencyPhone: countryCode == 'AE' ? '+971 50 000 0000' : '+20 100 123 4567',
       rating: 5.0,
     );
   }

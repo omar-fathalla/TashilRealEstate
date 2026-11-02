@@ -37,7 +37,7 @@ class PropertyItem {
     this.isFurnished = false,
     this.isFeatured = false,
     required this.agencyNames,
-    this.agencyPhone = '+20 100 000 0000',
+    this.agencyPhone = '+971 50 000 0000',
     this.rating = 4.8,
   });
 
@@ -544,7 +544,7 @@ class PropertyItem {
       isFurnished: map['isFurnished'] == true || map['is_furnished'] == true,
       isFeatured: map['isFeatured'] == true || map['is_featured'] == true,
       agencyNames: parseStringMap(map['agencyNames'], 'شركة تسهيل لإدارة الأملاك'),
-      agencyPhone: map['agencyPhone']?.toString() ?? '+20 100 000 0000',
+      agencyPhone: map['agencyPhone']?.toString() ?? '+971 50 000 0000',
       rating: (map['rating'] is num) ? (map['rating'] as num).toDouble() : 4.8,
     );
   }

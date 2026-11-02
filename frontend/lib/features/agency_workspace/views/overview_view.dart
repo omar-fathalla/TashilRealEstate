@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 
 class OverviewView extends StatelessWidget {
@@ -41,7 +43,7 @@ class OverviewView extends StatelessWidget {
                     _buildKpiCard(
                       context,
                       title: loc.tr('monthlyRevenue'),
-                      value: '450,000 ${loc.tr('currency')}',
+                      value: '450,000 ${CountryController.getCurrency(LocaleController.languageCode)}',
                       badgeText: loc.tr('growthRate'),
                       badgeColor: colorScheme.tertiary,
                       icon: Icons.account_balance_wallet_outlined,

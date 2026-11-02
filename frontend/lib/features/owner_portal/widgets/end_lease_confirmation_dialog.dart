@@ -90,9 +90,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
         final isMobile = ResponsiveLayout.isMobile(context);
         final screenWidth = MediaQuery.of(context).size.width;
         final dialogWidth = isMobile ? screenWidth * 0.94 : 580.0;
-        final currency = widget.property.currencyCode == 'EGP'
-            ? (lang == 'ar' ? 'ج.م' : (lang == 'hi' ? 'ईजीपी' : 'EGP'))
-            : (lang == 'ar' ? 'د.إ' : (lang == 'hi' ? 'एईडी' : 'AED'));
+        final currency = CurrencyFormatter.getCurrencySymbol(widget.property.currencyCode, lang);
 
         final propTitle = widget.property.titles[lang] ?? widget.property.titles['ar'] ?? '';
         final paidCount = widget.property.paidMonthsCount;

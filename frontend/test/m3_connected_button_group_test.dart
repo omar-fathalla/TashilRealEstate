@@ -156,7 +156,7 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
 
       // Verify the 2 segments exist for unfurnished property
-      expect(find.text('طلب معاينة / حجز'), findsOneWidget);
+      expect(find.text('طلب معاينة'), findsOneWidget);
       expect(find.text('التأثيث الافتراضي'), findsOneWidget);
       expect(find.text('التفاوض الذكي'), findsNothing);
 
@@ -188,7 +188,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify bottom bar has booking button only (single action renders TashilButton directly)
-      expect(find.text('طلب معاينة / حجز'), findsOneWidget);
+      expect(find.text('طلب معاينة'), findsOneWidget);
       expect(find.byType(TashilButton), findsWidgets);
       expect(find.text('التفاوض الذكي'), findsNothing);
       expect(find.text('التأثيث الافتراضي'), findsNothing);

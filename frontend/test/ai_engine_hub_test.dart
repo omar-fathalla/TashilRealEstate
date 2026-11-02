@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/models/ai_model_definition.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/services/ai_engine_config_controller.dart';
@@ -137,6 +138,12 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      UserProfileService().profileNotifier.value = const UserProfileData(
+        uid: 'super-admin-test',
+        email: 'admin@tashil.ae',
+        fullName: 'مشرف عام',
+        role: 'SuperAdmin',
+      );
       await tester.pumpWidget(wrapWithApp(const Scaffold(body: AppSettingsDialog())));
       await tester.pumpAndSettle();
 

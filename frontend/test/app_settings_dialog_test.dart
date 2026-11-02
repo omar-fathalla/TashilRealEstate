@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/font_theme_controller.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 
@@ -39,6 +40,15 @@ void main() {
   }
 
   group('AppSettingsDialog & FontPickerDialog M3 Suite Tests', () {
+    setUp(() {
+      UserProfileService().profileNotifier.value = const UserProfileData(
+        uid: 'super-admin-test',
+        email: 'admin@tashil.ae',
+        fullName: 'مشرف عام',
+        role: 'SuperAdmin',
+      );
+    });
+
     testWidgets('Renders AppSettingsDialog with M3 Connected Groups, Google Icons, and Typography Card', (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;

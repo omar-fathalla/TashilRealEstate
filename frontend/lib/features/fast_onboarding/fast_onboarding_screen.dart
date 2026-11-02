@@ -644,11 +644,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         isFurnished: _draft.furnishingStatus != FurnishingStatus.unfurnished,
         isFeatured: true,
         agencyNames: {
-          'ar': 'شركة تسهيل لإدارة الأملاك',
-          'en': 'Tashil Property Management',
-          'hi': 'तशिल संपत्ति प्रबंधन',
+          'ar': 'تسهيل عقار',
+          'en': 'Tashil Aqar',
+          'hi': 'ताशिल अकार',
         },
-        agencyPhone: '+20 100 123 4567',
+        agencyPhone: CountryController.isUAE ? '+971 50 000 0000' : '+20 100 123 4567',
         rating: 5.0,
       );
 

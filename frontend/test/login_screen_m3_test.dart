@@ -155,8 +155,8 @@ void main() {
       expect(find.text('رقم الهاتف'), findsOneWidget);
       expect(find.text('phoneNumberLabel'), findsNothing);
 
-      // Verify dial code (+20) is on the LEFT of the phone TextField in Arabic RTL
-      final dialCodePos = tester.getTopLeft(find.text('+20'));
+      // Verify dial code (+971) is on the LEFT of the phone TextField in Arabic RTL
+      final dialCodePos = tester.getTopLeft(find.text('+971'));
       final textFieldPos = tester.getTopLeft(find.byType(TextField));
       expect(dialCodePos.dx, lessThan(textFieldPos.dx));
 

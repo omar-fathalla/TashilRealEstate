@@ -9,6 +9,7 @@ import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/market_display.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
 import '../models/property_item.dart';
@@ -221,7 +222,10 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                           builder: (context, constraints) {
                             final isCompact = constraints.maxWidth < 640;
                             final formattedPrice = CurrencyFormatter.formatAmount(
-                              widget.property.pricePerMonth,
+                              MarketDisplay.rentAmount(
+                                pricePerMonth: widget.property.pricePerMonth,
+                                currencyCode: widget.property.currencyCode,
+                              ),
                               langCode: lang,
                             );
                             final currencyStr = widget.property.currencyCode == 'AED'
@@ -233,7 +237,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  loc.tr('monthlyRentVal'),
+                                  loc.tr(MarketDisplay.rentLabelKey(widget.property.currencyCode)),
                                   style: TextStyle(
                                     color: theme.colorScheme.onSurfaceVariant,
                                     fontSize: 11.0,
@@ -459,7 +463,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                         child: _buildSpecItem(
                                           theme,
                                           Icons.square_foot_outlined,
-                                          '${widget.property.areaSqM.toInt()} ${loc.tr('sqm')}',
+                                          '${MarketDisplay.areaAmount(areaSqM: widget.property.areaSqM, countryCode: widget.property.countryCode).round()} ${loc.tr(MarketDisplay.areaUnitKey(widget.property.countryCode))}',
                                           isMobile,
                                         ),
                                       ),

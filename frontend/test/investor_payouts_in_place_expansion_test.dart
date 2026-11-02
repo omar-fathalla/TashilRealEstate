@@ -116,6 +116,7 @@ void main() {
       final loc = AppLocalizations(const Locale('en'));
       final payoutTabFinder = find.text(loc.tr('recentPayouts'));
       expect(payoutTabFinder, findsOneWidget);
+      await tester.ensureVisible(payoutTabFinder);
       await tester.tap(payoutTabFinder);
       await tester.pumpAndSettle();
 

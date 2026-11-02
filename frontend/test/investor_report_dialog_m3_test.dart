@@ -52,9 +52,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify header and document titles
-      expect(find.text('تقرير المستثمر المالي وشهادة تقييم المحفظة'), findsOneWidget);
+      expect(find.text('تقرير المستثمر وتقييم المحفظة'), findsOneWidget);
       expect(find.text('كشف مالي رسمي معتمد وموثق'), findsOneWidget);
-      expect(find.text('توقيع واعتماد المستشار المالي المعتمد'), findsOneWidget);
+      expect(find.text('التوقيع'), findsOneWidget);
       expect(find.text('معتمد وموثق رسمياً'), findsOneWidget);
       expect(find.textContaining('الهيئة العامة للرقابة المالية والوساطة العقارية'), findsOneWidget);
 
@@ -84,9 +84,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Official Investor Statement & Portfolio Certificate'), findsOneWidget);
+      expect(find.text('Investor statement and portfolio valuation'), findsOneWidget);
       expect(find.text('Certified & Audited Statement'), findsOneWidget);
-      expect(find.text('Certified Financial Advisor Signature & Attestation'), findsOneWidget);
+      expect(find.text('Signature'), findsOneWidget);
       expect(find.text('OFFICIALLY VERIFIED'), findsOneWidget);
       expect(find.textContaining('November 30, 2026'), findsOneWidget);
       expect(find.textContaining('Financial Regulatory Authority & Real Estate Brokerage'), findsOneWidget);
@@ -106,8 +106,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('आधिकारिक निवेशक विवरण और पोर्टफोलियो प्रमाणपत्र'), findsOneWidget);
-      expect(find.text('प्रमाणित वित्तीय सलाहकार हस्ताक्षर और सत्यापन'), findsOneWidget);
+      expect(find.text('निवेशक विवरण और पोर्टफोलियो मूल्यांकन'), findsOneWidget);
+      expect(find.text('हस्ताक्षर'), findsOneWidget);
       expect(find.text('आधिकारिक रूप से सत्यापित'), findsOneWidget);
       expect(find.textContaining('30 नवंबर 2026'), findsOneWidget);
     });

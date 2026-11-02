@@ -148,7 +148,9 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
     await PropertyLifecycleService().markAsRented(
       propertyId: widget.property.id,
       tenantName: _tenantNameCtrl.text.trim(),
-      tenantPhone: _tenantPhoneCtrl.text.trim().isEmpty ? '+20 100 000 0000' : _tenantPhoneCtrl.text.trim(),
+      tenantPhone: _tenantPhoneCtrl.text.trim().isEmpty
+          ? (widget.property.countryCode == 'AE' ? '+971 50 000 0000' : '+20 100 000 0000')
+          : _tenantPhoneCtrl.text.trim(),
       monthlyRent: rent,
       startDate: _leaseStartDate,
       durationMonths: _durationMonths,

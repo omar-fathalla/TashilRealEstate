@@ -106,7 +106,7 @@ void main() {
 
       // Tooltips for each icon
       expect(find.byTooltip('التقييم العقاري الذكي'), findsOneWidget);
-      expect(find.byTooltip('مؤشر عقارماب'), findsOneWidget);
+      expect(find.byTooltip('مؤشر السوق'), findsOneWidget);
       expect(find.byTooltip('تسجيل الدخول'), findsOneWidget);
     });
 

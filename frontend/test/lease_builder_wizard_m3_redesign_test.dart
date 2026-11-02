@@ -13,7 +13,7 @@ import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget buildTestApp({Locale locale = const Locale('ar'), String country = 'EG'}) {
+  Widget buildTestApp({Locale locale = const Locale('ar'), String country = 'AE'}) {
     LocaleController.setLocale(locale);
     CountryController.setCountry(country);
 
@@ -55,9 +55,8 @@ void main() {
       // Verify Dialog Title
       expect(find.text('منشئ العقود الرقمية'), findsOneWidget);
 
-      // Verify Official TashilConnectedButtonGroup is used for Country Switcher
-      expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
-      expect(find.text('مصر'), findsOneWidget);
+      // UAE is the only market shown on a new contract.
+      expect(find.text('مصر'), findsNothing);
       expect(find.text('الإمارات'), findsOneWidget);
 
       // Verify Shaded Close Button is present
@@ -213,25 +212,18 @@ void main() {
       expect(find.text('المستشار القانوني العقاري الذكي'), findsOneWidget);
     });
 
-    testWidgets('Country switching between EG and AE updates defaults and labels dynamically', (tester) async {
+    testWidgets('New contracts open on the UAE market with Emirates ID', (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(buildTestApp(locale: const Locale('ar')));
+      await tester.pumpWidget(buildTestApp(locale: const Locale('ar'), country: 'AE'));
       await tester.pumpAndSettle();
 
-      // Initial country is EG: shows nationalId label
-      expect(find.text('الرقم القومي (14 رقماً)'), findsWidgets);
-
-      // Tap on UAE segment in header
-      final uaeSegment = find.text('الإمارات');
-      expect(uaeSegment, findsOneWidget);
-      await tester.tap(uaeSegment);
-      await tester.pumpAndSettle();
-
-      // Now shows Emirates ID label
+      expect(find.text('مصر'), findsNothing);
+      expect(find.text('الإمارات'), findsOneWidget);
       expect(find.text('رقم الهوية الإماراتية'), findsWidgets);
+      expect(find.text('الرقم القومي (14 رقماً)'), findsNothing);
     });
 
     testWidgets('Step 5 & Global: Zero raw translation keys, zero Gemini RAG mixing, and pure LTR phone numbers', (tester) async {
@@ -272,9 +264,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify certificate elements in Step 5
-      expect(find.text('عقد إيجار سكني خاضع لأحكام القانون رقم 4 لسنة 1996'), findsOneWidget);
+      expect(find.text('عقد إيجار موحّد (إيجاري)'), findsOneWidget);
       expect(find.textContaining('الجنسية'), findsWidgets);
-      expect(find.text('مصري'), findsWidgets);
+      expect(find.text('إماراتي'), findsWidgets);
       expect(find.text('nationality'), findsNothing);
       expect(find.text('buildingName'), findsNothing);
       expect(find.text('districtCity'), findsNothing);
@@ -282,8 +274,8 @@ void main() {
       expect(find.textContaining('cheques 12'), findsNothing);
 
       // Verify LTR phone numbers present with + prefix
-      expect(find.textContaining('+201002345678'), findsWidgets);
-      expect(find.textContaining('+201145678901'), findsWidgets);
+      expect(find.textContaining('+971501234567'), findsWidgets);
+      expect(find.textContaining('+971559876543'), findsWidgets);
 
       // Verify M3 Action buttons and Finish button
       expect(find.text('تصدير PDF'), findsOneWidget);

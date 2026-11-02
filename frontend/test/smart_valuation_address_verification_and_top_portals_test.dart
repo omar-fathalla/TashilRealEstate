@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/gemini_ai_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
@@ -169,6 +170,9 @@ void main() {
       tester.view.physicalSize = const Size(1200, 950);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
+
+      CountryController.setCountry('EG');
+      addTearDown(() => CountryController.setCountry('AE'));
 
       await tester.pumpWidget(
         wrapWithApp(

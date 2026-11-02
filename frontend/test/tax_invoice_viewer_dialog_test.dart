@@ -94,7 +94,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('تنزيل الفاتورة'), findsOneWidget);
-      expect(find.text('دفع إلكتروني فوري'), findsOneWidget);
+      expect(find.text('ادفع الآن'), findsOneWidget);
       expect(find.byType(TashilButton), findsNWidgets(2));
     });
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class CountryController {
-  static final ValueNotifier<String> currentCountry = ValueNotifier<String>('EG'); // 'EG' or 'AE'
+  /// Product market is the UAE. Egypt remains in data models for operator
+  /// records, but the default shown to users is AE.
+  static final ValueNotifier<String> currentCountry = ValueNotifier<String>('AE'); // 'EG' or 'AE'
 
   static bool get isEgypt => currentCountry.value == 'EG';
   static bool get isUAE => currentCountry.value == 'AE';
@@ -15,7 +17,7 @@ class CountryController {
 
   static String getCurrency(String lang) {
     if (isUAE) {
-      if (lang == 'ar') return 'د.إ';
+      if (lang == 'ar') return 'درهم';
       if (lang == 'hi') return 'AED';
       return 'AED';
     } else {

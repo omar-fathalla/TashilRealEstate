@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/core/services/storage/property_draft_cache_service.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
@@ -51,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _passwordController = TextEditingController();
 
   // Phone OTP form controllers
-  final _phoneController = TextEditingController(text: '01012345678');
+  final _phoneController = TextEditingController(text: '0501234567');
   final _otpController = TextEditingController(text: '123456');
   bool _isOtpSent = false;
   String? _verificationId;
@@ -71,9 +72,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    if (CountryController.isUAE) {
-      _phoneController.text = '0501234567';
-    }
+    _phoneController.text = CountryController.isUAE ? '0501234567' : '01012345678';
 
     _cardAnimController = AnimationController(
       vsync: this,
@@ -146,7 +145,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       final uri = GoRouterState.of(context).uri;
       final redirect = uri.queryParameters['redirect'];
-      if (redirect == '/fast-onboarding' || PropertyDraftCacheService().hasDraft()) {
+      if (redirect != null && redirect.startsWith('/') && !redirect.startsWith('//')) {
+        final blocked = RouteAccess.redirect(
+          isLoggedIn: true,
+          role: existingRole,
+          roleKnown: true,
+          location: redirect,
+        );
+        if (blocked == null) {
+          context.go(redirect);
+          return;
+        }
+      }
+      if (PropertyDraftCacheService().hasDraft()) {
         context.go('/fast-onboarding');
         return;
       }

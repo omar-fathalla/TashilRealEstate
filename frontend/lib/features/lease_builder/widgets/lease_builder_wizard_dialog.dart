@@ -147,6 +147,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       _lessorSignature = c.lessorSignature;
       _tenantSignature = c.tenantSignature;
     } else {
+      // New contracts follow the active market (UAE by default). Existing contracts keep theirs.
       _countryCode = widget.targetProperty?.countryCode ?? CountryController.countryCode;
       _initDefaultsForCountry(_countryCode);
     }
@@ -224,13 +225,6 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
     }
 
     _clauses = LegalClausesService.getStandardClauses(country);
-  }
-
-  void _onCountryChanged(String newCountry) {
-    setState(() {
-      _countryCode = newCountry;
-      _initDefaultsForCountry(newCountry);
-    });
   }
 
   Future<void> _openOcrExtractor(String targetParty) async {
@@ -434,22 +428,10 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                 // Country Switcher (Official M3 TashilConnectedButtonGroup)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 12),
-                  child: TashilConnectedButtonGroup<String>(
-                    height: 38,
-                    selectedValue: _countryCode,
-                    onSelectionChanged: (selected) => _onCountryChanged(selected),
-                    segments: [
-                      TashilConnectedButtonSegment(
-                        value: 'EG',
-                        label: loc.tr('country_eg'),
-                        icon: Icons.flag_rounded,
-                      ),
-                      TashilConnectedButtonSegment(
-                        value: 'AE',
-                        label: loc.tr('country_ae'),
-                        icon: Icons.flag_rounded,
-                      ),
-                    ],
+                  child: Chip(
+                    avatar: Icon(Icons.flag_rounded, size: 18, color: theme.colorScheme.primary),
+                    label: Text(loc.tr(_countryCode == 'AE' ? 'country_ae' : 'country_eg')),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
                 // Shaded Close Button (Official M3 TashilIconButton.close)
@@ -738,7 +720,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                       loc.tr('phone'),
                       Icons.phone_rounded,
                       isPhone: true,
-                      hintText: '+20 100 000 0000',
+                      hintText: isAE ? '+971 50 000 0000' : '+20 100 000 0000',
                     ),
                   ),
                 ],
@@ -822,7 +804,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                       loc.tr('phone'),
                       Icons.phone_rounded,
                       isPhone: true,
-                      hintText: '+20 100 000 0000',
+                      hintText: isAE ? '+971 50 000 0000' : '+20 100 000 0000',
                     ),
                   ),
                 ],

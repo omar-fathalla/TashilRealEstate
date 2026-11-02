@@ -117,7 +117,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify generalized title without hardcoded "للشقة"
-      expect(find.text('سجل وجدول الدفعات الشهرية'), findsOneWidget);
+      expect(find.text('جدول الدفعات'), findsOneWidget);
       expect(find.textContaining('للشقة'), findsNothing);
 
       // Verify M3 shaded close button is present
@@ -125,15 +125,12 @@ void main() {
 
       // Verify M3 Connected Button Group is present
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
-      expect(find.text('إنهاء العقد وإعادة النشر في السوق'), findsOneWidget);
+      expect(find.text('إنهاء العقد وإعادة النشر'), findsOneWidget);
       expect(find.text('إغلاق'), findsOneWidget);
 
-      // Verify zero language mixing in payment method badges (pure Arabic: أبل باي / جوجل باي)
-      expect(find.text('مدفوع إلكترونياً (أبل باي)'), findsOneWidget);
-      expect(find.text('مدفوع إلكترونياً (جوجل باي)'), findsOneWidget);
-      // Ensure no raw English "Apple Pay" or "Google Pay" leaked in Arabic mode
-      expect(find.textContaining('(Apple Pay)'), findsNothing);
-      expect(find.textContaining('(Google Pay)'), findsNothing);
+      // Brand names stay in Latin script, including in Arabic.
+      expect(find.text('مدفوع إلكترونياً (Apple Pay)'), findsOneWidget);
+      expect(find.text('مدفوع إلكترونياً (Google Pay)'), findsOneWidget);
     });
 
     testWidgets('Clicking close segment closes the dialog', (tester) async {
