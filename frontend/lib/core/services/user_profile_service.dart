@@ -185,6 +185,11 @@ class UserProfileService {
     _initProfile();
   }
 
+  /// True after a cached profile for the current user is restored, or after
+  /// the Firestore read finishes. Stays false while the role would otherwise
+  /// be guessed as Owner.
+  final ValueNotifier<bool> roleConfirmed = ValueNotifier<bool>(false);
+
   final ValueNotifier<UserProfileData> profileNotifier = ValueNotifier<UserProfileData>(
     const UserProfileData(
       uid: '',
@@ -224,6 +229,9 @@ class UserProfileService {
               }
             }
             profileNotifier.value = hydratedProfile;
+            if (currentUid != null && cachedUid == currentUid && hydratedProfile.role.trim().isNotEmpty) {
+              roleConfirmed.value = true;
+            }
             debugPrint('UserProfileService: Hydrated profile in 0ms from LocalStorage for [${profileNotifier.value.fullName}] (Photo: ${profileNotifier.value.photoUrl != null})');
           }
         }
@@ -260,6 +268,7 @@ class UserProfileService {
   void clearLocalCache() {
     LocalStorageService().remove(_profileCacheKey);
     LocalStorageService().remove(_lastOwnerKey);
+    roleConfirmed.value = false;
     profileNotifier.value = const UserProfileData(
       uid: '',
       email: '',
@@ -275,6 +284,7 @@ class UserProfileService {
   Future<void> loadProfile() async {
     final user = UserAvatarUtils.safeCurrentUser;
     if (user == null) {
+      roleConfirmed.value = false;
       profileNotifier.value = const UserProfileData(
         uid: '',
         email: '',
@@ -315,7 +325,11 @@ class UserProfileService {
     String firstName = UserAvatarUtils.getFirstName(fullName);
     String surname = UserAvatarUtils.getSurname(fullName);
     String phone = user.phoneNumber ?? '';
-    String role = 'Owner';
+    final cachedMatches = profileNotifier.value.uid == user.uid && profileNotifier.value.role.trim().isNotEmpty;
+    if (!cachedMatches) {
+      roleConfirmed.value = false;
+    }
+    String role = cachedMatches ? profileNotifier.value.role : 'Owner';
     String preferredMethod = 'phone';
     bool verified = true;
     DateTime? memberSince = user.metadata.creationTime;
@@ -425,6 +439,10 @@ class UserProfileService {
       }
     } catch (e) {
       debugPrint('UserProfileService.loadProfile fetch error: $e');
+    } finally {
+      if (profileNotifier.value.uid == user.uid) {
+        roleConfirmed.value = true;
+      }
     }
   }
 

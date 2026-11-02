@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:tashil_real_estate/core/routing/app_router.dart';
+import 'package:tashil_real_estate/core/routing/url_strategy.dart';
 import 'package:tashil_real_estate/core/theme/app_theme.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -33,6 +34,7 @@ class TashilAppScrollBehavior extends MaterialScrollBehavior {
 }
 
 void main() async {
+  configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
 
   // Suppress known upstream Flutter Web engine assertions:
@@ -101,7 +103,7 @@ class TashilRealEstateApp extends StatelessWidget {
                   valueListenable: FontThemeController.instance.currentFont,
                   builder: (context, activeFont, _) {
                     return MaterialApp.router(
-                      title: 'Tashil Real Estate',
+                      title: 'Tashil Aqar',
                       debugShowCheckedModeBanner: false,
                       theme: AppTheme.getTheme(
                         locale: currentLocale,
