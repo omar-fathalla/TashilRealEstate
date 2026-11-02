@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/lists/m3_lists_showcase_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/loading/m3_loading_showcase_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
@@ -52,6 +53,8 @@ class AppSettingsDialog extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final isMobile = MediaQuery.of(context).size.width < 700;
     final currentLang = loc.locale.languageCode;
+    final profile = UserProfileService().profileNotifier.value;
+    final isOperator = profile.role == 'SuperAdmin' && profile.uid.isNotEmpty;
 
     final dialogContent = Container(
       constraints: BoxConstraints(
@@ -89,33 +92,32 @@ class AppSettingsDialog extends StatelessWidget {
                   // Row 1: Quick Icon Controls (Country, Language, Dark Mode)
                   _buildQuickControlsBar(context, loc, colorScheme, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                  if (isOperator) ...[
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 2: لوحة الألوان (Color Palette)
-                  _buildColorPaletteSection(context, loc, colorScheme, currentLang),
+                    // Palette, fonts, and design-system tools stay on the operator console.
+                    _buildColorPaletteSection(context, loc, colorScheme, currentLang),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 3: الخطوط (Typography Card with Modal Picker Trigger)
-                  _buildFontSection(context, loc, colorScheme, currentLang, isMobile),
+                    _buildFontSection(context, loc, colorScheme, currentLang, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 4: معايير تصميم M3 والقوائم (Design System Standards & Lists)
-                  _buildDesignStandardsSection(context, loc, colorScheme, isMobile),
+                    _buildDesignStandardsSection(context, loc, colorScheme, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 5: محركات ونماذج الذكاء الاصطناعي (AI Models & Engine Hub)
-                  _buildAiEngineSection(context, loc, colorScheme, isMobile),
+                    _buildAiEngineSection(context, loc, colorScheme, isMobile),
+                  ],
                 ],
               ),
             ),
@@ -186,6 +188,9 @@ class AppSettingsDialog extends StatelessWidget {
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 640;
 
+        final profile = UserProfileService().profileNotifier.value;
+        final isOperator = profile.role == 'SuperAdmin' && profile.uid.isNotEmpty;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -194,30 +199,44 @@ class AppSettingsDialog extends StatelessWidget {
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                // 1. Country & Currency Selector (Google Icons Only)
+                // Country selector. End users stay on the UAE market.
+                // Super admins can still inspect Egypt records.
                 ValueListenableBuilder<String>(
                   valueListenable: CountryController.currentCountry,
                   builder: (context, currentCountry, _) {
+                    final segments = <TashilConnectedButtonSegment<String>>[
+                      if (isOperator)
+                        TashilConnectedButtonSegment(
+                          value: 'EG',
+                          label: '${loc.tr('country_eg')} (${loc.tr('currency_eg')})',
+                          icon: Icons.flag_rounded,
+                        ),
+                      TashilConnectedButtonSegment(
+                        value: 'AE',
+                        label: '${loc.tr('country_ae')} (${loc.tr('currency_ae')})',
+                        icon: Icons.flag_rounded,
+                      ),
+                    ];
+                    final selected = segments.any((segment) => segment.value == currentCountry)
+                        ? currentCountry
+                        : 'AE';
+                    if (!isOperator && currentCountry != 'AE') {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (CountryController.countryCode != 'AE') {
+                          CountryController.setCountry('AE');
+                        }
+                      });
+                    }
                     return SizedBox(
                       width: isNarrow ? (constraints.maxWidth > 340 ? constraints.maxWidth : null) : null,
                       child: TashilConnectedButtonGroup<String>(
                         height: 40,
-                        selectedValue: currentCountry,
+                        selectedValue: selected,
                         onSelectionChanged: (countryCode) {
+                          if (!isOperator && countryCode != 'AE') return;
                           CountryController.setCountry(countryCode);
                         },
-                        segments: [
-                          TashilConnectedButtonSegment(
-                            value: 'EG',
-                            label: '${loc.tr('country_eg')} (${loc.tr('currency_eg')})',
-                            icon: Icons.flag_rounded,
-                          ),
-                          TashilConnectedButtonSegment(
-                            value: 'AE',
-                            label: '${loc.tr('country_ae')} (${loc.tr('currency_ae')})',
-                            icon: Icons.flag_rounded,
-                          ),
-                        ],
+                        segments: segments,
                       ),
                     );
                   },

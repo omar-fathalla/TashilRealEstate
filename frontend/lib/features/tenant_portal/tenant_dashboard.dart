@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/widgets/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
@@ -89,8 +87,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
           onPressed: () => context.go('/'),
         ),
         actions: [
-          const ThemePaletteSwitcher(isCompact: true),
-          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
             tooltip: loc.tr('settings'),
@@ -98,7 +94,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
           ),
           const SizedBox(width: 4),
           IconButton(
-            icon: Icon(Icons.logout, color: colorScheme.error),
+            icon: Icon(Icons.logout, color: colorScheme.onSurfaceVariant),
             tooltip: loc.tr('logout'),
             onPressed: () async {
               await FirebaseAuthService().signOut();
@@ -270,11 +266,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                 tooltip: loc.tr('browseAsVisitor'),
                 onPressed: () => context.go('/'),
               ),
-              const SizedBox(width: 8),
-              const ThemePaletteSwitcher(isCompact: true),
               if (!isTablet) ...[
-                const SizedBox(width: 8),
-                const CountrySwitcher(isCompact: true, showLabel: false),
                 const SizedBox(width: 8),
                 const LanguageSwitcher(isCompact: true, showLabel: false),
               ],

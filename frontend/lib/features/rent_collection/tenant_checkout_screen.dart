@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
-import 'package:tashil_real_estate/core/widgets/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
@@ -63,10 +60,6 @@ class TenantCheckoutScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
-                  const ThemePaletteSwitcher(isCompact: true),
-                  const SizedBox(width: 4),
-                  CountrySwitcher(isCompact: true, showLabel: !isMobile),
-                  const SizedBox(width: 4),
                   LanguageSwitcher(isCompact: true, showLabel: !isMobile),
                   const SizedBox(width: 4),
                   IconButton(

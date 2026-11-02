@@ -9,15 +9,27 @@ class AppTheme {
   /// Generates a complete 26-role M3 Theme derived from a single seed color.
   static ThemeData getTheme({
     Locale? locale,
-    Color seedColor = const Color(0xFF0061A4), // Default: Ocean Royal Blue
+    Color seedColor = const Color(0xFF0F172A), // Slate Navy brand seed
     Brightness brightness = Brightness.light,
     AppFontTheme? fontTheme,
   }) {
-    // 1. Google M3 Material Color Utilities: Generates HCT tonal palettes
-    final colorScheme = ColorScheme.fromSeed(
+    // 1. Google M3 Material Color Utilities: Generates HCT tonal palettes.
+    // Light surfaces are the neutral tones from the design review (section 37.7).
+    // TODO(mohamed): dark neutral surface tones are still unspecified there.
+    var colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
     );
+    if (brightness == Brightness.light) {
+      colorScheme = colorScheme.copyWith(
+        surface: const Color(0xFFFDF8F8),
+        surfaceContainerLowest: const Color(0xFFFFFFFF),
+        surfaceContainerLow: const Color(0xFFF7F3F2),
+        surfaceContainer: const Color(0xFFF1EDED),
+        surfaceContainerHigh: const Color(0xFFEBE7E7),
+        surfaceContainerHighest: const Color(0xFFE6E1E1),
+      );
+    }
 
     final isDark = brightness == Brightness.dark;
     final lang = locale?.languageCode ?? 'ar';
@@ -29,7 +41,7 @@ class AppTheme {
     } else if (lang == 'hi') {
       textTheme = GoogleFonts.notoSansDevanagariTextTheme();
     } else {
-      textTheme = GoogleFonts.interTextTheme();
+      textTheme = GoogleFonts.robotoTextTheme();
     }
 
     final appliedTextTheme = textTheme.apply(
@@ -118,10 +130,18 @@ class AppTheme {
         ),
       ),
 
+      iconTheme: const IconThemeData(
+        size: 24,
+        fill: 0,
+        weight: 400,
+        opticalSize: 24,
+      ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           shape: const CircleBorder(),
           hoverColor: colorScheme.primaryHoverStateLayer,
+          minimumSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.padded,
           padding: const EdgeInsets.all(8),
           visualDensity: VisualDensity.standard,
         ),
@@ -157,12 +177,11 @@ class AppTheme {
 
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide(color: colorScheme.outlineVariant),
-        labelStyle: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+        labelStyle: textTheme.labelLarge?.copyWith(
           color: colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
         ),
       ),
 
@@ -170,22 +189,22 @@ class AppTheme {
         filled: true,
         fillColor: isDark ? colorScheme.surfaceContainerLow : colorScheme.surfaceContainerLowest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
 
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         backgroundColor: isDark ? colorScheme.surfaceContainerHigh : colorScheme.surfaceContainerLowest,
         surfaceTintColor: Colors.transparent,
       ),
@@ -228,7 +247,7 @@ class AppTheme {
 
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: isDark ? colorScheme.surface : colorScheme.surfaceContainerLowest,
-        selectedIconTheme: IconThemeData(color: colorScheme.primary),
+        selectedIconTheme: IconThemeData(color: colorScheme.onSecondaryContainer),
         unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
         selectedLabelTextStyle: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
         unselectedLabelTextStyle: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -242,9 +261,11 @@ class AppTheme {
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12);
+            return textTheme.labelMedium?.copyWith(color: colorScheme.onSurface) ??
+                TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 12);
           }
-          return TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12);
+          return textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant) ??
+              TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500, fontSize: 12);
         }),
       ),
 

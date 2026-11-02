@@ -121,6 +121,7 @@ class TashilButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double height = this.height < 48 ? 48 : this.height;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;

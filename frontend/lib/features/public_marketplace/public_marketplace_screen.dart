@@ -297,8 +297,8 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
             colorScheme.primary,
             Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), Colors.black),
           ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          begin: AlignmentDirectional.topEnd,
+          end: AlignmentDirectional.bottomStart,
         ),
       ),
       child: Column(
@@ -378,14 +378,14 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
           // Single Unified Official Google M3 Expressive Split Search Bar
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 880),
+            constraints: const BoxConstraints(maxWidth: 1120),
             child: TashilSearchBar(
               controller: _searchController,
               hintText: _isSemanticSearchActive
                   ? loc.tr('aiSearchPlaceholder')
                   : loc.tr('searchPlaceholder'),
               isSemanticActive: _isSemanticSearchActive,
-              suggestions: _getSearchSuggestions(currentCountry),
+              suggestions: _getSearchSuggestions(loc, currentCountry),
               leadingIcon: _activeSearchMode == 'ai'
                   ? Icons.auto_awesome_rounded
                   : (_activeSearchMode == 'visual'
@@ -468,7 +468,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
           // 2. Dedicated Filter Container (City, Type, Price Slider)
           Container(
-            constraints: const BoxConstraints(maxWidth: 880),
+            constraints: const BoxConstraints(maxWidth: 1120),
             padding: EdgeInsets.symmetric(
               horizontal: isMobile ? 14 : 18,
               vertical: isMobile ? 14 : 16,
@@ -517,24 +517,23 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     );
   }
 
-  List<String> _getSearchSuggestions(String currentCountry) {
-    if (currentCountry == 'EG') {
-      return const [
-        'شقة للبيع في الشيخ زايد',
-        'شقق للإيجار في التجمع الخامس',
-        'فيلا مستقلة في المعادي',
-        'مكتب إداري في العاصمة الإدارية',
-        'شاليه بإطلالة بحرية في الساحل الشمالي',
-      ];
-    } else {
-      return const [
-        'Apartment for rent in Dubai Marina',
-        'Luxury Villa in Palm Jumeirah',
-        'Studio in Downtown Dubai',
-        'Commercial office in Business Bay',
-        'Townhouse in Sharjah Waterfront',
+  List<String> _getSearchSuggestions(AppLocalizations loc, String currentCountry) {
+    if (currentCountry == 'AE') {
+      return [
+        loc.tr('searchSuggestMarina'),
+        loc.tr('searchSuggestPalm'),
+        loc.tr('searchSuggestDowntown'),
+        loc.tr('searchSuggestBusinessBay'),
+        loc.tr('searchSuggestSharjah'),
       ];
     }
+    return [
+      loc.tr('searchSuggestEg1'),
+      loc.tr('searchSuggestEg2'),
+      loc.tr('searchSuggestEg3'),
+      loc.tr('searchSuggestEg4'),
+      loc.tr('searchSuggestEg5'),
+    ];
   }
 
   Widget _buildHeroActions(

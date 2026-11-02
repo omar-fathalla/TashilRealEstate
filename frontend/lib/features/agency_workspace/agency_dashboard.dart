@@ -3,9 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
-import 'package:tashil_real_estate/core/widgets/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
@@ -142,10 +140,6 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ThemePaletteSwitcher(isCompact: true),
-              const SizedBox(width: 6),
-              const CountrySwitcher(isCompact: true, showLabel: false),
-              const SizedBox(width: 6),
               const LanguageSwitcher(isCompact: true),
               const SizedBox(width: 8),
               TashilIconButton.tonal(

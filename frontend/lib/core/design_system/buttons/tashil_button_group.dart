@@ -102,6 +102,8 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
   final bool showCheckmark;
   final bool isAnimatedFlex;
 
+  double get touchHeight => height < 48 ? 48.0 : height;
+
   const TashilConnectedButtonGroup({
     super.key,
     required this.segments,
@@ -148,7 +150,7 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
                 segment: segments[i],
                 isSelected: segments[i].value == selectedValue,
                 onTap: () => onSelectionChanged(segments[i].value),
-                height: height - 7.0,
+                height: touchHeight - 7.0,
                 isTonal: isTonal,
                 activeColor: activeColor,
                 activeForegroundColor: activeForegroundColor,
@@ -172,7 +174,7 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
                 segment: segments[i],
                 isSelected: segments[i].value == selectedValue,
                 onTap: () => onSelectionChanged(segments[i].value),
-                height: height - 7.0,
+                height: touchHeight - 7.0,
                 isTonal: isTonal,
                 activeColor: activeColor,
                 activeForegroundColor: activeForegroundColor,
@@ -185,7 +187,7 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
               segment: segments[i],
               isSelected: segments[i].value == selectedValue,
               onTap: () => onSelectionChanged(segments[i].value),
-              height: height - 7.0,
+              height: touchHeight - 7.0,
               isTonal: isTonal,
               activeColor: activeColor,
               activeForegroundColor: activeForegroundColor,
@@ -201,10 +203,10 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final outerRadius = borderRadius ?? BorderRadius.circular(height / 2);
+    final outerRadius = borderRadius ?? BorderRadius.circular(touchHeight / 2);
 
     return Container(
-      height: height,
+      height: touchHeight,
       padding: const EdgeInsets.all(3.5),
       decoration: BoxDecoration(
         color: isTonal
@@ -511,6 +513,8 @@ class TashilConnectedIconButtonGroup extends StatelessWidget {
   final Color? borderColor;
   final double itemSpacing;
 
+  double get touchHeight => height < 48 ? 48.0 : height;
+
   const TashilConnectedIconButtonGroup({
     super.key,
     required this.items,
@@ -526,10 +530,10 @@ class TashilConnectedIconButtonGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final outerRadius = borderRadius ?? BorderRadius.circular(height / 2);
+    final outerRadius = borderRadius ?? BorderRadius.circular(touchHeight / 2);
 
     return Container(
-      height: height,
+      height: touchHeight,
       padding: const EdgeInsets.all(3.5),
       decoration: BoxDecoration(
         color: backgroundColor ??
@@ -549,7 +553,7 @@ class TashilConnectedIconButtonGroup extends StatelessWidget {
             if (i > 0) SizedBox(width: itemSpacing),
             _ConnectedIconSegmentItem(
               item: items[i],
-              size: height - 7.0,
+              size: touchHeight - 7.0,
               isTonal: isTonal,
             ),
           ],

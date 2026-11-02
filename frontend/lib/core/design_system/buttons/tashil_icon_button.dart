@@ -22,6 +22,10 @@ class TashilIconButton extends StatelessWidget {
   final Color? color;
   final Color? backgroundColor;
 
+  static const double minTouchTarget = 48;
+
+  double get touchSize => size < minTouchTarget ? minTouchTarget : size;
+
   const TashilIconButton({
     super.key,
     required this.icon,
@@ -140,8 +144,8 @@ class TashilIconButton extends StatelessWidget {
           foregroundColor: WidgetStatePropertyAll(effectiveFg),
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           shape: const WidgetStatePropertyAll(CircleBorder()),
-          minimumSize: WidgetStatePropertyAll(Size(size, size)),
-          fixedSize: WidgetStatePropertyAll(Size(size, size)),
+          minimumSize: WidgetStatePropertyAll(Size(touchSize, touchSize)),
+          fixedSize: WidgetStatePropertyAll(Size(touchSize, touchSize)),
           padding: const WidgetStatePropertyAll(EdgeInsets.zero),
         ),
       );
@@ -159,7 +163,7 @@ class TashilIconButton extends StatelessWidget {
           color: color ?? colorScheme.onSurfaceVariant,
           hoverColor: colorScheme.primary.withValues(alpha: 0.08),
           highlightColor: colorScheme.primary.withValues(alpha: 0.12),
-          constraints: BoxConstraints.tightFor(width: size, height: size),
+          constraints: BoxConstraints.tightFor(width: touchSize, height: touchSize),
           padding: EdgeInsets.zero,
         );
         break;
@@ -178,8 +182,8 @@ class TashilIconButton extends StatelessWidget {
             highlightColor: isDark
                 ? Colors.white.withValues(alpha: 0.18)
                 : Colors.black.withValues(alpha: 0.18),
-            minimumSize: Size(size, size),
-            fixedSize: Size(size, size),
+            minimumSize: Size(touchSize, touchSize),
+            fixedSize: Size(touchSize, touchSize),
             padding: EdgeInsets.zero,
           ),
         );
@@ -195,8 +199,8 @@ class TashilIconButton extends StatelessWidget {
             foregroundColor: color ?? colorScheme.onSecondaryContainer,
             hoverColor: colorScheme.primary.withValues(alpha: 0.08),
             highlightColor: colorScheme.primary.withValues(alpha: 0.12),
-            minimumSize: Size(size, size),
-            fixedSize: Size(size, size),
+            minimumSize: Size(touchSize, touchSize),
+            fixedSize: Size(touchSize, touchSize),
             padding: EdgeInsets.zero,
           ),
         );
@@ -224,8 +228,8 @@ class TashilIconButton extends StatelessWidget {
               }
               return BorderSide(color: colorScheme.outlineVariant);
             }),
-            minimumSize: WidgetStatePropertyAll(Size(size, size)),
-            fixedSize: WidgetStatePropertyAll(Size(size, size)),
+            minimumSize: WidgetStatePropertyAll(Size(touchSize, touchSize)),
+            fixedSize: WidgetStatePropertyAll(Size(touchSize, touchSize)),
             padding: const WidgetStatePropertyAll(EdgeInsets.zero),
           ),
         );

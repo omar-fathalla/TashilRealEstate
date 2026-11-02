@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/theme/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
@@ -66,10 +64,6 @@ class PaymentScheduleScreen extends StatelessWidget {
                       ],
                     ),
                     actions: [
-                      const ThemePaletteSwitcher(isCompact: true),
-                      const SizedBox(width: 4),
-                      CountrySwitcher(isCompact: true, showLabel: !isMobile),
-                      const SizedBox(width: 4),
                       LanguageSwitcher(isCompact: true, showLabel: !isMobile),
                       const SizedBox(width: 4),
                       IconButton(
