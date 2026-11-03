@@ -366,7 +366,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           valueListenable: CountryController.currentCountry,
           builder: (context, countryCode, _) {
             final loc = AppLocalizations.of(context);
-            final isRtl = Directionality.of(context) == TextDirection.rtl;
 
             return PopScope(
               canPop: false,
@@ -387,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   scrolledUnderElevation: 0,
                   leading: IconButton(
                     icon: Icon(
-                      isRtl ? Symbols.arrow_forward_rounded : Symbols.arrow_back_rounded,
+                      Symbols.arrow_back_rounded,
                       color: colorScheme.onSurface,
                     ),
                     tooltip: loc.tr('browseAsVisitor'),

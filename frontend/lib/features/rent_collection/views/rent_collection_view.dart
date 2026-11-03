@@ -308,12 +308,11 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   }) {
     final showBack = widget.showBackButton ??
         (Navigator.of(context).canPop() || Navigator.of(context, rootNavigator: true).canPop());
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     final backButton = showBack
         ? TashilButton.tonal(
             onPressed: () => _handleBack(context),
-            icon: isRtl ? Symbols.arrow_forward_rounded : Symbols.arrow_back_rounded,
+            icon: Symbols.arrow_back_rounded,
             label: loc.tr('back'),
           )
         : null;
@@ -2590,8 +2589,6 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     required bool isCompact,
     required ColorScheme colorScheme,
   }) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2607,7 +2604,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               children: [
                 TashilButton.tonal(
                   onPressed: () => setState(() => _isTrashView = false),
-                  icon: isRtl ? Symbols.arrow_forward_rounded : Symbols.arrow_back_rounded,
+                  icon: Symbols.arrow_back_rounded,
                   label: loc.tr('backToActiveInvoices'),
                 ),
                 const SizedBox(width: 14),
@@ -2699,7 +2696,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   ),
                   const SizedBox(height: 20),
                   TashilButton.tonal(
-                    icon: isRtl ? Symbols.arrow_forward_rounded : Symbols.arrow_back_rounded,
+                    icon: Symbols.arrow_back_rounded,
                     label: loc.tr('backToActiveInvoices'),
                     onPressed: () => setState(() => _isTrashView = false),
                   ),

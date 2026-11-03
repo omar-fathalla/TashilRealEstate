@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/lists/m3_lists_showcase_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/loading/m3_loading_showcase_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
@@ -39,7 +40,7 @@ class AppSettingsDialog extends StatelessWidget {
     return TashilTransitions.showM3Dialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => const Dialog(
+      builder: (_) => const TashilDialogFrame(
         backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: AppSettingsDialog(),

@@ -146,13 +146,16 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                  letterSpacing: -0.2),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                    letterSpacing: -0.2),
+                  maxLines: 1,
+                ),
               ),
               const SizedBox(height: 5),
               Row(

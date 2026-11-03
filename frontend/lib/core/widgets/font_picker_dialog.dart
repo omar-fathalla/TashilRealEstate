@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/theme/font_theme_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -31,7 +32,7 @@ class FontPickerDialog extends StatefulWidget {
     return TashilTransitions.showM3Dialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => const Dialog(
+      builder: (_) => const TashilDialogFrame(
         backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: FontPickerDialog(),

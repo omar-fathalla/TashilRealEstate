@@ -248,7 +248,10 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                 final screenWidth = constraints.maxWidth;
                 final isCompact = screenWidth < 768;
 
-                return SingleChildScrollView(
+                return RefreshIndicator.adaptive(
+                  onRefresh: () async => _syncContracts(),
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.symmetric(
                     horizontal: isCompact ? 16 : 28,
                     vertical: isCompact ? 20 : 28,
@@ -329,6 +332,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                               ),
                       ),
                     ],
+                  ),
                   ),
                 );
               },

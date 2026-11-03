@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
+import 'package:tashil_real_estate/features/smart_valuation/widgets/district_location_picker_dialog.dart';
 import '../../core/localization/country_controller.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/responsive_layout.dart';
@@ -75,6 +76,20 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     }
     if (hookedQuery != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchResults());
+    }
+    final sheet = ScreenshotHooks.sheet;
+    if (sheet == 'valuation' || sheet == 'district') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (sheet == 'valuation') {
+          SmartValuationDialog.show(context);
+        } else {
+          DistrictLocationPickerDialog.show(
+            context,
+            countryCode: CountryController.countryCode,
+          );
+        }
+      });
     }
   }
 

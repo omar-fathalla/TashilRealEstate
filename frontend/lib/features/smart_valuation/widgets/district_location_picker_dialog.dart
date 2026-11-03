@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -70,7 +71,7 @@ class DistrictLocationPickerDialog extends StatefulWidget {
     return TashilTransitions.showM3Dialog<String>(
       context: context,
       barrierDismissible: true,
-      builder: (context) => Dialog(
+      builder: (context) => TashilDialogFrame(
         backgroundColor: Colors.transparent,
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),

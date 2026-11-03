@@ -106,12 +106,9 @@ class PropertyRepository {
     final allProperties = getPropertiesByCountry(countryCode);
 
     final filtered = allProperties.where((prop) {
-      final title = prop.getTitle(langCode);
-      final location = prop.getLocation(langCode);
-
       final matchesQuery = searchQuery.isEmpty ||
-          SearchTokenizer.matches(title, searchQuery) ||
-          SearchTokenizer.matches(location, searchQuery);
+          prop.titles.values.any((text) => SearchTokenizer.matches(text, searchQuery)) ||
+          prop.locations.values.any((text) => SearchTokenizer.matches(text, searchQuery));
 
       final matchesCity = cityCode == 'all' || prop.cityCode == cityCode;
       final matchesType = typeCode == 'all' || prop.propertyTypeCode == typeCode;

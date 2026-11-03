@@ -107,7 +107,7 @@ class TenantHomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '2026-11-01',
+                  DateFormat.yMMMd(lang).format(DateTime(2026, 11, 1)),
                   style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8)),
                 ),
                 SizedBox(height: isMobile ? 16 : 20),

@@ -1216,7 +1216,10 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: BoxDecoration(color: theme.colorScheme.error, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: _showMissingWarning ? theme.colorScheme.error : theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -1257,7 +1260,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
 
   Widget _buildStatusCard(MandatoryFieldStatus item, AppLocalizations loc, ThemeData theme) {
     final isDone = item.isComplete;
-    final isMissingMandatory = item.isMandatory && !isDone;
+    final isMissingMandatory = _showMissingWarning && item.isMandatory && !isDone;
 
     final borderColor = isMissingMandatory
         ? theme.colorScheme.error.withValues(alpha: 0.45)
@@ -1300,7 +1303,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (item.isMandatory) ...[
+                    if (isMissingMandatory) ...[
                       const SizedBox(width: 4),
                       Text(
                         '🔴',

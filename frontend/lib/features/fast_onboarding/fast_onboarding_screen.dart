@@ -27,6 +27,7 @@ import 'package:tashil_real_estate/core/services/storage/property_draft_cache_se
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/property_media_gallery_uploader.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/voice_property_input_modal.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
@@ -183,6 +184,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           }
         });
       }
+    }
+    if (ScreenshotHooks.sheet == 'voice') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) VoicePropertyInputModal.show(context);
+      });
     }
   }
 

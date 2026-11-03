@@ -90,27 +90,15 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                         runSpacing: 10,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          TashilConnectedButtonGroup<String>(
-                            selectedValue: null,
-                            onSelectionChanged: (action) {
-                              if (action == 'simulator') {
-                                InvestmentSimulatorDialog.show(context);
-                              } else if (action == 'exportPdf') {
-                                InvestorReportDialog.show(context, summary);
-                              }
-                            },
-                            segments: [
-                              TashilConnectedButtonSegment<String>(
-                                value: 'simulator',
-                                label: loc.tr('investmentSimulatorTitle'),
-                                icon: Symbols.calculate_rounded,
-                              ),
-                              TashilConnectedButtonSegment<String>(
-                                value: 'exportPdf',
-                                label: loc.tr('exportInvestorReportPdf'),
-                                icon: Symbols.picture_as_pdf_rounded,
-                              ),
-                            ],
+                          TashilButton.tonal(
+                            label: loc.tr('investmentSimulatorTitle'),
+                            icon: Symbols.calculate_rounded,
+                            onPressed: () => InvestmentSimulatorDialog.show(context),
+                          ),
+                          TashilButton.tonal(
+                            label: loc.tr('exportInvestorReportPdf'),
+                            icon: Symbols.picture_as_pdf_rounded,
+                            onPressed: () => InvestorReportDialog.show(context, summary),
                           ),
                         ],
                       ),

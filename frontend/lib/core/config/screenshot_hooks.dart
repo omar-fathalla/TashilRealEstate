@@ -95,6 +95,20 @@ class ScreenshotHooks {
     return null;
   }
 
+  /// `valuation`, `district`, or `voice` opens that sheet for screenshots.
+  static String? get sheet {
+    if (!enabled) return null;
+    final value = Uri.base.queryParameters['sheet'];
+    switch (value) {
+      case 'valuation':
+      case 'district':
+      case 'voice':
+        return value;
+      default:
+        return null;
+    }
+  }
+
   /// `dubai`, `abu_dhabi`, `sharjah`, or `ajman`.
   static String? get legalEmirate {
     if (!enabled) return null;
