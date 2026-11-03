@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -104,25 +105,38 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 final incomeHeightRatio = (pt.grossIncome / safeMax) * 140;
                 final expenseHeightRatio = (pt.operationalExpenses / safeMax) * 140;
 
+                final compactLabel = NumberFormat.compact(
+                  locale: Localizations.localeOf(context).toString(),
+                ).format(pt.netProfit);
+                final profitLabel = pt.netProfit > 0 ? '+$compactLabel' : compactLabel;
+
                 return Expanded(
-                  child: Padding(
+                  child: Tooltip(
+                    message: profitLabel,
+                    triggerMode: isMobile ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+                    child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Net Profit Pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(4),
+                        if (!isMobile)
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                profitLabel,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            '+${(pt.netProfit / 1000).toStringAsFixed(0)}k',
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
+                        if (!isMobile) const SizedBox(height: 6),
 
                         // Dual Bar (Income & Expense)
                         Row(
@@ -170,6 +184,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 );
               }).toList(),

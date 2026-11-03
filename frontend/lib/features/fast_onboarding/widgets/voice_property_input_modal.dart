@@ -1320,7 +1320,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 decoration: BoxDecoration(
                   color: isDone
                       ? theme.colorScheme.primaryContainer
-                      : (item.isMandatory ? theme.colorScheme.errorContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainerHighest),
+                      : (isMissingMandatory ? theme.colorScheme.errorContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainerHighest),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -1329,11 +1329,11 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                     Icon(
                       isDone
                           ? Symbols.check_circle_rounded
-                          : (item.isMandatory ? Symbols.error_outline_rounded : Symbols.radio_button_unchecked_rounded),
+                          : (isMissingMandatory ? Symbols.error_outline_rounded : Symbols.radio_button_unchecked_rounded),
                       size: 11,
                       color: isDone
                           ? theme.colorScheme.onPrimaryContainer
-                          : (item.isMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant),
+                          : (isMissingMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(width: 3),
                     Text(
@@ -1341,11 +1341,11 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                           ? (item.detectedValue != null
                               ? loc.tr('detectedFieldBadge').replaceAll('{value}', item.detectedValue!)
                               : loc.tr('detectedInSpeechBadge'))
-                          : (item.isMandatory ? loc.tr('missingFieldBadge') : loc.tr('notMentionedYetBadge')),
+                          : (isMissingMandatory ? loc.tr('missingFieldBadge') : loc.tr('notMentionedYetBadge')),
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                         color: isDone
                             ? theme.colorScheme.onPrimaryContainer
-                            : (item.isMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant)),
+                            : (isMissingMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant)),
                     ),
                   ],
                 ),

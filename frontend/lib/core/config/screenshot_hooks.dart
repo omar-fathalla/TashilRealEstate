@@ -95,7 +95,7 @@ class ScreenshotHooks {
     return null;
   }
 
-  /// `valuation`, `district`, or `voice` opens that sheet for screenshots.
+  /// `valuation`, `district`, `voice`, `settings`, or `font`.
   static String? get sheet {
     if (!enabled) return null;
     final value = Uri.base.queryParameters['sheet'];
@@ -103,6 +103,8 @@ class ScreenshotHooks {
       case 'valuation':
       case 'district':
       case 'voice':
+      case 'settings':
+      case 'font':
         return value;
       default:
         return null;

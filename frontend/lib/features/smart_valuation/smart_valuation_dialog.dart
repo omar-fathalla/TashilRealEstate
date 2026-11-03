@@ -321,112 +321,107 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
         horizontal: isMobile ? 16 : 24,
         vertical: isMobile ? 14 : 18,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Start: AI Icon Badge + Title & Subtitle
-          Expanded(
+      child: ValueListenableBuilder<int>(
+        valueListenable: quotaManager.remainingQuotaNotifier,
+        builder: (context, remaining, _) {
+          final hasQuota = remaining > 0;
+          final quotaChip = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: hasQuota
+                  ? colorScheme.secondaryContainer.withValues(alpha: 0.7)
+                  : colorScheme.errorContainer.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: hasQuota
+                    ? colorScheme.secondary.withValues(alpha: 0.4)
+                    : colorScheme.error.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.2),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Symbols.auto_awesome_rounded,
-                    color: colorScheme.onPrimaryContainer,
-                    size: 22,
-                  ),
+                Icon(
+                  Symbols.bolt_rounded,
+                  size: 14,
+                  color: hasQuota
+                      ? colorScheme.onSecondaryContainer
+                      : colorScheme.onErrorContainer,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        loc.tr('aiValuationTitle'),
-                        style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                          letterSpacing: -0.2),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        loc.tr('geminiFlashEngine'),
-                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
-                          color: colorScheme.primary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                const SizedBox(width: 4),
+                Text(
+                  '$remaining ${loc.tr('evaluationsLeftToday')}',
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                    color: hasQuota
+                        ? colorScheme.onSecondaryContainer
+                        : colorScheme.onErrorContainer),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 12),
+          );
+          final closeButton = TashilIconButton.close(
+            onPressed: () => Navigator.of(context).pop(),
+          );
 
-          // End: Quota Badge & Close Button
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ValueListenableBuilder<int>(
-                valueListenable: quotaManager.remainingQuotaNotifier,
-                builder: (context, remaining, _) {
-                  final hasQuota = remaining > 0;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: hasQuota
-                          ? colorScheme.secondaryContainer.withValues(alpha: 0.7)
-                          : colorScheme.errorContainer.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: hasQuota
-                            ? colorScheme.secondary.withValues(alpha: 0.4)
-                            : colorScheme.error.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  Symbols.auto_awesome_rounded,
+                  color: colorScheme.onPrimaryContainer,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      loc.tr('aiValuationTitle'),
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.2),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Symbols.bolt_rounded,
-                          size: 14,
-                          color: hasQuota
-                              ? colorScheme.onSecondaryContainer
-                              : colorScheme.onErrorContainer,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$remaining ${loc.tr('evaluationsLeftToday')}',
-                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
-                            color: hasQuota
-                                ? colorScheme.onSecondaryContainer
-                                : colorScheme.onErrorContainer),
-                        ),
-                      ],
+                    const SizedBox(height: 2),
+                    Text(
+                      loc.tr('geminiFlashEngine'),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                        color: colorScheme.primary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  );
-                },
+                    if (isMobile) ...[
+                      const SizedBox(height: 8),
+                      quotaChip,
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(width: 8),
-              TashilIconButton.close(
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+              if (!isMobile) ...[
+                quotaChip,
+                const SizedBox(width: 8),
+              ],
+              closeButton,
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

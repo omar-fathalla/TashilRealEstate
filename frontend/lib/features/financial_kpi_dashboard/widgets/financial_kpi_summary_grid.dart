@@ -159,23 +159,26 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Row(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       subtitle,
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
                         color: color),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

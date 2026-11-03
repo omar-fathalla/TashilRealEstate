@@ -407,26 +407,40 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
           top: BorderSide(color: colorScheme.outlineVariant.withAlpha(100)),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ValueListenableBuilder<AppFontTheme>(
-            valueListenable: FontThemeController.instance.currentFont,
-            builder: (context, activeFont, _) {
-              return Text(
-                '${loc.tr('currentActiveFont')}: ${activeFont.getLocalizedName(loc.locale.languageCode).split(' ').first}',
-                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurfaceVariant),
-              );
-            },
-          ),
-          TashilButton(
+      child: ValueListenableBuilder<AppFontTheme>(
+        valueListenable: FontThemeController.instance.currentFont,
+        builder: (context, activeFont, _) {
+          final status = Text(
+            '${loc.tr('currentActiveFont')}: ${activeFont.getLocalizedName(loc.locale.languageCode).split(' ').first}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500,
+              color: colorScheme.onSurfaceVariant),
+          );
+          final apply = TashilButton(
             label: loc.tr('applyFont'),
             icon: Symbols.check_rounded,
-            height: 38,
+            height: 48,
             onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
+          );
+          if (isMobile) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                status,
+                const SizedBox(height: 8),
+                apply,
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: status),
+              const SizedBox(width: 12),
+              apply,
+            ],
+          );
+        },
       ),
     );
   }

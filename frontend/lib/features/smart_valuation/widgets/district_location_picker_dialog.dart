@@ -656,19 +656,18 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                     const SizedBox(height: 10),
 
                     // Fast Action Buttons: GPS Pinpoint & Paste Maps URL
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Expanded(
-                          child: TashilButton.tonal(
-                            onPressed: _isLocatingGps ? null : _handleGpsLocate,
-                            icon: _isLocatingGps ? Symbols.hourglass_top_rounded : Symbols.my_location_rounded,
-                            label: _isLocatingGps
-                                ? loc.tr('locatingCurrentPosition')
-                                : loc.tr('useCurrentGpsLocation'),
-                            height: 40,
-                          ),
+                        TashilButton.tonal(
+                          onPressed: _isLocatingGps ? null : _handleGpsLocate,
+                          icon: _isLocatingGps ? Symbols.hourglass_top_rounded : Symbols.my_location_rounded,
+                          label: _isLocatingGps
+                              ? loc.tr('locatingCurrentPosition')
+                              : loc.tr('useCurrentGpsLocation'),
+                          height: 48,
                         ),
-                        const SizedBox(width: 8),
                         TashilAssistChip.outlined(
                           onPressed: () => setState(() => _showMapsUrlInput = !_showMapsUrlInput),
                           icon: Symbols.link_rounded,
@@ -786,7 +785,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                               trailing: TashilButton.text(
                                 height: 32,
                                 onPressed: () => Navigator.of(context).pop(localizedName),
-                                label: loc.tr('selectCountry').replaceAll('اختر الدولة', 'اختيار').replaceAll('Select Country', 'Select').replaceAll('देश चुनें', 'चुनें'),
+                                label: loc.tr('select'),
                               ),
                               onTap: () => Navigator.of(context).pop(localizedName),
                             ),

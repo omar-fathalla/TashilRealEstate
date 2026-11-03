@@ -12,6 +12,8 @@ import '../semantic_search/models/semantic_search_result_model.dart';
 import '../semantic_search/services/ai_semantic_vector_search_service.dart';
 import '../semantic_search/widgets/visual_search_modal.dart';
 import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
+import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'models/property_item.dart';
 import 'repositories/property_repository.dart';
@@ -78,16 +80,21 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchResults());
     }
     final sheet = ScreenshotHooks.sheet;
-    if (sheet == 'valuation' || sheet == 'district') {
+    if (sheet == 'valuation' || sheet == 'district' || sheet == 'settings' || sheet == 'font') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        if (sheet == 'valuation') {
-          SmartValuationDialog.show(context);
-        } else {
-          DistrictLocationPickerDialog.show(
-            context,
-            countryCode: CountryController.countryCode,
-          );
+        switch (sheet) {
+          case 'valuation':
+            SmartValuationDialog.show(context);
+          case 'district':
+            DistrictLocationPickerDialog.show(
+              context,
+              countryCode: CountryController.countryCode,
+            );
+          case 'settings':
+            AppSettingsDialog.show(context);
+          case 'font':
+            FontPickerDialog.show(context);
         }
       });
     }
