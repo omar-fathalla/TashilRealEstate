@@ -111,7 +111,9 @@ class _TashilPhoneTextFieldState extends State<TashilPhoneTextField> {
           size: 20,
           color: hasError
               ? colorScheme.error
-              : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant),
+              : (isFocused
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant),
         ),
         const SizedBox(width: 8),
         DropdownButtonHideUnderline(
@@ -122,11 +124,19 @@ class _TashilPhoneTextFieldState extends State<TashilPhoneTextField> {
             items: [
               DropdownMenuItem(
                 value: '+20',
-                child: Text('🇪🇬 +20', style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold)),
+                child: Text('🇪🇬 +20',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium!
+                        .copyWith(fontWeight: FontWeight.bold)),
               ),
               DropdownMenuItem(
                 value: '+971',
-                child: Text('🇦🇪 +971', style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold)),
+                child: Text('🇦🇪 +971',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium!
+                        .copyWith(fontWeight: FontWeight.bold)),
               ),
             ],
             onChanged: widget.enabled
@@ -154,7 +164,8 @@ class _TashilPhoneTextFieldState extends State<TashilPhoneTextField> {
     if (suffixWidget == null && widget.isPhoneVerified && hasNumber) {
       suffixWidget = Padding(
         padding: const EdgeInsetsDirectional.only(end: 12.0),
-        child: Icon(Symbols.check_circle_rounded, size: 20, color: colorScheme.primary),
+        child: Icon(Symbols.check_circle_rounded,
+            size: 20, color: colorScheme.primary),
       );
     } else if (suffixWidget == null && hasNumber && widget.onSendOtp != null) {
       suffixWidget = Padding(
@@ -188,31 +199,41 @@ class _TashilPhoneTextFieldState extends State<TashilPhoneTextField> {
           LengthLimitingTextInputFormatter(11),
         ],
         onChanged: widget.onChanged,
-        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
-          color: widget.enabled
-              ? colorScheme.onSurface
-              : colorScheme.onSurface.withValues(alpha: 0.38)),
+        scrollPadding: const EdgeInsets.only(bottom: 120),
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.2,
+            color: widget.enabled
+                ? colorScheme.onSurface
+                : colorScheme.onSurface.withValues(alpha: 0.38)),
         decoration: InputDecoration(
           isDense: false,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           filled: true,
           fillColor: fillColor,
           labelText: widget.labelText ?? loc.tr('phoneNumberLabel'),
           hintText: widget.countryCode == '+20' ? '010xxxxxxxx' : '050xxxxxxx',
           helperText: widget.helperText,
           errorText: widget.errorText,
-          labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w500,
-            color: hasError
-                ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
-          floatingLabelStyle: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-            color: hasError
-                ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
-          hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.normal,
-            letterSpacing: 0.5,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+          labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.w500,
+              color: hasError
+                  ? colorScheme.error
+                  : (isFocused
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant)),
+          floatingLabelStyle: Theme.of(context).textTheme.labelMedium!.copyWith(
+              fontWeight: FontWeight.bold,
+              color: hasError
+                  ? colorScheme.error
+                  : (isFocused
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant)),
+          hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.normal,
+              letterSpacing: 0.5,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
           prefixIcon: prefixWidget,
           prefixIconConstraints: const BoxConstraints(minHeight: 56),
           suffixIcon: suffixWidget,

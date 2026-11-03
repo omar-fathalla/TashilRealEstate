@@ -57,6 +57,7 @@ class TashilTextField extends StatefulWidget {
   final TextStyle? style;
   final String? counterText;
   final bool autofocus;
+  final EdgeInsets scrollPadding;
 
   const TashilTextField({
     super.key,
@@ -90,6 +91,7 @@ class TashilTextField extends StatefulWidget {
     this.style,
     this.counterText,
     this.autofocus = false,
+    this.scrollPadding = const EdgeInsets.only(bottom: 120),
   });
 
   /// Convenience constructor for M3 Outlined Text Field
@@ -124,6 +126,7 @@ class TashilTextField extends StatefulWidget {
     this.style,
     this.counterText,
     this.autofocus = false,
+    this.scrollPadding = const EdgeInsets.only(bottom: 120),
   }) : variant = TashilTextFieldVariant.outlined;
 
   /// Convenience constructor for M3 Filled Text Field
@@ -158,6 +161,7 @@ class TashilTextField extends StatefulWidget {
     this.style,
     this.counterText,
     this.autofocus = false,
+    this.scrollPadding = const EdgeInsets.only(bottom: 120),
   }) : variant = TashilTextFieldVariant.filled;
 
   @override
@@ -239,7 +243,9 @@ class _TashilTextFieldState extends State<TashilTextField> {
           size: 20.0,
           color: hasError
               ? colorScheme.error
-              : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant),
+              : (isFocused
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant),
         ),
       );
     }
@@ -254,14 +260,16 @@ class _TashilTextFieldState extends State<TashilTextField> {
         child: widget.onSuffixIconTap != null
             ? IconButton(
                 icon: Icon(widget.suffixIcon, size: 20.0),
-                color: hasError ? colorScheme.error : colorScheme.onSurfaceVariant,
+                color:
+                    hasError ? colorScheme.error : colorScheme.onSurfaceVariant,
                 onPressed: widget.onSuffixIconTap,
                 splashRadius: 20,
               )
             : Icon(
                 widget.suffixIcon,
                 size: 20.0,
-                color: hasError ? colorScheme.error : colorScheme.onSurfaceVariant,
+                color:
+                    hasError ? colorScheme.error : colorScheme.onSurfaceVariant,
               ),
       );
     }
@@ -291,7 +299,13 @@ class _TashilTextFieldState extends State<TashilTextField> {
         textDirection: widget.textDirection,
         textAlign: widget.textAlign,
         autofocus: widget.autofocus,
-        style: (widget.style ?? Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600)).copyWith(
+        scrollPadding: widget.scrollPadding,
+        style: (widget.style ??
+                Theme.of(context)
+                    .textTheme
+                    .bodyMedium!
+                    .copyWith(fontWeight: FontWeight.w600))
+            .copyWith(
           color: widget.style?.color ??
               (widget.enabled
                   ? colorScheme.onSurface
@@ -299,7 +313,8 @@ class _TashilTextFieldState extends State<TashilTextField> {
         ),
         decoration: InputDecoration(
           isDense: false,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           filled: true,
           fillColor: fillColor,
           labelText: widget.labelText,
@@ -307,20 +322,29 @@ class _TashilTextFieldState extends State<TashilTextField> {
           helperText: widget.helperText,
           errorText: widget.errorText,
           counterText: widget.counterText,
-          labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w500,
-            color: hasError
-                ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
-          floatingLabelStyle: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-            color: hasError
-                ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
-          hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.normal,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+          labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.w500,
+              color: hasError
+                  ? colorScheme.error
+                  : (isFocused
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant)),
+          floatingLabelStyle: Theme.of(context).textTheme.labelMedium!.copyWith(
+              fontWeight: FontWeight.bold,
+              color: hasError
+                  ? colorScheme.error
+                  : (isFocused
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant)),
+          hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.normal,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
           prefixIcon: prefixWidget,
-          prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 44, minHeight: 44),
           suffixIcon: suffixWidget,
-          suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 44, minHeight: 44),
           border: OutlineInputBorder(
             borderRadius: effectiveRadius,
             borderSide: BorderSide(color: defaultOutlineColor, width: 1.0),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_assist_chip.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_alert_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_modal_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
@@ -62,6 +63,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   String _countryCode = '+20';
   String _preferredContactMethod = 'phone';
   bool _isSaving = false;
+  bool _dirty = false;
+  bool _confirmingClose = false;
   String? _photoUrl;
   String? _idCardPhotoUrl;
   bool _isSyncingPhoto = false;
@@ -83,15 +86,20 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _photoUrl = profile.photoUrl;
     _idCardPhotoUrl = profile.idCardPhotoUrl;
 
-    _firstNameController = TextEditingController(text: profile.computedFirstName);
+    _firstNameController =
+        TextEditingController(text: profile.computedFirstName);
     _surnameController = TextEditingController(text: profile.computedSurname);
     _emailController = TextEditingController(text: profile.email);
     _otpController = TextEditingController();
-    _nationalIdController = TextEditingController(text: DigitUtils.normalize(profile.nationalId));
-    _addressController = TextEditingController(text: DigitUtils.normalize(profile.address));
+    _nationalIdController =
+        TextEditingController(text: DigitUtils.normalize(profile.nationalId));
+    _addressController =
+        TextEditingController(text: DigitUtils.normalize(profile.address));
     _bankNameController = TextEditingController(text: profile.bankName);
     _bankAccountNumberController = TextEditingController(
-      text: DigitUtils.normalize(profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban),
+      text: DigitUtils.normalize(profile.bankAccountNumber.isNotEmpty
+          ? profile.bankAccountNumber
+          : profile.iban),
     );
     _customBankController = TextEditingController();
 
@@ -104,15 +112,60 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       _countryCode = '+20';
       rawPhone = rawPhone.replaceFirst('+20', '').trim();
     }
-    _phoneController = TextEditingController(text: DigitUtils.normalize(rawPhone));
+    _phoneController =
+        TextEditingController(text: DigitUtils.normalize(rawPhone));
     _preferredContactMethod = profile.preferredContactMethod;
     _isPhoneVerified = profile.isPhoneVerified && rawPhone.isNotEmpty;
 
     _initBankSelection(profile.bankName);
+    for (final controller in _profileControllers) {
+      controller.addListener(_markDirty);
+    }
+  }
+
+  List<TextEditingController> get _profileControllers => [
+        _firstNameController,
+        _surnameController,
+        _emailController,
+        _phoneController,
+        _otpController,
+        _nationalIdController,
+        _addressController,
+        _bankNameController,
+        _bankAccountNumberController,
+        _customBankController,
+      ];
+
+  void _markDirty() {
+    if (_dirty || !mounted) return;
+    setState(() => _dirty = true);
+  }
+
+  Future<void> _requestClose() async {
+    if (_confirmingClose || _isSaving) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (!_dirty) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    _confirmingClose = true;
+    final loc = AppLocalizations.of(context);
+    final discard = await TashilAlertDialog.showConfirmation(
+      context: context,
+      title: loc.tr('unsavedChangesTitle'),
+      message: loc.tr('unsavedChangesBody'),
+      confirmLabel: loc.tr('discardChanges'),
+      cancelLabel: loc.tr('keepEditing'),
+      icon: Symbols.warning_rounded,
+      isDestructive: true,
+    );
+    _confirmingClose = false;
+    if (discard && mounted) Navigator.of(context).pop();
   }
 
   void _initBankSelection(String savedBankName) {
-    final activeCountry = (CountryController.isUAE || _countryCode == '+971') ? 'AE' : 'EG';
+    final activeCountry =
+        (CountryController.isUAE || _countryCode == '+971') ? 'AE' : 'EG';
     final bank = BankDirectoryService.findBank(savedBankName, activeCountry);
     if (bank != null) {
       if (bank.isOther) {
@@ -136,6 +189,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    for (final controller in _profileControllers) {
+      controller.removeListener(_markDirty);
+    }
     _firstNameController.dispose();
     _surnameController.dispose();
     _emailController.dispose();
@@ -153,18 +209,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     int points = 0;
     const int total = 6;
     if (_emailController.text.trim().isNotEmpty) points++;
-    if ('${_firstNameController.text} ${_surnameController.text}'.trim().isNotEmpty) points++;
+    if ('${_firstNameController.text} ${_surnameController.text}'
+        .trim()
+        .isNotEmpty) points++;
     if (_phoneController.text.trim().isNotEmpty) points++;
     if (_nationalIdController.text.trim().isNotEmpty) points++;
     if (_addressController.text.trim().isNotEmpty) points++;
-    if (_bankNameController.text.trim().isNotEmpty || _bankAccountNumberController.text.trim().isNotEmpty) points++;
+    if (_bankNameController.text.trim().isNotEmpty ||
+        _bankAccountNumberController.text.trim().isNotEmpty) points++;
     return points / total;
   }
 
   Future<void> _handleSyncGooglePhoto(AppLocalizations loc) async {
     setState(() => _isSyncingPhoto = true);
     try {
-      final success = await UserProfileService().syncFromGoogleAuth(overrideName: true);
+      final success =
+          await UserProfileService().syncFromGoogleAuth(overrideName: true);
       if (!mounted) return;
       if (success) {
         final updated = UserProfileService().profileNotifier.value;
@@ -218,8 +278,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     setState(() => _isSendingOtp = true);
 
     try {
-      final e164Number = FirebaseAuthService.formatE164Phone(_countryCode, localPhone);
-      final verifId = await UserProfileService().sendPhoneVerificationOtp(e164Number);
+      final e164Number =
+          FirebaseAuthService.formatE164Phone(_countryCode, localPhone);
+      final verifId =
+          await UserProfileService().sendPhoneVerificationOtp(e164Number);
 
       if (mounted) {
         setState(() {
@@ -239,7 +301,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         setState(() => _isSendingOtp = false);
         String errMsg = 'تعذر إرسال رمز التحقق: $e';
         final str = e.toString().toLowerCase();
-        if (str.contains('quota-exceeded') || str.contains('too-many-requests')) {
+        if (str.contains('quota-exceeded') ||
+            str.contains('too-many-requests')) {
           errMsg = AppLocalizations.trStatic('uiCopy179');
         } else if (str.contains('invalid-phone-number')) {
           errMsg = AppLocalizations.trStatic('uiCopy210');
@@ -268,7 +331,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     try {
       final localPhone = _phoneController.text.trim();
-      final e164Number = FirebaseAuthService.formatE164Phone(_countryCode, localPhone);
+      final e164Number =
+          FirebaseAuthService.formatE164Phone(_countryCode, localPhone);
       final success = await UserProfileService().verifyPhoneOtp(
         fullPhoneNumber: e164Number,
         verificationId: _verificationId,
@@ -320,7 +384,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
     try {
       final country = _countryCode == '+971' ? 'AE' : 'EG';
-      final docType = country == 'AE' ? DocumentOcrType.emiratesId : DocumentOcrType.egyptianNationalId;
+      final docType = country == 'AE'
+          ? DocumentOcrType.emiratesId
+          : DocumentOcrType.egyptianNationalId;
 
       final result = await AiDocumentOcrModal.show(
         context,
@@ -331,9 +397,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
       if (result != null && mounted) {
         setState(() {
-          final extractedName = result.fullNameAr.isNotEmpty ? result.fullNameAr : result.fullNameEn;
+          final extractedName = result.fullNameAr.isNotEmpty
+              ? result.fullNameAr
+              : result.fullNameEn;
           if (extractedName.isNotEmpty) {
-            _firstNameController.text = UserAvatarUtils.getFirstName(extractedName);
+            _firstNameController.text =
+                UserAvatarUtils.getFirstName(extractedName);
             _surnameController.text = UserAvatarUtils.getSurname(extractedName);
           }
           if (result.idNumber.isNotEmpty) {
@@ -358,7 +427,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   }
 
   /// Open full-screen zoomed preview for the scanned ID card image with full native resolution, zoom in/out, rotation and flip controls
-  void _showFullCardPreview(BuildContext context, String imageUrl, String title) {
+  void _showFullCardPreview(
+      BuildContext context, String imageUrl, String title) {
     final loc = AppLocalizations.of(context);
     final transformationController = TransformationController();
     int quarterTurns = 0;
@@ -371,7 +441,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
           final colorScheme = Theme.of(ctx).colorScheme;
           return Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 740),
               decoration: BoxDecoration(
@@ -395,7 +466,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                 children: [
                   // 1. Header with title and shaded close button
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -404,16 +476,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                                color: colorScheme.primaryContainer
+                                    .withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Symbols.badge_rounded, color: colorScheme.primary, size: 18),
+                              child: Icon(Symbols.badge_rounded,
+                                  color: colorScheme.primary, size: 18),
                             ),
                             const SizedBox(width: 10),
                             Text(
                               title,
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium!
+                                  .copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                             ),
                           ],
                         ),
@@ -430,7 +508,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                   Container(
                     width: double.infinity,
                     height: 520,
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.35),
                     child: ClipRect(
                       child: InteractiveViewer(
                         transformationController: transformationController,
@@ -442,7 +521,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             padding: const EdgeInsets.all(12),
                             child: Transform(
                               alignment: Alignment.center,
-                              transform: Matrix4.rotationY(flipHorizontal ? 3.1415926535 : 0),
+                              transform: Matrix4.rotationY(
+                                  flipHorizontal ? 3.1415926535 : 0),
                               child: RotatedBox(
                                 quarterTurns: quarterTurns,
                                 child: ImageUtils.cachedImage(
@@ -464,10 +544,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                   // 3. Control Toolbar: Zoom In (+), Zoom Out (-), Rotate Left, Rotate Right, Flip, Reset
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHigh,
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(24)),
                     ),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -482,8 +564,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             iconSize: 20,
                             onPressed: () {
                               setModalState(() {
-                                transformationController.value = Matrix4.copy(transformationController.value)
-                                  ..multiply(Matrix4.diagonal3Values(1.25, 1.25, 1.0));
+                                transformationController.value = Matrix4.copy(
+                                    transformationController.value)
+                                  ..multiply(
+                                      Matrix4.diagonal3Values(1.25, 1.25, 1.0));
                               });
                             },
                           ),
@@ -497,8 +581,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             iconSize: 20,
                             onPressed: () {
                               setModalState(() {
-                                transformationController.value = Matrix4.copy(transformationController.value)
-                                  ..multiply(Matrix4.diagonal3Values(0.8, 0.8, 1.0));
+                                transformationController.value = Matrix4.copy(
+                                    transformationController.value)
+                                  ..multiply(
+                                      Matrix4.diagonal3Values(0.8, 0.8, 1.0));
                               });
                             },
                           ),
@@ -555,7 +641,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             iconSize: 20,
                             onPressed: () {
                               setModalState(() {
-                                transformationController.value = Matrix4.identity();
+                                transformationController.value =
+                                    Matrix4.identity();
                                 quarterTurns = 0;
                                 flipHorizontal = false;
                               });
@@ -585,12 +672,14 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       final surname = _surnameController.text.trim();
       final localPhone = DigitUtils.normalize(_phoneController.text.trim());
       final phone = localPhone.isNotEmpty ? '$_countryCode $localPhone' : '';
-      final nationalId = DigitUtils.normalize(_nationalIdController.text.trim());
+      final nationalId =
+          DigitUtils.normalize(_nationalIdController.text.trim());
       final address = DigitUtils.normalize(_addressController.text.trim());
       final bankName = _isCustomBank
           ? _customBankController.text.trim()
           : _bankNameController.text.trim();
-      final bankAccountNumber = DigitUtils.normalize(_bankAccountNumberController.text.trim());
+      final bankAccountNumber =
+          DigitUtils.normalize(_bankAccountNumberController.text.trim());
 
       await UserProfileService().updateProfile(
         firstName: firstName,
@@ -631,7 +720,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     final colorScheme = theme.colorScheme;
     final loc = AppLocalizations.of(context);
     final profile = UserProfileService().profileNotifier.value;
-    final fullName = '${_firstNameController.text} ${_surnameController.text}'.trim().isNotEmpty
+    final fullName = '${_firstNameController.text} ${_surnameController.text}'
+            .trim()
+            .isNotEmpty
         ? '${_firstNameController.text} ${_surnameController.text}'.trim()
         : profile.fullName;
 
@@ -639,428 +730,535 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     final completenessPercent = (completenessRatio * 100).round();
     final isUAE = CountryController.isUAE || _countryCode == '+971';
 
-    return TashilModalDialog(
-      title: loc.tr('personalInfo'),
-      subtitle: loc.tr('editProfileSubtitle'),
-      icon: Symbols.manage_accounts_rounded,
-      maxWidth: 560,
-      footer: Container(
-        width: double.infinity,
-        height: 48,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            width: 1.0,
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return PopScope(
+      canPop: !_dirty && !_isSaving,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _requestClose();
+      },
+      child: TashilModalDialog(
+        title: loc.tr('personalInfo'),
+        subtitle: loc.tr('editProfileSubtitle'),
+        icon: Symbols.manage_accounts_rounded,
+        maxWidth: 560,
+        onClose: _requestClose,
+        footer: Container(
+          width: double.infinity,
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              width: 1.0,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            // زر إلغاء (Cancel: 50% width)
-            Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Symbols.close_rounded, size: 16, color: colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Text(
-                          loc.tr('cancel'),
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            // زر حفظ (Save: 50% width with primary background)
-            Expanded(
-              child: Material(
-                color: colorScheme.primary,
-                borderRadius: BorderRadius.circular(20),
-                elevation: 2,
-                shadowColor: colorScheme.primary.withValues(alpha: 0.3),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: _isSaving ? null : () => _handleSave(loc),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_isSaving)
-                          TashilLoadingIndicator(
-                            size: 14,
-                            color: colorScheme.onPrimary,
-                          )
-                        else
-                          Icon(Symbols.check_rounded, size: 16, color: colorScheme.onPrimary),
-                        const SizedBox(width: 6),
-                        Text(
-                          loc.tr('save'),
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
             children: [
-              // 1. Google Avatar & User Identity Banner
-              Center(
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: AlignmentDirectional.bottomEnd,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colorScheme.primary,
-                              width: 2.5,
-                            ),
-                          ),
-                          child: UserAvatarUtils.buildAvatar(
-                            context: context,
-                            photoUrl: _photoUrl ?? profile.photoUrl,
-                            displayName: fullName.isNotEmpty ? fullName : profile.fullName,
-                            fallbackInitials: 'MF',
-                            radius: 40,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: colorScheme.surface, width: 2),
-                          ),
-                          child: Icon(
-                            Symbols.verified_user_rounded,
-                            size: 13,
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      fullName.isNotEmpty ? fullName : 'Mohamed Fathallah',
-                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _emailController.text.isNotEmpty ? _emailController.text : 'mohamed.fathalla@gmail.com',
-                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: colorScheme.primary.withValues(alpha: 0.3),
-                        ),
-                      ),
+              // زر إلغاء (Cancel: 50% width)
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: _requestClose,
+                    child: Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Symbols.g_mobiledata_rounded, size: 18, color: colorScheme.primary),
-                          const SizedBox(width: 4),
+                          Icon(Symbols.close_rounded,
+                              size: 16, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 6),
                           Text(
-                            loc.tr('googleAccountLinked'),
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer),
+                            loc.tr('cancel'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium!
+                                .copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    TashilAssistChip.outlined(
-                      label: loc.tr('syncPhotoFromGoogle'),
-                      icon: _isSyncingPhoto ? Symbols.hourglass_top_rounded : Symbols.sync_rounded,
-                      onPressed: _isSyncingPhoto ? null : () => _handleSyncGooglePhoto(loc),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // 2. Profile Completeness Live Progress Bar
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: completenessRatio >= 1.0
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.25)
-                      : colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: completenessRatio >= 1.0
-                        ? colorScheme.primary.withValues(alpha: 0.3)
-                        : colorScheme.outlineVariant.withValues(alpha: 0.4),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              completenessRatio >= 1.0
-                                  ? Symbols.check_circle_rounded
-                                  : Symbols.shield_rounded,
-                              size: 15,
-                              color: colorScheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              loc.tr('profileCompleteness'),
-                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '$completenessPercent%',
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                            color: colorScheme.primary),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    TashilLinearProgressIndicator.flat(
-                      value: completenessRatio,
-                      thickness: 6,
-                      color: colorScheme.primary,
-                      trackColor: colorScheme.surfaceContainerHighest,
-                      showStopIndicator: false,
-                      useContainerInset: false,
-                    ),
-                  ],
-                ),
               ),
-              const SizedBox(height: 18),
-
-              // 3. AI Document OCR National ID Scanner Banner & Card Preview
-              if (_idCardPhotoUrl != null && _idCardPhotoUrl!.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.35),
-                      width: 1.2,
+              const SizedBox(width: 6),
+              // زر حفظ (Save: 50% width with primary background)
+              Expanded(
+                child: Material(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  elevation: 2,
+                  shadowColor: colorScheme.primary.withValues(alpha: 0.3),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: _isSaving ? null : () => _handleSave(loc),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_isSaving)
+                            TashilLoadingIndicator(
+                              size: 14,
+                              color: colorScheme.onPrimary,
+                            )
+                          else
+                            Icon(Symbols.check_rounded,
+                                size: 16, color: colorScheme.onPrimary),
+                          const SizedBox(width: 6),
+                          Text(
+                            loc.tr('save'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium!
+                                .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimary),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  child: Row(
+                ),
+              ),
+            ],
+          ),
+        ),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(bottom: keyboard),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Google Avatar & User Identity Banner
+                Center(
+                  child: Column(
                     children: [
-                      // Thumbnail with click-to-zoom
-                      GestureDetector(
-                        onTap: () => _showFullCardPreview(
-                          context,
-                          _idCardPhotoUrl!,
-                          isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
-                        ),
-                        child: Stack(
-                          alignment: AlignmentDirectional.bottomEnd,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: ImageUtils.cachedImage(
-                                imageUrl: _idCardPhotoUrl!,
-                                width: 100,
-                                height: 64,
-                                fit: BoxFit.cover,
+                      Stack(
+                        alignment: AlignmentDirectional.bottomEnd,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: colorScheme.primary,
+                                width: 2.5,
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(3),
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: colorScheme.shadow.withValues(alpha: 0.65),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Symbols.zoom_in_rounded,
-                                size: 14,
-                                color: colorScheme.onPrimary,
-                              ),
+                            child: UserAvatarUtils.buildAvatar(
+                              context: context,
+                              photoUrl: _photoUrl ?? profile.photoUrl,
+                              displayName: fullName.isNotEmpty
+                                  ? fullName
+                                  : profile.fullName,
+                              fallbackInitials: 'MF',
+                              radius: 40,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: colorScheme.surface, width: 2),
+                            ),
+                            child: Icon(
+                              Symbols.verified_user_rounded,
+                              size: 13,
+                              color: colorScheme.onPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        fullName.isNotEmpty ? fullName : 'Mohamed Fathallah',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium!
+                            .copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _emailController.text.isNotEmpty
+                            ? _emailController.text
+                            : 'mohamed.fathalla@gmail.com',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium!
+                            .copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer
+                              .withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Symbols.g_mobiledata_rounded,
+                                size: 18, color: colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              loc.tr('googleAccountLinked'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall!
+                                  .copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onPrimaryContainer),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Symbols.verified_rounded, size: 16, color: colorScheme.primary),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
-                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                                      color: colorScheme.onSurface),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              loc.tr('tapToViewFullCard'),
-                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
-                            ),
-                            const SizedBox(height: 6),
-                            InkWell(
-                              onTap: _isScanningOcr ? null : () => _handleScanIdWithAi(loc),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Symbols.refresh_rounded, size: 14, color: colorScheme.primary),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    loc.tr('rescanIdCard'),
-                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                      decoration: TextDecoration.underline),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(height: 10),
+                      TashilAssistChip.outlined(
+                        label: loc.tr('syncPhotoFromGoogle'),
+                        icon: _isSyncingPhoto
+                            ? Symbols.hourglass_top_rounded
+                            : Symbols.sync_rounded,
+                        onPressed: _isSyncingPhoto
+                            ? null
+                            : () => _handleSyncGooglePhoto(loc),
                       ),
                     ],
                   ),
                 ),
-              ] else ...[
+                const SizedBox(height: 14),
+
+                // 2. Profile Completeness Live Progress Bar
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primaryContainer.withValues(alpha: 0.5),
-                        colorScheme.surfaceContainerHigh,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
+                    color: completenessRatio >= 1.0
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.25)
+                        : colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.25),
-                      width: 1.0,
+                      color: completenessRatio >= 1.0
+                          ? colorScheme.primary.withValues(alpha: 0.3)
+                          : colorScheme.outlineVariant.withValues(alpha: 0.4),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Symbols.document_scanner_rounded, size: 18, color: colorScheme.onPrimary),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                completenessRatio >= 1.0
+                                    ? Symbols.check_circle_rounded
+                                    : Symbols.shield_rounded,
+                                size: 15,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                loc.tr('profileCompleteness'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium!
+                                    .copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '$completenessPercent%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium!
+                                .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
+                      const SizedBox(height: 6),
+                      TashilLinearProgressIndicator.flat(
+                        value: completenessRatio,
+                        thickness: 6,
+                        color: colorScheme.primary,
+                        trackColor: colorScheme.surfaceContainerHighest,
+                        showStopIndicator: false,
+                        useContainerInset: false,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // 3. AI Document OCR National ID Scanner Banner & Card Preview
+                if (_idCardPhotoUrl != null && _idCardPhotoUrl!.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Thumbnail with click-to-zoom
+                        GestureDetector(
+                          onTap: () => _showFullCardPreview(
+                            context,
+                            _idCardPhotoUrl!,
+                            isUAE
+                                ? loc.tr('emiratesIdLabel')
+                                : loc.tr('idCardPreviewTitle'),
+                          ),
+                          child: Stack(
+                            alignment: AlignmentDirectional.bottomEnd,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: ImageUtils.cachedImage(
+                                  imageUrl: _idCardPhotoUrl!,
+                                  width: 100,
+                                  height: 64,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                margin: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.shadow
+                                      .withValues(alpha: 0.65),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Symbols.zoom_in_rounded,
+                                  size: 14,
+                                  color: colorScheme.onPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Symbols.verified_rounded,
+                                      size: 16, color: colorScheme.primary),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      isUAE
+                                          ? loc.tr('emiratesIdLabel')
+                                          : loc.tr('idCardPreviewTitle'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium!
+                                          .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.onSurface),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                loc.tr('tapToViewFullCard'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall!
+                                    .copyWith(
+                                        color: colorScheme.onSurfaceVariant),
+                              ),
+                              const SizedBox(height: 6),
+                              InkWell(
+                                onTap: _isScanningOcr
+                                    ? null
+                                    : () => _handleScanIdWithAi(loc),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Symbols.refresh_rounded,
+                                        size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      loc.tr('rescanIdCard'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall!
+                                          .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.primary,
+                                              decoration:
+                                                  TextDecoration.underline),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          colorScheme.surfaceContainerHigh,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.25),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final stacked = constraints.maxWidth < 480;
+                        final copy = Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               loc.tr('scanIdWithAi'),
-                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium!
+                                  .copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                             ),
                             Text(
                               isUAE
                                   ? AppLocalizations.trStatic('uiCopy112')
                                   : AppLocalizations.trStatic('uiCopy111'),
-                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall!
+                                  .copyWith(
+                                      color: colorScheme.onSurfaceVariant),
                             ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TashilButton.tonal(
-                        label: AppLocalizations.trStatic('uiCopy290'),
-                        icon: Symbols.flash_on_rounded,
-                        isLoading: _isScanningOcr,
-                        onPressed: () => _handleScanIdWithAi(loc),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 18),
-
-              // 4. Basic Info M3 Form Fields
-              Row(
-                children: [
-                  Expanded(
-                    child: TashilTextField.outlined(
-                      controller: _firstNameController,
-                      labelText: loc.tr('firstNameLabel'),
-                      prefixIcon: Symbols.person_outline_rounded,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TashilTextField.outlined(
-                      controller: _surnameController,
-                      labelText: loc.tr('surnameLabel'),
-                      prefixIcon: Symbols.badge_rounded,
-                      onChanged: (_) => setState(() {}),
+                        );
+                        final action = TashilButton.tonal(
+                          label: AppLocalizations.trStatic('uiCopy290'),
+                          icon: Symbols.flash_on_rounded,
+                          isLoading: _isScanningOcr,
+                          onPressed: () => _handleScanIdWithAi(loc),
+                        );
+                        final lead = Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Symbols.document_scanner_rounded,
+                              size: 18, color: colorScheme.onPrimary),
+                        );
+                        if (stacked) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  lead,
+                                  const SizedBox(width: 10),
+                                  Expanded(child: copy),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              action,
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            lead,
+                            const SizedBox(width: 10),
+                            Expanded(child: copy),
+                            const SizedBox(width: 8),
+                            action,
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 18),
 
-              // Editable Email Address field
-              TashilTextField.outlined(
-                controller: _emailController,
-                labelText: loc.tr('emailAddress'),
-                prefixIcon: Symbols.email_rounded,
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
+                // 4. Basic Info M3 Form Fields
+                Row(
+                  children: [
+                    Expanded(
+                      child: TashilTextField.outlined(
+                        controller: _firstNameController,
+                        labelText: loc.tr('firstNameLabel'),
+                        prefixIcon: Symbols.person_outline_rounded,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TashilTextField.outlined(
+                        controller: _surnameController,
+                        labelText: loc.tr('surnameLabel'),
+                        prefixIcon: Symbols.badge_rounded,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
 
-              // Phone with OTP Verification
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TashilPhoneTextField(
+                // Editable Email Address field
+                TashilTextField.outlined(
+                  controller: _emailController,
+                  labelText: loc.tr('emailAddress'),
+                  prefixIcon: Symbols.email_rounded,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 14),
+
+                // Phone with OTP Verification
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final stacked = constraints.maxWidth < 480;
+                    final phone = TashilPhoneTextField(
                       textFieldKey: const Key('edit_profile_phone_input'),
                       controller: _phoneController,
                       countryCode: _countryCode,
@@ -1080,278 +1278,347 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           _isOtpSent = false;
                         });
                       },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_isPhoneVerified && _phoneController.text.trim().isNotEmpty) ...[
-                    Container(
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: colorScheme.primary.withValues(alpha: 0.4),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    );
+                    final Widget action = (_isPhoneVerified &&
+                            _phoneController.text.trim().isNotEmpty)
+                        ? Container(
+                            height: 56,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color:
+                                  colorScheme.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    colorScheme.primary.withValues(alpha: 0.4),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Symbols.verified_rounded,
+                                    size: 20, color: colorScheme.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  loc.tr('phoneVerifiedBadge'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium!
+                                      .copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.primary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : SizedBox(
+                            height: 56,
+                            child: TashilButton.tonal(
+                              onPressed: (_isSendingOtp ||
+                                      _phoneController.text.trim().isEmpty)
+                                  ? null
+                                  : () => _handleSendOtp(loc),
+                              isLoading: _isSendingOtp,
+                              icon: Symbols.sms_rounded,
+                              label: loc.tr('sendOtp'),
+                              height: 56,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          );
+                    if (stacked) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Icon(Symbols.verified_rounded, size: 20, color: colorScheme.primary),
-                          const SizedBox(width: 6),
-                          Text(
-                            loc.tr('phoneVerifiedBadge'),
-                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                              color: colorScheme.primary),
+                          phone,
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: action,
                           ),
                         ],
-                      ),
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: phone),
+                        const SizedBox(width: 8),
+                        action,
+                      ],
+                    );
+                  },
+                ),
+
+                // Inline OTP Verification Block (when code is sent)
+                if (_isOtpSent) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: colorScheme.primary.withValues(alpha: 0.4)),
                     ),
-                  ] else ...[
-                    SizedBox(
-                      height: 56,
-                      child: TashilButton.tonal(
-                        onPressed: (_isSendingOtp || _phoneController.text.trim().isEmpty)
-                            ? null
-                            : () => _handleSendOtp(loc),
-                        isLoading: _isSendingOtp,
-                        icon: Symbols.sms_rounded,
-                        label: loc.tr('sendOtp'),
-                        height: 56,
-                        borderRadius: BorderRadius.circular(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TashilTextField.outlined(
+                                key: const Key('otp_code_field'),
+                                controller: _otpController,
+                                keyboardType: TextInputType.number,
+                                maxLength: 6,
+                                labelText: loc.tr('enterOtpCode'),
+                                prefixIcon: Symbols.pin_rounded,
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              height: 56,
+                              child: TashilButton.filled(
+                                label: AppLocalizations.trStatic('uiCopy163'),
+                                icon: Symbols.check_rounded,
+                                isLoading: _isVerifyingOtp,
+                                onPressed: () => _handleVerifyOtp(loc),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (_otpCountdown > 0)
+                              Text(
+                                '$_otpCountdown ${loc.tr('secondsRemaining')}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall!
+                                    .copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.primary),
+                              )
+                            else
+                              InkWell(
+                                onTap: () => _handleSendOtp(loc),
+                                child: Text(
+                                  loc.tr('resendOtp'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall!
+                                      .copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.primary,
+                                          decoration: TextDecoration.underline),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+
+                // 5. Official Identity & Address Section
+                Row(
+                  children: [
+                    Icon(Symbols.badge_rounded,
+                        size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        loc.tr('officialIdentitySectionTitle'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium!
+                            .copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                       ),
                     ),
                   ],
-                ],
-              ),
-
-              // Inline OTP Verification Block (when code is sent)
-              if (_isOtpSent) ...[
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.4)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TashilTextField.outlined(
-                              key: const Key('otp_code_field'),
-                              controller: _otpController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 6,
-                              labelText: loc.tr('enterOtpCode'),
-                              prefixIcon: Symbols.pin_rounded,
-                              textDirection: TextDirection.ltr,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          SizedBox(
-                            height: 56,
-                            child: TashilButton.filled(
-                              label: AppLocalizations.trStatic('uiCopy163'),
-                              icon: Symbols.check_rounded,
-                              isLoading: _isVerifyingOtp,
-                              onPressed: () => _handleVerifyOtp(loc),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (_otpCountdown > 0)
-                            Text(
-                              '$_otpCountdown ${loc.tr('secondsRemaining')}',
-                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
-                                color: colorScheme.primary),
-                            )
-                          else
-                            InkWell(
-                              onTap: () => _handleSendOtp(loc),
-                              child: Text(
-                                loc.tr('resendOtp'),
-                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                  decoration: TextDecoration.underline),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
-              ],
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-              // 5. Official Identity & Address Section
-              Row(
-                children: [
-                  Icon(Symbols.badge_rounded, size: 16, color: colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    loc.tr('officialIdentitySectionTitle'),
-                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                // National ID (14 digits) or Emirates ID
+                TashilTextField.outlined(
+                  controller: _nationalIdController,
+                  labelText: isUAE
+                      ? loc.tr('emiratesIdLabel')
+                      : loc.tr('nationalIdLabel'),
+                  prefixIcon: Symbols.credit_card_rounded,
+                  keyboardType: TextInputType.number,
+                  maxLength: isUAE ? 18 : 14,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 14),
 
-              // National ID (14 digits) or Emirates ID
-              TashilTextField.outlined(
-                controller: _nationalIdController,
-                labelText: isUAE ? loc.tr('emiratesIdLabel') : loc.tr('nationalIdLabel'),
-                prefixIcon: Symbols.credit_card_rounded,
-                keyboardType: TextInputType.number,
-                maxLength: isUAE ? 18 : 14,
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
+                // Full Address as on ID Card
+                TashilTextField.outlined(
+                  controller: _addressController,
+                  labelText: loc.tr('officialAddressLabel'),
+                  prefixIcon: Symbols.location_on_rounded,
+                  suffixIcon: Symbols.my_location_rounded,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 20),
 
-              // Full Address as on ID Card
-              TashilTextField.outlined(
-                controller: _addressController,
-                labelText: loc.tr('officialAddressLabel'),
-                prefixIcon: Symbols.location_on_rounded,
-                suffixIcon: Symbols.my_location_rounded,
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 20),
-
-              // 6. Landlord Bank Payout Details Section
-              Row(
-                children: [
-                  Icon(Symbols.account_balance_rounded, size: 16, color: colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    loc.tr('bankPayoutSectionTitle'),
-                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Dynamic Bank Directory Dropdown Menu
-              Builder(
-                builder: (ctx) {
-                  final activeCountry = isUAE ? 'AE' : 'EG';
-                  final bankList = BankDirectoryService.getBanksForCountry(activeCountry);
-                  final lang = LocaleController.languageCode;
-
-                  final bankItems = bankList.map((bank) {
-                    return TashilDropdownMenuItem<String?>(
-                      value: bank.code,
-                      label: bank.localizedName(lang),
-                      icon: bank.isOther ? Symbols.edit_note_rounded : Symbols.account_balance_rounded,
-                      supportingText: bank.isOther ? null : (isUAE ? 'CBUAE' : 'CBE'),
-                    );
-                  }).toList();
-
-                  // Validate selected bank code belongs to active directory
-                  final validSelection = bankList.any((b) => b.code == _selectedBankCode)
-                      ? _selectedBankCode
-                      : null;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TashilDropdownMenu<String?>(
-                        value: validSelection,
-                        items: bankItems,
-                        labelText: loc.tr('bankNameLabel'),
-                        hintText: loc.tr('selectBankPlaceholder'),
-                        prefixIcon: Symbols.account_balance_rounded,
-                        isSearchable: true,
-                        searchHintText: loc.tr('searchBankPlaceholder'),
-                        height: 52,
-                        maxMenuHeight: 320,
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedBankCode = val;
-                            if (val == BankDirectoryService.otherBankCode) {
-                              _isCustomBank = true;
-                              _bankNameController.text = _customBankController.text.trim();
-                            } else if (val != null) {
-                              _isCustomBank = false;
-                              final selectedBank = bankList.firstWhere((b) => b.code == val);
-                              _bankNameController.text = selectedBank.localizedName(lang);
-                            } else {
-                              _isCustomBank = false;
-                              _bankNameController.clear();
-                            }
-                          });
-                        },
+                // 6. Landlord Bank Payout Details Section
+                Row(
+                  children: [
+                    Icon(Symbols.account_balance_rounded,
+                        size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        loc.tr('bankPayoutSectionTitle'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium!
+                            .copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                       ),
-                      if (_isCustomBank) ...[
-                        const SizedBox(height: 10),
-                        TashilTextField.outlined(
-                          controller: _customBankController,
-                          labelText: loc.tr('customBankNameLabel'),
-                          prefixIcon: Symbols.edit_note_rounded,
-                          onChanged: (text) {
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Dynamic Bank Directory Dropdown Menu
+                Builder(
+                  builder: (ctx) {
+                    final activeCountry = isUAE ? 'AE' : 'EG';
+                    final bankList =
+                        BankDirectoryService.getBanksForCountry(activeCountry);
+                    final lang = LocaleController.languageCode;
+
+                    final bankItems = bankList.map((bank) {
+                      return TashilDropdownMenuItem<String?>(
+                        value: bank.code,
+                        label: bank.localizedName(lang),
+                        icon: bank.isOther
+                            ? Symbols.edit_note_rounded
+                            : Symbols.account_balance_rounded,
+                        supportingText:
+                            bank.isOther ? null : (isUAE ? 'CBUAE' : 'CBE'),
+                      );
+                    }).toList();
+
+                    // Validate selected bank code belongs to active directory
+                    final validSelection =
+                        bankList.any((b) => b.code == _selectedBankCode)
+                            ? _selectedBankCode
+                            : null;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TashilDropdownMenu<String?>(
+                          value: validSelection,
+                          items: bankItems,
+                          labelText: loc.tr('bankNameLabel'),
+                          hintText: loc.tr('selectBankPlaceholder'),
+                          prefixIcon: Symbols.account_balance_rounded,
+                          isSearchable: true,
+                          searchHintText: loc.tr('searchBankPlaceholder'),
+                          height: 52,
+                          maxMenuHeight: 320,
+                          onChanged: (val) {
                             setState(() {
-                              _bankNameController.text = text.trim();
+                              _selectedBankCode = val;
+                              if (val == BankDirectoryService.otherBankCode) {
+                                _isCustomBank = true;
+                                _bankNameController.text =
+                                    _customBankController.text.trim();
+                              } else if (val != null) {
+                                _isCustomBank = false;
+                                final selectedBank =
+                                    bankList.firstWhere((b) => b.code == val);
+                                _bankNameController.text =
+                                    selectedBank.localizedName(lang);
+                              } else {
+                                _isCustomBank = false;
+                                _bankNameController.clear();
+                              }
                             });
                           },
                         ),
+                        if (_isCustomBank) ...[
+                          const SizedBox(height: 10),
+                          TashilTextField.outlined(
+                            controller: _customBankController,
+                            labelText: loc.tr('customBankNameLabel'),
+                            prefixIcon: Symbols.edit_note_rounded,
+                            onChanged: (text) {
+                              setState(() {
+                                _bankNameController.text = text.trim();
+                              });
+                            },
+                          ),
+                        ],
                       ],
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 14),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
 
-              TashilTextField.outlined(
-                controller: _bankAccountNumberController,
-                labelText: loc.tr('bankAccountOrIbanLabel'),
-                prefixIcon: Symbols.payments_rounded,
-                textDirection: TextDirection.ltr,
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 20),
+                TashilTextField.outlined(
+                  controller: _bankAccountNumberController,
+                  labelText: loc.tr('bankAccountOrIbanLabel'),
+                  prefixIcon: Symbols.payments_rounded,
+                  textDirection: TextDirection.ltr,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 20),
 
-              // 7. Preferred Contact Method (Connected Button Group)
-              Text(
-                loc.tr('preferredContactMethodLabel'),
-                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface),
-              ),
-              const SizedBox(height: 8),
-              TashilConnectedButtonGroup<String>(
-                selectedValue: _preferredContactMethod,
-                isFullWidth: true,
-                onSelectionChanged: (val) {
-                  setState(() => _preferredContactMethod = val);
-                },
-                segments: [
-                  TashilConnectedButtonSegment(
-                    value: 'phone',
-                    label: loc.tr('contactMethodPhone'),
-                    icon: Symbols.phone_rounded,
-                  ),
-                  TashilConnectedButtonSegment(
-                    value: 'whatsapp',
-                    label: loc.tr('contactMethodWhatsApp'),
-                    icon: Symbols.chat_bubble_outline_rounded,
-                  ),
-                  TashilConnectedButtonSegment(
-                    value: 'email',
-                    label: loc.tr('contactMethodEmail'),
-                    icon: Symbols.mail_outline_rounded,
-                  ),
-                ],
-              ),
-            ],
+                // 7. Preferred Contact Method (Connected Button Group)
+                Text(
+                  loc.tr('preferredContactMethodLabel'),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
+                ),
+                const SizedBox(height: 8),
+                TashilConnectedButtonGroup<String>(
+                  selectedValue: _preferredContactMethod,
+                  isFullWidth: true,
+                  onSelectionChanged: (val) {
+                    setState(() {
+                      _preferredContactMethod = val;
+                      _dirty = true;
+                    });
+                  },
+                  segments: [
+                    TashilConnectedButtonSegment(
+                      value: 'phone',
+                      label: loc.tr('contactMethodPhone'),
+                      icon: Symbols.phone_rounded,
+                    ),
+                    TashilConnectedButtonSegment(
+                      value: 'whatsapp',
+                      label: loc.tr('contactMethodWhatsApp'),
+                      icon: Symbols.chat_bubble_outline_rounded,
+                    ),
+                    TashilConnectedButtonSegment(
+                      value: 'email',
+                      label: loc.tr('contactMethodEmail'),
+                      icon: Symbols.mail_outline_rounded,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

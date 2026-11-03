@@ -250,11 +250,15 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                         key: _resultsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${loc.tr('availableUnits')} (${filteredList.length})',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
+                          Expanded(
+                            child: Text(
+                              '${loc.tr('availableUnits')} (${filteredList.length})',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
                             ),
                           ),
                           if (_selectedCityCode != 'all' || _selectedTypeCode != 'all' || _searchController.text.isNotEmpty || _propertyQuickFilter != 'all')

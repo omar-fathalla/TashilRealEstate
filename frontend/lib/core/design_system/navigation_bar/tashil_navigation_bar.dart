@@ -57,14 +57,15 @@ class TashilNavigationBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: ConstrainedBox(
+          // minHeight lets large text grow the bar. Do not wrap destinations
+          // in Center/Align: Scaffold gives bottomNavigationBar a loose max
+          // height, and those widgets expand to it, covering the body.
           constraints: BoxConstraints(minHeight: height),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: destinations.map((dest) {
-              return Expanded(
-                child: Center(child: dest),
-              );
-            }).toList(),
+            children: [
+              for (final dest in destinations) Expanded(child: dest),
+            ],
           ),
         ),
       ),
