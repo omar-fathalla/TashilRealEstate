@@ -205,34 +205,61 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final outerRadius = borderRadius ?? BorderRadius.circular(touchHeight / 2);
+    final scale = MediaQuery.textScalerOf(context).scale(1);
 
-    return Container(
-      constraints: BoxConstraints(minHeight: touchHeight),
-      padding: const EdgeInsets.all(3.5),
-      decoration: BoxDecoration(
-        color: isTonal
-            ? colorScheme.surfaceContainer
-            : colorScheme.surfaceContainerHigh,
-        borderRadius: outerRadius,
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-          width: 1.0,
-        ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final content = _buildGroupContent(
-            context: context,
-            maxWidth: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+    return LayoutBuilder(
+      builder: (context, outer) {
+        final maxW = outer.maxWidth;
+        final wrap = scale >= 1.4 || (maxW.isFinite && maxW < 480 && segments.length > 1);
+        if (wrap) {
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final segment in segments)
+                _ConnectedGroupSegmentItem<T>(
+                  segment: segment,
+                  isSelected: segment.value == selectedValue,
+                  onTap: () => onSelectionChanged(segment.value),
+                  height: touchHeight,
+                  isTonal: isTonal,
+                  activeColor: activeColor,
+                  activeForegroundColor: activeForegroundColor,
+                  showCheckmark: showCheckmark,
+                  isFullWidth: false,
+                ),
+            ],
           );
-          return isFullWidth || isAnimatedFlex
-              ? content
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: content,
-                );
-        },
-      ),
+        }
+        return Container(
+          constraints: BoxConstraints(minHeight: touchHeight),
+          padding: const EdgeInsets.all(3.5),
+          decoration: BoxDecoration(
+            color: isTonal
+                ? colorScheme.surfaceContainer
+                : colorScheme.surfaceContainerHigh,
+            borderRadius: outerRadius,
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+              width: 1.0,
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final content = _buildGroupContent(
+                context: context,
+                maxWidth: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+              );
+              return isFullWidth || isAnimatedFlex
+                  ? content
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: content,
+                    );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -267,6 +294,23 @@ class _ConnectedGroupSegmentItem<T> extends StatefulWidget {
 
 class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentItem<T>> {
   bool _isHovered = false;
+
+  Widget _segmentLabel(ThemeData theme, Color currentFg, bool isSelected) {
+    final label = (isSelected && widget.segment.selectedLabel != null)
+        ? widget.segment.selectedLabel!
+        : widget.segment.label;
+    return Text(
+      label,
+      key: ValueKey<String>(label),
+      softWrap: true,
+      textAlign: TextAlign.center,
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: currentFg,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -405,57 +449,44 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
               padding: EdgeInsets.symmetric(
                 horizontal: widget.isFullWidth ? 4.0 : 14.0,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (leadingWidget != null) ...[
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: leadingWidget,
-                    ),
-                    const SizedBox(width: 4.0),
-                  ],
-                  Flexible(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeInOutCubic,
-                      switchOutCurve: Curves.easeInOutCubic,
-                      child: Text(
-                        (isSelected && widget.segment.selectedLabel != null)
-                            ? widget.segment.selectedLabel!
-                            : widget.segment.label,
-                        key: ValueKey<String>(
-                          (isSelected && widget.segment.selectedLabel != null)
-                              ? widget.segment.selectedLabel!
-                              : widget.segment.label,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bounded = constraints.maxWidth.isFinite;
+                  final label = _segmentLabel(theme, currentFg, isSelected);
+                  return Row(
+                    mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (leadingWidget != null) ...[
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: leadingWidget,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(color: currentFg,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          letterSpacing: 0.2),
-                      ),
-                    ),
-                  ),
-                  if (widget.segment.badge != null) ...[
-                    const SizedBox(width: 5.0),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? currentFg.withValues(alpha: 0.2)
-                            : colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: Text(
-                        widget.segment.badge!,
-                        style: theme.textTheme.labelSmall?.copyWith(color: currentFg,
-                          fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ],
+                        const SizedBox(width: 4.0),
+                      ],
+                      if (bounded) Flexible(child: label) else label,
+                      if (widget.segment.badge != null) ...[
+                        const SizedBox(width: 5.0),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? currentFg.withValues(alpha: 0.2)
+                                : colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          child: Text(
+                            widget.segment.badge!,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: currentFg,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -527,9 +558,10 @@ class TashilConnectedIconButtonGroup extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final outerRadius = borderRadius ?? BorderRadius.circular(touchHeight / 2);
 
+    final itemSize = touchHeight < 48 ? 48.0 : touchHeight;
     return Container(
-      height: touchHeight,
-      padding: const EdgeInsets.all(3.5),
+      height: itemSize,
+      padding: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: backgroundColor ??
             (isTonal
@@ -548,7 +580,7 @@ class TashilConnectedIconButtonGroup extends StatelessWidget {
             if (i > 0) SizedBox(width: itemSpacing),
             _ConnectedIconSegmentItem(
               item: items[i],
-              size: touchHeight - 7.0,
+              size: itemSize,
               isTonal: isTonal,
             ),
           ],

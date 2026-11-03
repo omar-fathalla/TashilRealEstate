@@ -522,23 +522,25 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                     color: theme.colorScheme.onSurfaceVariant),
                                 ),
 
-                                const SizedBox(height: 24.0),
-                                Text(
-                                  loc.tr('amenities'),
-                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface),
-                                ),
-                                const SizedBox(height: 12.0),
-                                Wrap(
-                                  spacing: 8.0,
-                                  runSpacing: 8.0,
-                                  children: widget.property.getAmenities(lang).map((amenity) {
-                                    return TashilAssistChip.outlined(
-                                      icon: _getAmenityIcon(amenity),
-                                      label: amenity,
-                                    );
-                                  }).toList(),
-                                ),
+                                if (widget.property.getAmenities(lang).isNotEmpty) ...[
+                                  const SizedBox(height: 24.0),
+                                  Text(
+                                    loc.tr('amenities'),
+                                    style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
+                                  ),
+                                  const SizedBox(height: 12.0),
+                                  Wrap(
+                                    spacing: 8.0,
+                                    runSpacing: 8.0,
+                                    children: widget.property.getAmenities(lang).map((amenity) {
+                                      return TashilAssistChip.outlined(
+                                        icon: _getAmenityIcon(amenity),
+                                        label: amenity,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
 
                                 const SizedBox(height: 24.0),
                                 Text(

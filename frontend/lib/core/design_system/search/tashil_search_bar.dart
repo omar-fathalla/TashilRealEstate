@@ -389,8 +389,10 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
               message: 'البحث بالصور والطراز',
               child: InkWell(
                 onTap: widget.onVisualSearch,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 child: Container(
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  alignment: Alignment.center,
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsetsDirectional.only(end: 6),
                   decoration: BoxDecoration(

@@ -68,6 +68,20 @@ class ScreenshotHooks {
     }
   }
 
+  /// `textScale=2` applies before the first frame. Changing the browser
+  /// root font after load is what trips the Flutter web engine's null style
+  /// read (F-14); this path does not touch `documentElement.style`.
+  static double? parseTextScale(String? raw) {
+    final value = double.tryParse((raw ?? '').trim());
+    if (value == null || value < 0.5 || value > 3) return null;
+    return value;
+  }
+
+  static double? get textScale {
+    if (!enabled) return null;
+    return parseTextScale(Uri.base.queryParameters['textScale']);
+  }
+
   static void applyFromUri() {
     if (!enabled) return;
     final params = Uri.base.queryParameters;

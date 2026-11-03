@@ -104,8 +104,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                 ),
               ],
               child: Container(
-                width: 38,
-                height: 38,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: colorScheme.primaryContainer,
@@ -152,8 +152,10 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             child: InkWell(
               onTap: () => _navigateSafely(context, '/'),
               borderRadius: BorderRadius.circular(10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final showMark = !isSubPage || constraints.maxWidth >= 160;
+                  return Row(
                 children: [
                   if (isSubPage) ...[
                     IconButton(
@@ -173,6 +175,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     ),
                     const SizedBox(width: 2),
                   ],
+                  if (showMark) ...[
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
@@ -186,6 +189,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     ),
                   ),
                   const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: Text(
                       loc.tr('appName'),
@@ -197,6 +201,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     ),
                   ),
                 ],
+                  );
+                },
               ),
             ),
             ),
@@ -248,6 +254,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
               // Back Button on Subpages
               if (isSubPage) ...[
                 IconButton(
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                   icon: Icon(
                     Symbols.arrow_back_rounded,
                     color: colorScheme.onSurface,
@@ -499,8 +506,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: Container(
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: colorScheme.primaryContainer,
@@ -522,6 +529,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
 
   static _UserRoleInfo _resolveUserInfo(User user, AppLocalizations loc) {
     final email = (user.email ?? '').toLowerCase();
+    final roleTitle = headerRoleTitleForEmail(email, loc.tr);
 
     if (email.contains('admin')) {
       final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
@@ -529,7 +537,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : 'Super Admin';
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleSuperAdmin'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'SA'),
         dashboardRoute: '/super-admin',
       );
@@ -539,9 +547,19 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('roleAgency');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleAgency'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'AG'),
         dashboardRoute: '/agency',
+      );
+    } else if (email.contains('investor')) {
+      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
+          ? user.displayName!
+          : loc.tr('roleInvestor');
+      return _UserRoleInfo(
+        displayName: name,
+        roleTitle: roleTitle,
+        initials: UserAvatarUtils.getInitials(name, 'IN'),
+        dashboardRoute: '/investor-dashboard',
       );
     } else if (email.contains('tenant')) {
       final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
@@ -549,7 +567,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('roleTenant');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleTenant'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'TN'),
         dashboardRoute: '/tenant',
       );
@@ -559,12 +577,22 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('ownerProfile');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('ownerRoleTitle'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'AF'),
         dashboardRoute: '/owner',
       );
     }
   }
+}
+
+/// Role shown on the signed-in avatar. Investor is not an owner.
+String headerRoleTitleForEmail(String email, String Function(String key) tr) {
+  final value = email.toLowerCase();
+  if (value.contains('admin')) return tr('roleSuperAdmin');
+  if (value.contains('agency') || value.contains('broker')) return tr('roleAgency');
+  if (value.contains('investor')) return tr('roleInvestor');
+  if (value.contains('tenant')) return tr('roleTenant');
+  return tr('ownerRoleTitle');
 }
 
 class _UserRoleInfo {

@@ -229,15 +229,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leading: Padding(
-                padding: const EdgeInsetsDirectional.only(start: 12),
-                child: Center(
-                  child: TashilIconButton.tonal(
-                    icon: Symbols.arrow_back_rounded,
-                    tooltip: loc.tr('returnToMarketplace'),
-                    onPressed: () => context.go('/'),
-                  ),
-                ),
+              leading: TashilIconButton.tonal(
+                icon: Symbols.arrow_back_rounded,
+                tooltip: loc.tr('returnToMarketplace'),
+                onPressed: () => context.go('/'),
               ),
               actions: [
                 // Security Status Pill Badge
@@ -438,9 +433,9 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                                 : () => _showForgotPasswordDialog(context, loc),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 2),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  horizontal: 12, vertical: 12),
+                              minimumSize: const Size(48, 48),
+                              tapTargetSize: MaterialTapTargetSize.padded,
                             ),
                             child: Text(
                               loc.tr('forgotPassword'),
@@ -488,6 +483,9 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                         // 6. Return to Marketplace
                         Center(
                           child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                            ),
                             icon: const Icon(Symbols.storefront_rounded,
                                 size: 16),
                             label: Text(

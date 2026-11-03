@@ -171,33 +171,37 @@ class TashilButton extends StatelessWidget {
             ? const EdgeInsetsDirectional.only(start: 16, end: 20, top: 10, bottom: 10)
             : const EdgeInsets.symmetric(horizontal: 20, vertical: 10));
 
-    Widget childContent = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isLoading) ...[
-          TashilLoadingIndicator(
-            size: 16,
-            color: foregroundColor,
-          ),
-          const SizedBox(width: 8),
-        ] else if (icon != null) ...[
-          Icon(icon, size: 18, color: foregroundColor),
-          const SizedBox(width: 8),
-        ],
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-              color: foregroundColor, // Strict M3 Contrast Enforcer: Never dark-on-dark
-            ),
-          ),
-        ),
-      ],
+    final labelText = Text(
+      label,
+      softWrap: true,
+      textAlign: TextAlign.center,
+      style: theme.textTheme.labelLarge?.copyWith(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w600,
+        color: foregroundColor,
+      ),
+    );
+    Widget childContent = LayoutBuilder(
+      builder: (context, constraints) {
+        final bounded = constraints.maxWidth.isFinite;
+        return Row(
+          mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading) ...[
+              TashilLoadingIndicator(
+                size: 16,
+                color: foregroundColor,
+              ),
+              const SizedBox(width: 8),
+            ] else if (icon != null) ...[
+              Icon(icon, size: 18, color: foregroundColor),
+              const SizedBox(width: 8),
+            ],
+            if (bounded) Flexible(child: labelText) else labelText,
+          ],
+        );
+      },
     );
 
     Widget button;

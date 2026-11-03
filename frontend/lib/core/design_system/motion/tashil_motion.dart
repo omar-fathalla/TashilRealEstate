@@ -462,8 +462,7 @@ class TashilTransitions {
     bool longForm = false,
     bool barrierDismissible = true,
   }) {
-    final width = MediaQuery.sizeOf(context).width;
-    if (width >= 600 && !longForm) {
+    if (!longForm) {
       return showM3Dialog<T>(
         context: context,
         builder: builder,
@@ -507,11 +506,11 @@ class TashilTransitions {
     bool longForm = false,
   }) {
     final width = MediaQuery.sizeOf(context).width;
-    if (width < 600) {
+    if (longForm && width < 600) {
       return showAdaptiveSheet<T>(
         context: context,
         builder: builder,
-        longForm: longForm,
+        longForm: true,
         barrierDismissible: barrierDismissible,
       );
     }

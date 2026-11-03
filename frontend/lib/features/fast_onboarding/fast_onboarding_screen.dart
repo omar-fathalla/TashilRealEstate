@@ -779,16 +779,13 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                         ],
                       ),
                       child: SafeArea(
-                        child: SizedBox(
-                          height: 50,
-                          child: TashilButton.filled(
+                        child: TashilButton.filled(
                             onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
                             icon: isEditing ? Symbols.save_rounded : Symbols.publish_rounded,
                             label: _isSubmitting
                                 ? loc.tr('savingListing')
                                 : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
                           ),
-                        ),
                       ),
                     )
                   : null,
@@ -1026,7 +1023,6 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 44,
             child: TashilButton.filled(
               onPressed: _handleVoiceAutofill,
               icon: Symbols.record_voice_over_rounded,

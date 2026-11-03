@@ -32,6 +32,15 @@ import 'package:material_symbols_icons/symbols.dart';
 /// - Tashil Menus Suite (TashilDropdownMenu with 250ms unfolding motion, 180° rotating caret, Level 2 elevation)
 /// - Tashil Cards Suite (TashilCard.outlined & TashilCard.filled for metrics & comps)
 /// - Trilingual parity (Arabic RTL, English LTR, Hindi LTR) with zero language mixing.
+/// Default UAE city for the valuation form, in the active language.
+String localizedUaeCityName(String languageCode) {
+  return switch (languageCode) {
+    'ar' => 'دبي مارينا',
+    'hi' => 'दुबई मरीना',
+    _ => 'Dubai Marina',
+  };
+}
+
 class SmartValuationDialog extends StatefulWidget {
   final String? initialCity;
   final int? initialArea;
@@ -47,18 +56,23 @@ class SmartValuationDialog extends StatefulWidget {
     return TashilTransitions.showM3Dialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => TashilDialogFrame(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680, maxHeight: 840),
-          child: SmartValuationDialog(
-            initialCity: initialCity,
-            initialArea: initialArea,
+      builder: (context) {
+        final wide = MediaQuery.sizeOf(context).width >= 600;
+        final body = SmartValuationDialog(
+          initialCity: initialCity,
+          initialArea: initialArea,
+        );
+        if (!wide) {
+          return TashilDialogFrame(child: body);
+        }
+        return TashilDialogFrame(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680, maxHeight: 840),
+            child: body,
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -89,6 +103,13 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
   final TextEditingController _areaController = TextEditingController();
 
   bool _isLocatingGps = false;
+
+  String _localizedDefaultCity() {
+    if (_countryCode != 'AE') {
+      return AppLocalizations.trStatic('districtFifthSettlement');
+    }
+    return localizedUaeCityName(LocaleController.languageCode);
+  }
 
   List<String> get _quickDistricts {
     if (_countryCode == 'AE') {
@@ -166,7 +187,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
   void initState() {
     super.initState();
     _countryCode = CountryController.countryCode;
-    _cityOrArea = widget.initialCity ?? (_countryCode == 'AE' ? 'Dubai Marina' : 'التجمع الخامس');
+    _cityOrArea = widget.initialCity ?? _localizedDefaultCity();
     _areaSqm = widget.initialArea ?? 140;
     _cityController.text = _cityOrArea;
     _areaController.text = _areaSqm.toString();
@@ -272,15 +293,17 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
 
         return Container(
           decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(isMobile ? 20 : 28),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withValues(alpha: 0.16),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            color: isMobile ? Colors.transparent : colorScheme.surface,
+            borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(28),
+            boxShadow: isMobile
+                ? null
+                : [
+                    BoxShadow(
+                      color: colorScheme.shadow.withValues(alpha: 0.16),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -533,7 +556,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
             onSelectionChanged: (val) {
               setState(() {
                 _countryCode = val;
-                _cityController.text = _countryCode == 'AE' ? 'Dubai Marina' : 'التجمع الخامس';
+                _cityController.text = _localizedDefaultCity();
               });
             },
             segments: [

@@ -1,7 +1,20 @@
 const admin = require('firebase-admin');
 
+// Refuse to touch any project unless the caller names it and confirms.
+// This script can write Auth users and Firestore documents for that project.
+const projectFlag = process.argv.indexOf('--project');
+const projectId = projectFlag >= 0 ? process.argv[projectFlag + 1] : '';
+const confirm = process.env.TASHIL_SEED_CONFIRM;
+
+if (!projectId || confirm !== 'I_UNDERSTAND_THIS_WRITES_DATA') {
+  console.error(
+    'Refusing to run backend/seed.js. Pass --project <firebase-project-id> and set TASHIL_SEED_CONFIRM=I_UNDERSTAND_THIS_WRITES_DATA. For local data use backend/seed_emulator.js instead.',
+  );
+  process.exit(1);
+}
+
 admin.initializeApp({
-  projectId: 'tashil-proptech-os'
+  projectId,
 });
 
 const auth = admin.auth();

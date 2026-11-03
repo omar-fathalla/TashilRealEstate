@@ -180,7 +180,15 @@ class _TashilTextFieldState extends State<TashilTextField> {
   }
 
   void _onFocusChange() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (_focusNode.hasFocus) {
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.12,
+        duration: Duration.zero,
+      );
+    }
+    setState(() {});
   }
 
   @override
@@ -299,7 +307,11 @@ class _TashilTextFieldState extends State<TashilTextField> {
         textDirection: widget.textDirection,
         textAlign: widget.textAlign,
         autofocus: widget.autofocus,
-        scrollPadding: widget.scrollPadding,
+        scrollPadding: widget.scrollPadding.copyWith(
+          bottom: widget.scrollPadding.bottom +
+              MediaQuery.viewInsetsOf(context).bottom +
+              88,
+        ),
         style: (widget.style ??
                 Theme.of(context)
                     .textTheme

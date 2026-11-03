@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/core/utils/content_sized_grid.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
@@ -86,15 +87,11 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
         final isNarrow = constraints.maxWidth < 1100;
         final isSingleColumn = constraints.maxWidth < 620;
         final crossAxisCount = isSingleColumn ? 1 : (isNarrow ? 2 : 4);
-        final aspectRatio = isSingleColumn ? 2.5 : (isNarrow ? 1.75 : 1.35);
 
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 14,
-          mainAxisSpacing: 14,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: aspectRatio,
+        return ContentSizedGrid(
+          maxWidth: constraints.maxWidth,
+          columns: crossAxisCount,
+          spacing: 14,
           children: cards,
         );
       },
@@ -115,7 +112,7 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

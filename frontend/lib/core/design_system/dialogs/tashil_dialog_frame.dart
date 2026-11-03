@@ -33,17 +33,38 @@ class TashilDialogFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 600;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 600;
     if (compact) {
       final color = backgroundColor ?? Theme.of(context).colorScheme.surface;
-      return Material(
-        color: color,
-        elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: Material(
+          color: color,
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            width: width,
+            height: MediaQuery.sizeOf(context).height,
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 32,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Expanded(child: child ?? const SizedBox.shrink()),
+              ],
+            ),
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: child,
       );
     }
     return Dialog(

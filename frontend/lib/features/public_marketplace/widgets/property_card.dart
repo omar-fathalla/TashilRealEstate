@@ -557,7 +557,8 @@ class _HeaderActionPillState extends State<_HeaderActionPill> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
         transform: Matrix4.translationValues(0, _isHovered ? -1.0 : 0.0, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: _isHovered
               ? widget.backgroundColor.withValues(alpha: 0.9)
@@ -635,8 +636,8 @@ class _HeaderIconButtonState extends State<_HeaderIconButton> {
         message: widget.tooltip,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 30,
-          height: 30,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _isHovered

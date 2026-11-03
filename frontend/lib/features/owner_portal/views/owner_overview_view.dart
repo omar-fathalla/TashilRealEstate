@@ -163,23 +163,31 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top Header: Icon + Title + Gemini Flash Badge
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: onBanner.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Symbols.auto_awesome_rounded, color: onBanner, size: 20),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: onBanner.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Symbols.auto_awesome_rounded, color: onBanner, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                loc.tr('aiValuationBannerTitle'),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: onBanner),
+                                softWrap: true,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          loc.tr('aiValuationBannerTitle'),
-                          style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
-                            color: onBanner),
-                        ),
-                        const SizedBox(width: 10),
+                        const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
@@ -485,25 +493,26 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 3),
                         Text(
                           location,
                           style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
+                          softWrap: true,
                         ),
                         if (isOccupied && tenant.isNotEmpty && tenant != '-') ...[
                           Text(' • ', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                           Icon(Symbols.person_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              tenant,
-                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Text(
+                            tenant,
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500),
+                            softWrap: true,
                           ),
                         ],
                       ],
@@ -512,17 +521,22 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
+              Flexible(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     '${CurrencyFormatter.formatAmount(price, langCode: lang)} $currency',
+                    textAlign: TextAlign.end,
+                    softWrap: true,
                     style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: colorScheme.primary),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -530,15 +544,15 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                           color: isOccupied ? colorScheme.secondaryContainer : colorScheme.tertiaryContainer,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Icon(
                               isOccupied ? Symbols.check_rounded : Symbols.door_front_rounded,
                               size: 12,
                               color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
                             ),
-                            const SizedBox(width: 4),
                             Text(
                               isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
                               style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
@@ -564,6 +578,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     ],
                   ),
                 ],
+              ),
               ),
             ],
           ),
@@ -810,8 +825,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Row(
                 children: [
@@ -824,10 +841,13 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     child: Icon(Symbols.account_balance_rounded, color: colorScheme.onPrimaryContainer, size: 20),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    loc.tr('recentPayouts'),
-                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface),
+                  Expanded(
+                    child: Text(
+                      loc.tr('recentPayouts'),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
+                      softWrap: true,
+                    ),
                   ),
                 ],
               ),
@@ -911,7 +931,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: Row(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -921,26 +944,26 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       ),
                       child: Icon(Symbols.arrow_downward_rounded, color: colorScheme.onSecondaryContainer, size: 18),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$date • Ref: ${p['ref']}',
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$date • Ref: ${p['ref']}',
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
                     Text(
                       '+ ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
+                      textAlign: TextAlign.end,
+                      softWrap: true,
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
                         fontWeight: FontWeight.bold),
                     ),

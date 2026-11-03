@@ -71,6 +71,10 @@ void main() async {
     return false;
   };
 
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.prepareBeforeInitializeApp();
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -129,6 +133,16 @@ class TashilRealEstateApp extends StatelessWidget {
                       ),
                       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
                       scrollBehavior: const TashilAppScrollBehavior(),
+                      builder: (context, child) {
+                        final scale = ScreenshotHooks.textScale;
+                        final wrapped = child ?? const SizedBox.shrink();
+                        if (scale == null) return wrapped;
+                        final media = MediaQuery.of(context);
+                        return MediaQuery(
+                          data: media.copyWith(textScaler: TextScaler.linear(scale)),
+                          child: wrapped,
+                        );
+                      },
                       routerConfig: routerConfig ?? appRouter,
                       locale: currentLocale,
                       supportedLocales: const [

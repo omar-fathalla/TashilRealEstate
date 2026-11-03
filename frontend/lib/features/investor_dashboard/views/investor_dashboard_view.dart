@@ -26,7 +26,10 @@ import '../widgets/monthly_cash_flow_details_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class InvestorDashboardView extends StatefulWidget {
-  const InvestorDashboardView({super.key});
+  /// When set, the dashboard renders this portfolio instead of the live sample.
+  final InvestorPortfolioSummary? testSummary;
+
+  const InvestorDashboardView({super.key, this.testSummary});
 
   @override
   State<InvestorDashboardView> createState() => _InvestorDashboardViewState();
@@ -54,7 +57,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
 
         return ValueListenableBuilder<InvestorPortfolioSummary>(
           valueListenable: _service.currentSummaryNotifier as ValueNotifier<InvestorPortfolioSummary>,
-          builder: (context, summary, _) {
+          builder: (context, liveSummary, _) {
+            final summary = widget.testSummary ?? liveSummary;
             return RefreshIndicator.adaptive(
               onRefresh: () async {},
               child: SingleChildScrollView(
@@ -341,25 +345,26 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                 '${loc.tr('assetInventoryTitle')} (${assets.length})',
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colorScheme.outlineVariant),
+              if (assets.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.outlineVariant),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Symbols.drag_indicator_rounded, size: 14, color: colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        loc.tr('reorderableListHint'),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Symbols.drag_indicator_rounded, size: 14, color: colorScheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      loc.tr('reorderableListHint'),
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
               Text(
                 loc.tr('liveZestimateValuationsActive'),
                 style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),

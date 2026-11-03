@@ -208,8 +208,7 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
         letterSpacing: 0.1,
         height: 1.25,
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      softWrap: true,
     );
 
     return LayoutBuilder(
@@ -230,7 +229,7 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
         hoverColor: colorScheme.onSurface.withValues(alpha: 0.06),
         splashColor: colorScheme.primary.withValues(alpha: 0.12),
         child: Container(
-          height: widget.height,
+          constraints: BoxConstraints(minHeight: widget.height < 48 ? 48 : widget.height, minWidth: 48),
           padding: EdgeInsetsDirectional.only(
             start: hasLeading ? 8.0 : 10.0,
             end: hasTrailing ? 8.0 : 10.0,

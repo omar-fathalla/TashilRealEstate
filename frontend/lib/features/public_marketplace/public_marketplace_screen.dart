@@ -422,7 +422,8 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                 onTap: () => context.go('/fast-onboarding'),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: onBanner.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),

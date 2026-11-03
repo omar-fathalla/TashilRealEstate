@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
+import 'package:tashil_real_estate/core/utils/content_sized_grid.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
@@ -679,7 +680,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       borderRadius: BorderRadius.circular(20),
       onTap: () => _showEmailVerificationDialog(context, loc, isVerified),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: badgeColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
@@ -1159,13 +1161,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 700;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: isNarrow ? 2 : 4,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: isNarrow ? 1.45 : 1.7,
+              return ContentSizedGrid(
+                maxWidth: constraints.maxWidth,
+                columns: isNarrow ? 2 : 4,
+                spacing: 14,
                 children: [
                   _buildAgencyMetricCard(
                     title: '$activeCount',
@@ -2470,13 +2469,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 800;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: isNarrow ? 1 : 3,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: isNarrow ? 2.3 : 1.8,
+              return ContentSizedGrid(
+                maxWidth: constraints.maxWidth,
+                columns: isNarrow ? 1 : 3,
+                spacing: 16,
                 children: [
                   TashilCard.elevated(
                     child: Padding(

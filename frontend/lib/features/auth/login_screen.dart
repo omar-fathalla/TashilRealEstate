@@ -378,6 +378,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 }
               },
               child: Scaffold(
+                resizeToAvoidBottomInset: true,
                 backgroundColor: colorScheme.surface,
                 // Top Header: Retains ONLY the Settings icon as requested by user
                 appBar: AppBar(
@@ -385,6 +386,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   elevation: 0,
                   scrolledUnderElevation: 0,
                   leading: IconButton(
+                    style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                     icon: Icon(
                       Symbols.arrow_back_rounded,
                       color: colorScheme.onSurface,
@@ -839,7 +841,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,
-          height: 48,
           child: TashilButton(
             onPressed: _isLoading ? null : () => _handleEmailAuth(loc),
             icon: _isSignUpMode ? Symbols.person_add_rounded : Symbols.login_rounded,

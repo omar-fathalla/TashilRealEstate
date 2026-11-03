@@ -116,10 +116,20 @@ class _TashilFilterChipState extends State<TashilFilterChip> {
           hoverColor: colorScheme.onSurface.withValues(alpha: 0.06),
           splashColor: colorScheme.primary.withValues(alpha: 0.12),
           child: Container(
-            height: widget.height,
-            padding: const EdgeInsetsDirectional.only(start: 8.0, end: 12.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            constraints: BoxConstraints(minHeight: widget.height < 48 ? 48 : widget.height, minWidth: 48),
+            padding: const EdgeInsetsDirectional.only(start: 12.0, end: 12.0, top: 8, bottom: 8),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bounded = constraints.maxWidth.isFinite;
+                final label = Text(
+                  widget.label,
+                  style: theme.textTheme.labelLarge?.copyWith(color: effectiveFg,
+                    fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
+                    letterSpacing: 0.1),
+                  softWrap: bounded,
+                );
+                return Row(
+              mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Animated Leading Icon / Checkmark
@@ -147,17 +157,10 @@ class _TashilFilterChipState extends State<TashilFilterChip> {
                   const SizedBox(width: 8),
 
                 // Label Text
-                Flexible(
-                  child: Text(
-                    widget.label,
-                    style: theme.textTheme.labelLarge?.copyWith(color: effectiveFg,
-                      fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
-                      letterSpacing: 0.1),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                if (bounded) Flexible(child: label) else label,
               ],
+                );
+              },
             ),
           ),
         ),

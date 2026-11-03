@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
+import 'package:tashil_real_estate/core/utils/coordinate_format.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -560,7 +561,6 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
             ],
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Structured M3 Header
@@ -723,7 +723,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
               const TashilDivider.fullWidth(),
 
               // 4. District Item List
-              Flexible(
+              Expanded(
                 child: filteredDistricts.isEmpty
                     ? Center(
                         child: Padding(
@@ -779,13 +779,20 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                                   color: isCurrent ? colorScheme.primary : colorScheme.onSurface),
                               ),
                               subtitle: Text(
-                                '$localizedCity • ${item.latitude.toStringAsFixed(3)}, ${item.longitude.toStringAsFixed(3)}',
+                                '$localizedCity • ${formatLatLng(item.latitude, item.longitude)}',
                                 style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
-                              trailing: TashilButton.text(
-                                height: 32,
-                                onPressed: () => Navigator.of(context).pop(localizedName),
-                                label: loc.tr('select'),
+                              trailing: SizedBox(
+                                width: 72,
+                                child: Text(
+                                  loc.tr('select'),
+                                  textAlign: TextAlign.end,
+                                  softWrap: true,
+                                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                               onTap: () => Navigator.of(context).pop(localizedName),
                             ),
@@ -804,9 +811,9 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
     if (widget.countryCode == 'AE') {
       return [
         _buildFilterPill('all', loc.tr('allDistrictsTab')),
-        _buildFilterPill('dubai_prime', 'Dubai Prime & Marina'),
-        _buildFilterPill('dubai_suburbs', 'Dubai Hills & JVC'),
-        _buildFilterPill('abu_dhabi', 'Abu Dhabi Islands'),
+        _buildFilterPill('dubai_prime', loc.tr('districtCategoryDubaiPrime')),
+        _buildFilterPill('dubai_suburbs', loc.tr('districtCategoryDubaiHills')),
+        _buildFilterPill('abu_dhabi', loc.tr('districtCategoryAbuDhabiIslands')),
       ];
     }
 

@@ -202,11 +202,11 @@ void main() {
 
       // Verify popular areas chips row exists
       expect(find.text('المناطق الأكثر طلباً:'), findsOneWidget);
-      expect(find.text('دبي مارينا'), findsOneWidget);
+      expect(find.text('دبي مارينا'), findsWidgets);
       expect(find.text('داون تاون دبي'), findsOneWidget);
       expect(find.text('الخليج التجاري'), findsOneWidget);
 
-      await tester.tap(find.text('دبي مارينا'));
+      await tester.tap(find.text('دبي مارينا').last);
       await tester.pumpAndSettle();
 
       final cityField = tester.widget<TextField>(find.byType(TextField).first);

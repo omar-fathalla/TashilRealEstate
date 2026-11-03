@@ -660,12 +660,20 @@ class TashilCardText extends StatelessWidget {
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   onTap: onLinkedTextTap,
-                  child: Text(
-                    linkedText!,
-                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                      decorationColor: colorScheme.primary),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        linkedText!,
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          decorationColor: colorScheme.primary,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

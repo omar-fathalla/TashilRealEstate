@@ -68,8 +68,7 @@ class TenantHomeView extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
                     ),
                     Text(
                       loc.tr('tenant'),

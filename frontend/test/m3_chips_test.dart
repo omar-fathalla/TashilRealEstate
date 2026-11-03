@@ -47,7 +47,7 @@ void main() {
 
       // Verify M3 height
       final container = tester.widget<Container>(find.byType(Container).first);
-      expect(container.constraints?.maxHeight ?? 32.0, equals(32.0));
+      expect(container.constraints?.minHeight ?? 0, greaterThanOrEqualTo(48));
 
       // Tap and verify callback
       await tester.tap(find.text('صالة المعيشة'));
