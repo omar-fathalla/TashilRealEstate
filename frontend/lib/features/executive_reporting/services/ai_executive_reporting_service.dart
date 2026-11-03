@@ -65,9 +65,9 @@ class AiExecutiveReportingService {
           currentMonthlyRent: 28000.0,
           renewalProbability: 0.88,
           actionRecommendation: {
-            'ar': 'إرسال عرض تجديد بعقد سنوي مع زيادة 7% متوافقة مع مؤشر ريرا (RERA Index)',
-            'en': 'Send 1-year renewal notice with 7% rent escalation compliant with RERA Index',
-            'hi': 'रेरा इंडेक्स के अनुपालन में 7% किराया वृद्धि के साथ 1 साल का नवीनीकरण नोटिस भेजें',
+            'ar': 'إرسال عرض تجديد بعقد سنوي مع زيادة 7% متوافقة مع مؤشر الإيجارات',
+            'en': 'Send a one-year renewal offer with a 7% increase allowed by the Rental Index',
+            'hi': 'रेंटल इंडेक्स के अनुसार 7% वृद्धि के साथ एक साल का नवीनीकरण प्रस्ताव भेजें',
           },
         ),
         LeaseExpirationRiskItem(

@@ -453,7 +453,7 @@ Prime districts like Dubai Marina, Downtown, and Business Bay yield net rental r
     },
     tenantAdvice: {
       'ar': 'احرص على تجديد العقود وتسجيلها في منصة إيجاري الرسمية في المواعيد المقررة للاستفادة من حماية مؤشر الإيجارات.',
-      'en': 'Renew and register leases via the official Ejari portal promptly to lock in statutory RERA rent index protections.',
+      'en': 'Renew and register leases on the Ejari portal in time to keep the protection of the Rental Index.',
       'hi': 'आधिकारिक एज़ारी पोर्टल के माध्यम से पट्टा पंजीकृत करें ताकि वैधानिक सुरक्षा प्राप्त हो सके।',
     },
     keyDrivers: [
@@ -590,7 +590,7 @@ Prime districts like Dubai Marina, Downtown, and Business Bay yield net rental r
         },
         category: 'policy',
         impact: 'positive',
-        sourceName: 'مؤشر إيجاري الرسمي وريرا (RERA)',
+        sourceName: 'DLD Rental Index',
         timeAgo: {'ar': 'اليوم 07:30 ص', 'en': 'Today 07:30 AM', 'hi': 'आज 07:30 पूर्वाह्न'},
       ),
     ],

@@ -126,7 +126,7 @@ class AiLegalAdvisorService {
     required bool isAE,
   }) {
     final jurisdiction = isAE
-        ? 'United Arab Emirates (Dubai Tenancy Law No. 26 of 2007 as amended by Law No. 33 of 2008, Articles 24 & 25, RDSC Court precedents, and RERA Rental Regulations)'
+        ? 'United Arab Emirates (Dubai Tenancy Law No. 26 of 2007 as amended by Law No. 33 of 2008, Articles 24 and 25, Rental Disputes Center precedents, and the Dubai Land Department Rental Index)'
         : 'Arab Republic of Egypt (Egyptian Civil Code Law No. 131 of 1948 - including Article 596 on Subleasing/Assignment, Tenancy Law No. 4 of 1996 as amended, and Law No. 136 of 1981)';
 
     return '''
@@ -184,7 +184,7 @@ Only output the raw JSON object without markdown fences.
 
     final isAE = countryCode == 'AE';
     final defaultSources = isAE
-        ? ['Dubai Tenancy Law No. 26/2007', 'RERA Rental Index', 'RDSC Dubai']
+        ? ['Dubai Tenancy Law No. 26/2007', 'DLD Rental Index', 'Rental Disputes Center (RDC)']
         : ['القانون المدني المصري (م 596)', 'قانون رقم 4 لسنة 1996', 'مكتب الشهر العقاري المصري'];
 
     return LegalClauseAuditResult(
@@ -255,11 +255,11 @@ Only output the raw JSON object without markdown fences.
           applicableLawReferenceHi:
               'दुबई किरायेदारी कानून 2007 के नंबर 26 (संशोधित 2008 का कानून 33) के अनुच्छेद 24 और 25',
           legalReasoningAr:
-              'تنص المادة 24 من قانون إيجارات دبي على أنه لا يجوز للمستأجر التنازل عن الإيجار أو إعادة تأجير العقار من الباطن إلا بموافقة خطية مسبقة من المؤجر. كما تنص المادة 25 على أن مخالفة هذا الحظر تمنح المؤجر الحق القانوني الكامل في طلب إخلاء العين وفسخ العقد أمام مركز فض المنازعات الإيجارية (RDSC).',
+              'تنص المادة 24 من قانون إيجارات دبي على أنه لا يجوز للمستأجر التنازل عن الإيجار أو إعادة تأجير العقار من الباطن إلا بموافقة خطية مسبقة من المؤجر. كما تنص المادة 25 على أن مخالفة هذا الحظر تمنح المؤجر الحق القانوني الكامل في طلب إخلاء العين وفسخ العقد أمام مركز فض المنازعات الإيجارية (RDC).',
           legalReasoningEn:
-              'Under Article 24 of Dubai Tenancy Law No. 26/2007, the tenant may not sublease or assign tenancy rights without prior written landlord approval. Article 25 confirms unauthorized subletting constitutes immediate statutory grounds for lease cancellation and eviction via RDSC.',
+              'Under Article 24 of Dubai Tenancy Law No. 26/2007, the tenant may not sublease or assign tenancy rights without prior written landlord approval. Article 25 confirms unauthorized subletting constitutes immediate statutory grounds for lease cancellation and eviction at the Rental Disputes Center (RDC).',
           legalReasoningHi:
-              'दुबई किरायेदारी कानून नंबर 26/2007 के अनुच्छेद 24 के तहत, किरायेदार मकान मालिक की पूर्व लिखित मंजूरी के बिना उप-पट्टे पर नहीं दे सकता। अनुच्छेद 25 आरडीएससी के माध्यम से बेदखली के वैधानिक आधार की पुष्टि करता है।',
+              'दुबई किरायेदारी कानून नंबर 26/2007 के अनुच्छेद 24 के तहत, किरायेदार मकान मालिक की पूर्व लिखित मंजूरी के बिना उप-पट्टे पर नहीं दे सकता। अनुच्छेद 25 रेंटल डिस्प्यूट्स सेंटर (RDC) के माध्यम से बेदखली के वैधानिक आधार की पुष्टि करता है।',
           suggestedBalancedClauseAr:
               'يحظر على المستأجر التنازل عن هذا العقد أو إعادة تأجير العقار من الباطن كلياً أو جزئياً لأي طرف ثالث دون موافقة خطية صريحة ومسبقة من المؤجر، ويعد الإخلال بهذا الالتزام سبباً موجباً لفسخ العقد والإخلاء الفوري طبقاً لأحكام المادتين 24 و 25 من القانون رقم 26 لسنة 2007.',
           suggestedBalancedClauseEn:
@@ -267,7 +267,7 @@ Only output the raw JSON object without markdown fences.
           suggestedBalancedClauseHi:
               'किरायेदार को मकान मालिक की पूर्व स्पष्ट लिखित सहमति के बिना इस पट्टे को सौंपने या परिसर को किसी तीसरे पक्ष को उप-किराए पर देने की सख्त मनाही है। उल्लंघन पर दुबई कानून संख्या 26/2007 के तहत तत्काल पट्टा समाप्ति और बेदखली होगी।',
           isGrounded: true,
-          groundingSources: ['قانون إيجارات دبي 26 لسنة 2007', 'مركز فض المنازعات الإيجارية (RDSC)'],
+          groundingSources: ['قانون إيجارات دبي 26 لسنة 2007', 'مركز فض المنازعات الإيجارية (RDC)'],
           searchQueries: ['قانون إيجارات دبي التأجير من الباطن المادة 24'],
         );
       } else {
@@ -404,9 +404,9 @@ Only output the raw JSON object without markdown fences.
           legalReasoningAr:
               'حددت المادة 25 من قانون إيجارات دبي مهلة 30 يوماً من تاريخ الإخطار الرسمي قبل الشروع في دعوى الإخلاء لعدم السداد. الصياغة تضبط مواعيد الشيكات البنكية وغرامة التأخير الإدارية مع الامتثال لمهل الإخطار الرسمية لدى الكاتب العدل أو البريد المسجل.',
           legalReasoningEn:
-              'Article 25 (1-a) of Dubai Law 26/2007 provides a statutory 30-day notice period for rent non-payment before filing for eviction with RDSC. The formulated clause enforces payment timeliness while respecting mandatory judicial notice timelines.',
+              'Article 25 (1-a) of Dubai Law 26/2007 provides a statutory 30-day notice period for rent non-payment before filing for eviction at the Rental Disputes Center (RDC). The formulated clause enforces payment timeliness while respecting mandatory judicial notice timelines.',
           legalReasoningHi:
-              'दुबई कानून 26/2007 का अनुच्छेद 25 (1-ए) आरडीएससी के साथ बेदखली के लिए आवेदन करने से पहले गैर-भुगतान के लिए 30-दिवसीय वैधानिक नोटिस अवधि प्रदान करता है।',
+              'दुबई कानून 26/2007 का अनुच्छेद 25 (1-ए) रेंटल डिस्प्यूट्स सेंटर (RDC) में बेदखली का दावा करने से पहले गैर-भुगतान के लिए 30-दिवसीय वैधानिक नोटिस अवधि प्रदान करता है।',
           suggestedBalancedClauseAr:
               'يلتزم المستأجر بسداد الدفعات الإيجارية في مواعيد استحقاقها المحددة بالعقد دون تأخير، وفي حال رجوع أي شيك لعدم كفاية الرصيد أو التأخر عن السداد لمدة تتجاوز 15 يوماً، يلتزم المستأجر بسداد رسم تأخير إداري قدره 250 درهم، ويحق للمؤجر توجيه إخطار رسمي لفسخ العقد والمطالبة بالإخلاء طبقاً للمادة 25 من القانون رقم 26 لسنة 2007.',
           suggestedBalancedClauseEn:
@@ -414,7 +414,7 @@ Only output the raw JSON object without markdown fences.
           suggestedBalancedClauseHi:
               'किरायेदार नियत तिथियों पर समय पर किराया किश्तों का भुगतान करेगा। चेक अनादर या 15 दिनों से अधिक के विलंब के मामले में 250 एईडी का जुर्माना लागू होगा।',
           isGrounded: true,
-          groundingSources: ['قانون إيجارات دبي رقم 26 لسنة 2007', 'أحكام مركز فض المنازعات RDSC'],
+          groundingSources: ['قانون إيجارات دبي رقم 26 لسنة 2007', 'مركز فض المنازعات الإيجارية (RDC)'],
           searchQueries: ['قانون إيجارات دبي الإخلاء لعدم السداد المادة 25'],
         );
       } else {

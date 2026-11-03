@@ -1422,6 +1422,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final licenseController = TextEditingController();
+    final tradeLicenseController = TextEditingController();
     final brokersController = TextEditingController(text: '12');
     final unitsController = TextEditingController(text: '85');
     final emailController = TextEditingController();
@@ -1471,6 +1472,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         'license': licenseController.text.trim().isNotEmpty
                             ? licenseController.text.trim()
                             : (selectedCountry == 'EG' ? 'EG-REG-6520' : 'AE-RERA-7140'),
+                        if (selectedCountry == 'AE' && tradeLicenseController.text.trim().isNotEmpty)
+                          'tradeLicense': tradeLicenseController.text.trim(),
                         'authority': selectedCountry == 'EG'
                             ? AppLocalizations.trStatic('uiCopy151')
                             : AppLocalizations.trStatic('uiCopy273'),
@@ -1563,11 +1566,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Commercial License No.
                     TextFormField(
                       controller: licenseController,
                       decoration: InputDecoration(
-                        labelText: loc.tr('commercialLicenseLabel'),
+                        labelText: selectedCountry == 'AE'
+                            ? loc.tr('officeRegistrationNumberLabel')
+                            : loc.tr('commercialLicenseLabel'),
                         hintText: loc.tr('commercialLicenseHint'),
                         prefixIcon: const Icon(Symbols.verified_rounded),
                         filled: true,
@@ -1579,6 +1583,23 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       ),
                       validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('requiredField') : null,
                     ),
+                    if (selectedCountry == 'AE') ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: tradeLicenseController,
+                        decoration: InputDecoration(
+                          labelText: loc.tr('commercialLicenseLabel'),
+                          hintText: loc.tr('commercialLicenseHint'),
+                          prefixIcon: const Icon(Symbols.badge_rounded),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: colorScheme.outlineVariant),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // Plan Selector
@@ -1709,7 +1730,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       builder: (ctx) => TashilModalDialog(
         maxWidth: 640,
         title: agency['name'] as String,
-        subtitle: '${loc.tr('licenseNumber')}: ${agency['license']}',
+        subtitle: isEg
+            ? '${loc.tr('commercialLicenseLabel')}: ${agency['license']}'
+            : '${loc.tr('officeRegistrationNumberLabel')}: ${agency['license']}',
         icon: Symbols.verified_user_rounded,
         onClose: () => Navigator.of(ctx).pop(),
         footer: Wrap(

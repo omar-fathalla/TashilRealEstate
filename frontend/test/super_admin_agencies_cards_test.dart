@@ -116,7 +116,7 @@ void main() {
       // Verify modal opened
       expect(find.text('تسجيل واعتماد وكالة وساطة عقارية جديدة في المنصة'), findsOneWidget);
       expect(find.text('اسم الوكالة العقارية'), findsOneWidget);
-      expect(find.text('الرخصة التجارية'), findsOneWidget);
+      expect(find.text('رقم الرخصة التجارية'), findsOneWidget);
 
       // Enter agency name
       await tester.enterText(find.widgetWithText(TextFormField, 'اسم الوكالة العقارية'), 'وكالة النيل العقارية الدولية');

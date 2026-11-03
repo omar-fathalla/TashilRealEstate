@@ -1840,9 +1840,9 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
           id: 'uae_corporate_rera',
           icon: Symbols.business_center_rounded,
           seasonName: {
-            'ar': 'فترة الأعمال وتجديد عقود ريرا',
-            'en': 'Business Inflow & RERA Index Window',
-            'hi': 'व्यावसायिक प्रवाह और रेरा नवीनीकरण',
+            'ar': 'موسم الأعمال وتجديد العقود',
+            'en': 'Business season and lease renewals',
+            'hi': 'व्यावसायिक मौसम और पट्टा नवीनीकरण',
           },
           activeMonths: {
             'ar': 'أبريل - مايو، سبتمبر - أكتوبر',
@@ -1857,9 +1857,9 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
           surgeMultiplierDisplay: '+8% إلى +10%',
           expectedOccupancyPct: 91,
           aiStrategy: {
-            'ar': 'تعديل الإيجار بزيادة متوافقة مع مؤشر حاسبة زيادة الإيجار لمؤسسة التنظيم العقاري (RERA).',
-            'en': 'Adjust rent upward in accordance with RERA rental increase index guidelines.',
-            'hi': 'रेरा रेंटल इंडेक्स दिशानिर्देशों के अनुसार किराए में वृद्धि करें।',
+            'ar': 'تعديل الإيجار بزيادة متوافقة مع مؤشر الإيجارات الصادر عن دائرة الأراضي والأملاك.',
+            'en': 'Adjust the rent in line with the Dubai Land Department Rental Index.',
+            'hi': 'दुबई भूमि विभाग के रेंटल इंडेक्स के अनुसार किराया समायोजित करें।',
           },
           impactOnYield: {
             'ar': '+1.6% نمو سنوي',
