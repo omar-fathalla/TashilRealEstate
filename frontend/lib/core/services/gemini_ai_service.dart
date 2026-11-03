@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/models/ai_model_definition.dart';
@@ -20,13 +19,8 @@ class GeminiAiService {
   factory GeminiAiService() => _instance;
   GeminiAiService._internal();
 
-  static String get _apiKey => AiConfig.geminiApiKey;
-
   String get _valuationModel =>
       AiEngineConfigController().getModelName(AiServiceType.smartValuation);
-
-  String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1beta/models/$_valuationModel:generateContent?key=$_apiKey';
 
   /// Performs a smart AI valuation for a real estate unit
   Future<SmartValuationModel> estimateRentalValue({
@@ -155,10 +149,9 @@ You MUST return a valid JSON object ONLY (no markdown code fences, no extra word
 ''';
 
     try {
-      final response = await http.post(
-        Uri.parse(_endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await GeminiGateway.generate(
+        model: _valuationModel,
+        body: {
           'contents': [
             {
               'parts': [
@@ -176,7 +169,7 @@ You MUST return a valid JSON object ONLY (no markdown code fences, no extra word
             'maxOutputTokens': 1500,
             'responseMimeType': 'application/json',
           }
-        }),
+        },
       );
 
       if (response.statusCode == 200) {

@@ -1825,7 +1825,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           ),
           const SizedBox(height: 18),
 
-          // AI Title & Description Generation Button (Gemini 3.8 Flash)
+          // AI Title & Description Generation Button (Gemini 2.5 Flash)
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TashilButton.tonal(

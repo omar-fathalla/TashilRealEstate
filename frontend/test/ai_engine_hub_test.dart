@@ -50,7 +50,7 @@ void main() {
       }
 
       // Check default model for property ingestion
-      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-3.8-flash'));
+      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-2.5-flash'));
 
       // Switch to Gemini 2.5 Flash
       controller.switchModel(AiServiceType.propertyIngestion, 'gemini-2.5-flash');
@@ -67,9 +67,9 @@ void main() {
 
       // Reset to defaults
       controller.resetToDefaults();
-      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-3.8-flash'));
-      expect(controller.getModelName(AiServiceType.legalAdvisor), equals('gemini-3.8-flash'));
-      expect(controller.getActiveModel(AiServiceType.legalAdvisor).name, equals('Gemini 3.8 Flash Legal'));
+      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-2.5-flash'));
+      expect(controller.getModelName(AiServiceType.legalAdvisor), equals('gemini-2.5-flash'));
+      expect(controller.getActiveModel(AiServiceType.legalAdvisor).name, equals('Gemini 2.5 Flash'));
     });
 
     testWidgets('AiEngineHubView renders Hero KPI metrics and 6 AI service cards', (tester) async {
@@ -101,7 +101,7 @@ void main() {
       expect(find.text('توكن متوازن'), findsWidgets);
 
       // Verify switching a model
-      expect(find.text('Gemini 3.8 Flash'), findsWidgets);
+      expect(find.text('Gemini 2.5 Flash'), findsWidgets);
       await tester.tap(find.text('Gemini 2.5 Flash').first);
       await tester.pumpAndSettle();
 
@@ -150,7 +150,7 @@ void main() {
 
       // Verify Section 5 is present
       expect(find.text('محركات ونماذج الذكاء الاصطناعي'), findsOneWidget);
-      expect(find.text('Gemini 3.8 & 2.5 Active'), findsOneWidget);
+      expect(find.text('Gemini 2.5 Flash'), findsWidgets);
       expect(find.text('فتح مركز إدارة نماذج AI'), findsOneWidget);
     });
 

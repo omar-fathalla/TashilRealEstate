@@ -1109,7 +1109,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         ),
                         const SizedBox(height: 14),
 
-                        // AI Title & Description Generation Button (Gemini 3.8 Flash)
+                        // AI Title & Description Generation Button (Gemini 2.5 Flash)
                         Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: TashilButton.tonal(

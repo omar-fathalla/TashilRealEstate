@@ -8,6 +8,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../../public_marketplace/models/property_item.dart';
 import '../models/viewing_appointment_model.dart';
 import '../models/voice_broker_message.dart';
+import '../../../core/services/ai_processing_consent.dart';
 import '../services/gemini_live_voice_broker_service.dart';
 import 'gemini_voice_broker_orb.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -53,7 +54,12 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
       _selectedDialect = isUAE ? VoiceBrokerDialect.emiratiArabic : VoiceBrokerDialect.egyptianArabic;
     }
 
-    _sendInitialGreeting();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await AiProcessingConsent.ensure(context);
+      if (!mounted) return;
+      _sendInitialGreeting();
+    });
   }
 
   @override

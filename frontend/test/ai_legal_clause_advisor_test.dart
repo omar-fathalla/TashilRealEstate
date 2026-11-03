@@ -160,7 +160,7 @@ void main() {
 
       expect(find.text('المستشار القانوني العقاري الذكي'), findsOneWidget);
       expect(find.text('Google Search Grounded'), findsOneWidget);
-      expect(find.text('Gemini 3.8 Flash Legal'), findsOneWidget);
+      expect(find.text('Gemini 2.5 Flash'), findsWidgets);
       expect(find.byIcon(Symbols.close_rounded), findsWidgets);
       expect(find.byType(TextField), findsOneWidget);
     });

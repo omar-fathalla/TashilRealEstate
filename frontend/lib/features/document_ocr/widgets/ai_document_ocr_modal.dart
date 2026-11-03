@@ -8,6 +8,7 @@ import '../../../core/design_system/menus/tashil_menus.dart';
 import '../../../core/design_system/motion/tashil_motion.dart';
 import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/services/ai_processing_consent.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/utils/responsive_layout.dart';
@@ -190,6 +191,12 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
   }
 
   Future<void> _runOcrScan(String templateId, {String? customImageUrl, Uint8List? rawBytes}) async {
+    final sendsUserImage = rawBytes != null
+        || (customImageUrl != null && customImageUrl.startsWith('data:'));
+    if (sendsUserImage) {
+      final allowed = await AiProcessingConsent.ensure(context);
+      if (!allowed || !mounted) return;
+    }
     setState(() {
       _selectedTemplateId = templateId;
       _isProcessing = true;
@@ -221,6 +228,8 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
   }
 
   Future<void> _handlePickImage(ImageSource source) async {
+    final allowed = await AiProcessingConsent.ensure(context);
+    if (!allowed || !mounted) return;
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(

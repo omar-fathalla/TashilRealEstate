@@ -31,6 +31,11 @@ class AppLocalizations {
       'activeAccount': 'الحساب النشط',
       'userProfileMenu': 'قائمة الحساب',
       'menu': 'القائمة',
+      'aiProcessingConsentTitle': 'موافقة معالجة الذكاء الاصطناعي',
+      'aiProcessingConsentBody': 'الصور والتسجيلات الصوتية وصور المستندات تُرسل إلى خادم تسهيل عقار ثم إلى نموذج ذكاء اصطناعي لمعالجتها. لا نستخدمها لتدريب نماذج عامة. يمكنك الرفض ويبقى التطبيق يعمل دون هذه الميزة.',
+      'aiProcessingConsentAccept': 'أوافق',
+      'aiProcessingConsentDecline': 'رفض',
+      'aiModelsActive': 'Gemini 2.5 Flash',
       
       // Search & Filters
       'searchPlaceholder': 'ابحث بالمنطقة أو اسم العقار...',
@@ -2105,6 +2110,11 @@ class AppLocalizations {
       'activeAccount': 'Active account',
       'userProfileMenu': 'Account menu',
       'menu': 'Menu',
+      'aiProcessingConsentTitle': 'AI processing consent',
+      'aiProcessingConsentBody': 'Photos, voice, and document images are sent to the Tashil Aqar server and then to an AI model so we can process them. We do not use them to train public models. You can decline and keep using the app without this feature.',
+      'aiProcessingConsentAccept': 'I agree',
+      'aiProcessingConsentDecline': 'Decline',
+      'aiModelsActive': 'Gemini 2.5 Flash',
       
       // Search & Filters
       'searchPlaceholder': 'Search by district or property name...',
@@ -4179,6 +4189,11 @@ class AppLocalizations {
       'activeAccount': 'सक्रिय खाता',
       'userProfileMenu': 'खाता मेनू',
       'menu': 'मेनू',
+      'aiProcessingConsentTitle': 'कृत्रिम बुद्धिमत्ता प्रसंस्करण की सहमति',
+      'aiProcessingConsentBody': 'तस्वीरें, आवाज़ और दस्तावेज़ चित्र ताशिल अकार सर्वर पर भेजे जाते हैं, फिर एक कृत्रिम बुद्धिमत्ता मॉडल उन्हें संसाधित करता है। हम उन्हें सार्वजनिक मॉडल के प्रशिक्षण में उपयोग नहीं करते। आप मना कर सकते हैं और इस सुविधा के बिना ऐप का उपयोग जारी रख सकते हैं।',
+      'aiProcessingConsentAccept': 'मैं सहमत हूँ',
+      'aiProcessingConsentDecline': 'अस्वीकार',
+      'aiModelsActive': 'Gemini 2.5 Flash',
       
       // Search & Filters
       'searchPlaceholder': 'क्षेत्र या संपत्ति के नाम से खोजें...',

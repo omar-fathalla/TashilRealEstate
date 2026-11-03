@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/services/ai_processing_consent.dart';
 import 'package:tashil_real_estate/core/services/speech_recognition/speech_recognition_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
@@ -399,12 +400,17 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
     _recordingTimer?.cancel();
     _speechService.stopListening();
 
+    final allowed = await AiProcessingConsent.ensure(context);
+    if (!mounted) return;
+
     setState(() => _step = VoiceInputStep.parsing);
 
-    final draft = await _service.parseVoiceTranscriptionToDraft(
-      voiceTranscription: text,
-      countryCode: countryCode,
-    );
+    final draft = allowed
+        ? await _service.parseVoiceTranscriptionToDraft(
+            voiceTranscription: text,
+            countryCode: countryCode,
+          )
+        : heuristicDraft;
 
     if (mounted) {
       setState(() => _step = VoiceInputStep.ready);

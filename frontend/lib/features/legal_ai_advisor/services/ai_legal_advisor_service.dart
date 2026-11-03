@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import '../../../core/config/ai_config.dart';
+import '../../../core/services/gemini_gateway.dart';
 import '../../../core/services/ai_quota_manager.dart';
 import '../../ai_engine_hub/models/ai_model_definition.dart';
 import '../../ai_engine_hub/services/ai_engine_config_controller.dart';
@@ -13,15 +12,10 @@ class AiLegalAdvisorService {
   factory AiLegalAdvisorService() => _instance;
   AiLegalAdvisorService._internal();
 
-  static String get _apiKey => AiConfig.geminiApiKey;
-
   String get _legalModel =>
       AiEngineConfigController().getModelName(AiServiceType.legalAdvisor);
 
-  String _buildEndpoint(String model) =>
-      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_apiKey';
-
-  /// Audit a custom lease clause draft using Gemini 3.8 Flash Legal Reasoning & Google Search Grounding
+  /// Audit a custom lease clause draft using Gemini with Google Search grounding.
   Future<LegalClauseAuditResult> auditAndRefineClause({
     required String clauseDraft,
     required String countryCode,
@@ -38,10 +32,9 @@ class AiLegalAdvisorService {
           isAE: isAE,
         );
 
-        final response = await http.post(
-          Uri.parse(_buildEndpoint(_legalModel)),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        final response = await GeminiGateway.generate(
+          model: _legalModel,
+          body: {
             'contents': [
               {
                 'parts': [
@@ -59,7 +52,7 @@ class AiLegalAdvisorService {
               'maxOutputTokens': 2048,
               'responseMimeType': 'application/json',
             }
-          }),
+          },
         ).timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200) {

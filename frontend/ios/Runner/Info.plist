@@ -73,7 +73,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>تطبيق تسهيل العقارية يحتاج إلى الوصول للكاميرا لالتقاط صور المعاينات والعقارات / Tashil Real Estate needs camera access to capture property photos.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>تطبيق تسهيل العقارية يحتاج إلى الوصول للميكروفون لتسجيل الفيديوهات العقارية / Tashil Real Estate needs microphone access for video tours.</string>
+	<string>تطبيق تسهيل عقار يحتاج إلى الميكروفون لإملاء تفاصيل العقار صوتياً. Tashil Aqar uses the microphone for voice property input.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>تطبيق تسهيل عقار يستخدم التعرف على الكلام لتحويل الإملاء إلى نص الإعلان. Tashil Aqar uses speech recognition to turn dictation into listing text.</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>ar</string>

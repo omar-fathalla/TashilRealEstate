@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import '../../../core/services/ai_processing_consent.dart';
 import '../../../core/services/ai_quota_manager.dart';
+import '../../../core/services/gemini_gateway.dart';
+import '../../../core/utils/jpeg_exif.dart';
 import '../../../core/services/user_profile_service.dart';
 import '../models/document_ocr_result_model.dart';
 
@@ -10,10 +12,7 @@ class AiDocumentOcrService {
   factory AiDocumentOcrService() => _instance;
   AiDocumentOcrService._internal();
 
-  static const String _geminiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  static const String _model = 'gemini-2.5-flash';
 
   /// Sample pre-loaded official documents for instant testing & demonstration
   static final List<Map<String, dynamic>> sampleTemplates = [
@@ -98,7 +97,7 @@ class AiDocumentOcrService {
     String? sampleId,
   }) async {
     // Check quota
-    if (_apiKey.isNotEmpty && AiQuotaManager().hasAvailableQuota) {
+    if (AiQuotaManager().hasAvailableQuota) {
       try {
         final result = await _callGeminiOcr(
           docType: docType,
@@ -174,11 +173,15 @@ Extract all official fields and return ONLY a valid JSON object with the followi
       {'text': prompt},
     ];
 
+    if (!AiProcessingConsent.granted) {
+      return null;
+    }
+
     if (rawBytes != null && rawBytes.isNotEmpty) {
       parts.add({
         'inlineData': {
           'mimeType': 'image/jpeg',
-          'data': base64Encode(rawBytes),
+          'data': base64Encode(stripJpegExif(rawBytes)),
         },
       });
     } else if (customImageUrl != null && customImageUrl.startsWith('data:')) {
@@ -186,7 +189,14 @@ Extract all official fields and return ONLY a valid JSON object with the followi
       if (commaIdx != -1) {
         final semicolonIdx = customImageUrl.indexOf(';');
         final mime = customImageUrl.substring(5, semicolonIdx != -1 ? semicolonIdx : commaIdx);
-        final data = customImageUrl.substring(commaIdx + 1);
+        var data = customImageUrl.substring(commaIdx + 1);
+        if (mime.contains('jpeg') || mime.contains('jpg')) {
+          try {
+            data = base64Encode(stripJpegExif(base64Decode(data)));
+          } catch (_) {
+            // Keep the original payload when it is not valid base64.
+          }
+        }
         parts.add({
           'inlineData': {
             'mimeType': mime,
@@ -196,11 +206,11 @@ Extract all official fields and return ONLY a valid JSON object with the followi
       }
     }
 
-    final url = Uri.parse('$_geminiEndpoint?key=$_apiKey');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await GeminiGateway.generate(
+      model: _model,
+      purpose: 'ocr',
+      processingConsent: AiProcessingConsent.granted,
+      body: {
         'contents': [
           {
             'parts': parts,
@@ -210,7 +220,7 @@ Extract all official fields and return ONLY a valid JSON object with the followi
           'temperature': 0.1,
           'maxOutputTokens': 1000,
         },
-      }),
+      },
     ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {

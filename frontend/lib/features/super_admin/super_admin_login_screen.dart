@@ -23,8 +23,7 @@ class SuperAdminLoginScreen extends StatefulWidget {
 class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
   final _emailController =
       TextEditingController(text: SuperAdminSecurityConfig.defaultEmail);
-  final _passwordController =
-      TextEditingController(text: SuperAdminSecurityConfig.envPassword);
+  final _passwordController = TextEditingController();
   final _securityKeyController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -53,23 +52,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
 
     try {
       final auth = FirebaseAuthService();
-      bool isAuthenticated = false;
-
-      // 1. Primary Authentication via Firebase Auth
       try {
         await auth.signInWithEmailAndPassword(email, password);
-        isAuthenticated = true;
       } catch (authError) {
-        debugPrint(
-            'ℹ️ Firebase Auth fallback check for local environment: $authError');
-        // 2. Cryptographic Salted SHA-256 Hash Verification for offline / local environment
-        if (SuperAdminSecurityConfig.verifyOfflineCredentials(
-            email, password)) {
-          isAuthenticated = true;
-        }
-      }
-
-      if (!isAuthenticated) {
+        debugPrint('Admin sign-in failed: $authError');
         if (!mounted) return;
         setState(() => _isLoading = false);
         TashilSnackBar.showError(

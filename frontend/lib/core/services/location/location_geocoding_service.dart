@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'gps_service.dart';
 
 class ResolvedLocation {
@@ -30,8 +30,6 @@ class LocationGeocodingService {
   LocationGeocodingService._internal();
 
   final _gpsService = GpsService();
-
-  static String get _geminiApiKey => AiConfig.geminiApiKey;
 
   Future<ResolvedLocation?> fetchCurrentGpsLocation({String preferredCountry = 'EG'}) async {
     // 1. Try Browser / Device Geolocation Hardware
@@ -297,8 +295,6 @@ class LocationGeocodingService {
 
   Future<ResolvedLocation?> _geocodeWithGemini(String addressQuery, String countryCode) async {
     try {
-      final endpoint =
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=$_geminiApiKey';
       final prompt = '''
 Geocode this Arabic real estate address.
 Return ONLY valid JSON matching this schema without markdown fences:
@@ -319,10 +315,9 @@ Reference Landmarks:
 - Dubai Marina: lat 25.0772, lng 55.1396
 ''';
 
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await GeminiGateway.generate(
+        model: 'gemini-2.5-flash',
+        body: {
           'contents': [
             {
               'parts': [
@@ -334,7 +329,7 @@ Reference Landmarks:
             'temperature': 0.1,
             'responseMimeType': 'application/json',
           }
-        }),
+        },
       ).timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {

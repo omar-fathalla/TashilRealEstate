@@ -35,6 +35,10 @@ class BrokerProfile {
         'brokerRegistrationNumber': brokerRegistrationNumber,
         'officeRegistrationNumber': officeRegistrationNumber,
         'languages': languages,
+      };
+
+  /// Contact details stay in Brokers/{id}/private and are not on the public card.
+  Map<String, dynamic> toPrivateContact() => {
         'phone': phone,
         'whatsApp': whatsApp,
       };

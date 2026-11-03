@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/ai_processing_consent.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
+import 'package:tashil_real_estate/core/utils/jpeg_exif.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
 
@@ -12,10 +13,7 @@ class AiImageModerationService {
     _initializeSeedInspectionItems();
   }
 
-  static String get _apiKey => AiConfig.geminiApiKey;
-  static const String _modelName = 'gemini-1.5-flash';
-  static String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1beta/models/$_modelName:generateContent?key=$_apiKey';
+  static const String _modelName = 'gemini-2.5-flash';
 
   final ValueNotifier<List<ImageModerationItem>> moderatedItemsNotifier = ValueNotifier<List<ImageModerationItem>>([]);
 
@@ -142,7 +140,10 @@ class AiImageModerationService {
       throw Exception('Quota exceeded');
     }
 
-    final base64Image = base64Encode(imageBytes);
+    if (!AiProcessingConsent.granted) {
+      throw Exception('AI processing consent is required');
+    }
+    final base64Image = base64Encode(stripJpegExif(imageBytes));
 
     final prompt = '''
 You are the Real Estate Content Moderation & AI Inspector for Tashil Real Estate.
@@ -172,10 +173,11 @@ Respond with a JSON object ONLY adhering to this exact schema:
 }
 ''';
 
-    final response = await http.post(
-      Uri.parse(_endpoint),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await GeminiGateway.generate(
+      model: _modelName,
+      purpose: 'image',
+      processingConsent: AiProcessingConsent.granted,
+      body: {
         'contents': [
           {
             'parts': [
@@ -194,7 +196,7 @@ Respond with a JSON object ONLY adhering to this exact schema:
           'maxOutputTokens': 512,
           'responseMimeType': 'application/json',
         }
-      }),
+      },
     );
 
     if (response.statusCode == 200) {

@@ -728,7 +728,7 @@ class AppSettingsDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Gemini 3.8 & 2.5 Active',
+                loc.tr('aiModelsActive'),
                 style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                   color: colorScheme.onPrimaryContainer),
               ),

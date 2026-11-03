@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
+import 'package:tashil_real_estate/core/services/ai_processing_consent.dart';
 import 'package:tashil_real_estate/features/image_moderation/services/ai_image_moderation_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
@@ -31,6 +32,8 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
   final _service = AiImageModerationService();
 
   Future<void> _simulateUpload(String type) async {
+    final allowed = await AiProcessingConsent.ensure(context);
+    if (!allowed || !mounted) return;
     setState(() => _isUploading = true);
 
     String name = 'property_photo.jpg';
