@@ -21,14 +21,25 @@ Future<void> prepareAuthEmulatorBeforeInit(String origin) async {
   globalContext['flutterfire_web_sdk_version'] = _firebaseJsSdkVersion.toJS;
   web.window.sessionStorage.setItem('[DEFAULT]-firebaseEmulatorOrigin', origin);
 
-  await _loadModule(
-    'https://www.gstatic.com/firebasejs/$_firebaseJsSdkVersion/firebase-app.js',
-    'firebase_core',
-  );
-  await _loadModule(
-    'https://www.gstatic.com/firebasejs/$_firebaseJsSdkVersion/firebase-auth.js',
-    'firebase_auth',
-  );
+  // FlutterFire skips every service script once `firebase_core` exists, so
+  // the bundles it would have loaded must already be on the page.
+  const modules = <String, String>{
+    'firebase_core': 'firebase-app.js',
+    'firebase_auth': 'firebase-auth.js',
+    'firebase_firestore': 'firebase-firestore-pipelines.js',
+    'firebase_storage': 'firebase-storage.js',
+    'firebase_functions': 'firebase-functions.js',
+    'firebase_messaging': 'firebase-messaging.js',
+    'firebase_remote_config': 'firebase-remote-config.js',
+    'firebase_app_check': 'firebase-app-check.js',
+    'firebase_performance': 'firebase-performance.js',
+  };
+  for (final entry in modules.entries) {
+    await _loadModule(
+      'https://www.gstatic.com/firebasejs/$_firebaseJsSdkVersion/${entry.value}',
+      entry.key,
+    );
+  }
 
   final authNs = globalContext['firebase_auth'];
   if (authNs == null || authNs.isUndefinedOrNull) {
