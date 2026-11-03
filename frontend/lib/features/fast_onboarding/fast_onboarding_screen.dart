@@ -747,8 +747,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           builder: (context, countryCode, _) {
             final loc = AppLocalizations.of(context);
 
-            return Scaffold(
+            return PopScope(
+              canPop: !_isSubmitting,
+              child: Scaffold(
               backgroundColor: theme.colorScheme.surface,
+              resizeToAvoidBottomInset: true,
               appBar: const PublicHeaderNavbar(isSubPage: true, currentRoute: '/fast-onboarding'),
               bottomNavigationBar: isMobile
                   ? Container(
@@ -784,7 +787,12 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     )
                   : null,
               body: SingleChildScrollView(
-                padding: EdgeInsets.all(isMobile ? 14 : 24),
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  isMobile ? 14 : 24,
+                  isMobile ? 14 : 24,
+                  isMobile ? 14 : 24,
+                  (isMobile ? 120 : 24) + MediaQuery.viewInsetsOf(context).bottom,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),
@@ -879,6 +887,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   ),
                 ),
               ),
+            ),
             );
           },
         );

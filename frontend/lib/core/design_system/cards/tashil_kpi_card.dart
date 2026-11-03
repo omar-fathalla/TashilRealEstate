@@ -123,7 +123,7 @@ class TashilKpiGrid extends StatelessWidget {
       builder: (context, constraints) {
         final double cardWidth;
         if (constraints.maxWidth < 650) {
-          cardWidth = constraints.maxWidth;
+          cardWidth = (constraints.maxWidth - spacing) / 2;
         } else if (constraints.maxWidth < 1150) {
           cardWidth = (constraints.maxWidth - spacing) / 2;
         } else {

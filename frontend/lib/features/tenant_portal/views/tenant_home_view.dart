@@ -148,12 +148,12 @@ class TenantHomeView extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   loc.tr('leasePeriod'),
-                  '2026-01-01 -> 2027-12-31',
+                  '\u2066${loc.tr('leaseFrom')} 1 Jan 2026 ${loc.tr('leaseTo')} 31 Dec 2027\u2069',
                 ),
                 TashilDivider.middleInset(),
                 _buildDetailRow(
                   context,
-                  loc.tr('statusActive'),
+                  loc.tr('statusLabel'),
                   loc.tr('statusActive'),
                   valueColor: colorScheme.primary,
                 ),
@@ -182,7 +182,7 @@ class TenantHomeView extends StatelessWidget {
             textAlign: TextAlign.end,
             style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
               color: valueColor ?? colorScheme.onSurface),
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ),

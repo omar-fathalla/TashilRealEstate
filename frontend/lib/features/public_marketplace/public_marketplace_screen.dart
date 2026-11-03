@@ -23,7 +23,6 @@ import 'package:tashil_real_estate/core/design_system/search/tashil_search.dart'
 import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import '../../core/design_system/navigation_bar/tashil_navigation_bar.dart';
-import '../../core/widgets/app_settings_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class PublicMarketplaceScreen extends StatefulWidget {
@@ -221,8 +220,13 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               backgroundColor: theme.scaffoldBackgroundColor,
               appBar: const PublicHeaderNavbar(isSubPage: false, currentRoute: '/'),
               bottomNavigationBar: isMobile ? _buildMobileBottomBar(context, loc, colorScheme) : null,
-              body: SingleChildScrollView(
+              body: RefreshIndicator.adaptive(
+                onRefresh: () async {
+                  PropertyRepository().updatesNotifier.value++;
+                },
+                child: SingleChildScrollView(
                 controller: _resultsScroll,
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
                     // Hero Section with Search Banner
@@ -276,9 +280,10 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
                 // Footer
                 _buildFooter(context, loc),
-                if (isMobile) const SizedBox(height: 80),
+                if (isMobile) const SizedBox(height: 24),
               ],
             ),
+          ),
           ),
         );
           },
@@ -297,12 +302,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     return TashilNavigationBar(
       destinations: [
         TashilNavigationDestination(
-          icon: Symbols.add_home_work_rounded,
-          selectedIcon: Symbols.add_home_work_rounded,
-          label: loc.tr('navUploadProperty'),
-          isSelected: false,
-          tooltip: loc.tr('fastPropertyOnboardingTitle'),
-          onTap: () => context.go('/fast-onboarding'),
+          icon: Symbols.explore_rounded,
+          selectedIcon: Symbols.explore_rounded,
+          label: loc.tr('navExplore'),
+          isSelected: true,
+          tooltip: loc.tr('navExplore'),
+          onTap: () => context.go('/'),
         ),
 
         // 2. AI Smart Valuation
@@ -314,7 +319,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           badgeColor: colorScheme.primary,
           isSelected: false,
           tooltip: loc.tr('aiValuationTitle'),
-          onTap: () => SmartValuationDialog.show(context),
+          onTap: () => context.go('/valuation'),
         ),
 
         // 3. Market Index (Aqarmap / DXB Index)
@@ -330,12 +335,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
         // 4. Settings
         TashilNavigationDestination(
-          icon: Symbols.tune_rounded,
-          selectedIcon: Symbols.tune_rounded,
-          label: loc.tr('navSettings'),
+          icon: Symbols.account_circle_rounded,
+          selectedIcon: Symbols.account_circle_rounded,
+          label: loc.tr('signIn'),
           isSelected: false,
-          tooltip: loc.tr('settings'),
-          onTap: () => AppSettingsDialog.show(context),
+          tooltip: loc.tr('portalLogin'),
+          onTap: () => context.go('/login'),
         ),
       ],
     );
@@ -351,7 +356,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 16 : 64,
-        vertical: isMobile ? 32 : 64,
+        vertical: isMobile ? 16 : 64,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -420,14 +425,16 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               color: onBanner,
               height: 1.2),
           ),
-          const SizedBox(height: 12),
-          Text(
-            isUAE ? loc.tr('heroSubtitle_ae') : loc.tr('heroSubtitle_eg'),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: TashilBannerColors.muted(colorScheme),
-              height: 1.5),
-          ),
-          const SizedBox(height: 28),
+          if (!isMobile) ...[
+            const SizedBox(height: 12),
+            Text(
+              isUAE ? loc.tr('heroSubtitle_ae') : loc.tr('heroSubtitle_eg'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: TashilBannerColors.muted(colorScheme),
+                height: 1.5),
+            ),
+          ],
+          const SizedBox(height: 16),
 
           // Single Unified Official Google M3 Expressive Split Search Bar
           ConstrainedBox(
@@ -444,7 +451,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   : (_activeSearchMode == 'visual'
                       ? Symbols.photo_camera_rounded
                       : Symbols.search_rounded),
-              splitMenuItems: [
+              splitMenuItems: isMobile ? null : [
                 TashilSplitButtonItem<String>(
                   value: 'location',
                   label: loc.tr('searchModeLocation'),
@@ -521,7 +528,40 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 2. Dedicated Filter Container (City, Type, Price Slider)
+          // 2. Filters: a sheet on a phone, an inline bar on a wider window.
+          if (isMobile)
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  showDragHandle: true,
+                  builder: (sheetContext) => Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      16,
+                      0,
+                      16,
+                      24 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCityDropdown(loc, currentCountry),
+                        const SizedBox(height: 12),
+                        _buildTypeDropdown(loc),
+                        const SizedBox(height: 12),
+                        _buildPriceSlider(loc, currentCountry, colorScheme),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Symbols.tune_rounded),
+              label: Text(loc.tr('filtersLabel')),
+            )
+          else
           Container(
             constraints: const BoxConstraints(maxWidth: 1120),
             padding: EdgeInsets.symmetric(
@@ -543,17 +583,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                 ),
               ],
             ),
-            child: isMobile
-                ? Column(
-                    children: [
-                      _buildCityDropdown(loc, currentCountry),
-                      const SizedBox(height: 12),
-                      _buildTypeDropdown(loc),
-                      const SizedBox(height: 12),
-                      _buildPriceSlider(loc, currentCountry, colorScheme),
-                    ],
-                  )
-                : Row(
+            child: Row(
                     children: [
                       Expanded(flex: 3, child: _buildCityDropdown(loc, currentCountry)),
                       const SizedBox(width: 14),

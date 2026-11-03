@@ -20,7 +20,7 @@ class OverviewView extends StatelessWidget {
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth < 650;
           final isTablet = constraints.maxWidth >= 650 && constraints.maxWidth < 1100;
-          final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 4);
+          final crossAxisCount = isMobile ? 2 : (isTablet ? 2 : 4);
           final padding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
 
           return SingleChildScrollView(
@@ -39,7 +39,7 @@ class OverviewView extends StatelessWidget {
                   mainAxisSpacing: 16,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: isMobile ? 2.4 : (isTablet ? 2.0 : 1.6),
+                  childAspectRatio: isMobile ? 1.35 : (isTablet ? 2.0 : 1.6),
                   children: [
                     _buildKpiCard(
                       context,
@@ -63,7 +63,7 @@ class OverviewView extends StatelessWidget {
                       context,
                       title: loc.tr('totalProperties'),
                       value: '120',
-                      badgeText: loc.tr('collectionRate'),
+                      badgeText: loc.tr('collectionRate').replaceAll('{rate}', '94'),
                       badgeColor: colorScheme.primary,
                       icon: Symbols.apartment_rounded,
                       accentColor: colorScheme.primary,
@@ -73,9 +73,9 @@ class OverviewView extends StatelessWidget {
                       title: loc.tr('pendingMaintenance'),
                       value: '3',
                       badgeText: loc.tr('urgentTickets'),
-                      badgeColor: colorScheme.error,
+                      badgeColor: colorScheme.tertiary,
                       icon: Symbols.handyman_rounded,
-                      accentColor: colorScheme.error,
+                      accentColor: colorScheme.tertiary,
                     ),
                   ],
                 ),

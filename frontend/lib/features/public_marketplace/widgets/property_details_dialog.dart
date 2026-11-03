@@ -745,14 +745,14 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                 spacing: 8.0,
                 children: [
                   TashilIconButton.tonal(
-                    size: 40.0,
+                    size: 48.0,
                     iconSize: 20.0,
                     icon: Symbols.mic_none_rounded,
                     tooltip: loc.tr('talkToVoiceBroker'),
                     onPressed: () => GeminiVoiceBrokerDialog.show(context, widget.property),
                   ),
                   TashilIconButton.tonal(
-                    size: 40.0,
+                    size: 48.0,
                     iconSize: 20.0,
                     icon: Symbols.share_rounded,
                     tooltip: loc.tr('share'),
@@ -764,7 +764,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                     },
                   ),
                   TashilIconButton.close(
-                    size: 40.0,
+                    size: 48.0,
                     iconSize: 20.0,
                     tooltip: loc.tr('close'),
                     onPressed: () => Navigator.of(context).pop(),

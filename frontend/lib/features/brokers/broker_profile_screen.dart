@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
@@ -23,7 +24,19 @@ class BrokerProfileScreen extends StatelessWidget {
     final broker = BrokerRepository().byId(brokerId);
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: Text(loc.tr('brokerProfileTitle'))),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Directionality.of(context) == TextDirection.rtl
+                ? Symbols.arrow_forward_rounded
+                : Symbols.arrow_back_rounded,
+          ),
+          tooltip: loc.tr('back'),
+          style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+        ),
+        title: Text(loc.tr('brokerProfileTitle')),
+      ),
       body: broker == null
           ? Center(child: Text(loc.tr('brokerNotFound')))
           : _BrokerBody(broker: broker),
@@ -68,9 +81,12 @@ class _BrokerBody extends StatelessWidget {
               )
             else
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Photo(url: broker.photoUrl, name: broker.name(lang)),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: _Photo(url: broker.photoUrl, name: broker.name(lang), compact: true),
+                  ),
                   const SizedBox(height: 16),
                   _Identity(broker: broker, loc: loc, lang: lang),
                 ],
@@ -103,20 +119,22 @@ class _BrokerBody extends StatelessWidget {
 class _Photo extends StatelessWidget {
   final String url;
   final String name;
+  final bool compact;
 
-  const _Photo({required this.url, required this.name});
+  const _Photo({required this.url, required this.name, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final side = compact ? 96.0 : 160.0;
     final child = url.isEmpty
-        ? Icon(Symbols.person_rounded, size: 72, color: scheme.onPrimaryContainer)
-        : Image.network(url, fit: BoxFit.cover, width: 160, height: 160);
+        ? Icon(Symbols.person_rounded, size: compact ? 48 : 72, color: scheme.onPrimaryContainer)
+        : Image.network(url, fit: BoxFit.cover, width: side, height: side);
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: Container(
-        width: 160,
-        height: 160,
+        width: side,
+        height: side,
         color: scheme.primaryContainer,
         alignment: Alignment.center,
         child: child,
@@ -166,22 +184,25 @@ class _Identity extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            Row(
               children: [
-                TashilButton(
-                  icon: Symbols.call_rounded,
-                  label: loc.tr('brokerCall'),
-                  onPressed: () => launchUrl(Uri.parse('tel:${broker.phone}')),
+                Expanded(
+                  child: TashilButton(
+                    icon: Symbols.call_rounded,
+                    label: loc.tr('brokerCall'),
+                    onPressed: () => launchUrl(Uri.parse('tel:${broker.phone}')),
+                  ),
                 ),
-                TashilButton.tonal(
-                  icon: Symbols.chat_rounded,
-                  label: loc.tr('brokerWhatsApp'),
-                  onPressed: () {
-                    final digits = broker.whatsApp.replaceAll(RegExp(r'[^0-9]'), '');
-                    launchUrl(Uri.parse('https://wa.me/$digits'));
-                  },
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TashilButton.tonal(
+                    icon: Symbols.chat_rounded,
+                    label: loc.tr('brokerWhatsApp'),
+                    onPressed: () {
+                      final digits = broker.whatsApp.replaceAll(RegExp(r'[^0-9]'), '');
+                      launchUrl(Uri.parse('https://wa.me/$digits'));
+                    },
+                  ),
                 ),
               ],
             ),

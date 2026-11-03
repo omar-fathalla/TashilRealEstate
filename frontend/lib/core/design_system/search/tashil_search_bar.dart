@@ -373,6 +373,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
           if (_hasText)
             IconButton(
               icon: const Icon(Symbols.close_rounded, size: 20),
+              constraints: const BoxConstraints.tightFor(width: 48, height: 48),
               tooltip: 'مسح',
               color: colorScheme.onSurfaceVariant,
               onPressed: () {
