@@ -319,6 +319,7 @@ class AppLocalizations {
       'chipFurnished': 'مفروشة فقط',
       // Compact Nav Labels
       'navOverview': 'نظرة عامة',
+      'navMore': 'المزيد',
       'navProperties': 'عقاراتي',
       'navFinancials': 'المالية',
       'navMaintenance': 'الصيانة',
@@ -2375,6 +2376,7 @@ class AppLocalizations {
       'chipFurnished': 'Furnished only',
       // Compact Nav Labels
       'navOverview': 'Overview',
+      'navMore': 'More',
       'navProperties': 'Properties',
       'navFinancials': 'Financials',
       'navMaintenance': 'Maintenance',
@@ -4430,6 +4432,7 @@ class AppLocalizations {
       'chipFurnished': 'केवल सुसज्जित',
       // Compact Nav Labels
       'navOverview': 'अवलोकन',
+      'navMore': 'और',
       'navProperties': 'संपत्तियां',
       'navFinancials': 'वित्तीय',
       'navMaintenance': 'रखरखाव',

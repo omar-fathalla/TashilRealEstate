@@ -1615,13 +1615,21 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               size: 38,
               iconSize: 20,
               tooltip: loc.tr('menu'),
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              onPressed: () => showModalBottomSheet<void>(
+                context: ctx,
+                isScrollControlled: true,
+                useSafeArea: true,
+                showDragHandle: true,
+                builder: (sheetContext) => SizedBox(
+                  height: MediaQuery.sizeOf(sheetContext).height * 0.8,
+                  child: _buildMobileDrawer(sheetContext, loc, colorScheme),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      endDrawer: _buildMobileDrawer(context, loc, colorScheme),
       body: ValueListenableBuilder<TashilPageTransitionType>(
         valueListenable: MotionPreferenceController.currentTransition,
         builder: (context, transitionType, _) {
@@ -1639,8 +1647,23 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         },
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex < 6 ? _selectedIndex : 0,
-        onDestinationSelected: _selectView,
+        selectedIndex: _selectedIndex <= 2 ? _selectedIndex : 3,
+        onDestinationSelected: (index) {
+          if (index == 3) {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              showDragHandle: true,
+              builder: (sheetContext) => SizedBox(
+                height: MediaQuery.sizeOf(sheetContext).height * 0.8,
+                child: _buildMobileDrawer(sheetContext, loc, colorScheme),
+              ),
+            );
+            return;
+          }
+          _selectView(index);
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Symbols.dashboard_rounded),
@@ -1658,19 +1681,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             label: loc.tr('navCollection'),
           ),
           NavigationDestination(
-            icon: const Icon(Symbols.description_rounded),
-            selectedIcon: const Icon(Symbols.description_rounded),
-            label: loc.tr('navContracts'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Symbols.account_balance_wallet_rounded),
-            selectedIcon: const Icon(Symbols.account_balance_wallet_rounded),
-            label: loc.tr('navFinancials'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Symbols.build_rounded),
-            selectedIcon: const Icon(Symbols.build_rounded),
-            label: loc.tr('navMaintenance'),
+            icon: const Icon(Symbols.more_horiz_rounded),
+            selectedIcon: const Icon(Symbols.more_horiz_rounded),
+            label: loc.tr('navMore'),
           ),
         ],
       ),

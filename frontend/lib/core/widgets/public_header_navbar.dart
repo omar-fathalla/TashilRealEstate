@@ -121,21 +121,19 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             );
           }
 
-          return TashilIconButton.tonal(
-            icon: Symbols.lock_person_rounded,
-            size: 38,
-            iconSize: 19,
-            tooltip: loc.tr('portalLogin'),
+          return TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            icon: Icon(Symbols.login_rounded, color: colorScheme.primary),
+            label: Text(loc.tr('signIn')),
             onPressed: () => _navigateSafely(context, '/login'),
           );
         },
       );
     } catch (_) {
-      return TashilIconButton.tonal(
-        icon: Symbols.lock_person_rounded,
-        size: 38,
-        iconSize: 19,
-        tooltip: loc.tr('portalLogin'),
+      return TextButton.icon(
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        icon: Icon(Symbols.login_rounded, color: colorScheme.primary),
+        label: Text(loc.tr('signIn')),
         onPressed: () => _navigateSafely(context, '/login'),
       );
     }
@@ -146,15 +144,12 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
     AppLocalizations loc,
     ColorScheme colorScheme,
   ) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // PHYSICAL LEFT: Brand Icon + English "Tashil Aqar"
-            InkWell(
+            Flexible(
+            child: InkWell(
               onTap: () => _navigateSafely(context, '/'),
               borderRadius: BorderRadius.circular(10),
               child: Row(
@@ -162,8 +157,14 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                 children: [
                   if (isSubPage) ...[
                     IconButton(
-                      icon: Icon(Symbols.arrow_back_rounded, color: colorScheme.onSurface),
-                      tooltip: loc.tr('browseAsVisitor'),
+                      icon: Icon(
+                        Directionality.of(context) == TextDirection.rtl
+                            ? Symbols.arrow_forward_rounded
+                            : Symbols.arrow_back_rounded,
+                        color: colorScheme.onSurface,
+                      ),
+                      tooltip: loc.tr('back'),
+                      style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                       onPressed: () {
                         if (context.canPop()) {
                           context.pop();
@@ -187,22 +188,25 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Tashil Aqar',
-                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                      letterSpacing: -0.3),
+                  Expanded(
+                    child: Text(
+                      loc.tr('appName'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.3),
+                    ),
                   ),
                 ],
               ),
             ),
-
-            // PHYSICAL RIGHT: Circular Login / Account Button Only
+            ),
+            const SizedBox(width: 8),
             _buildMobileCircularLoginButton(context, loc, colorScheme),
           ],
         ),
-      ),
-    );
+      );
   }
 
   @override
@@ -244,8 +248,13 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
               // Back Button on Subpages
               if (isSubPage) ...[
                 IconButton(
-                  icon: Icon(Symbols.arrow_back_rounded, color: colorScheme.onSurface),
-                  tooltip: loc.tr('browseAsVisitor'),
+                  icon: Icon(
+                    Directionality.of(context) == TextDirection.rtl
+                        ? Symbols.arrow_forward_rounded
+                        : Symbols.arrow_back_rounded,
+                    color: colorScheme.onSurface,
+                  ),
+                  tooltip: loc.tr('back'),
                   onPressed: () {
                     if (context.canPop()) {
                       context.pop();

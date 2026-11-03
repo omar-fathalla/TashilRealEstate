@@ -36,6 +36,8 @@ class PublicMarketplaceScreen extends StatefulWidget {
 class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _openedHookedListing = false;
+  final ScrollController _resultsScroll = ScrollController();
+  final GlobalKey _resultsKey = GlobalKey();
   String _selectedCityCode = 'all';
   String _selectedTypeCode = 'all';
   double _maxPrice = 80000;
@@ -72,6 +74,21 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       PropertyRepository().updatesNotifier.addListener(_maybeOpenHookedListing);
       WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenHookedListing());
     }
+    if (hookedQuery != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchResults());
+    }
+  }
+
+  void _revealSearchResults() {
+    if (!mounted || _searchController.text.trim().isEmpty) return;
+    if (MediaQuery.sizeOf(context).width >= 600) return;
+    final target = _resultsKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 280),
+      alignment: 0.02,
+    );
   }
 
   void _maybeOpenHookedListing() {
@@ -118,6 +135,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   void dispose() {
     CountryController.currentCountry.removeListener(_onCountryChanged);
     PropertyRepository().updatesNotifier.removeListener(_maybeOpenHookedListing);
+    _resultsScroll.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -204,6 +222,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               appBar: const PublicHeaderNavbar(isSubPage: false, currentRoute: '/'),
               bottomNavigationBar: isMobile ? _buildMobileBottomBar(context, loc, colorScheme) : null,
               body: SingleChildScrollView(
+                controller: _resultsScroll,
                 child: Column(
                   children: [
                     // Hero Section with Search Banner
@@ -224,6 +243,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
                       // Results Header
                       Row(
+                        key: _resultsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
@@ -276,7 +296,6 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
     return TashilNavigationBar(
       destinations: [
-        // 1. Upload Property
         TashilNavigationDestination(
           icon: Symbols.add_home_work_rounded,
           selectedIcon: Symbols.add_home_work_rounded,
@@ -467,6 +486,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   _performSemanticSearch(val, currentCountry);
                 } else {
                   setState(() {});
+                  _revealSearchResults();
                 }
               },
               onSubmitted: (val) {
@@ -474,6 +494,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   _performSemanticSearch(val, currentCountry);
                 } else {
                   setState(() {});
+                  _revealSearchResults();
                 }
               },
               onClear: () {

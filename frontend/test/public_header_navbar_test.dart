@@ -88,12 +88,11 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const SizedBox()));
       await tester.pumpAndSettle();
 
-      // On mobile, brand English text and apartment icon are on the left
-      expect(find.text('Tashil Aqar'), findsOneWidget);
+      // Mobile Arabic keeps the localized brand and a labeled sign-in control.
+      expect(find.text('تسهيل عقار'), findsOneWidget);
+      expect(find.text('Tashil Aqar'), findsNothing);
       expect(find.byIcon(Symbols.apartment_rounded), findsWidgets);
-
-      // On mobile, the circular login button is on the right, and old menu button is removed
-      expect(find.byIcon(Symbols.lock_person_rounded), findsWidgets);
+      expect(find.text('تسجيل الدخول'), findsOneWidget);
       expect(find.byIcon(Symbols.menu_rounded), findsNothing);
     });
 

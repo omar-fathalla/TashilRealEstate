@@ -19,10 +19,15 @@ import 'package:material_symbols_icons/symbols.dart';
 
 class PropertyDetailsDialog extends StatefulWidget {
   final PropertyItem property;
+  final bool asPage;
 
-  const PropertyDetailsDialog({super.key, required this.property});
+  const PropertyDetailsDialog({super.key, required this.property, this.asPage = false});
 
   static Future<void> show(BuildContext context, PropertyItem property) {
+    if (MediaQuery.sizeOf(context).width < 600) {
+      GoRouter.of(context).push('/listing/${property.id}');
+      return Future.value();
+    }
     return TashilTransitions.showM3Dialog(
       context: context,
       barrierDismissible: true,
@@ -195,16 +200,20 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
             borderRadius: BorderRadius.circular(isMobile ? 20.0 : 28.0),
           ),
           clipBehavior: Clip.antiAlias,
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 12.0 : 32.0,
-            vertical: isMobile ? 12.0 : 24.0,
-          ),
+          insetPadding: widget.asPage
+              ? EdgeInsets.zero
+              : EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12.0 : 32.0,
+                  vertical: isMobile ? 12.0 : 24.0,
+                ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: 960,
-              maxHeight: size.height > 480
-                  ? (size.height * 0.92).clamp(400.0, 840.0)
-                  : size.height - 16.0,
+              maxWidth: widget.asPage ? size.width : 960,
+              maxHeight: widget.asPage
+                  ? size.height
+                  : size.height > 480
+                      ? (size.height * 0.92).clamp(400.0, 840.0)
+                      : size.height - 16.0,
             ),
             child: Scaffold(
               backgroundColor: theme.colorScheme.surface,
