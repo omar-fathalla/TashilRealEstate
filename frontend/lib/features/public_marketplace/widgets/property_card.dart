@@ -10,6 +10,7 @@ import '../../../core/design_system/cards/tashil_cards.dart';
 import '../../../core/design_system/buttons/tashil_buttons.dart';
 import '../../owner_portal/widgets/property_share_dialog.dart';
 import '../models/property_item.dart';
+import 'advertising_permit_badge.dart';
 import 'property_details_dialog.dart';
 import '../../../core/design_system/carousel/tashil_carousels.dart';
 import '../../../core/design_system/dividers/tashil_dividers.dart';
@@ -169,6 +170,14 @@ class _PropertyCardState extends State<PropertyCard> {
                 ),
               ],
             ),
+
+            if (widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              AdvertisingPermitBadge(
+                permitNumber: widget.property.advertisingPermitNumber,
+                qrSize: 36,
+              ),
+            ],
 
             if (widget.semanticResult != null) ...[
               const SizedBox(height: 8),

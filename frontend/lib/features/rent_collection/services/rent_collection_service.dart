@@ -489,6 +489,7 @@ class RentCollectionService {
             unitNumber: prop.unitNumber,
             buildingName: prop.buildingName,
             district: district,
+            cityCode: prop.cityCode,
             propertyId: prop.id,
             monthKey: inst.monthKey,
             propertyTypeCode: prop.propertyTypeCode,

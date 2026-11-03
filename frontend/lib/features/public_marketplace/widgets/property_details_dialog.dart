@@ -13,6 +13,7 @@ import '../../../core/utils/market_display.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
 import '../models/property_item.dart';
+import 'advertising_permit_badge.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class PropertyDetailsDialog extends StatefulWidget {
@@ -410,6 +411,13 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                               ),
                                             ],
                                           ),
+                                          if (widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
+                                            const SizedBox(height: 12),
+                                            AdvertisingPermitBadge(
+                                              permitNumber: widget.property.advertisingPermitNumber,
+                                              qrSize: 72,
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ),

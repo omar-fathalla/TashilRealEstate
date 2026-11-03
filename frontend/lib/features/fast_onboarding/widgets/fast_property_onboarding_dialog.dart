@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/utils/advertising_permit.dart';
 import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
@@ -64,6 +65,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
   late FastPropertyDraft _draft;
 
   late TextEditingController _cityCtrl;
+  late TextEditingController _permitCtrl;
   late TextEditingController _districtCtrl;
   late TextEditingController _buildingNameCtrl;
   late TextEditingController _unitNumberCtrl;
@@ -130,6 +132,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
 
     _cityCtrl = TextEditingController(text: _draft.city);
     _districtCtrl = TextEditingController(text: _draft.district);
+    _permitCtrl = TextEditingController(text: _draft.advertisingPermitNumber);
     _buildingNameCtrl = TextEditingController(text: _draft.buildingName ?? '');
     _unitNumberCtrl = TextEditingController(text: _draft.unitNumber ?? '');
 
@@ -167,6 +170,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
   void dispose() {
     _cityCtrl.dispose();
     _districtCtrl.dispose();
+    _permitCtrl.dispose();
     _buildingNameCtrl.dispose();
     _unitNumberCtrl.dispose();
     _rentCtrl.dispose();
@@ -189,6 +193,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
       _draft = draft;
       _cityCtrl.text = draft.city;
       _districtCtrl.text = draft.district;
+      _permitCtrl.text = draft.advertisingPermitNumber;
       _buildingNameCtrl.text = draft.buildingName ?? '';
       _unitNumberCtrl.text = draft.unitNumber ?? '';
 
@@ -310,9 +315,20 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
     }
   }
 
+  String? _permitError(AppLocalizations loc, String? value) {
+    final cityCode = deriveCityCode(
+      city: _cityCtrl.text,
+      district: _districtCtrl.text,
+      countryCode: _draft.countryCode,
+    );
+    final key = AdvertisingPermit.errorKey(value: value ?? '', cityCode: cityCode);
+    return key == null ? null : loc.tr(key);
+  }
+
   void _syncControllersToDraft() {
     _draft.city = _cityCtrl.text.trim();
     _draft.district = _districtCtrl.text.trim();
+    _draft.advertisingPermitNumber = _permitCtrl.text.trim();
     _draft.buildingName = _buildingNameCtrl.text.trim();
     _draft.unitNumber = _unitNumberCtrl.text.trim();
     _draft.monthlyRent = double.tryParse(_rentCtrl.text.trim()) ?? _draft.monthlyRent;
@@ -434,6 +450,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         propertyTypeCode: _draft.propertyType,
         unitNumber: _draft.unitNumber ?? '',
         buildingName: _draft.buildingName ?? '',
@@ -475,6 +492,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         pricePerMonth: _draft.monthlyRent,
         bedrooms: _draft.bedrooms,
         bathrooms: _draft.bathrooms,
@@ -844,6 +862,16 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 10),
+                        TashilTextField.outlined(
+                          controller: _permitCtrl,
+                          labelText: loc.tr('adPermitNumberLabel'),
+                          hintText: loc.tr('adPermitNumberHint'),
+                          prefixIcon: Symbols.qr_code_2_rounded,
+                          keyboardType: TextInputType.number,
+                          validator: (value) => _permitError(loc, value),
+                          onChanged: (value) => _draft.advertisingPermitNumber = value.trim(),
                         ),
                         const SizedBox(height: 10),
                         Row(

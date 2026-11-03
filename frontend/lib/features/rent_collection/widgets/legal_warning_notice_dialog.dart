@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
+import 'package:tashil_real_estate/core/utils/uae_emirate.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
@@ -28,6 +29,7 @@ class LegalWarningNoticeDialog extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final isMobile = ResponsiveLayout.isMobile(context);
     final isUAE = invoice.countryCode == 'AE';
+    final emirate = resolveUaeEmirate(cityCode: invoice.cityCode, district: invoice.district);
     final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
     final lang = LocaleController.languageCode;
     final theme = Theme.of(context);
@@ -88,7 +90,7 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isUAE ? loc.tr('dubaiLandDept') : loc.tr('egyptMinistryJustice'),
+                      isUAE ? loc.tr(rentalDisputeAuthorityKey(emirate)) : loc.tr('egyptMinistryJustice'),
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 10),
@@ -203,7 +205,7 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 child: Text(
-                  isUAE ? loc.tr('legalNoticeBody_ae') : loc.tr('legalNoticeBody_eg'),
+                  isUAE ? loc.tr(legalNoticeBodyKey(emirate)) : loc.tr('legalNoticeBody_eg'),
                   style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.6, color: theme.colorScheme.onSurface),
                 ),
               ),

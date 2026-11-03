@@ -81,6 +81,7 @@ class FastPropertyDraft {
   DateTime? availableFrom; // If null, "متاح فوراً"
 
   String countryCode; // 'EG' or 'AE'
+  String advertisingPermitNumber;
 
   FastPropertyDraft({
     // Section 1: Location
@@ -129,6 +130,7 @@ class FastPropertyDraft {
     this.videoTourUrl,
     this.availableFrom,
     this.countryCode = 'EG',
+    this.advertisingPermitNumber = '',
   }) : photoUrls = photoUrls ?? [];
 
   Map<String, dynamic> toJson() => {
@@ -178,6 +180,7 @@ class FastPropertyDraft {
         'videoTourUrl': videoTourUrl,
         'availableFrom': availableFrom?.toIso8601String(),
         'countryCode': countryCode,
+        'advertisingPermitNumber': advertisingPermitNumber,
       };
 
   factory FastPropertyDraft.fromJson(Map<String, dynamic> json) {
@@ -258,6 +261,7 @@ class FastPropertyDraft {
       videoTourUrl: json['videoTourUrl']?.toString(),
       availableFrom: parseDate(json['availableFrom']),
       countryCode: json['countryCode']?.toString() ?? 'EG',
+      advertisingPermitNumber: json['advertisingPermitNumber']?.toString() ?? json['adPermitNumber']?.toString() ?? '',
     );
   }
 }
@@ -273,6 +277,8 @@ String deriveCityCode({
     if (text.contains('شارقة') || text.contains('sharjah')) return 'sharjah';
     if (text.contains('عجمان') || text.contains('ajman')) return 'ajman';
     if (text.contains('رأس الخيمة') || text.contains('راس الخيمة') || text.contains('ras al khaimah')) return 'ras_al_khaimah';
+    if (text.contains('أم القيوين') || text.contains('ام القيوين') || text.contains('umm al quwain')) return 'umm_al_quwain';
+    if (text.contains('الفجيرة') || text.contains('فجيرة') || text.contains('fujairah')) return 'fujairah';
     return 'dubai';
   }
   // Egypt

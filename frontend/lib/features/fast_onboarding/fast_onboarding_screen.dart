@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/utils/advertising_permit.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/widgets/public_header_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,6 +58,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
 
   // Section 1 Controllers
   late TextEditingController _cityCtrl;
+  late TextEditingController _permitCtrl;
   late TextEditingController _districtCtrl;
   late TextEditingController _buildingNameCtrl;
   late TextEditingController _unitNumberCtrl;
@@ -125,6 +127,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     }
 
     _cityCtrl = TextEditingController(text: _draft.city);
+    _permitCtrl = TextEditingController(text: _draft.advertisingPermitNumber);
     _districtCtrl = TextEditingController(text: _draft.district);
     _buildingNameCtrl = TextEditingController(text: _draft.buildingName ?? '');
     _unitNumberCtrl = TextEditingController(text: _draft.unitNumber ?? '');
@@ -186,6 +189,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
   @override
   void dispose() {
     _cityCtrl.dispose();
+    _permitCtrl.dispose();
     _districtCtrl.dispose();
     _buildingNameCtrl.dispose();
     _unitNumberCtrl.dispose();
@@ -241,6 +245,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
       );
       _cityCtrl.clear();
       _districtCtrl.clear();
+      _permitCtrl.clear();
       _buildingNameCtrl.clear();
       _unitNumberCtrl.clear();
       _rentCtrl.clear();
@@ -268,6 +273,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     setState(() {
       _draft = draft;
       _cityCtrl.text = draft.city;
+      _permitCtrl.text = draft.advertisingPermitNumber;
       _districtCtrl.text = draft.district;
       _buildingNameCtrl.text = draft.buildingName ?? '';
       _unitNumberCtrl.text = draft.unitNumber ?? '';
@@ -408,9 +414,20 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     }
   }
 
+  String? _permitError(AppLocalizations loc, String? value) {
+    final cityCode = deriveCityCode(
+      city: _cityCtrl.text,
+      district: _districtCtrl.text,
+      countryCode: _draft.countryCode,
+    );
+    final key = AdvertisingPermit.errorKey(value: value ?? '', cityCode: cityCode);
+    return key == null ? null : loc.tr(key);
+  }
+
   void _syncControllersToDraft() {
     _draft.city = _cityCtrl.text.trim();
     _draft.district = _districtCtrl.text.trim();
+    _draft.advertisingPermitNumber = _permitCtrl.text.trim();
     _draft.buildingName = _buildingNameCtrl.text.trim();
     _draft.unitNumber = _unitNumberCtrl.text.trim();
     _draft.monthlyRent = double.tryParse(_rentCtrl.text.trim()) ?? _draft.monthlyRent;
@@ -569,6 +586,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         propertyTypeCode: _draft.propertyType,
         unitNumber: _draft.unitNumber ?? '',
         buildingName: _draft.buildingName ?? '',
@@ -605,6 +623,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         pricePerMonth: _draft.monthlyRent,
         bedrooms: _draft.bedrooms,
         bathrooms: _draft.bathrooms,
@@ -1202,6 +1221,16 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               ],
             ),
           ],
+          const SizedBox(height: 14),
+          TashilTextField.outlined(
+            controller: _permitCtrl,
+            labelText: loc.tr('adPermitNumberLabel'),
+            hintText: loc.tr('adPermitNumberHint'),
+            prefixIcon: Symbols.qr_code_2_rounded,
+            keyboardType: TextInputType.number,
+            validator: (value) => _permitError(loc, value),
+            onChanged: (value) => _draft.advertisingPermitNumber = value.trim(),
+          ),
           const SizedBox(height: 16),
 
           // Building / Compound & Unit Number (Responsive)

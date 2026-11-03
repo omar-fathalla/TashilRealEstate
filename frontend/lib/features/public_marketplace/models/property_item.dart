@@ -18,6 +18,7 @@ class PropertyItem {
   final Map<String, String> agencyNames;
   final String agencyPhone;
   final double rating;
+  final String advertisingPermitNumber;
 
   const PropertyItem({
     required this.id,
@@ -39,6 +40,7 @@ class PropertyItem {
     required this.agencyNames,
     this.agencyPhone = '+971 50 000 0000',
     this.rating = 4.8,
+    this.advertisingPermitNumber = '',
   });
 
   String getTitle(String lang) => titles[lang] ?? titles['en'] ?? titles['ar'] ?? '';
@@ -256,6 +258,7 @@ class PropertyItem {
         'hi': 'मरीना गेट, दुबई मरीना, दुबई',
       },
       cityCode: 'dubai',
+      advertisingPermitNumber: '7123456789',
       pricePerMonth: 14500,
       bedrooms: 2,
       bathrooms: 2,
@@ -301,6 +304,7 @@ class PropertyItem {
         'hi': 'डाउनटाउन दुबई, दुबई मॉल के पास',
       },
       cityCode: 'dubai',
+      advertisingPermitNumber: '7123456789',
       pricePerMonth: 28000,
       bedrooms: 3,
       bathrooms: 3,
@@ -345,6 +349,7 @@ class PropertyItem {
         'hi': 'फ्रोंड के, पाम जुमेराह, दुबई',
       },
       cityCode: 'dubai',
+      advertisingPermitNumber: '7123456789',
       pricePerMonth: 48000,
       bedrooms: 5,
       bathrooms: 6,
@@ -389,6 +394,7 @@ class PropertyItem {
         'hi': 'बिजनेस बे, दुबई',
       },
       cityCode: 'dubai',
+      advertisingPermitNumber: '7123456789',
       pricePerMonth: 6500,
       bedrooms: 1,
       bathrooms: 1,
@@ -479,6 +485,7 @@ class PropertyItem {
       'agencyNames': agencyNames,
       'agencyPhone': agencyPhone,
       'rating': rating,
+      'adPermitNumber': advertisingPermitNumber,
     };
   }
 
@@ -546,6 +553,7 @@ class PropertyItem {
       agencyNames: parseStringMap(map['agencyNames'], 'شركة تسهيل لإدارة الأملاك'),
       agencyPhone: map['agencyPhone']?.toString() ?? '+971 50 000 0000',
       rating: (map['rating'] is num) ? (map['rating'] as num).toDouble() : 4.8,
+      advertisingPermitNumber: map['adPermitNumber']?.toString() ?? map['ad_permit_number']?.toString() ?? map['advertisingPermitNumber']?.toString() ?? '',
     );
   }
 }

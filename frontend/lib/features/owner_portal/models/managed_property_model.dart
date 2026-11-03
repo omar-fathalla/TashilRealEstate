@@ -178,6 +178,7 @@ class ManagedPropertyModel {
   final double areaSqM;
   final String image;
   final List<String> imageUrls;
+  final String advertisingPermitNumber;
   final bool isPublished; // هل الوحدة معروضة حالياً للجمهور في السوق العام؟
   final PropertyRentalStatus rentalStatus;
   final String? tenantName;
@@ -204,6 +205,7 @@ class ManagedPropertyModel {
     required this.areaSqM,
     required this.image,
     required this.imageUrls,
+    this.advertisingPermitNumber = '',
     this.isPublished = true,
     this.rentalStatus = PropertyRentalStatus.rented,
     this.tenantName,
@@ -253,6 +255,7 @@ class ManagedPropertyModel {
     double? areaSqM,
     String? image,
     List<String>? imageUrls,
+    String? advertisingPermitNumber,
     bool? isPublished,
     PropertyRentalStatus? rentalStatus,
     bool clearTenant = false,
@@ -282,6 +285,7 @@ class ManagedPropertyModel {
       areaSqM: areaSqM ?? this.areaSqM,
       image: image ?? this.image,
       imageUrls: imageUrls ?? this.imageUrls,
+      advertisingPermitNumber: advertisingPermitNumber ?? this.advertisingPermitNumber,
       isPublished: isPublished ?? this.isPublished,
       rentalStatus: rentalStatus ?? this.rentalStatus,
       tenantName: clearTenant ? null : (tenantName ?? this.tenantName),
@@ -326,6 +330,7 @@ class ManagedPropertyModel {
       },
       agencyPhone: countryCode == 'AE' ? '+971 50 000 0000' : '+20 100 123 4567',
       rating: 5.0,
+      advertisingPermitNumber: advertisingPermitNumber,
     );
   }
 
@@ -369,6 +374,7 @@ class ManagedPropertyModel {
       descriptionEn: getDescription('en'),
       descriptionHi: getDescription('hi'),
       photoUrls: images,
+      advertisingPermitNumber: advertisingPermitNumber,
     );
   }
 
@@ -390,6 +396,7 @@ class ManagedPropertyModel {
       'areaSqM': areaSqM,
       'image': image,
       'imageUrls': imageUrls,
+      'adPermitNumber': advertisingPermitNumber,
       'isPublished': isPublished,
       'rentalStatus': rentalStatus.name,
       'tenantName': tenantName,
@@ -509,6 +516,7 @@ class ManagedPropertyModel {
               : 100.0,
       image: singleImage,
       imageUrls: imageUrls,
+      advertisingPermitNumber: map['adPermitNumber']?.toString() ?? map['ad_permit_number']?.toString() ?? map['advertisingPermitNumber']?.toString() ?? '',
       isPublished: map['isPublished'] == true || map['is_published'] == true,
       rentalStatus: parseRentalStatus(map['rentalStatus']?.toString() ?? map['rental_status']?.toString()),
       tenantName: map['tenantName']?.toString() ?? map['tenant_name']?.toString(),

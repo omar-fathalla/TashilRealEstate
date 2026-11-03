@@ -27,6 +27,25 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().role == 'Tenant';
     }
 
+    function isDubaiListing() {
+      return request.resource.data.get('cityCode', '') == 'dubai'
+        || request.resource.data.get('city_code', '') == 'dubai';
+    }
+
+    function isPublishedListing() {
+      return request.resource.data.get('isPublished', false) == true
+        || request.resource.data.get('is_published', false) == true;
+    }
+
+    function hasAdvertisingPermit() {
+      return request.resource.data.get('adPermitNumber', '') is string
+        && request.resource.data.adPermitNumber.matches('^[0-9]{6,15}$');
+    }
+
+    function dubaiPermitOk() {
+      return !isDubaiListing() || !isPublishedListing() || hasAdvertisingPermit();
+    }
+
     // 1. Users Collection
     match /Users/{userId} {
       allow read: if isAuthenticated();
@@ -35,7 +54,8 @@ service cloud.firestore {
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
-        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if (isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId))
+          && dubaiPermitOk();
       }
     }
 
@@ -45,8 +65,13 @@ service cloud.firestore {
       allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
       
       // Agency admins and Owners can create/update properties
-      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
-      allow update, delete: if isSuperAdmin() || 
+      allow create: if (isSuperAdmin() || isAgencyAdmin() || isAuthenticated())
+        && dubaiPermitOk();
+      allow update: if (isSuperAdmin() || 
+        (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
+        (isAuthenticated() && resource.data.owner_id == request.auth.uid))
+        && dubaiPermitOk();
+      allow delete: if isSuperAdmin() || 
         (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
         (isAuthenticated() && resource.data.owner_id == request.auth.uid);
     }
