@@ -103,7 +103,7 @@ void main() {
         locale: const Locale('en'),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Trash & Recycle Bin'), findsWidgets);
+      expect(find.text('Trash & recycle bin'), findsWidgets);
 
       // Hindi
       await tester.pumpWidget(buildTestApp(

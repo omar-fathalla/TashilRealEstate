@@ -1,11 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class RevenueVsExpenseChartCard extends StatelessWidget {
   final List<MonthlyCashFlowPoint> history;
@@ -20,6 +22,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
     required this.lang,
     required this.isMobile,
   });
+
+  String _yoyRate(List<MonthlyCashFlowPoint> history) {
+    if (history.length < 2 || history.first.netProfit == 0) return '0';
+    final rate = (history.last.netProfit - history.first.netProfit) / history.first.netProfit.abs() * 100;
+    return rate.toStringAsFixed(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +60,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.bar_chart_rounded, color: colorScheme.primary, size: 20),
+                      child: Icon(Symbols.bar_chart_rounded, color: colorScheme.primary, size: 20),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -61,12 +69,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         children: [
                           Text(
                             loc.tr('monthlyRevenueVsExpensesChartTitle'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             loc.tr('netProfitCashFlowTrendSubtitle'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -78,9 +86,9 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 6,
                 children: [
-                  _buildLegendItem(loc.tr('grossIncomeLegend'), colorScheme.primary, colorScheme),
-                  _buildLegendItem(loc.tr('expensesLegend'), colorScheme.error, colorScheme),
-                  _buildLegendItem(loc.tr('netProfitLegend'), colorScheme.secondary, colorScheme),
+                  _buildLegendItem(context, loc.tr('grossIncomeLegend'), colorScheme.primary, colorScheme),
+                  _buildLegendItem(context, loc.tr('expensesLegend'), colorScheme.tertiary, colorScheme),
+                  _buildLegendItem(context, loc.tr('netProfitLegend'), colorScheme.secondary, colorScheme),
                 ],
               ),
             ],
@@ -97,25 +105,38 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 final incomeHeightRatio = (pt.grossIncome / safeMax) * 140;
                 final expenseHeightRatio = (pt.operationalExpenses / safeMax) * 140;
 
+                final compactLabel = NumberFormat.compact(
+                  locale: Localizations.localeOf(context).toString(),
+                ).format(pt.netProfit);
+                final profitLabel = pt.netProfit > 0 ? '+$compactLabel' : compactLabel;
+
                 return Expanded(
-                  child: Padding(
+                  child: Tooltip(
+                    message: profitLabel,
+                    triggerMode: isMobile ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+                    child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Net Profit Pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(4),
+                        if (!isMobile)
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                profitLabel,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            '+${(pt.netProfit / 1000).toStringAsFixed(0)}k',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
+                        if (!isMobile) const SizedBox(height: 6),
 
                         // Dual Bar (Income & Expense)
                         Row(
@@ -142,7 +163,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                               height: max(expenseHeightRatio, 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [colorScheme.error, colorScheme.error.withValues(alpha: 0.7)],
+                                  colors: [colorScheme.tertiary, colorScheme.tertiary.withValues(alpha: 0.7)],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
@@ -156,16 +177,14 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         // Month Label
                         Text(
                           monthName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
+                  ),
                   ),
                 );
               }).toList(),
@@ -182,12 +201,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.trending_up_rounded, size: 18, color: colorScheme.secondary),
+                    Icon(Symbols.trending_up_rounded, size: 18, color: colorScheme.secondary),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         '${loc.tr('averageMonthlyNetProfit')}: ${CurrencyFormatter.formatAmount(history.last.netProfit, langCode: lang)} $currency',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -203,8 +222,10 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  loc.tr('yoyProfitGrowthRate'),
-                  style: TextStyle(color: colorScheme.onSecondaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                  loc.tr('yoyProfitGrowthRate', {
+                    'rate': _yoyRate(history),
+                  }),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -214,7 +235,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, ColorScheme colorScheme) {
+  Widget _buildLegendItem(BuildContext context, String label, Color color, ColorScheme colorScheme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -226,7 +247,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
         ),
       ],
     );

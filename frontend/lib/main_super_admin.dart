@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/services/remote_config_service.dart';
 import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
 import 'package:tashil_real_estate/core/services/performance_monitoring_service.dart';
 import 'package:tashil_real_estate/core/services/crash_reporting_service.dart';
+import 'package:tashil_real_estate/core/config/firebase_emulator.dart';
 import 'package:tashil_real_estate/main.dart';
 
 /// Dedicated standalone entry point for the Tashil Real Estate Super Admin Portal.
@@ -45,16 +46,23 @@ void main() async {
     return false;
   };
 
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.prepareBeforeInitializeApp();
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Enterprise Firebase Services asynchronously
-  CrashReportingService().initialize();
-  unawaited(AppCheckService().initialize());
-  unawaited(RemoteConfigService().initialize());
-  unawaited(FcmNotificationService().initialize());
-  unawaited(PerformanceMonitoringService().initialize());
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.connect();
+  } else {
+    CrashReportingService().initialize();
+    unawaited(AppCheckService().initialize());
+    unawaited(RemoteConfigService().initialize());
+    unawaited(FcmNotificationService().initialize());
+    unawaited(PerformanceMonitoringService().initialize());
+  }
 
   // Launch Tashil Real Estate App with Super Admin router initialLocation: '/admin'
   runApp(TashilRealEstateApp(routerConfig: superAdminAppRouter));

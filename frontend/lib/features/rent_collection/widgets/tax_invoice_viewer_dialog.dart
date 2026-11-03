@@ -8,6 +8,8 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class TaxInvoiceViewerDialog extends StatelessWidget {
   final RentInvoiceModel invoice;
@@ -43,7 +45,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
         '?ref=${invoice.id}&token=$token&total=${invoice.totalAmountDue}'
         '&country=${invoice.countryCode}&date=${invoice.dueDate.toIso8601String().split('T').first}';
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,
@@ -71,7 +73,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            Icons.receipt_long_rounded,
+                            Symbols.receipt_long_rounded,
                             color: theme.colorScheme.onPrimaryContainer,
                             size: 20,
                           ),
@@ -83,16 +85,13 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                             children: [
                               Text(
                                 loc.tr('officialElectronicTaxInvoice'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 isUAE ? loc.tr('taxAuthorityUAEStandard') : loc.tr('taxAuthorityEGStandard'),
-                                style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
@@ -134,10 +133,10 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                                 children: [
                                   Icon(
                                     isPaid
-                                        ? Icons.check_circle_rounded
+                                        ? Symbols.check_circle_rounded
                                         : isOverdue
-                                            ? Icons.warning_amber_rounded
-                                            : Icons.schedule_rounded,
+                                            ? Symbols.warning_amber_rounded
+                                            : Symbols.schedule_rounded,
                                     size: 16,
                                     color: isPaid
                                         ? theme.colorScheme.primary
@@ -153,15 +152,12 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                                           : isOverdue
                                               ? '${loc.tr('statusOverdueWithDays')} (${invoice.overdueDays} ${loc.tr('days')})'
                                               : loc.tr('statusPendingPayment'),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                                         color: isPaid
                                             ? theme.colorScheme.primary
                                             : isOverdue
                                                 ? theme.colorScheme.error
-                                                : theme.colorScheme.onSecondaryContainer,
-                                      ),
+                                                : theme.colorScheme.onSecondaryContainer),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -173,12 +169,9 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                               textDirection: TextDirection.ltr,
                               child: Text(
                                 invoice.invoiceNumber,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                  color: theme.colorScheme.onSurface),
                               ),
                             ),
                           ],
@@ -213,11 +206,8 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                       // Line Items Table
                       Text(
                         loc.tr('invoiceFinancialBreakdown'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 8),
 
@@ -265,7 +255,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
                                 boxShadow: [
@@ -302,16 +292,16 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Row(
-                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.verified_rounded, size: 14, color: theme.colorScheme.primary),
+                                        Icon(Symbols.verified_rounded, size: 14, color: theme.colorScheme.primary),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          loc.tr('digitallyCertified'),
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.onPrimaryContainer,
+                                        Flexible(
+                                          child: Text(
+                                            loc.tr('digitallyCertified'),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.onPrimaryContainer),
                                           ),
                                         ),
                                       ],
@@ -320,42 +310,30 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                                   const SizedBox(height: 6),
                                   Text(
                                     loc.tr('taxAuthorityVerification'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
                                     isUAE
                                         ? loc.tr('taxAuthorityUAEStandard')
                                         : loc.tr('taxAuthorityEGStandard'),
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                                      color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     loc.tr('qrScanVerifyHint'),
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 6),
                                   Directionality(
                                     textDirection: TextDirection.ltr,
                                     child: Text(
                                       'Token: $token • Escrow Secured',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                         letterSpacing: 0.4,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                        color: theme.colorScheme.primary),
                                     ),
                                   ),
                                 ],
@@ -386,7 +364,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                         ),
                       );
                     },
-                    icon: Icons.download_rounded,
+                    icon: Symbols.download_rounded,
                     label: loc.tr('downloadInvoice'),
                   ),
                 ),
@@ -405,7 +383,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                             ),
                           );
                         },
-                        icon: Icons.download_rounded,
+                        icon: Symbols.download_rounded,
                         label: loc.tr('downloadInvoice'),
                       ),
                     ),
@@ -416,7 +394,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                           Navigator.of(context).pop();
                           TenantCheckoutDialog.show(context, invoice);
                         },
-                        icon: Icons.payment_rounded,
+                        icon: Symbols.payment_rounded,
                         label: loc.tr('payNowOnline'),
                       ),
                     ),
@@ -435,7 +413,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+        Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         Flexible(
           child: isLtr
               ? Directionality(
@@ -443,21 +421,15 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
                   child: Text(
                     value,
                     textAlign: TextAlign.end,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
                   ),
                 )
               : Text(
                   value,
                   textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface),
                 ),
         ),
       ],
@@ -473,23 +445,17 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: isTotal ? 13 : 12,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-              color: isPenalty ? theme.colorScheme.error : theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+              color: isPenalty ? theme.colorScheme.error : theme.colorScheme.onSurface),
           ),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: isTotal ? 14 : 12,
-              fontWeight: FontWeight.bold,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
               color: isTotal
                   ? theme.colorScheme.primary
                   : isPenalty
                       ? theme.colorScheme.error
-                      : theme.colorScheme.onSurface,
-            ),
+                      : theme.colorScheme.onSurface),
           ),
         ],
       ),

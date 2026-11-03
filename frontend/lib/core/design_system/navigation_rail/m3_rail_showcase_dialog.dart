@@ -3,6 +3,8 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'tashil_navigation_rail.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive Showcase Dialog for Google Material Design 3 Navigation Rail & Nested Canvas.
 class M3RailShowcaseDialog extends StatefulWidget {
@@ -38,7 +40,7 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
         ? colorScheme.surfaceContainerLow
         : Color.alphaBlend(colorScheme.primary.withAlpha(10), colorScheme.surfaceContainerLow);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)),
@@ -59,7 +61,7 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                       borderRadius: BorderRadius.circular(14.0),
                     ),
                     child: Icon(
-                      Icons.view_sidebar_rounded,
+                      Symbols.view_sidebar_rounded,
                       color: colorScheme.onSecondaryContainer,
                       size: 24.0,
                     ),
@@ -87,13 +89,13 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                     ),
                   ),
                   TashilButton.tonal(
-                    icon: _isExpanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
+                    icon: _isExpanded ? Symbols.close_fullscreen_rounded : Symbols.open_in_full_rounded,
                     label: _isExpanded ? loc.tr('railMode') : loc.tr('expandedMode'),
                     onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   ),
                   const SizedBox(width: 8.0),
                   TashilIconButton.standard(
-                    icon: Icons.close_rounded,
+                    icon: Symbols.close_rounded,
                     size: 38.0,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -130,16 +132,13 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                     color: colorScheme.primary,
                                     borderRadius: BorderRadius.circular(8.0),
                                   ),
-                                  child: Icon(Icons.apartment_rounded, color: colorScheme.onPrimary, size: 18.0),
+                                  child: Icon(Symbols.apartment_rounded, color: colorScheme.onPrimary, size: 18.0),
                                 ),
                                 const SizedBox(width: 10.0),
                                 Text(
                                   loc.tr('appName'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15.0,
-                                    color: colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface),
                                 ),
                               ],
                             ),
@@ -151,11 +150,8 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                               ),
                               child: Text(
                                 loc.tr('nestedCanvas'),
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.primary,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                  color: colorScheme.primary),
                               ),
                             ),
                           ],
@@ -174,8 +170,8 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                               menuTooltip: loc.tr('menu'),
                               actionFab: _isExpanded
                                   ? TashilButton(
-                                      icon: Icons.add_rounded,
-                                      label: 'إضافة وحدة',
+                                      icon: Symbols.add_rounded,
+                                      label: AppLocalizations.trStatic('uiCopy094'),
                                       onPressed: () {},
                                     )
                                   : FloatingActionButton.small(
@@ -184,20 +180,20 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                       foregroundColor: colorScheme.onPrimary,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
                                       onPressed: () {},
-                                      child: const Icon(Icons.add_rounded, size: 22.0),
+                                      child: const Icon(Symbols.add_rounded, size: 22.0),
                                     ),
                               destinations: [
                                 TashilRailDestination(
-                                  icon: Icons.dashboard_outlined,
-                                  selectedIcon: Icons.dashboard_rounded,
+                                  icon: Symbols.dashboard_rounded,
+                                  selectedIcon: Symbols.dashboard_rounded,
                                   label: loc.tr('portfolioOverview'),
                                   isSelected: _selectedIndex == 0,
                                   isExpanded: _isExpanded,
                                   onTap: () => setState(() => _selectedIndex = 0),
                                 ),
                                 TashilRailDestination(
-                                  icon: Icons.apartment_outlined,
-                                  selectedIcon: Icons.apartment_rounded,
+                                  icon: Symbols.apartment_rounded,
+                                  selectedIcon: Symbols.apartment_rounded,
                                   label: loc.tr('myProperties'),
                                   badgeCount: '5',
                                   isSelected: _selectedIndex == 1,
@@ -205,16 +201,16 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                   onTap: () => setState(() => _selectedIndex = 1),
                                 ),
                                 TashilRailDestination(
-                                  icon: Icons.account_balance_wallet_outlined,
-                                  selectedIcon: Icons.account_balance_wallet_rounded,
+                                  icon: Symbols.account_balance_wallet_rounded,
+                                  selectedIcon: Symbols.account_balance_wallet_rounded,
                                   label: loc.tr('financialsAndPayouts'),
                                   isSelected: _selectedIndex == 2,
                                   isExpanded: _isExpanded,
                                   onTap: () => setState(() => _selectedIndex = 2),
                                 ),
                                 TashilRailDestination(
-                                  icon: Icons.build_outlined,
-                                  selectedIcon: Icons.build_rounded,
+                                  icon: Symbols.build_rounded,
+                                  selectedIcon: Symbols.build_rounded,
                                   label: loc.tr('maintenanceTickets'),
                                   badgeCount: '1',
                                   isSelected: _selectedIndex == 3,
@@ -222,7 +218,7 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                   onTap: () => setState(() => _selectedIndex = 3),
                                 ),
                                 TashilRailDestination(
-                                  icon: Icons.tune_rounded,
+                                  icon: Symbols.tune_rounded,
                                   label: loc.tr('settings'),
                                   isSelected: _selectedIndex == 4,
                                   isExpanded: _isExpanded,
@@ -236,11 +232,8 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                   backgroundColor: colorScheme.primaryContainer,
                                   child: Text(
                                     'AF',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12.0,
-                                      color: colorScheme.onPrimaryContainer,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onPrimaryContainer),
                                   ),
                                 ),
                               ),
@@ -265,7 +258,7 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.rounded_corner_rounded, size: 24.0, color: colorScheme.primary),
+                                        Icon(Symbols.rounded_corner_rounded, size: 24.0, color: colorScheme.primary),
                                         const SizedBox(width: 10.0),
                                         Text(
                                           loc.tr('nestedCanvasDesc'),
@@ -286,12 +279,12 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(Icons.info_outline_rounded, size: 20.0, color: colorScheme.primary),
+                                          Icon(Symbols.info_rounded, size: 20.0, color: colorScheme.primary),
                                           const SizedBox(width: 10.0),
                                           Expanded(
                                             child: Text(
                                               loc.tr('railActiveIndicatorDesc'),
-                                              style: TextStyle(fontSize: 12.5, color: colorScheme.onSurface),
+                                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface),
                                             ),
                                           ),
                                         ],
@@ -299,19 +292,19 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
                                     ),
                                     const SizedBox(height: 20.0),
                                     Text(
-                                      'المواصفات الهندسية المحققة:',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: colorScheme.onSurface),
+                                      AppLocalizations.trStatic('uiCopy148'),
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                     ),
                                     const SizedBox(height: 8.0),
-                                    Text('• عرض الشريط القياسي في وضع الـ Rail هو 80.0dp بدقة.', style: TextStyle(fontSize: 12.0, color: colorScheme.onSurfaceVariant)),
+                                    Text(AppLocalizations.trStatic('uiCopy332'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
                                     const SizedBox(height: 4.0),
-                                    Text('• مؤشر الكبسولة النشطة للأيقونة بمقاس 56×32dp مع استدارة 16dp.', style: TextStyle(fontSize: 12.0, color: colorScheme.onSurfaceVariant)),
+                                    Text(AppLocalizations.trStatic('uiCopy333'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
                                     const SizedBox(height: 4.0),
-                                    Text('• تموضع اسم الوجهة مباشرة تحت الأيقونة بنمط labelMedium.', style: TextStyle(fontSize: 12.0, color: colorScheme.onSurfaceVariant)),
+                                    Text(AppLocalizations.trStatic('uiCopy331'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
                                     const SizedBox(height: 4.0),
-                                    Text('• محاذاة زر المنيو العلوي في نفس المحور الرأسي للأيقونات.', style: TextStyle(fontSize: 12.0, color: colorScheme.onSurfaceVariant)),
+                                    Text(AppLocalizations.trStatic('uiCopy334'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
                                     const SizedBox(height: 4.0),
-                                    Text('• تكامل لوني موحد بين الهيدر والـ Rail مع انحناءة زاوية البودي 28dp.', style: TextStyle(fontSize: 12.0, color: colorScheme.onSurfaceVariant)),
+                                    Text(AppLocalizations.trStatic('uiCopy330'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
                                   ],
                                 ),
                               ),

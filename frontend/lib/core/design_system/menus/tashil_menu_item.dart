@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Data model representing an item in the Material Design 3 Dropdown Menu.
 class TashilDropdownMenuItem<T> {
@@ -120,11 +121,8 @@ class _TashilMenuItemWidgetState<T> extends State<TashilMenuItemWidget<T>> {
                   children: [
                     Text(
                       widget.item.label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: foregroundColor,
-                        fontSize: 13,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: foregroundColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -132,13 +130,10 @@ class _TashilMenuItemWidgetState<T> extends State<TashilMenuItemWidget<T>> {
                       const SizedBox(height: 2),
                       Text(
                         widget.item.supportingText!,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: isSelected
+                        style: theme.textTheme.labelMedium?.copyWith(color: isSelected
                               ? colorScheme.onSecondaryContainer.withValues(alpha: 0.8)
                               : colorScheme.onSurfaceVariant,
-                          fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -151,7 +146,7 @@ class _TashilMenuItemWidgetState<T> extends State<TashilMenuItemWidget<T>> {
               if (isSelected) ...[
                 const SizedBox(width: 8),
                 Icon(
-                  Icons.check_rounded,
+                  Symbols.check_rounded,
                   size: 18,
                   color: colorScheme.primary,
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Item model for actions inside the M3 FAB Menu.
 class TashilFabMenuItem {
@@ -33,8 +34,8 @@ class TashilFabMenu extends StatefulWidget {
   const TashilFabMenu({
     super.key,
     required this.items,
-    this.openIcon = Icons.add_rounded,
-    this.closeIcon = Icons.close_rounded,
+    this.openIcon = Symbols.add_rounded,
+    this.closeIcon = Symbols.close_rounded,
     this.tooltip,
     this.mainFabBackgroundColor,
     this.mainFabForegroundColor,

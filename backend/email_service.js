@@ -76,7 +76,6 @@ async function sendBrandedVerificationEmail(email, customSettings = {}) {
   return {
     success: true,
     messageId: info.messageId,
-    verificationLink: link,
   };
 }
 
@@ -118,7 +117,6 @@ async function sendBrandedPasswordResetEmail(email, customSettings = {}) {
   return {
     success: true,
     messageId: info.messageId,
-    resetLink: link,
   };
 }
 

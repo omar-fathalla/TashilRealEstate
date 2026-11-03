@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 (M3) Basic & Alert Dialog for Tashil Real Estate.
 ///
@@ -80,7 +82,7 @@ class TashilAlertDialog extends StatelessWidget {
     required String message,
     required String confirmLabel,
     required String cancelLabel,
-    IconData? icon = Icons.help_outline_rounded,
+    IconData? icon = Symbols.help_outline_rounded,
     bool isDestructive = false,
   }) async {
     final result = await show<bool>(
@@ -150,7 +152,7 @@ class TashilAlertDialog extends StatelessWidget {
       );
     }
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: resolvedBg,
       elevation: elevation,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),

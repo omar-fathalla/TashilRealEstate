@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Dedicated Executive Super Admin Login Portal for Tashil Real Estate.
 /// Completely isolated from public customer & tenant login flows.
@@ -20,8 +21,9 @@ class SuperAdminLoginScreen extends StatefulWidget {
 }
 
 class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
-  final _emailController = TextEditingController(text: SuperAdminSecurityConfig.defaultEmail);
-  final _passwordController = TextEditingController(text: SuperAdminSecurityConfig.envPassword);
+  final _emailController =
+      TextEditingController(text: SuperAdminSecurityConfig.defaultEmail);
+  final _passwordController = TextEditingController();
   final _securityKeyController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -50,21 +52,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
 
     try {
       final auth = FirebaseAuthService();
-      bool isAuthenticated = false;
-
-      // 1. Primary Authentication via Firebase Auth
       try {
         await auth.signInWithEmailAndPassword(email, password);
-        isAuthenticated = true;
       } catch (authError) {
-        debugPrint('ℹ️ Firebase Auth fallback check for local environment: $authError');
-        // 2. Cryptographic Salted SHA-256 Hash Verification for offline / local environment
-        if (SuperAdminSecurityConfig.verifyOfflineCredentials(email, password)) {
-          isAuthenticated = true;
-        }
-      }
-
-      if (!isAuthenticated) {
+        debugPrint('Admin sign-in failed: $authError');
         if (!mounted) return;
         setState(() => _isLoading = false);
         TashilSnackBar.showError(
@@ -115,7 +106,8 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     }
   }
 
-  Future<void> _showForgotPasswordDialog(BuildContext context, AppLocalizations loc) async {
+  Future<void> _showForgotPasswordDialog(
+      BuildContext context, AppLocalizations loc) async {
     final resetEmailController = TextEditingController(
       text: _emailController.text.trim().isNotEmpty
           ? _emailController.text.trim()
@@ -129,7 +121,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         builder: (context, setDialogState) {
           final theme = Theme.of(context);
           return TashilAlertDialog(
-            iconData: Icons.lock_reset_rounded,
+            iconData: Symbols.lock_reset_rounded,
             title: loc.tr('resetPasswordTitle'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -148,7 +140,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   textDirection: TextDirection.ltr,
                   decoration: InputDecoration(
                     labelText: loc.tr('adminEmailOrId'),
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: const Icon(Symbols.email_rounded),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -163,7 +155,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
               ),
               TashilButton.filled(
                 label: loc.tr('sendResetLinkBtn'),
-                icon: Icons.send_rounded,
+                icon: Symbols.send_rounded,
                 isLoading: isSending,
                 onPressed: isSending
                     ? null
@@ -178,7 +170,8 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                         }
                         setDialogState(() => isSending = true);
                         try {
-                          await FirebaseAuthService().sendPasswordResetEmail(email);
+                          await FirebaseAuthService()
+                              .sendPasswordResetEmail(email);
                           if (!dialogCtx.mounted) return;
                           Navigator.pop(dialogCtx);
                           TashilSnackBar.showSuccess(
@@ -210,260 +203,295 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         final colorScheme = theme.colorScheme;
         final loc = AppLocalizations.of(context);
 
-        return Scaffold(
-          backgroundColor: colorScheme.surfaceContainerLowest,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 12),
-          child: Center(
-            child: TashilIconButton.tonal(
-              icon: Icons.arrow_back_rounded,
-              tooltip: loc.tr('returnToMarketplace'),
-              onPressed: () => context.go('/'),
-            ),
-          ),
-        ),
-        actions: [
-          // Security Status Pill Badge
-          Container(
-            margin: const EdgeInsetsDirectional.only(end: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.25),
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop || _isLoading) return;
+            context.go('/');
+          },
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            backgroundColor: colorScheme.surfaceContainerLowest,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: TashilIconButton.tonal(
+                icon: Symbols.arrow_back_rounded,
+                tooltip: loc.tr('returnToMarketplace'),
+                onPressed: () => context.go('/'),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.verified_user_rounded,
-                  size: 16,
-                  color: colorScheme.primary,
+              actions: [
+                // Security Status Pill Badge
+                Container(
+                  margin: const EdgeInsetsDirectional.only(end: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Symbols.verified_user_rounded,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        loc.tr('systemGuardTier'),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  loc.tr('systemGuardTier'),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
+                // App Settings & Theme Trigger
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 16),
+                  child: TashilIconButton.standard(
+                    icon: Symbols.tune_rounded,
+                    tooltip: loc.tr('systemSettings'),
+                    onPressed: () => AppSettingsDialog.show(context),
                   ),
                 ),
               ],
             ),
-          ),
-          // App Settings & Theme Trigger
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 16),
-            child: TashilIconButton.standard(
-              icon: Icons.tune_rounded,
-              tooltip: loc.tr('systemSettings'),
-              onPressed: () => AppSettingsDialog.show(context),
-            ),
-          ),
-        ],
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: TashilCard.outlined(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Executive Emblem Header
-                  Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            colorScheme.primary,
-                            colorScheme.secondary,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.primary.withValues(alpha: 0.28),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.admin_panel_settings_rounded,
-                        size: 38,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 2. Titles
-                  Text(
-                    loc.tr('superAdminPortalTitle'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    loc.tr('superAdminPortalSubtitle'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 3. High-Security Notice Banner
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            body: Center(
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: TashilCard.outlined(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(
-                          Icons.security_rounded,
-                          size: 18,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            loc.tr('superAdminSecurityNotice'),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              height: 1.35,
+                        // 1. Executive Emblem Header
+                        Center(
+                          child: Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: AlignmentDirectional.topStart,
+                                end: AlignmentDirectional.bottomEnd,
+                                colors: [
+                                  colorScheme.primary,
+                                  colorScheme.secondary,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.28),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
                             ),
+                            child: Icon(
+                              Symbols.admin_panel_settings_rounded,
+                              size: 38,
+                              color: colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // 2. Titles
+                        Text(
+                          loc.tr('superAdminPortalTitle'),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          loc.tr('superAdminPortalSubtitle'),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 3. High-Security Notice Banner
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Symbols.security_rounded,
+                                size: 18,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  loc.tr('superAdminSecurityNotice'),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 4. Input Fields
+                        // Email / Admin Identifier
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          scrollPadding: const EdgeInsets.only(bottom: 120),
+                          textDirection: TextDirection.ltr,
+                          decoration: InputDecoration(
+                            labelText: loc.tr('adminEmailOrId'),
+                            prefixIcon: const Icon(Symbols.badge_rounded),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.password],
+                          scrollPadding: const EdgeInsets.only(bottom: 120),
+                          textDirection: TextDirection.ltr,
+                          decoration: InputDecoration(
+                            labelText: loc.tr('adminPassword'),
+                            prefixIcon:
+                                const Icon(Symbols.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Symbols.visibility_rounded
+                                    : Symbols.visibility_off_rounded,
+                              ),
+                              onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _showForgotPasswordDialog(context, loc),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              minimumSize: const Size(48, 48),
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                            ),
+                            child: Text(
+                              loc.tr('forgotPassword'),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 2FA Master Security Key
+                        TextFormField(
+                          controller: _securityKeyController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.oneTimeCode],
+                          scrollPadding: const EdgeInsets.only(bottom: 120),
+                          onFieldSubmitted: (_) {
+                            if (!_isLoading) _handleAdminLogin(loc);
+                          },
+                          textDirection: TextDirection.ltr,
+                          decoration: InputDecoration(
+                            labelText: loc.tr('adminSecurityKey'),
+                            prefixIcon: const Icon(Symbols.pin_rounded),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 5. Primary Sign In Action
+                        TashilButton.filled(
+                          label: loc.tr('superAdminSignInBtn'),
+                          icon: Symbols.login_rounded,
+                          height: 48,
+                          isLoading: _isLoading,
+                          onPressed:
+                              _isLoading ? null : () => _handleAdminLogin(loc),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // 6. Return to Marketplace
+                        Center(
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                            ),
+                            icon: const Icon(Symbols.storefront_rounded,
+                                size: 16),
+                            label: Text(
+                              loc.tr('returnToMarketplace'),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            onPressed: () => context.go('/'),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // 4. Input Fields
-                  // Email / Admin Identifier
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textDirection: TextDirection.ltr,
-                    decoration: InputDecoration(
-                      labelText: loc.tr('adminEmailOrId'),
-                      prefixIcon: const Icon(Icons.badge_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textDirection: TextDirection.ltr,
-                    decoration: InputDecoration(
-                      labelText: loc.tr('adminPassword'),
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton(
-                      onPressed: _isLoading ? null : () => _showForgotPasswordDialog(context, loc),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        loc.tr('forgotPassword'),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 2FA Master Security Key
-                  TextFormField(
-                    controller: _securityKeyController,
-                    textDirection: TextDirection.ltr,
-                    decoration: InputDecoration(
-                      labelText: loc.tr('adminSecurityKey'),
-                      prefixIcon: const Icon(Icons.pin_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 5. Primary Sign In Action
-                  TashilButton.filled(
-                    label: loc.tr('superAdminSignInBtn'),
-                    icon: Icons.login_rounded,
-                    height: 48,
-                    isLoading: _isLoading,
-                    onPressed: _isLoading ? null : () => _handleAdminLogin(loc),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 6. Return to Marketplace
-                  Center(
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.storefront_outlined, size: 16),
-                      label: Text(
-                        loc.tr('returnToMarketplace'),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed: () => context.go('/'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
       },
     );
   }

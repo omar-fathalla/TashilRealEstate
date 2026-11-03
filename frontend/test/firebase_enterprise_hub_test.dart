@@ -155,13 +155,13 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Firebase Enterprise Services Hub'), findsOneWidget);
-      expect(find.text('App Check Cloud Shield'), findsOneWidget);
-      expect(find.text('Real-time Push Notifications'), findsOneWidget);
-      expect(find.text('Live Remote Config'), findsOneWidget);
-      expect(find.text('Performance Monitoring'), findsOneWidget);
-      expect(find.text('Cloud Error Telemetry'), findsOneWidget);
-      expect(find.text('Digital Invoices & Receipts Automation'), findsOneWidget);
+      expect(find.text('Firebase enterprise services hub'), findsOneWidget);
+      expect(find.text('App check cloud shield'), findsOneWidget);
+      expect(find.text('Real-time push notifications'), findsOneWidget);
+      expect(find.text('Live remote config'), findsOneWidget);
+      expect(find.text('Performance monitoring'), findsOneWidget);
+      expect(find.text('Cloud error telemetry'), findsOneWidget);
+      expect(find.text('Digital invoices & receipts automation'), findsOneWidget);
     });
 
     testWidgets('Renders all 6 testing stations in Hindi Devanagari mode', (tester) async {

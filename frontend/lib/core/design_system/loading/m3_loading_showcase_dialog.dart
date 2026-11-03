@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/dialogs/tashil_modal_dialo
 import 'package:tashil_real_estate/core/design_system/loading/tashil_loading_indicator.dart';
 import 'package:tashil_real_estate/core/design_system/loading/tashil_loading_overlay.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive Material Design 3 Expressive Loading Indicator Showcase Dialog.
 class M3LoadingShowcaseDialog extends StatefulWidget {
@@ -55,14 +56,14 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
       child: TashilModalDialog(
         title: loc.tr('m3LoadingIndicatorTitle'),
         subtitle: loc.tr('m3LoadingExpressiveSubtitle'),
-        icon: Icons.hourglass_top_rounded,
+        icon: Symbols.hourglass_top_rounded,
         maxWidth: 680,
         footer: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             TashilButton(
               label: loc.tr('confirm'),
-              icon: Icons.check_circle_rounded,
+              icon: Symbols.check_circle_rounded,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -98,11 +99,8 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                           Text(
                             loc.tr('loadingSizeSmall'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -123,11 +121,8 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                           Text(
                             loc.tr('loadingSizeMedium'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.primary,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                              color: colorScheme.primary),
                           ),
                         ],
                       ),
@@ -148,11 +143,8 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                           Text(
                             loc.tr('loadingSizeLarge'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -180,9 +172,9 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                       children: [
                         TashilLoadingIndicator.medium(hasContainer: true),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           'M3 Elevation Level 2',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -193,9 +185,9 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                           color: colorScheme.tertiary,
                         ),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           'Tertiary Color Scheme',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -214,7 +206,7 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.blur_on_rounded, color: colorScheme.primary),
+                        Icon(Symbols.blur_on_rounded, color: colorScheme.primary),
                         const SizedBox(width: 8),
                         Text(
                           loc.tr('simulateOverlayAction'),
@@ -225,12 +217,12 @@ class _M3LoadingShowcaseDialogState extends State<M3LoadingShowcaseDialog> {
                     const SizedBox(height: 8),
                     Text(
                       loc.tr('loadingAiProcessing'),
-                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 16),
                     TashilButton(
                       label: loc.tr('simulateOverlayAction'),
-                      icon: Icons.play_arrow_rounded,
+                      icon: Symbols.play_arrow_rounded,
                       onPressed: _triggerOverlaySimulation,
                     ),
                   ],

@@ -5,12 +5,14 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/market_index/models/market_index_model.dart';
 import 'package:tashil_real_estate/features/market_index/services/ai_market_index_service.dart';
 import 'package:tashil_real_estate/features/market_index/widgets/ai_market_analyst_chat_dialog.dart';
 import 'package:tashil_real_estate/features/market_index/widgets/market_historical_chart.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class MarketIndexView extends StatefulWidget {
   const MarketIndexView({super.key});
@@ -61,16 +63,18 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                               color: colorScheme.primary,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.analytics_rounded, color: colorScheme.onPrimary, size: 20),
+                            child: Icon(Symbols.analytics_rounded, color: colorScheme.onPrimary, size: 20),
                           ),
                           const SizedBox(width: 10),
-                          Flexible(
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: isMobile ? 190 : 520),
                             child: Text(
                               isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                              style: theme.textTheme.headlineSmall?.copyWith(
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: (isMobile ? theme.textTheme.titleMedium : theme.textTheme.headlineSmall)?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.onSurface,
-                                fontSize: isMobile ? 16 : 20,
                               ),
                             ),
                           ),
@@ -78,7 +82,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       ),
                       TashilButton(
                         onPressed: () => AiMarketAnalystChatDialog.show(context),
-                        icon: Icons.psychology_alt_rounded,
+                        icon: Symbols.psychology_alt_rounded,
                         label: loc.tr('askAiMarketAnalyst'),
                       ),
                     ],
@@ -137,21 +141,19 @@ class _MarketIndexViewState extends State<MarketIndexView> {
     bool isMobile,
     ColorScheme colorScheme,
   ) {
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     return Container(
       padding: EdgeInsets.all(isMobile ? 18 : 26),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.7), Colors.black),
-          ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          colors: TashilBannerColors.gradient(colorScheme),
+          begin: AlignmentDirectional.topEnd,
+          end: AlignmentDirectional.bottomStart,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: colorScheme.shadow.withValues(alpha: 0.1),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -174,30 +176,30 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colorScheme.onPrimary.withValues(alpha: 0.15),
+                      color: onBanner.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       summary.indexName,
-                      style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 11),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: colorScheme.onPrimary.withValues(alpha: 0.2),
+                      color: onBanner.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '+${summary.indexChangeMoM}% ${lang == 'ar' ? 'شهرياً' : lang == 'hi' ? 'मासिक' : 'MoM'}',
-                      style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 11),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               Text(
                 '${loc.tr('lastUpdated')}: ${summary.lastUpdatedTimestamp}',
-                style: TextStyle(color: colorScheme.onPrimary.withValues(alpha: 0.7), fontSize: 11),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.7)),
               ),
             ],
           ),
@@ -210,17 +212,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             children: [
               Text(
                 '${summary.indexPoints}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 38,
+                style: Theme.of(context).textTheme.headlineLarge!.copyWith(color: onBanner,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: -1,
-                ),
+                  letterSpacing: -1),
               ),
               const SizedBox(width: 8),
               Text(
                 loc.tr('points'),
-                style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: onBanner.withValues(alpha: 0.70), fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -234,13 +233,13 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                 // Wide Desktop: 4 items in a row
                 return Row(
                   children: [
-                    Expanded(child: _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Icons.local_fire_department_rounded)),
+                    Expanded(child: _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Symbols.local_fire_department_rounded)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Icons.storefront_rounded)),
+                    Expanded(child: _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Symbols.storefront_rounded)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Icons.speed_rounded)),
+                    Expanded(child: _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Symbols.speed_rounded)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Icons.trending_up_rounded)),
+                    Expanded(child: _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Symbols.trending_up_rounded)),
                   ],
                 );
               } else if (w >= 480) {
@@ -249,17 +248,17 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Icons.local_fire_department_rounded)),
+                        Expanded(child: _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Symbols.local_fire_department_rounded)),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Icons.storefront_rounded)),
+                        Expanded(child: _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Symbols.storefront_rounded)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Icons.speed_rounded)),
+                        Expanded(child: _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Symbols.speed_rounded)),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Icons.trending_up_rounded)),
+                        Expanded(child: _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Symbols.trending_up_rounded)),
                       ],
                     ),
                   ],
@@ -268,13 +267,13 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                 // Compact Phone: Vertical Stack
                 return Column(
                   children: [
-                    _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Icons.local_fire_department_rounded),
+                    _buildHeroMetricTile(loc.tr('demandMomentum'), loc.tr('highDemandSurge'), Symbols.local_fire_department_rounded),
                     const SizedBox(height: 8),
-                    _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Icons.storefront_rounded),
+                    _buildHeroMetricTile(loc.tr('marketCondition'), loc.tr('sellersMarketState'), Symbols.storefront_rounded),
                     const SizedBox(height: 8),
-                    _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Icons.speed_rounded),
+                    _buildHeroMetricTile(loc.tr('averageLeasingSpeed'), '${summary.averageDaysOnMarket.toStringAsFixed(1)} ${loc.tr('days')}', Symbols.speed_rounded),
                     const SizedBox(height: 8),
-                    _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Icons.trending_up_rounded),
+                    _buildHeroMetricTile(loc.tr('annualRentalInflation'), '+${summary.averageRentalGrowthYoY}% ${lang == 'ar' ? 'سنوياً' : lang == 'hi' ? 'वार्षिक' : 'YoY'}', Symbols.trending_up_rounded),
                   ],
                 );
               }
@@ -286,16 +285,17 @@ class _MarketIndexViewState extends State<MarketIndexView> {
   }
 
   Widget _buildHeroMetricTile(String label, String value, IconData icon) {
+    final onBanner = TashilBannerColors.foreground(Theme.of(context).colorScheme);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: onBanner.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        border: Border.all(color: onBanner.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white, size: 20),
+          Icon(icon, color: onBanner, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -304,14 +304,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.70)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -358,20 +358,20 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       color: colorScheme.secondary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.auto_awesome_rounded, color: colorScheme.secondary, size: 18),
+                    child: Icon(Symbols.auto_awesome_rounded, color: colorScheme.secondary, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
                       loc.tr('geminiAiMarketDiagnosis'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                   ),
                 ],
               ),
               TashilButton.tonal(
                 onPressed: () => AiMarketAnalystChatDialog.show(context),
-                icon: Icons.forum_outlined,
+                icon: Symbols.forum_rounded,
                 label: loc.tr('askAiAnalyst'),
                 height: 36,
               ),
@@ -380,7 +380,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
           const SizedBox(height: 12),
           Text(
             aiText,
-            style: TextStyle(fontSize: 13, color: colorScheme.onSurface, height: 1.45),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface, height: 1.45),
           ),
         ],
       ),
@@ -400,7 +400,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
     final ownerCard = _buildAdviceCard(
       title: loc.tr('recommendationForOwners'),
       content: ownerAdvice,
-      icon: Icons.key_rounded,
+      icon: Symbols.key_rounded,
       headerColor: colorScheme.primary,
       bgColor: colorScheme.surfaceContainerLowest,
       borderColor: colorScheme.outlineVariant,
@@ -410,7 +410,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
     final tenantCard = _buildAdviceCard(
       title: loc.tr('recommendationForTenants'),
       content: tenantAdvice,
-      icon: Icons.person_pin_circle_rounded,
+      icon: Symbols.person_pin_circle_rounded,
       headerColor: colorScheme.secondary,
       bgColor: colorScheme.surfaceContainerLowest,
       borderColor: colorScheme.outlineVariant,
@@ -463,7 +463,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: headerColor),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: headerColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -473,7 +473,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
           const SizedBox(height: 8),
           Text(
             content,
-            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, height: 1.45),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.45),
           ),
         ],
       ),
@@ -492,7 +492,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
       children: [
         Text(
           loc.tr('marketMomentumDrivers'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 12),
 
@@ -522,7 +522,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       color: colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.insights_rounded, color: colorScheme.primary, size: 18),
+                    child: Icon(Symbols.insights_rounded, color: colorScheme.primary, size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -537,7 +537,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                           children: [
                             Text(
                               title,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -547,7 +547,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                               ),
                               child: Text(
                                 driver.metricBadge,
-                                style: TextStyle(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold, fontSize: 11),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -555,7 +555,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                         const SizedBox(height: 4),
                         Text(
                           desc,
-                          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant, height: 1.35),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.35),
                         ),
                       ],
                     ),
@@ -596,16 +596,13 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               children: [
                 Text(
                   loc.tr('districtDemandRanking'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isMobile ? 13 : 15,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   loc.tr('updatedDailyFromLiveBookings'),
-                  style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -620,12 +617,12 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               segments: [
                 TashilConnectedButtonSegment(
                   value: 'table',
-                  icon: Icons.table_rows_rounded,
+                  icon: Symbols.table_rows_rounded,
                   label: loc.tr('tableView'),
                 ),
                 TashilConnectedButtonSegment(
                   value: 'cards',
-                  icon: Icons.grid_view_rounded,
+                  icon: Symbols.grid_view_rounded,
                   label: loc.tr('cardsView'),
                 ),
               ],
@@ -659,7 +656,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: colorScheme.shadow.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -721,12 +718,12 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                         children: [
                           Text(
                             name,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             city,
-                            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -748,11 +745,11 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                             ),
                             child: Text(
                               '${d.demandIndexScore}',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: colorScheme.primary),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text('/100', style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+                          Text('/100', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                         ],
                       ),
                     ),
@@ -762,7 +759,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Text(
                         '${CurrencyFormatter.formatAmount(d.averageRentPerSqm, langCode: lang)} $currency/م²',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       ),
                     ),
 
@@ -771,7 +768,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Text(
                         '${d.annualRentalYield.toStringAsFixed(1)}%',
-                        style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
 
@@ -781,11 +778,11 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.timelapse_rounded, size: 14, color: colorScheme.tertiary),
+                          Icon(Symbols.timelapse_rounded, size: 14, color: colorScheme.tertiary),
                           const SizedBox(width: 4),
                           Text(
                             '${d.demandVelocityDays} ${loc.tr('days')}',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                           ),
                         ],
                       ),
@@ -804,11 +801,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                           ),
                           child: Text(
                             '+${d.priceGrowthRateMoM}% MoM',
-                            style: TextStyle(
-                              color: colorScheme.onSecondaryContainer,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer,
+                              fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -840,11 +834,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Text(
         text,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
-          color: colorScheme.onSurface,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+          color: colorScheme.onSurface),
       ),
     );
   }
@@ -914,7 +905,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: colorScheme.shadow.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -936,7 +927,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                         color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.location_on_rounded, color: colorScheme.primary, size: 18),
+                      child: Icon(Symbols.location_on_rounded, color: colorScheme.primary, size: 18),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -945,13 +936,13 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                         children: [
                           Text(
                             name,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             city,
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -973,11 +964,11 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   children: [
                     Text(
                       '${d.demandIndexScore}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.primary),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                     ),
                     Text(
                       '/100',
-                      style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -993,7 +984,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             children: [
               Expanded(
                 child: _buildMetricTile(
-                  icon: Icons.payments_outlined,
+                  icon: Symbols.payments_rounded,
                   label: loc.tr('avgRentPerSqm'),
                   value: '${CurrencyFormatter.formatAmount(d.averageRentPerSqm, langCode: lang)} $currency/م²',
                   colorScheme: colorScheme,
@@ -1002,7 +993,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMetricTile(
-                  icon: Icons.trending_up_rounded,
+                  icon: Symbols.trending_up_rounded,
                   label: loc.tr('annualYield'),
                   value: '${d.annualRentalYield.toStringAsFixed(1)}%',
                   valueColor: colorScheme.primary,
@@ -1016,7 +1007,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             children: [
               Expanded(
                 child: _buildMetricTile(
-                  icon: Icons.timelapse_rounded,
+                  icon: Symbols.timelapse_rounded,
                   label: loc.tr('leasingVelocity'),
                   value: '${d.demandVelocityDays} ${loc.tr('days')}',
                   colorScheme: colorScheme,
@@ -1025,7 +1016,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMetricTile(
-                  icon: Icons.price_change_outlined,
+                  icon: Symbols.price_change_rounded,
                   label: loc.tr('priceTrend'),
                   value: '+${d.priceGrowthRateMoM}% MoM',
                   isPill: true,
@@ -1063,7 +1054,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1080,20 +1071,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   ),
                   child: Text(
                     value,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSecondaryContainer,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSecondaryContainer),
                   ),
                 )
               : Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: valueColor ?? colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                    color: valueColor ?? colorScheme.onSurface),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1119,7 +1104,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: colorScheme.shadow.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1129,14 +1114,10 @@ class _MarketIndexViewState extends State<MarketIndexView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isMobile) ...[
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
+            Row(
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Row(
                   children: [
                     Container(
                       width: 8,
@@ -1147,7 +1128,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
+                    Flexible(
+                      child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.14),
@@ -1155,15 +1137,17 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       ),
                       child: Text(
                         loc.tr('dailyUpdateAtNine'),
-                        style: const TextStyle(
-                          color: Color(0xFF047857),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10.5,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Color(0xFF047857),
+                          fontWeight: FontWeight.bold),
                       ),
+                    ),
                     ),
                   ],
                 ),
+                ),
+                const SizedBox(width: 8),
                 TashilButton.tonal(
                   onPressed: () async {
                     await AiMarketIndexService().refreshDailyMarketData(countryCode: summary.countryCode);
@@ -1174,7 +1158,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       );
                     }
                   },
-                  icon: Icons.refresh_rounded,
+                  icon: Symbols.refresh_rounded,
                   label: loc.tr('instantRefreshNow'),
                   height: 30,
                 ),
@@ -1183,11 +1167,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             const SizedBox(height: 8),
             Text(
               loc.tr('liveMarketPulseTitle'),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13.5,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
           ] else ...[
             Row(
@@ -1213,22 +1194,16 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                         ),
                         child: Text(
                           loc.tr('dailyUpdateAtNine'),
-                          style: const TextStyle(
-                            color: Color(0xFF047857),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Color(0xFF047857),
+                            fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
                           loc.tr('liveMarketPulseTitle'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1246,7 +1221,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                       );
                     }
                   },
-                  icon: Icons.refresh_rounded,
+                  icon: Symbols.refresh_rounded,
                   label: loc.tr('instantRefreshNow'),
                   height: 32,
                 ),
@@ -1289,19 +1264,19 @@ class _MarketIndexViewState extends State<MarketIndexView> {
     IconData catIcon;
     switch (signal.category) {
       case 'demand':
-        catIcon = Icons.trending_up_rounded;
+        catIcon = Symbols.trending_up_rounded;
         break;
       case 'economy':
-        catIcon = Icons.account_balance_rounded;
+        catIcon = Symbols.account_balance_rounded;
         break;
       case 'velocity':
-        catIcon = Icons.speed_rounded;
+        catIcon = Symbols.speed_rounded;
         break;
       case 'investment':
-        catIcon = Icons.monetization_on_outlined;
+        catIcon = Symbols.monetization_on_rounded;
         break;
       default:
-        catIcon = Icons.newspaper_rounded;
+        catIcon = Symbols.newspaper_rounded;
     }
 
     return Container(
@@ -1321,32 +1296,23 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               Expanded(
                 child: Text(
                   signal.sourceName,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
                 timeStr,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: colorScheme.outline,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.outline),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             headline,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
-              height: 1.35,
-            ),
+              height: 1.35),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1380,17 +1346,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.verified_user_rounded, color: colorScheme.onPrimaryContainer, size: 18),
+                child: Icon(Symbols.verified_user_rounded, color: colorScheme.onPrimaryContainer, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   loc.tr('verifiedSourcesLabel'),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface),
                 ),
               ),
             ],
@@ -1398,11 +1361,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
           const SizedBox(height: 10),
           Text(
             '${loc.tr('officialBaselineSource')} • ${loc.tr('googleGroundingNotice')}',
-            style: TextStyle(
-              fontSize: 12,
-              color: colorScheme.onSurfaceVariant,
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+              height: 1.4),
           ),
           const SizedBox(height: 12),
           LayoutBuilder(
@@ -1422,16 +1382,13 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.travel_explore_rounded, size: 13, color: colorScheme.primary),
+                        Icon(Symbols.travel_explore_rounded, size: 13, color: colorScheme.primary),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             src,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],

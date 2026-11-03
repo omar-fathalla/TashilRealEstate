@@ -1,29 +1,29 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { setGlobalOptions } = require("firebase-functions/v2");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+const {
+  requireAuth,
+  requireRole,
+  loadLease,
+  leaseAmount,
+  assertLeaseParty,
+  safeContinueUrl,
+} = require("./authz");
+
+setGlobalOptions({ maxInstances: 10, region: "us-central1" });
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.processRentPayment = onCall(async (request) => {
-  const data = request.data;
-  const auth = request.auth;
-
-  if (!auth) {
-    throw new Error("Unauthenticated");
-  }
-
-  const leaseId = data.leaseId;
-  const amount = data.amount;
-
-  if (!leaseId || !amount) {
-    throw new Error("Missing leaseId or amount");
-  }
-
-  // Calculate splits
+exports.processRentPayment = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const lease = await loadLease(request.data && request.data.leaseId);
+  assertLeaseParty(auth, lease);
+  const amount = leaseAmount(lease);
   const platformFee = amount * 0.02;
   const agencyFee = amount * 0.08;
   const ownerPayout = amount * 0.90;
@@ -31,36 +31,39 @@ exports.processRentPayment = onCall(async (request) => {
   try {
     const db = admin.firestore();
     const transactionRef = db.collection("Transactions").doc();
-    
     await transactionRef.set({
       transactionId: transactionRef.id,
-      leaseId: leaseId,
+      leaseId: lease.id,
+      tenant_id: lease.tenant_id || null,
+      owner_id: lease.owner_id || null,
       amount: amount,
-      splits: {
-        platformFee: platformFee,
-        agencyFee: agencyFee,
-        ownerPayout: ownerPayout
-      },
-      status: "Completed",
+      splits: { platformFee, agencyFee, ownerPayout },
+      // Completed is reserved for a verified payment-provider webhook.
+      status: "Pending",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      userId: auth.uid
+      userId: auth.uid,
     });
-
-    return { success: true, transactionId: transactionRef.id };
+    return { success: true, transactionId: transactionRef.id, status: "Pending" };
   } catch (error) {
     logger.error("Error processing rent payment", error);
-    throw new Error("Failed to process payment");
+    throw new HttpsError("internal", "Failed to record the payment request.");
   }
 });
 
-exports.sendRentalReminder = onCall(async (request) => {
+exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
-  const auth = request.auth;
-  const tenantId = data.tenantId || (auth ? auth.uid : "tenant_guest");
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, lease);
+  if (data.tenantId && auth.token.role !== "SuperAdmin" && lease.tenant_id !== data.tenantId) {
+    throw new HttpsError("permission-denied", "That tenant is not on this lease.");
+  }
+  const tenantId = lease.tenant_id;
   const propertyTitle = data.propertyTitle || "وحدة سكنية";
-  const amount = data.amount || 0;
+  const amount = leaseAmount(lease);
   const dueDate = data.dueDate || new Date().toISOString();
-  const countryCode = data.countryCode || "EG";
+  const countryCode = lease.countryCode || data.countryCode || "EG";
   const currency = countryCode === "AE" ? "AED" : "EGP";
 
   const db = admin.firestore();
@@ -94,19 +97,22 @@ exports.sendRentalReminder = onCall(async (request) => {
       await db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id).set(notificationPayload);
     }
     logger.info(`Rental reminder notification created: ${notifRef.id}`);
-    return { success: true, messageId: notifRef.id, payload: notificationPayload };
+    return { success: true, messageId: notifRef.id };
   } catch (error) {
     logger.error("Error creating rental reminder", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to create the reminder.");
   }
 });
 
-exports.generateRentalInvoiceReceipt = onCall(async (request) => {
+exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
   const data = request.data || {};
-  const leaseId = data.leaseId || `lease_${Date.now()}`;
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, lease);
+  const leaseId = lease.id;
   const tenantName = data.tenantName || "عميل تسهيل";
-  const amount = Number(data.amount) || 10000;
-  const currencyCode = data.currencyCode || "EGP";
+  const amount = leaseAmount(lease);
+  const currencyCode = lease.countryCode === "AE" ? "AED" : (data.currencyCode || "EGP");
 
   const platformFee = amount * 0.025; // 2.5% platform fee
   const agencyFee = amount * 0.08;   // 8% agency fee
@@ -128,71 +134,26 @@ exports.generateRentalInvoiceReceipt = onCall(async (request) => {
     vatAmount: vatAmount,
     totalPaid: totalPaid,
     currencyCode: currencyCode,
-    status: "Paid_Verified",
+    tenant_id: lease.tenant_id || null,
+    owner_id: lease.owner_id || null,
+    // Paid_Verified is reserved for a verified payment-provider webhook.
+    status: "Issued",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   try {
     await invoiceRef.set(invoiceData);
     logger.info(`Generated digital rental invoice: ${invoiceNumber}`);
-    return { success: true, invoiceNumber: invoiceNumber, invoice: invoiceData };
+    return { success: true, invoiceNumber: invoiceNumber, status: "Issued" };
   } catch (error) {
     logger.error("Error generating rental invoice", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to issue the invoice.");
   }
 });
 
 
-exports.seedDatabase = onRequest(async (req, res) => {
-  // Reject execution in production environment to prevent test accounts injection
-  if (process.env.NODE_ENV === "production" || process.env.FUNCTIONS_EMULATOR !== "true") {
-    res.status(403).json({ error: "Forbidden: Database seeding is disabled in production environment." });
-    return;
-  }
-
-  const users = [
-    { email: "agency@test.com", password: "password123", role: "AgencyAdmin", name: "Test Agency" },
-    { email: "owner@test.com", password: "password123", role: "Owner", name: "Test Owner" },
-    { email: "tenant@test.com", password: "password123", role: "Tenant", name: "Test Tenant" }
-  ];
-
-  const db = admin.firestore();
-  const results = [];
-
-  for (const u of users) {
-    try {
-      let userRecord;
-      try {
-        userRecord = await admin.auth().getUserByEmail(u.email);
-      } catch (e) {
-        if (e.code === 'auth/user-not-found') {
-          userRecord = await admin.auth().createUser({
-            email: u.email,
-            password: u.password,
-            displayName: u.name,
-          });
-        } else {
-          throw e;
-        }
-      }
-
-      await db.collection("Users").doc(userRecord.uid).set({
-        user_id: userRecord.uid,
-        email: u.email,
-        full_name: u.name,
-        role: u.role,
-        agency_id: "agency_test_123" // Mock agency ID
-      }, { merge: true });
-
-      results.push({ email: u.email, uid: userRecord.uid, status: "Seeded" });
-    } catch (error) {
-      logger.error(`Error seeding ${u.email}`, error);
-      results.push({ email: u.email, error: error.message });
-    }
-  }
-
-  res.json({ message: "Seeded Successfully", details: results });
-});
+// seedDatabase is intentionally not exported. Seeding lives in
+// backend/seed_emulator.js and only runs against the local emulators.
 
 /**
  * Sanitizes an owner property document for the public marketplace (/Properties).
@@ -289,9 +250,17 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const rentalStatus = afterData.rentalStatus || "available";
 
     // 2. Handle active published property
-    if (isPublished && rentalStatus === "available") {
+    const city = String(afterData.cityCode || afterData.city_code || "").toLowerCase();
+    const permit = String(afterData.adPermitNumber || afterData.advertisingPermitNumber || "");
+    const dubaiPermitMissing = city === "dubai" && !/^[0-9]{6,15}$/.test(permit);
+    if (isPublished && rentalStatus === "available" && dubaiPermitMissing) {
+      logger.info(`Refusing to publish Dubai listing [${propertyId}] without an advertising permit.`);
+    }
+
+    if (isPublished && rentalStatus === "available" && !dubaiPermitMissing) {
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
+      if (permit) sanitized.adPermitNumber = permit;
       try {
         await marketDocRef.set(sanitized, { merge: true });
         logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
@@ -509,22 +478,38 @@ exports.syncMarketIndexDaily = onSchedule(
 /**
  * On-demand HTTP Endpoint: Allows manual/admin trigger of the market index pipeline.
  */
-exports.syncMarketIndexManual = onRequest(async (req, res) => {
-  const db = admin.firestore();
-  const country = (req.query.country || "EG").toUpperCase();
+exports.syncMarketIndexManual = onCall({ enforceAppCheck: true, maxInstances: 2 }, async (request) => {
+  const auth = requireAuth(request);
+  requireRole(auth, ["SuperAdmin"]);
+  const country = String((request.data && request.data.country) || "EG").toUpperCase();
+  if (country !== "EG" && country !== "AE") {
+    throw new HttpsError("invalid-argument", "Country must be EG or AE.");
+  }
   try {
     const payload = generateMarketIndexData(country);
-    await db.collection("MarketIndices").doc(country).set(payload, { merge: true });
-    res.json({
-      success: true,
-      message: `Daily market index updated for ${country}`,
-      data: payload,
-    });
+    await admin.firestore().collection("MarketIndices").doc(country).set(payload, { merge: true });
+    return { success: true, country };
   } catch (err) {
     logger.error("Error in syncMarketIndexManual", err);
-    res.status(500).json({ success: false, error: err.message });
+    throw new HttpsError("internal", "Failed to update the market index.");
   }
 });
+
+exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (request) => {
+  const auth = requireAuth(request);
+  requireRole(auth, ["SuperAdmin"]);
+  const uid = request.data && request.data.uid;
+  const role = request.data && request.data.role;
+  const allowed = ["Tenant", "Owner", "AgencyAdmin", "Investor", "SuperAdmin"];
+  if (!uid || !allowed.includes(role)) {
+    throw new HttpsError("invalid-argument", "A user id and a known role are required.");
+  }
+  await admin.auth().setCustomUserClaims(uid, { role });
+  await admin.firestore().collection("Users").doc(uid).set({ role }, { merge: true });
+  return { success: true };
+});
+
+exports.geminiGenerateContent = require("./gemini_proxy").geminiGenerateContent;
 
 const {
   sendBrandedVerificationEmail,
@@ -534,40 +519,40 @@ const {
 /**
  * Callable Cloud Function: Dispatches a rich Material Design 3 verification email with a button
  */
-exports.sendCustomVerificationEmail = onCall(async (request) => {
+exports.sendCustomVerificationEmail = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
   const email = request.data?.email;
   if (!email) {
-    throw new Error("Missing email address");
+    throw new HttpsError("invalid-argument", "Missing email address");
   }
-
   try {
-    const result = await sendBrandedVerificationEmail(email, {
-      url: request.data?.continueUrl,
+    await sendBrandedVerificationEmail(email, {
+      url: safeContinueUrl(request.data?.continueUrl),
     });
-    return result;
+    return { sent: true };
   } catch (error) {
     logger.error("Error sending custom verification email", error);
-    throw new Error(error.message || "Failed to send verification email");
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError("internal", "Failed to send verification email");
   }
 });
 
 /**
  * Callable Cloud Function: Dispatches a rich Material Design 3 password reset email with a button
  */
-exports.sendCustomPasswordResetEmail = onCall(async (request) => {
+exports.sendCustomPasswordResetEmail = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
   const email = request.data?.email;
   if (!email) {
-    throw new Error("Missing email address");
+    throw new HttpsError("invalid-argument", "Missing email address");
   }
-
   try {
-    const result = await sendBrandedPasswordResetEmail(email, {
-      url: request.data?.continueUrl,
+    await sendBrandedPasswordResetEmail(email, {
+      url: safeContinueUrl(request.data?.continueUrl),
     });
-    return result;
+    return { sent: true };
   } catch (error) {
     logger.error("Error sending custom password reset email", error);
-    throw new Error(error.message || "Failed to send password reset email");
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError("internal", "Failed to send password reset email");
   }
 });
 

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
+import 'package:tashil_real_estate/features/smart_valuation/widgets/district_location_picker_dialog.dart';
 import '../../core/localization/country_controller.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/responsive_layout.dart';
@@ -10,9 +11,14 @@ import '../../core/widgets/public_header_navbar.dart';
 import '../semantic_search/models/semantic_search_result_model.dart';
 import '../semantic_search/services/ai_semantic_vector_search_service.dart';
 import '../semantic_search/widgets/visual_search_modal.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
+import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'models/property_item.dart';
 import 'repositories/property_repository.dart';
 import 'widgets/property_card.dart';
+import 'widgets/property_details_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
 import 'package:tashil_real_estate/core/design_system/sliders/tashil_sliders.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
@@ -20,7 +26,7 @@ import 'package:tashil_real_estate/core/design_system/search/tashil_search.dart'
 import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import '../../core/design_system/navigation_bar/tashil_navigation_bar.dart';
-import '../../core/widgets/app_settings_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PublicMarketplaceScreen extends StatefulWidget {
   const PublicMarketplaceScreen({super.key});
@@ -31,6 +37,9 @@ class PublicMarketplaceScreen extends StatefulWidget {
 
 class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   final TextEditingController _searchController = TextEditingController();
+  bool _openedHookedListing = false;
+  final ScrollController _resultsScroll = ScrollController();
+  final GlobalKey _resultsKey = GlobalKey();
   String _selectedCityCode = 'all';
   String _selectedTypeCode = 'all';
   double _maxPrice = 80000;
@@ -57,8 +66,78 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   @override
   void initState() {
     super.initState();
+    final hookedQuery = ScreenshotHooks.searchQuery;
+    if (hookedQuery != null) {
+      _searchController.text = hookedQuery;
+    }
     _maxPrice = CountryController.isUAE ? 40000 : 80000;
     CountryController.currentCountry.addListener(_onCountryChanged);
+    if (ScreenshotHooks.details != null) {
+      PropertyRepository().updatesNotifier.addListener(_maybeOpenHookedListing);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenHookedListing());
+    }
+    if (hookedQuery != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchResults());
+    }
+    final sheet = ScreenshotHooks.sheet;
+    if (sheet == 'valuation' || sheet == 'district' || sheet == 'settings' || sheet == 'font') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        switch (sheet) {
+          case 'valuation':
+            SmartValuationDialog.show(context);
+          case 'district':
+            DistrictLocationPickerDialog.show(
+              context,
+              countryCode: CountryController.countryCode,
+            );
+          case 'settings':
+            AppSettingsDialog.show(context);
+          case 'font':
+            FontPickerDialog.show(context);
+        }
+      });
+    }
+  }
+
+  void _revealSearchResults() {
+    if (!mounted || _searchController.text.trim().isEmpty) return;
+    if (MediaQuery.sizeOf(context).width >= 600) return;
+    final target = _resultsKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 280),
+      alignment: 0.02,
+    );
+  }
+
+  void _maybeOpenHookedListing() {
+    if (!mounted || _openedHookedListing) return;
+    final which = ScreenshotHooks.details;
+    if (which == null) return;
+    final props = PropertyRepository().getPropertiesByCountry('AE');
+    PropertyItem? item;
+    if (which == 'permit') {
+      for (final property in props) {
+        if (!property.isSample &&
+            property.cityCode == 'dubai' &&
+            property.advertisingPermitNumber.trim().isNotEmpty) {
+          item = property;
+          break;
+        }
+      }
+    } else if (which == 'sample') {
+      for (final property in props) {
+        if (property.isSample && property.cityCode == 'dubai') {
+          item = property;
+          break;
+        }
+      }
+    }
+    if (item == null) return;
+    _openedHookedListing = true;
+    PropertyDetailsDialog.show(context, item);
   }
 
   void _onCountryChanged() {
@@ -76,6 +155,8 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   @override
   void dispose() {
     CountryController.currentCountry.removeListener(_onCountryChanged);
+    PropertyRepository().updatesNotifier.removeListener(_maybeOpenHookedListing);
+    _resultsScroll.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -161,7 +242,13 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               backgroundColor: theme.scaffoldBackgroundColor,
               appBar: const PublicHeaderNavbar(isSubPage: false, currentRoute: '/'),
               bottomNavigationBar: isMobile ? _buildMobileBottomBar(context, loc, colorScheme) : null,
-              body: SingleChildScrollView(
+              body: RefreshIndicator.adaptive(
+                onRefresh: () async {
+                  PropertyRepository().updatesNotifier.value++;
+                },
+                child: SingleChildScrollView(
+                controller: _resultsScroll,
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
                     // Hero Section with Search Banner
@@ -182,19 +269,24 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
                       // Results Header
                       Row(
+                        key: _resultsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${loc.tr('availableUnits')} (${filteredList.length})',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
+                          Expanded(
+                            child: Text(
+                              '${loc.tr('availableUnits')} (${filteredList.length})',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
                             ),
                           ),
                           if (_selectedCityCode != 'all' || _selectedTypeCode != 'all' || _searchController.text.isNotEmpty || _propertyQuickFilter != 'all')
                             TashilButton.tonal(
                               label: loc.tr('resetFilters'),
-                              icon: Icons.refresh_rounded,
+                              icon: Symbols.refresh_rounded,
                               height: 38,
                               onPressed: _resetFilters,
                             ),
@@ -214,9 +306,10 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
                 // Footer
                 _buildFooter(context, loc),
-                if (isMobile) const SizedBox(height: 80),
+                if (isMobile) const SizedBox(height: 24),
               ],
             ),
+          ),
           ),
         );
           },
@@ -234,32 +327,31 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
     return TashilNavigationBar(
       destinations: [
-        // 1. Upload Property
         TashilNavigationDestination(
-          icon: Icons.add_home_work_outlined,
-          selectedIcon: Icons.add_home_work_rounded,
-          label: loc.tr('navUploadProperty'),
-          isSelected: false,
-          tooltip: loc.tr('fastPropertyOnboardingTitle'),
-          onTap: () => context.go('/fast-onboarding'),
+          icon: Symbols.explore_rounded,
+          selectedIcon: Symbols.explore_rounded,
+          label: loc.tr('navExplore'),
+          isSelected: true,
+          tooltip: loc.tr('navExplore'),
+          onTap: () => context.go('/'),
         ),
 
         // 2. AI Smart Valuation
         TashilNavigationDestination(
-          icon: Icons.auto_awesome_outlined,
-          selectedIcon: Icons.auto_awesome_rounded,
+          icon: Symbols.auto_awesome_rounded,
+          selectedIcon: Symbols.auto_awesome_rounded,
           label: loc.tr('navValuation'),
           badgeLabel: loc.tr('navBadgeAi'),
           badgeColor: colorScheme.primary,
           isSelected: false,
           tooltip: loc.tr('aiValuationTitle'),
-          onTap: () => SmartValuationDialog.show(context),
+          onTap: () => context.go('/valuation'),
         ),
 
         // 3. Market Index (Aqarmap / DXB Index)
         TashilNavigationDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
+          icon: Symbols.analytics_rounded,
+          selectedIcon: Symbols.analytics_rounded,
           label: isUAE ? loc.tr('navMarketIndexAe') : loc.tr('navMarketIndex'),
           hasBadgeDot: true,
           isSelected: false,
@@ -269,12 +361,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
         // 4. Settings
         TashilNavigationDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
-          label: loc.tr('navSettings'),
+          icon: Symbols.account_circle_rounded,
+          selectedIcon: Symbols.account_circle_rounded,
+          label: loc.tr('signIn'),
           isSelected: false,
-          tooltip: loc.tr('settings'),
-          onTap: () => AppSettingsDialog.show(context),
+          tooltip: loc.tr('portalLogin'),
+          onTap: () => context.go('/login'),
         ),
       ],
     );
@@ -284,21 +376,19 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     final isUAE = currentCountry == 'AE';
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final onBanner = TashilBannerColors.foreground(colorScheme);
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 16 : 64,
-        vertical: isMobile ? 32 : 64,
+        vertical: isMobile ? 16 : 64,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), Colors.black),
-          ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          colors: TashilBannerColors.gradient(colorScheme),
+          begin: AlignmentDirectional.topEnd,
+          end: AlignmentDirectional.bottomStart,
         ),
       ),
       child: Column(
@@ -312,18 +402,18 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: onBanner.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  border: Border.all(color: onBanner.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified, color: colorScheme.secondaryContainer, size: 16),
+                    Icon(Symbols.verified_rounded, color: onBanner, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       loc.tr('verifiedBadge'),
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -332,20 +422,21 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                 onTap: () => context.go('/fast-onboarding'),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: onBanner.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                    border: Border.all(color: onBanner.withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.rocket_launch_rounded, color: Colors.amberAccent, size: 16),
+                      Icon(Symbols.rocket_launch_rounded, color: onBanner, size: 16),
                       const SizedBox(width: 8),
                       Text(
                         loc.tr('listPropertyBtn'),
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -357,58 +448,54 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           Text(
             isUAE ? loc.tr('heroTitle_ae') : loc.tr('heroTitle_eg'),
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: isMobile ? 22 : 38,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              height: 1.2,
-            ),
+            style: Theme.of(context).textTheme.headlineLarge!.copyWith(fontWeight: FontWeight.bold,
+              color: onBanner,
+              height: 1.2),
           ),
-          const SizedBox(height: 12),
-          Text(
-            isUAE ? loc.tr('heroSubtitle_ae') : loc.tr('heroSubtitle_eg'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: isMobile ? 13 : 15,
-              color: Colors.grey[300],
-              height: 1.5,
+          if (!isMobile) ...[
+            const SizedBox(height: 12),
+            Text(
+              isUAE ? loc.tr('heroSubtitle_ae') : loc.tr('heroSubtitle_eg'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: TashilBannerColors.muted(colorScheme),
+                height: 1.5),
             ),
-          ),
-          const SizedBox(height: 28),
+          ],
+          const SizedBox(height: 16),
 
           // Single Unified Official Google M3 Expressive Split Search Bar
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 880),
+            constraints: const BoxConstraints(maxWidth: 1120),
             child: TashilSearchBar(
               controller: _searchController,
               hintText: _isSemanticSearchActive
                   ? loc.tr('aiSearchPlaceholder')
                   : loc.tr('searchPlaceholder'),
               isSemanticActive: _isSemanticSearchActive,
-              suggestions: _getSearchSuggestions(currentCountry),
+              suggestions: _getSearchSuggestions(loc, currentCountry),
               leadingIcon: _activeSearchMode == 'ai'
-                  ? Icons.auto_awesome_rounded
+                  ? Symbols.auto_awesome_rounded
                   : (_activeSearchMode == 'visual'
-                      ? Icons.photo_camera_outlined
-                      : Icons.search_rounded),
-              splitMenuItems: [
+                      ? Symbols.photo_camera_rounded
+                      : Symbols.search_rounded),
+              splitMenuItems: isMobile ? null : [
                 TashilSplitButtonItem<String>(
                   value: 'location',
                   label: loc.tr('searchModeLocation'),
                   subtitle: loc.tr('searchModeLocationDesc'),
-                  icon: Icons.location_on_outlined,
+                  icon: Symbols.location_on_rounded,
                 ),
                 TashilSplitButtonItem<String>(
                   value: 'ai',
                   label: loc.tr('searchModeAi'),
                   subtitle: loc.tr('searchModeAiDesc'),
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Symbols.auto_awesome_rounded,
                 ),
                 TashilSplitButtonItem<String>(
                   value: 'visual',
                   label: loc.tr('searchModeVisual'),
                   subtitle: loc.tr('searchModeVisualDesc'),
-                  icon: Icons.photo_camera_outlined,
+                  icon: Symbols.photo_camera_rounded,
                 ),
               ],
               selectedSplitMenuValue: _activeSearchMode,
@@ -433,6 +520,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   _performSemanticSearch(val, currentCountry);
                 } else {
                   setState(() {});
+                  _revealSearchResults();
                 }
               },
               onSubmitted: (val) {
@@ -440,6 +528,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   _performSemanticSearch(val, currentCountry);
                 } else {
                   setState(() {});
+                  _revealSearchResults();
                 }
               },
               onClear: () {
@@ -466,9 +555,46 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 2. Dedicated Filter Container (City, Type, Price Slider)
+          // 2. Filters: a sheet on a phone, an inline bar on a wider window.
+          if (isMobile)
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+              ),
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  showDragHandle: true,
+                  builder: (sheetContext) => Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      16,
+                      0,
+                      16,
+                      24 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCityDropdown(loc, currentCountry),
+                        const SizedBox(height: 12),
+                        _buildTypeDropdown(loc),
+                        const SizedBox(height: 12),
+                        _buildPriceSlider(loc, currentCountry, colorScheme),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Symbols.tune_rounded),
+              label: Text(loc.tr('filtersLabel')),
+            )
+          else
           Container(
-            constraints: const BoxConstraints(maxWidth: 880),
+            constraints: const BoxConstraints(maxWidth: 1120),
             padding: EdgeInsets.symmetric(
               horizontal: isMobile ? 14 : 18,
               vertical: isMobile ? 14 : 16,
@@ -482,23 +608,13 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: colorScheme.shadow.withValues(alpha: 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: isMobile
-                ? Column(
-                    children: [
-                      _buildCityDropdown(loc, currentCountry),
-                      const SizedBox(height: 12),
-                      _buildTypeDropdown(loc),
-                      const SizedBox(height: 12),
-                      _buildPriceSlider(loc, currentCountry, colorScheme),
-                    ],
-                  )
-                : Row(
+            child: Row(
                     children: [
                       Expanded(flex: 3, child: _buildCityDropdown(loc, currentCountry)),
                       const SizedBox(width: 14),
@@ -517,24 +633,23 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     );
   }
 
-  List<String> _getSearchSuggestions(String currentCountry) {
-    if (currentCountry == 'EG') {
-      return const [
-        'شقة للبيع في الشيخ زايد',
-        'شقق للإيجار في التجمع الخامس',
-        'فيلا مستقلة في المعادي',
-        'مكتب إداري في العاصمة الإدارية',
-        'شاليه بإطلالة بحرية في الساحل الشمالي',
-      ];
-    } else {
-      return const [
-        'Apartment for rent in Dubai Marina',
-        'Luxury Villa in Palm Jumeirah',
-        'Studio in Downtown Dubai',
-        'Commercial office in Business Bay',
-        'Townhouse in Sharjah Waterfront',
+  List<String> _getSearchSuggestions(AppLocalizations loc, String currentCountry) {
+    if (currentCountry == 'AE') {
+      return [
+        loc.tr('searchSuggestMarina'),
+        loc.tr('searchSuggestPalm'),
+        loc.tr('searchSuggestDowntown'),
+        loc.tr('searchSuggestBusinessBay'),
+        loc.tr('searchSuggestSharjah'),
       ];
     }
+    return [
+      loc.tr('searchSuggestEg1'),
+      loc.tr('searchSuggestEg2'),
+      loc.tr('searchSuggestEg3'),
+      loc.tr('searchSuggestEg4'),
+      loc.tr('searchSuggestEg5'),
+    ];
   }
 
   Widget _buildHeroActions(
@@ -546,7 +661,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     return Center(
       child: TashilButton.elevated(
         label: loc.tr('aiValuationBannerPrompt'),
-        icon: Icons.auto_awesome_rounded,
+        icon: Symbols.auto_awesome_rounded,
         height: 48.0,
         borderRadius: BorderRadius.circular(24),
         padding: EdgeInsets.symmetric(
@@ -561,25 +676,25 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   IconData _getCityIcon(String code) {
     switch (code) {
       case 'all':
-        return Icons.domain_rounded;
+        return Symbols.domain_rounded;
       case 'dubai':
       case 'abu_dhabi':
-        return Icons.location_city_rounded;
+        return Symbols.location_city_rounded;
       case 'sharjah':
       case 'ajman':
       case 'ras_al_khaimah':
-        return Icons.apartment_rounded;
+        return Symbols.apartment_rounded;
       case 'new_cairo':
       case 'october':
       case 'maadi':
-        return Icons.location_city_rounded;
+        return Symbols.location_city_rounded;
       case 'sheikh_zayed':
-        return Icons.holiday_village_rounded;
+        return Symbols.holiday_village_rounded;
       case 'alexandria':
       case 'north_coast':
-        return Icons.beach_access_rounded;
+        return Symbols.beach_access_rounded;
       default:
-        return Icons.location_on_outlined;
+        return Symbols.location_on_rounded;
     }
   }
 
@@ -611,7 +726,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       key: ValueKey('city_m3_dropdown_${currentCountry}_$_selectedCityCode'),
       value: _selectedCityCode,
       labelText: loc.tr('city'),
-      prefixIcon: Icons.location_city_rounded,
+      prefixIcon: Symbols.location_city_rounded,
       items: items,
       onChanged: (val) {
         if (val != null) setState(() => _selectedCityCode = val);
@@ -622,19 +737,19 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   IconData _getTypeIcon(String code) {
     switch (code) {
       case 'all':
-        return Icons.home_work_outlined;
+        return Symbols.home_work_rounded;
       case 'apartment':
-        return Icons.apartment_rounded;
+        return Symbols.apartment_rounded;
       case 'villa':
-        return Icons.villa_outlined;
+        return Symbols.villa_rounded;
       case 'studio':
-        return Icons.single_bed_outlined;
+        return Symbols.single_bed_rounded;
       case 'duplex':
-        return Icons.layers_outlined;
+        return Symbols.layers_rounded;
       case 'chalet':
-        return Icons.beach_access_outlined;
+        return Symbols.beach_access_rounded;
       default:
-        return Icons.home_outlined;
+        return Symbols.home_rounded;
     }
   }
 
@@ -658,7 +773,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       key: ValueKey('type_m3_dropdown_$_selectedTypeCode'),
       value: _selectedTypeCode,
       labelText: loc.tr('propertyType'),
-      prefixIcon: Icons.home_work_outlined,
+      prefixIcon: Symbols.home_work_rounded,
       items: items,
       onChanged: (val) {
         if (val != null) setState(() => _selectedTypeCode = val);
@@ -681,15 +796,15 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.payments_outlined, size: 16, color: colorScheme.primary),
+                Icon(Symbols.payments_rounded, size: 16, color: colorScheme.primary),
                 const SizedBox(width: 6),
-                Text(loc.tr('maxRent'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                Text(loc.tr('maxRent'), style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
             Flexible(
               child: Text(
                 '${CurrencyFormatter.formatAmount(_maxPrice, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                style: TextStyle(fontSize: 12, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -743,11 +858,8 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               color: colorScheme.surface,
               child: Text(
                 loc.tr('maxRentShort'),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -759,7 +871,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.payments_outlined,
+                  Symbols.payments_rounded,
                   size: 18,
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -783,11 +895,8 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                 const SizedBox(width: 8),
                 Text(
                   '${CurrencyFormatter.formatAmount(_maxPrice, langCode: lang)} $currency',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.primary),
                 ),
               ],
             ),
@@ -814,17 +923,17 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
         TashilConnectedButtonSegment<String>(
           value: 'all',
           label: loc.tr('all'),
-          icon: Icons.grid_view_rounded,
+          icon: Symbols.grid_view_rounded,
         ),
         TashilConnectedButtonSegment<String>(
           value: 'featured',
           label: loc.tr('chipFeatured'),
-          icon: Icons.star_rounded,
+          icon: Symbols.star_rounded,
         ),
         TashilConnectedButtonSegment<String>(
           value: 'furnished',
           label: loc.tr('chipFurnished'),
-          icon: Icons.chair_rounded,
+          icon: Symbols.chair_rounded,
         ),
       ],
     );
@@ -848,7 +957,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               const SizedBox(height: 16),
               Text(
                 loc.tr('semanticSearchingProgress'),
-                style: TextStyle(fontSize: 14, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               const SizedBox(
@@ -869,11 +978,11 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           padding: const EdgeInsets.symmetric(vertical: 48),
           child: Column(
             children: [
-              Icon(Icons.search_off_rounded, size: 64, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+              Icon(Symbols.search_off_rounded, size: 64, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               Text(
                 loc.tr('noResultsTitle'),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -883,7 +992,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               const SizedBox(height: 24),
               TashilButton.tonal(
                 label: loc.tr('resetFilters'),
-                icon: Icons.refresh_rounded,
+                icon: Symbols.refresh_rounded,
                 onPressed: _resetFilters,
               ),
             ],
@@ -953,16 +1062,14 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     if (isMobile) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              colorScheme.primary,
-              Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), Colors.black),
-            ],
+            colors: TashilBannerColors.gradient(colorScheme),
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -971,19 +1078,19 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           children: [
             Text(
               loc.tr('promoTitle'),
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               loc.tr('promoSubtitle'),
-              style: TextStyle(color: Colors.grey[300], fontSize: 12, height: 1.4),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.muted(colorScheme), height: 1.4),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () => context.go('/login'),
-                icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                icon: const Icon(Symbols.rocket_launch_rounded, size: 18),
                 label: Text(loc.tr('joinPlatform')),
                 style: FilledButton.styleFrom(
                   backgroundColor: colorScheme.secondaryContainer,
@@ -1002,10 +1109,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), Colors.black),
-          ],
+          colors: TashilBannerColors.gradient(colorScheme),
         ),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -1017,12 +1121,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               children: [
                 Text(
                   loc.tr('promoTitle'),
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   loc.tr('promoSubtitle'),
-                  style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.4),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.muted(colorScheme), height: 1.4),
                 ),
               ],
             ),
@@ -1030,7 +1134,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           const SizedBox(width: 24),
           FilledButton.icon(
             onPressed: () => context.go('/login'),
-            icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+            icon: const Icon(Symbols.rocket_launch_rounded, size: 18),
             label: Text(loc.tr('joinPlatform')),
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.secondaryContainer,
@@ -1054,7 +1158,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       child: Center(
         child: Text(
           loc.tr('footerCopyright'),
-          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ),
     );

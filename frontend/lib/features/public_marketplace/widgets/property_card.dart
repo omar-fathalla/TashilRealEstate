@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/market_display.dart';
 import '../../semantic_search/models/semantic_search_result_model.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
@@ -9,10 +10,12 @@ import '../../../core/design_system/cards/tashil_cards.dart';
 import '../../../core/design_system/buttons/tashil_buttons.dart';
 import '../../owner_portal/widgets/property_share_dialog.dart';
 import '../models/property_item.dart';
+import 'advertising_permit_badge.dart';
 import 'property_details_dialog.dart';
 import '../../../core/design_system/carousel/tashil_carousels.dart';
 import '../../../core/design_system/dividers/tashil_dividers.dart';
 import '../../../core/design_system/motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PropertyCard extends StatefulWidget {
   final PropertyItem property;
@@ -61,52 +64,49 @@ class _PropertyCardState extends State<PropertyCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Row(
                   children: [
-                    Icon(Icons.payments_outlined, size: 18, color: colorScheme.primary),
+                    Icon(Symbols.payments_rounded, size: 18, color: colorScheme.primary),
                     const SizedBox(width: 8),
-                    RichText(
+                    Flexible(
+                    child: RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '${CurrencyFormatter.formatAmount(widget.property.pricePerMonth, langCode: lang)} ',
-                            style: TextStyle(
-                              fontSize: 18.5,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
+                            text: '${CurrencyFormatter.formatAmount(MarketDisplay.rentAmount(pricePerMonth: widget.property.pricePerMonth, currencyCode: widget.property.currencyCode), langCode: lang)} ',
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.primary),
                           ),
                           TextSpan(
-                            text: '${widget.property.currencyCode == 'AED' ? loc.tr('currency_ae') : loc.tr('currency_eg')} / ${loc.tr('perMonth')}',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            text: '${widget.property.currencyCode == 'AED' ? loc.tr('currency_ae') : loc.tr('currency_eg')} / ${loc.tr(MarketDisplay.rentPeriodKey(widget.property.currencyCode))}',
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
                     ),
+                    ),
                   ],
                 ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
+                    color: colorScheme.tertiary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 15),
+                      Icon(Symbols.star_rounded, color: colorScheme.tertiary, size: 15),
                       const SizedBox(width: 2),
                       Text(
                         '${widget.property.rating}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -119,7 +119,7 @@ class _PropertyCardState extends State<PropertyCard> {
             TashilCardText(
               headlineText: widget.property.getTitle(lang),
               subheadText: widget.property.getLocation(lang),
-              subheadLeading: Icon(Icons.location_on_outlined, size: 14, color: colorScheme.secondary),
+              subheadLeading: Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.secondary),
               supportingText: widget.property.getDescription(lang).replaceAll('\n', ' ').trim(),
               linkedText: loc.tr('cardReadMoreLink'),
               onLinkedTextTap: () => _openDetails(context),
@@ -140,11 +140,14 @@ class _PropertyCardState extends State<PropertyCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildFeatureIcon(Icons.bed_outlined, '${widget.property.bedrooms} ${loc.tr('bedrooms')}'),
-                _buildFeatureIcon(Icons.bathtub_outlined, '${widget.property.bathrooms} ${loc.tr('bathrooms')}'),
-                _buildFeatureIcon(Icons.square_foot_outlined, '${widget.property.areaSqM.toInt()} ${loc.tr('sqm')}'),
+                _buildFeatureIcon(Symbols.bed_rounded, '${widget.property.bedrooms} ${loc.tr('bedrooms')}'),
+                _buildFeatureIcon(Symbols.bathtub_rounded, '${widget.property.bathrooms} ${loc.tr('bathrooms')}'),
                 _buildFeatureIcon(
-                  widget.property.isFurnished ? Icons.weekend_outlined : Icons.chair_outlined,
+                  Symbols.square_foot_rounded,
+                  '${MarketDisplay.areaAmount(areaSqM: widget.property.areaSqM, countryCode: widget.property.countryCode).round()} ${loc.tr(MarketDisplay.areaUnitKey(widget.property.countryCode))}',
+                ),
+                _buildFeatureIcon(
+                  widget.property.isFurnished ? Symbols.weekend_rounded : Symbols.chair_rounded,
                   widget.property.isFurnished ? loc.tr('furnished') : loc.tr('unfurnished'),
                 ),
               ],
@@ -154,22 +157,27 @@ class _PropertyCardState extends State<PropertyCard> {
             // Agency / Broker row with dedicated M3 business icon
             Row(
               children: [
-                Icon(Icons.business_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+                Icon(Symbols.business_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     widget.property.getAgencyName(lang),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
+
+            if (!widget.property.isSample && widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              AdvertisingPermitBadge(
+                permitNumber: widget.property.advertisingPermitNumber,
+                qrSize: 36,
+              ),
+            ],
 
             if (widget.semanticResult != null) ...[
               const SizedBox(height: 8),
@@ -182,16 +190,13 @@ class _PropertyCardState extends State<PropertyCard> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.auto_awesome, size: 13, color: colorScheme.primary),
+                    Icon(Symbols.auto_awesome_rounded, size: 13, color: colorScheme.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         widget.semanticResult!.getMatchReason(lang),
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -219,12 +224,12 @@ class _PropertyCardState extends State<PropertyCard> {
                     TashilConnectedButtonSegment(
                       value: 'booking',
                       label: loc.tr('bookViewingShort'),
-                      icon: Icons.calendar_month_outlined,
+                      icon: Symbols.calendar_month_rounded,
                     ),
                     TashilConnectedButtonSegment(
                       value: 'details',
                       label: loc.tr('detailsShort'),
-                      icon: Icons.visibility_outlined,
+                      icon: Symbols.visibility_rounded,
                     ),
                   ],
                 ),
@@ -232,7 +237,7 @@ class _PropertyCardState extends State<PropertyCard> {
               const SizedBox(width: 8),
               // Icon buttons per Google M3 card interactive controls: Phone & Message
               TashilIconButton.outlined(
-                icon: Icons.phone_outlined,
+                icon: Symbols.phone_rounded,
                 size: 38.0,
                 iconSize: 18.0,
                 tooltip: loc.tr('callAgency'),
@@ -249,7 +254,7 @@ class _PropertyCardState extends State<PropertyCard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.outlined(
-                icon: Icons.chat_bubble_outline_rounded,
+                icon: Symbols.chat_bubble_outline_rounded,
                 size: 38.0,
                 iconSize: 18.0,
                 tooltip: loc.tr('chatAgency'),
@@ -277,6 +282,25 @@ class _PropertyCardState extends State<PropertyCard> {
                       showArrows: widget.property.imageUrls.length > 1,
                       onTap: () => _openDetails(context),
                     ),
+                    if (widget.property.isSample)
+                      PositionedDirectional(
+                        bottom: 10,
+                        start: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            loc.tr('sampleListingBadge'),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onTertiaryContainer,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
                     // Property Category Tag ("شاليه" / "شقة" / "فيلا") at Top-Start
                     PositionedDirectional(
                       top: 10,
@@ -288,7 +312,7 @@ class _PropertyCardState extends State<PropertyCard> {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
+                              color: colorScheme.shadow.withValues(alpha: 0.25),
                               blurRadius: 4,
                               offset: const Offset(0, 1.5),
                             ),
@@ -297,15 +321,12 @@ class _PropertyCardState extends State<PropertyCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.apartment_rounded, size: 12, color: colorScheme.onPrimary),
+                            Icon(Symbols.apartment_rounded, size: 12, color: colorScheme.onPrimary),
                             const SizedBox(width: 4),
                             Text(
                               loc.tr('type_${widget.property.propertyTypeCode}'),
-                              style: TextStyle(
-                                color: colorScheme.onPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.5,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -322,7 +343,7 @@ class _PropertyCardState extends State<PropertyCard> {
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: colorScheme.shadow.withValues(alpha: 0.2),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1.5),
                               ),
@@ -331,15 +352,12 @@ class _PropertyCardState extends State<PropertyCard> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.star, size: 12, color: colorScheme.onTertiaryContainer),
+                              Icon(Symbols.star_rounded, size: 12, color: colorScheme.onTertiaryContainer),
                               const SizedBox(width: 4),
                               Text(
                                 loc.tr('featured'),
-                                style: TextStyle(
-                                  color: colorScheme.onTertiaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onTertiaryContainer,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -356,7 +374,7 @@ class _PropertyCardState extends State<PropertyCard> {
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
+                                color: colorScheme.shadow.withValues(alpha: 0.25),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -365,15 +383,12 @@ class _PropertyCardState extends State<PropertyCard> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.auto_awesome, size: 12, color: colorScheme.onSecondaryContainer),
+                              Icon(Symbols.auto_awesome_rounded, size: 12, color: colorScheme.onSecondaryContainer),
                               const SizedBox(width: 4),
                               Text(
                                 '${(widget.semanticResult!.similarityScore * 100).toInt()}% ${loc.tr('semanticMatchBadge')}',
-                                style: TextStyle(
-                                  color: colorScheme.onSecondaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -428,15 +443,12 @@ class _PropertyCardState extends State<PropertyCard> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: Colors.grey[600]),
+        Icon(icon, size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 3),
         Text(
           text,
-          style: TextStyle(
-            fontSize: 11.5,
-            color: Colors.grey[700],
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -460,7 +472,7 @@ class _PropertyCardState extends State<PropertyCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _HeaderActionPill(
-                    icon: Icons.chair_rounded,
+                    icon: Symbols.chair_rounded,
                     label: loc.tr('virtualStaging'),
                     backgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.55),
                     foregroundColor: colorScheme.onSecondaryContainer,
@@ -471,8 +483,8 @@ class _PropertyCardState extends State<PropertyCard> {
                   ),
                   const SizedBox(width: 8),
                   _HeaderActionPill(
-                    icon: Icons.mic_rounded,
-                    label: 'Gemini Live',
+                    icon: Symbols.mic_rounded,
+                    label: loc.tr('voiceAssistantBadge'),
                     backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.55),
                     foregroundColor: colorScheme.onPrimaryContainer,
                     borderColor: colorScheme.primary.withValues(alpha: 0.25),
@@ -490,14 +502,14 @@ class _PropertyCardState extends State<PropertyCard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _HeaderIconButton(
-                icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                iconColor: _isFavorite ? Colors.red : colorScheme.onSurfaceVariant,
+                icon: _isFavorite ? Symbols.favorite_rounded : Symbols.favorite_border_rounded,
+                iconColor: _isFavorite ? colorScheme.error : colorScheme.onSurfaceVariant,
                 tooltip: loc.tr('favorite'),
                 onTap: () => setState(() => _isFavorite = !_isFavorite),
               ),
               const SizedBox(width: 2),
               _HeaderIconButton(
-                icon: Icons.more_vert_rounded,
+                icon: Symbols.more_vert_rounded,
                 iconColor: colorScheme.onSurfaceVariant,
                 tooltip: loc.tr('shareAndOptions'),
                 onTap: () => PropertyShareDialog.showForMarketplace(context, widget.property),
@@ -545,7 +557,8 @@ class _HeaderActionPillState extends State<_HeaderActionPill> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
         transform: Matrix4.translationValues(0, _isHovered ? -1.0 : 0.0, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: _isHovered
               ? widget.backgroundColor.withValues(alpha: 0.9)
@@ -577,11 +590,8 @@ class _HeaderActionPillState extends State<_HeaderActionPill> {
                 const SizedBox(width: 4),
                 Text(
                   widget.label,
-                  style: TextStyle(
-                    color: widget.foregroundColor,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: widget.foregroundColor,
+                    fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -626,8 +636,8 @@ class _HeaderIconButtonState extends State<_HeaderIconButton> {
         message: widget.tooltip,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 30,
-          height: 30,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _isHovered

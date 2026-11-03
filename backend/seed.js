@@ -1,7 +1,20 @@
 const admin = require('firebase-admin');
 
+function loopback(value) {
+  if (!value) return false;
+  const host = value.split(':')[0].trim().toLowerCase();
+  return host === 'localhost' || host === '::1' || host.startsWith('127.');
+}
+
+if (!loopback(process.env.FIRESTORE_EMULATOR_HOST) || !loopback(process.env.FIREBASE_AUTH_EMULATOR_HOST)) {
+  console.error(
+    'Refusing to run backend/seed.js. It only runs when FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST point at loopback. Use npm run seed:emulator for the demo accounts.',
+  );
+  process.exit(1);
+}
+
 admin.initializeApp({
-  projectId: 'tashil-proptech-os'
+  projectId: process.env.FIREBASE_PROJECT_ID || 'tashil-proptech-os',
 });
 
 const auth = admin.auth();

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+final ValueNotifier<Set<String>> _dismissedActivities = ValueNotifier<Set<String>>(<String>{});
 
 class OverviewView extends StatelessWidget {
   const OverviewView({super.key});
@@ -17,10 +22,13 @@ class OverviewView extends StatelessWidget {
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth < 650;
           final isTablet = constraints.maxWidth >= 650 && constraints.maxWidth < 1100;
-          final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 4);
+          final crossAxisCount = isMobile ? 2 : (isTablet ? 2 : 4);
           final padding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
 
-          return SingleChildScrollView(
+          return RefreshIndicator.adaptive(
+            onRefresh: () async {},
+            child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(padding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,21 +38,18 @@ class OverviewView extends StatelessWidget {
                 SizedBox(height: isMobile ? 20 : 28),
 
                 // Responsive KPI Grid
-                GridView.count(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: isMobile ? 2.4 : (isTablet ? 2.0 : 1.6),
-                  children: [
+                LayoutBuilder(
+                  builder: (context, gridConstraints) {
+                    final columns = crossAxisCount;
+                    final cardWidth = (gridConstraints.maxWidth - (16 * (columns - 1))) / columns;
+                    final cards = [
                     _buildKpiCard(
                       context,
                       title: loc.tr('monthlyRevenue'),
-                      value: '450,000 ${loc.tr('currency')}',
+                      value: '450,000 ${CountryController.getCurrency(LocaleController.languageCode)}',
                       badgeText: loc.tr('growthRate'),
                       badgeColor: colorScheme.tertiary,
-                      icon: Icons.account_balance_wallet_outlined,
+                      icon: Symbols.account_balance_wallet_rounded,
                       accentColor: colorScheme.tertiary,
                     ),
                     _buildKpiCard(
@@ -53,16 +58,16 @@ class OverviewView extends StatelessWidget {
                       value: '85',
                       badgeText: loc.tr('occupancyRate'),
                       badgeColor: colorScheme.secondary,
-                      icon: Icons.assignment_outlined,
+                      icon: Symbols.assignment_rounded,
                       accentColor: colorScheme.secondary,
                     ),
                     _buildKpiCard(
                       context,
                       title: loc.tr('totalProperties'),
                       value: '120',
-                      badgeText: loc.tr('collectionRate'),
+                      badgeText: loc.tr('collectionRate').replaceAll('{rate}', '94'),
                       badgeColor: colorScheme.primary,
-                      icon: Icons.apartment_outlined,
+                      icon: Symbols.apartment_rounded,
                       accentColor: colorScheme.primary,
                     ),
                     _buildKpiCard(
@@ -70,11 +75,17 @@ class OverviewView extends StatelessWidget {
                       title: loc.tr('pendingMaintenance'),
                       value: '3',
                       badgeText: loc.tr('urgentTickets'),
-                      badgeColor: colorScheme.error,
-                      icon: Icons.handyman_outlined,
-                      accentColor: colorScheme.error,
+                      badgeColor: colorScheme.tertiary,
+                      icon: Symbols.handyman_rounded,
+                      accentColor: colorScheme.tertiary,
                     ),
-                  ],
+                    ];
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: cards.map((card) => SizedBox(width: cardWidth, child: card)).toList(),
+                    );
+                  },
                 ),
 
                 SizedBox(height: isMobile ? 28 : 36),
@@ -82,6 +93,7 @@ class OverviewView extends StatelessWidget {
                 // Recent Activities Card Section
                 _buildRecentActivities(context, loc, colorScheme, isMobile),
               ],
+            ),
             ),
           );
         },
@@ -143,7 +155,7 @@ class OverviewView extends StatelessWidget {
               SnackBar(content: Text(loc.tr('addNewProperty'))),
             );
           },
-          icon: const Icon(Icons.add, size: 18),
+          icon: const Icon(Symbols.add_rounded, size: 18),
           label: Text(loc.tr('addNewProperty')),
         ),
       ],
@@ -174,7 +186,6 @@ class OverviewView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -183,21 +194,6 @@ class OverviewView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: accentColor, size: 20),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
             ],
           ),
@@ -211,7 +207,7 @@ class OverviewView extends StatelessWidget {
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
@@ -221,7 +217,17 @@ class OverviewView extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
                 ),
-                maxLines: 1,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                badgeText,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                  color: badgeColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -243,31 +249,31 @@ class OverviewView extends StatelessWidget {
       {
         'title': loc.tr('activity1Title'),
         'time': loc.tr('activity1Time'),
-        'icon': Icons.verified_outlined,
+        'icon': Symbols.verified_rounded,
         'color': colorScheme.primary,
       },
       {
         'title': loc.tr('activity2Title'),
         'time': loc.tr('activity2Time'),
-        'icon': Icons.handyman_outlined,
-        'color': colorScheme.error,
+        'icon': Symbols.handyman_rounded,
+        'color': colorScheme.tertiary,
       },
       {
         'title': loc.tr('activity3Title'),
         'time': loc.tr('activity3Time'),
-        'icon': Icons.payments_outlined,
+        'icon': Symbols.payments_rounded,
         'color': colorScheme.secondary,
       },
       {
         'title': loc.tr('activity4Title'),
         'time': loc.tr('activity4Time'),
-        'icon': Icons.add_home_work_outlined,
+        'icon': Symbols.add_home_work_rounded,
         'color': colorScheme.secondary,
       },
       {
         'title': loc.tr('activity5Title'),
         'time': loc.tr('activity5Time'),
-        'icon': Icons.autorenew_outlined,
+        'icon': Symbols.autorenew_rounded,
         'color': colorScheme.tertiary,
       },
     ];
@@ -301,16 +307,33 @@ class OverviewView extends StatelessWidget {
           const SizedBox(height: 12),
           const TashilDivider.fullWidth(),
           const SizedBox(height: 8),
-          ListView.separated(
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: _dismissedActivities,
+            builder: (context, dismissed, _) {
+              final visible = activities.where((item) => !dismissed.contains(item['title'])).toList();
+              return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: activities.length,
+            itemCount: visible.length,
             separatorBuilder: (context, index) => const TashilDivider.inset(startIndent: 56),
             itemBuilder: (context, index) {
-              final item = activities[index];
+              final item = visible[index];
               final iconColor = item['color'] as Color;
+              final title = item['title'] as String;
 
-              return Material(
+              return Dismissible(
+                key: ValueKey<String>(title),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) {
+                  _dismissedActivities.value = {..._dismissedActivities.value, title};
+                },
+                background: Container(
+                  alignment: AlignmentDirectional.centerEnd,
+                  padding: const EdgeInsetsDirectional.only(end: 16),
+                  color: colorScheme.secondaryContainer,
+                  child: Icon(Symbols.delete_rounded, color: colorScheme.onSecondaryContainer),
+                ),
+                child: Material(
                 type: MaterialType.transparency,
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -339,13 +362,16 @@ class OverviewView extends StatelessWidget {
                     ),
                   ),
                   trailing: Icon(
-                    Icons.arrow_forward_ios,
+                    Symbols.arrow_forward_ios_rounded,
                     size: 14,
                     color: colorScheme.outline,
                   ),
                   onTap: () {},
                 ),
+              ),
               );
+            },
+          );
             },
           ),
         ],

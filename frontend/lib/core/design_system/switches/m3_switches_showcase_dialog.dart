@@ -4,6 +4,8 @@ import '../../localization/locale_controller.dart';
 import '../buttons/tashil_buttons.dart';
 import '../dividers/tashil_dividers.dart';
 import 'tashil_switch.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Switches Suite.
 ///
@@ -43,7 +45,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -68,7 +70,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Icon(
-                                Icons.toggle_on_rounded,
+                                Symbols.toggle_on_rounded,
                                 color: colorScheme.onPrimaryContainer,
                                 size: 24,
                               ),
@@ -80,7 +82,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                 children: [
                                   Text(
                                     lang == 'ar'
-                                        ? 'مفاتيح التبديل الرسمية (M3 Switch)'
+                                        ? AppLocalizations.trStatic('uiCopy299')
                                         : (lang == 'hi' ? 'आधिकारिक एम3 स्विच (M3 Switch)' : 'Google M3 Switch Suite'),
                                     style: theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
@@ -102,7 +104,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Symbols.close_rounded),
                         tooltip: loc.tr('closeModalBtn'),
                       ),
                     ],
@@ -122,7 +124,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                           _buildSectionTitle(
                             context,
                             title: lang == 'ar'
-                                ? '1. التبديل القياسي مع علامة الصح التعبيرية (M3 Default)'
+                                ? AppLocalizations.trStatic('uiCopy005')
                                 : '1. Standard M3 Switch with Animated Checkmark',
                             badge: 'Wi-Fi & Bluetooth Demo',
                           ),
@@ -141,11 +143,11 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.wifi_rounded, size: 20, color: colorScheme.primary),
+                                        Icon(Symbols.wifi_rounded, size: 20, color: colorScheme.primary),
                                         const SizedBox(width: 12),
                                         Text(
                                           'Wi-Fi',
-                                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: colorScheme.onSurface),
+                                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                         ),
                                       ],
                                     ),
@@ -164,11 +166,11 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.bluetooth_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                        Icon(Symbols.bluetooth_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                         const SizedBox(width: 12),
                                         Text(
                                           'Bluetooth',
-                                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: colorScheme.onSurface),
+                                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                         ),
                                       ],
                                     ),
@@ -188,7 +190,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                           _buildSectionTitle(
                             context,
                             title: lang == 'ar'
-                                ? '2. التبديل مع أيقونتين مزدوجتين (تفعيل / إلغاء)'
+                                ? AppLocalizations.trStatic('uiCopy013')
                                 : '2. Dual Icons Configuration (Selected & Unselected)',
                             badge: 'Dual Icon Morph',
                           ),
@@ -205,13 +207,13 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                               children: [
                                 Text(
                                   lang == 'ar' ? 'التفاوض الآلي الفوري' : 'Automated Negotiation Auto-Pilot',
-                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                 ),
                                 TashilSwitch(
                                   value: _customIconSelected,
                                   showIcon: true,
-                                  selectedIcon: Icons.check_rounded,
-                                  unselectedIcon: Icons.close_rounded,
+                                  selectedIcon: Symbols.check_rounded,
+                                  unselectedIcon: Symbols.close_rounded,
                                   onChanged: (val) => setState(() => _customIconSelected = val),
                                 ),
                               ],
@@ -240,7 +242,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                   children: [
                                     Text(
                                       lang == 'ar' ? 'معطل (مفعل)' : 'Disabled (ON)',
-                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                     ),
                                     const SizedBox(width: 8),
                                     const TashilSwitch(
@@ -254,7 +256,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                   children: [
                                     Text(
                                       lang == 'ar' ? 'معطل (مغلق)' : 'Disabled (OFF)',
-                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                     ),
                                     const SizedBox(width: 8),
                                     const TashilSwitch(
@@ -287,7 +289,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                 TashilSwitchListTile(
                                   title: Text(loc.tr('allowUpfrontDiscountSwitch')),
                                   subtitle: Text(loc.tr('allowUpfrontDiscountDesc')),
-                                  secondary: Icon(Icons.discount_rounded, color: colorScheme.primary),
+                                  secondary: Icon(Symbols.sell_rounded, color: colorScheme.primary),
                                   value: _notificationsTile,
                                   onChanged: (val) => setState(() => _notificationsTile = val),
                                 ),
@@ -295,7 +297,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                                 TashilSwitchListTile(
                                   title: Text(loc.tr('autoCloseDealsTitle')),
                                   subtitle: Text(loc.tr('autoCloseDealsDesc')),
-                                  secondary: Icon(Icons.auto_awesome_rounded, color: colorScheme.primary),
+                                  secondary: Icon(Symbols.auto_awesome_rounded, color: colorScheme.primary),
                                   value: _autoDebitTile,
                                   onChanged: (val) => setState(() => _autoDebitTile = val),
                                 ),
@@ -317,7 +319,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
                     children: [
                       TashilButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: Icons.check_circle_outline_rounded,
+                        icon: Symbols.check_circle_outline_rounded,
                         label: loc.tr('confirmActionBtn'),
                       ),
                     ],
@@ -359,11 +361,8 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
           ),
           child: Text(
             badge,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSecondaryContainer,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSecondaryContainer),
           ),
         ),
       ],

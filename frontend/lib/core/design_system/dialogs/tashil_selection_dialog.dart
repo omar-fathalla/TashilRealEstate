@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Item model for M3 Selection Dialog options.
 class TashilSelectionOption<T> {
@@ -82,27 +85,27 @@ class TashilSelectionDialog<T> extends StatelessWidget {
   }) {
     return show<String>(
       context: context,
-      title: title ?? 'اختيار العملة النقدية',
-      icon: Icons.payments_rounded,
+      title: title ?? AppLocalizations.trStatic('uiCopy104'),
+      icon: Symbols.payments_rounded,
       selectedValue: currentCurrency,
-      options: const [
+      options: [
         TashilSelectionOption<String>(
           value: 'EGP',
-          label: 'ج.م (جنيه مصري)',
-          subtitle: 'جمهورية مصر العربية 🇪🇬',
-          leading: Text('🇪🇬', style: TextStyle(fontSize: 22)),
+          label: AppLocalizations.trStatic('uiCopy184'),
+          subtitle: AppLocalizations.trStatic('uiCopy188'),
+          leading: Text('🇪🇬', style: Theme.of(context).textTheme.titleLarge!),
         ),
         TashilSelectionOption<String>(
           value: 'AED',
-          label: 'د.إ (درهم إماراتي)',
-          subtitle: 'الإمارات العربية المتحدة 🇦🇪',
-          leading: Text('🇦🇪', style: TextStyle(fontSize: 22)),
+          label: AppLocalizations.trStatic('uiCopy200'),
+          subtitle: AppLocalizations.trStatic('uiCopy119'),
+          leading: Text('🇦🇪', style: Theme.of(context).textTheme.titleLarge!),
         ),
         TashilSelectionOption<String>(
           value: 'USD',
           label: '\$ (دولار أمريكي)',
-          subtitle: 'الولايات المتحدة الأمريكية 🇺🇸',
-          leading: Text('🇺🇸', style: TextStyle(fontSize: 22)),
+          subtitle: AppLocalizations.trStatic('uiCopy153'),
+          leading: Text('🇺🇸', style: Theme.of(context).textTheme.titleLarge!),
         ),
       ],
     );
@@ -113,7 +116,7 @@ class TashilSelectionDialog<T> extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerHigh,
       elevation: elevation,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),
@@ -210,34 +213,28 @@ class TashilSelectionDialog<T> extends StatelessWidget {
                                     children: [
                                       Text(
                                         opt.label,
-                                        style: TextStyle(
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                          color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
-                                          fontSize: 14,
-                                        ),
+                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface),
                                       ),
                                       if (opt.subtitle != null)
                                         Text(
                                           opt.subtitle!,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: isSelected
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isSelected
                                                 ? colorScheme.onPrimaryContainer.withValues(alpha: 0.8)
-                                                : colorScheme.onSurfaceVariant,
-                                          ),
+                                                : colorScheme.onSurfaceVariant),
                                         ),
                                     ],
                                   ),
                                 ),
                                 if (isSelected)
                                   Icon(
-                                    Icons.check_circle_rounded,
+                                    Symbols.check_circle_rounded,
                                     color: colorScheme.primary,
                                     size: 20,
                                   )
                                 else
                                   Icon(
-                                    Icons.radio_button_unchecked_rounded,
+                                    Symbols.radio_button_unchecked_rounded,
                                     color: colorScheme.outlineVariant,
                                     size: 18,
                                   ),
@@ -257,7 +254,7 @@ class TashilSelectionDialog<T> extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TashilButton.text(
-                    label: 'إلغاء',
+                    label: AppLocalizations.trStatic('uiCopy098'),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

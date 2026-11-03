@@ -10,6 +10,8 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 Confirmation Dialog for Lease Termination and Market Re-listing.
 ///
@@ -90,15 +92,13 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
         final isMobile = ResponsiveLayout.isMobile(context);
         final screenWidth = MediaQuery.of(context).size.width;
         final dialogWidth = isMobile ? screenWidth * 0.94 : 580.0;
-        final currency = widget.property.currencyCode == 'EGP'
-            ? (lang == 'ar' ? 'ج.م' : (lang == 'hi' ? 'ईजीपी' : 'EGP'))
-            : (lang == 'ar' ? 'د.إ' : (lang == 'hi' ? 'एईडी' : 'AED'));
+        final currency = CurrencyFormatter.getCurrencySymbol(widget.property.currencyCode, lang);
 
         final propTitle = widget.property.titles[lang] ?? widget.property.titles['ar'] ?? '';
         final paidCount = widget.property.paidMonthsCount;
         final totalPaid = widget.property.totalCollectedRevenue;
 
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surfaceContainerLowest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -129,7 +129,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          Icons.assignment_return_rounded,
+                          Symbols.assignment_return_rounded,
                           color: theme.colorScheme.onErrorContainer,
                           size: 24,
                         ),
@@ -141,11 +141,8 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                           children: [
                             Text(
                               loc.tr('endLeaseConfirmTitle'),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: theme.colorScheme.onSurface,
-                              ),
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface),
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -199,7 +196,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                                     width: 60,
                                     height: 60,
                                     color: theme.colorScheme.surfaceContainerHighest,
-                                    child: Icon(Icons.apartment_rounded, color: theme.colorScheme.onSurfaceVariant),
+                                    child: Icon(Symbols.apartment_rounded, color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ),
                               ),
@@ -211,16 +208,13 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                                     if (widget.property.tenantName != null) ...[
                                       Row(
                                         children: [
-                                          Icon(Icons.person_rounded, size: 14, color: theme.colorScheme.primary),
+                                          Icon(Symbols.person_rounded, size: 14, color: theme.colorScheme.primary),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
                                               '${loc.tr('currentTenantName')}: ${widget.property.tenantName}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
-                                                color: theme.colorScheme.onSurface,
-                                              ),
+                                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.onSurface),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -231,16 +225,13 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                                     ],
                                     Row(
                                       children: [
-                                        Icon(Icons.payments_rounded, size: 14, color: theme.colorScheme.secondary),
+                                        Icon(Symbols.payments_rounded, size: 14, color: theme.colorScheme.secondary),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             '${CurrencyFormatter.formatAmount(totalPaid, langCode: lang)} $currency ($paidCount ${loc.tr('monthsPaidOutOf12')})',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                              color: theme.colorScheme.onSurfaceVariant),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -259,11 +250,8 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         // Section Explanation Heading
                         Text(
                           loc.tr('endLeaseConfirmSubtitle'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface),
                         ),
 
                         const SizedBox(height: 12),
@@ -271,7 +259,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         // Consequence Item 1: Financial Ledger Preserved (Green/Verified)
                         _buildConsequenceCard(
                           context,
-                          icon: Icons.verified_user_rounded,
+                          icon: Symbols.verified_user_rounded,
                           iconColor: const Color(0xFF10B981),
                           containerBg: const Color(0xFF10B981).withValues(alpha: 0.08),
                           borderColor: const Color(0xFF10B981).withValues(alpha: 0.25),
@@ -284,7 +272,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         // Consequence Item 2: Remaining Future Installments Closed
                         _buildConsequenceCard(
                           context,
-                          icon: Icons.event_busy_rounded,
+                          icon: Symbols.event_busy_rounded,
                           iconColor: theme.colorScheme.primary,
                           containerBg: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
                           borderColor: theme.colorScheme.primary.withValues(alpha: 0.20),
@@ -297,7 +285,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         // Consequence Item 3: Tenant Clearance & Historical Archiving
                         _buildConsequenceCard(
                           context,
-                          icon: Icons.person_pin_rounded,
+                          icon: Symbols.person_pin_rounded,
                           iconColor: theme.colorScheme.secondary,
                           containerBg: theme.colorScheme.secondaryContainer.withValues(alpha: 0.25),
                           borderColor: theme.colorScheme.secondary.withValues(alpha: 0.20),
@@ -310,7 +298,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         // Consequence Item 4: Marketplace Live or Draft
                         _buildConsequenceCard(
                           context,
-                          icon: Icons.storefront_rounded,
+                          icon: Symbols.storefront_rounded,
                           iconColor: theme.colorScheme.tertiary,
                           containerBg: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.25),
                           borderColor: theme.colorScheme.tertiary.withValues(alpha: 0.20),
@@ -324,17 +312,17 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.10),
+                            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.amber.withValues(alpha: 0.35),
+                              color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.35),
                               width: 1.0,
                             ),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.key_rounded, size: 18, color: Colors.amber),
+                              Icon(Symbols.key_rounded, size: 18, color: Theme.of(context).colorScheme.tertiary),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -342,20 +330,14 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                                   children: [
                                     Text(
                                       loc.tr('handoverClearanceNoticeTitle'),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurface),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       loc.tr('handoverClearanceNoticeDesc'),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        height: 1.4,
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.4,
+                                        color: theme.colorScheme.onSurfaceVariant),
                                     ),
                                   ],
                                 ),
@@ -379,7 +361,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                           child: Row(
                             children: [
                               Icon(
-                                _republishImmediately ? Icons.public_rounded : Icons.construction_rounded,
+                                _republishImmediately ? Symbols.public_rounded : Symbols.construction_rounded,
                                 size: 20,
                                 color: _republishImmediately
                                     ? theme.colorScheme.primary
@@ -394,11 +376,8 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                                       _republishImmediately
                                           ? loc.tr('republishImmediateOption')
                                           : loc.tr('saveAsDraftOption'),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurface),
                                     ),
                                   ],
                                 ),
@@ -432,12 +411,12 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
                       children: [
                         TashilButton.tonal(
                           label: loc.tr('cancelAndKeepLeaseBtn'),
-                          icon: Icons.arrow_back_rounded,
+                          icon: Symbols.arrow_back_rounded,
                           onPressed: _isProcessing ? null : () => Navigator.of(context).pop(false),
                         ),
                         TashilButton.filled(
                           label: loc.tr('confirmTerminationActionBtn'),
-                          icon: Icons.check_circle_rounded,
+                          icon: Symbols.check_circle_rounded,
                           onPressed: _isProcessing ? null : () => _handleConfirmTermination(loc),
                         ),
                       ],
@@ -487,20 +466,14 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   description,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.4,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.4,
+                    color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),

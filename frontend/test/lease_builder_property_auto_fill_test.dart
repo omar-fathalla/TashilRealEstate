@@ -124,13 +124,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Step 1 -> Next Step
-      final nextBtn = find.text('Next Step');
+      final nextBtn = find.text('Next step');
       expect(nextBtn, findsOneWidget);
       await tester.tap(nextBtn);
       await tester.pumpAndSettle();
 
       // Verify Step 2 English title
-      expect(find.text('Leased Property Specifications & Location'), findsOneWidget);
+      expect(find.text('Leased property specifications & location'), findsOneWidget);
       expect(find.byType(TashilDropdownMenu<String>), findsOneWidget);
 
       // Verify English property title and city

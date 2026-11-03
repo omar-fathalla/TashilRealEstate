@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/features/owner_portal/views/owner_overview_vi
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -48,8 +49,8 @@ void main() {
             title: 'إجمالي الفواتير',
             value: '25,000 ج.م',
             subtitle: 'تحصيل إلكتروني مؤكد',
-            icon: Icons.receipt_long_rounded,
-            subtitleIcon: Icons.verified_rounded,
+            icon: Symbols.receipt_long_rounded,
+            subtitleIcon: Symbols.verified_rounded,
           ),
         ),
       );
@@ -58,8 +59,8 @@ void main() {
       expect(find.text('إجمالي الفواتير'), findsOneWidget);
       expect(find.text('25,000 ج.م'), findsOneWidget);
       expect(find.text('تحصيل إلكتروني مؤكد'), findsOneWidget);
-      expect(find.byIcon(Icons.receipt_long_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.receipt_long_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.verified_rounded), findsWidgets);
 
       // Verify card styling
       final cardFinder = find.byType(TashilCard);
@@ -73,8 +74,8 @@ void main() {
           title: 'Card $i',
           value: '$i',
           subtitle: 'Sub $i',
-          icon: Icons.star,
-          subtitleIcon: Icons.check,
+          icon: Symbols.star_rounded,
+          subtitleIcon: Symbols.check_rounded,
         ),
       );
 
@@ -253,8 +254,8 @@ void main() {
       await tester.pumpWidget(buildTestableWidget(const OwnerFinancialsView(), locale: const Locale('en')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Rent Invoicing & Electronic Collection Hub'), findsOneWidget);
-      expect(find.text('Issue Invoice'), findsOneWidget);
+      expect(find.text('Rent invoicing & electronic collection hub'), findsOneWidget);
+      expect(find.text('Issue invoice'), findsOneWidget);
       expect(find.text('Verified electronic deposits'), findsOneWidget);
     });
 

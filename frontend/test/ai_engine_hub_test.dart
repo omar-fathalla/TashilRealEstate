@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/models/ai_model_definition.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/services/ai_engine_config_controller.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_view.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_dashboard.dart';
 import 'package:tashil_real_estate/features/architecture_hub/widgets/google_ai_architecture_hub_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +50,7 @@ void main() {
       }
 
       // Check default model for property ingestion
-      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-3.8-flash'));
+      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-2.5-flash'));
 
       // Switch to Gemini 2.5 Flash
       controller.switchModel(AiServiceType.propertyIngestion, 'gemini-2.5-flash');
@@ -65,9 +67,9 @@ void main() {
 
       // Reset to defaults
       controller.resetToDefaults();
-      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-3.8-flash'));
-      expect(controller.getModelName(AiServiceType.legalAdvisor), equals('gemini-3.8-flash'));
-      expect(controller.getActiveModel(AiServiceType.legalAdvisor).name, equals('Gemini 3.8 Flash Legal'));
+      expect(controller.getModelName(AiServiceType.propertyIngestion), equals('gemini-2.5-flash'));
+      expect(controller.getModelName(AiServiceType.legalAdvisor), equals('gemini-2.5-flash'));
+      expect(controller.getActiveModel(AiServiceType.legalAdvisor).name, equals('Gemini 2.5 Flash'));
     });
 
     testWidgets('AiEngineHubView renders Hero KPI metrics and 6 AI service cards', (tester) async {
@@ -99,7 +101,7 @@ void main() {
       expect(find.text('توكن متوازن'), findsWidgets);
 
       // Verify switching a model
-      expect(find.text('Gemini 3.8 Flash'), findsWidgets);
+      expect(find.text('Gemini 2.5 Flash'), findsWidgets);
       await tester.tap(find.text('Gemini 2.5 Flash').first);
       await tester.pumpAndSettle();
 
@@ -126,7 +128,7 @@ void main() {
       expect(find.text('محركات الذكاء الاصطناعي'), findsWidgets);
 
       // Verify Header button
-      expect(find.byIcon(Icons.smart_toy_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.smart_toy_rounded), findsWidgets);
     });
 
     testWidgets('AppSettingsDialog includes AI Engine section with open hub button', (tester) async {
@@ -137,12 +139,18 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      UserProfileService().profileNotifier.value = const UserProfileData(
+        uid: 'super-admin-test',
+        email: 'admin@tashil.ae',
+        fullName: 'مشرف عام',
+        role: 'SuperAdmin',
+      );
       await tester.pumpWidget(wrapWithApp(const Scaffold(body: AppSettingsDialog())));
       await tester.pumpAndSettle();
 
       // Verify Section 5 is present
       expect(find.text('محركات ونماذج الذكاء الاصطناعي'), findsOneWidget);
-      expect(find.text('Gemini 3.8 & 2.5 Active'), findsOneWidget);
+      expect(find.text('Gemini 2.5 Flash'), findsWidgets);
       expect(find.text('فتح مركز إدارة نماذج AI'), findsOneWidget);
     });
 

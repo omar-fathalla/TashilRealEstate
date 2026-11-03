@@ -420,7 +420,7 @@ class TashilTransitions {
       context: context,
       barrierDismissible: barrierDismissible,
       barrierLabel: barrierLabel ?? 'Dismiss',
-      barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.54),
+      barrierColor: barrierColor ?? Theme.of(context).colorScheme.shadow.withValues(alpha: 0.54),
       transitionDuration: TashilMotionWebCurves.expressiveDefaultSpatialDuration,
       pageBuilder: (context, animation, secondaryAnimation) => builder(context),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -454,6 +454,46 @@ class TashilTransitions {
   /// - Faster Exit Law: 200ms exit with [TashilMotionEasing.emphasizedAccelerate] (`cubic-bezier(0.3, 0.0, 0.8, 0.15)`).
   /// - Smooth scaling (starts at 0.90 on entrance, dismisses smoothly to 0.95 on exit).
   /// - Soft dynamic backdrop scrim blur and fade.
+  /// Compact phones get a drag-handle sheet, or a full-screen page for long
+  /// forms. Expanded windows keep the centered dialog.
+  static Future<T?> showAdaptiveSheet<T>({
+    required BuildContext context,
+    required WidgetBuilder builder,
+    bool longForm = false,
+    bool barrierDismissible = true,
+  }) {
+    if (!longForm) {
+      return showM3Dialog<T>(
+        context: context,
+        builder: builder,
+        barrierDismissible: barrierDismissible,
+      );
+    }
+    if (longForm) {
+      return Navigator.of(context, rootNavigator: true).push<T>(
+        MaterialPageRoute<T>(
+          fullscreenDialog: true,
+          builder: (routeContext) => Scaffold(
+            resizeToAvoidBottomInset: true,
+            body: SafeArea(
+              child: builder(routeContext),
+            ),
+          ),
+        ),
+      );
+    }
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+        child: builder(sheetContext),
+      ),
+    );
+  }
+
   static Future<T?> showM3Dialog<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -463,13 +503,23 @@ class TashilTransitions {
     Duration duration = TashilMotionDuration.medium4,
     Duration reverseDuration = TashilMotionDuration.short4,
     double beginScale = 0.90,
+    bool longForm = false,
   }) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (longForm && width < 600) {
+      return showAdaptiveSheet<T>(
+        context: context,
+        builder: builder,
+        longForm: true,
+        barrierDismissible: barrierDismissible,
+      );
+    }
     return Navigator.of(context, rootNavigator: true).push<T>(
       _M3DialogRoute<T>(
         pageBuilder: (ctx, animation, secondaryAnimation) => builder(ctx),
         barrierDismissible: barrierDismissible,
         barrierLabel: barrierLabel ?? 'Dismiss',
-        barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.45),
+        barrierColor: barrierColor ?? Theme.of(context).colorScheme.shadow.withValues(alpha: 0.45),
         transitionDuration: duration,
         reverseTransitionDuration: reverseDuration,
         transitionBuilder: (ctx, animation, secondaryAnimation, child) {

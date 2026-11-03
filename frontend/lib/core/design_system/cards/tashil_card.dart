@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Enumeration of Material Design 3 Card visual variants.
 enum TashilCardVariant {
@@ -217,7 +218,7 @@ class _TashilCardState extends State<TashilCard> {
             top: 6,
             end: 6,
             child: PopupMenuButton(
-              icon: const Icon(Icons.more_vert_rounded, size: 20),
+              icon: const Icon(Symbols.more_vert_rounded, size: 20),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               onSelected: isEffectivelyDisabled ? null : widget.onMenuItemSelected,
               enabled: !isEffectivelyDisabled,
@@ -659,14 +660,19 @@ class TashilCardText extends StatelessWidget {
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   onTap: onLinkedTextTap,
-                  child: Text(
-                    linkedText!,
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                      decorationColor: colorScheme.primary,
-                      fontSize: 12,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        linkedText!,
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          decorationColor: colorScheme.primary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -693,13 +699,10 @@ class TashilCardText extends StatelessWidget {
                       onTap: onLinkedTextTap,
                       child: Text(
                         linkedText!,
-                        style: TextStyle(
-                          color: colorScheme.primary,
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.underline,
-                          decorationColor: colorScheme.primary,
-                          fontSize: 12,
-                        ),
+                          decorationColor: colorScheme.primary),
                       ),
                     ),
                   ),

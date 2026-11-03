@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:tashil_real_estate/core/config/demo_data.dart';
 import '../models/property_item.dart';
 import '../../../core/utils/search_tokenizer.dart';
 import '../../../core/services/firestore_service.dart';
@@ -42,8 +43,12 @@ class PropertyRepository {
 
   // In-Memory Country Caches for instant sub-millisecond retrieval
   final Map<String, List<PropertyItem>> _countryCache = {
-    'EG': PropertyItem.sampleProperties.where((p) => p.countryCode == 'EG').toList(),
-    'AE': PropertyItem.sampleProperties.where((p) => p.countryCode == 'AE').toList(),
+    'EG': DemoData.enabled
+        ? PropertyItem.sampleProperties.where((p) => p.countryCode == 'EG').toList()
+        : <PropertyItem>[],
+    'AE': DemoData.enabled
+        ? PropertyItem.sampleProperties.where((p) => p.countryCode == 'AE').toList()
+        : <PropertyItem>[],
   };
 
   /// Retrieves cached properties for a specific country
@@ -101,12 +106,9 @@ class PropertyRepository {
     final allProperties = getPropertiesByCountry(countryCode);
 
     final filtered = allProperties.where((prop) {
-      final title = prop.getTitle(langCode);
-      final location = prop.getLocation(langCode);
-
       final matchesQuery = searchQuery.isEmpty ||
-          SearchTokenizer.matches(title, searchQuery) ||
-          SearchTokenizer.matches(location, searchQuery);
+          prop.titles.values.any((text) => SearchTokenizer.matches(text, searchQuery)) ||
+          prop.locations.values.any((text) => SearchTokenizer.matches(text, searchQuery));
 
       final matchesCity = cityCode == 'all' || prop.cityCode == cityCode;
       final matchesType = typeCode == 'all' || prop.propertyTypeCode == typeCode;

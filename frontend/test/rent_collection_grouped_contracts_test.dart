@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/features/rent_collection/models/contract_invo
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   setUp(() {
@@ -130,7 +131,7 @@ void main() {
       expect(find.byType(DataTable), findsOneWidget);
 
       // Verify the spotlight star icon is rendered
-      expect(find.byIcon(Icons.stars_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.stars_rounded), findsWidgets);
     });
 
     testWidgets('Tapping the group header collapses and expands the installments sub-table', (tester) async {

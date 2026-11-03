@@ -60,7 +60,7 @@ void main() {
       // Ensure properly translated Arabic strings are present
       expect(find.text('تحصيل الإيجار'), findsOneWidget);
       expect(find.text('إنشاء فاتورة'), findsOneWidget);
-      expect(find.text('المالك / المؤجر'), findsWidgets);
+      expect(find.text('المالك'), findsWidgets);
       expect(find.text('التحويل الآلي للمالك مفعل'), findsNothing);
 
       // Verify Connected Button Groups are present (filter bar + invoice action cards)
@@ -113,10 +113,10 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Rent Collection'), findsOneWidget);
-      expect(find.text('Create Invoice'), findsOneWidget);
-      expect(find.text('Landlord / Owner'), findsWidgets);
-      expect(find.text('All Invoices'), findsOneWidget);
+      expect(find.text('Rent collection'), findsOneWidget);
+      expect(find.text('Create invoice'), findsOneWidget);
+      expect(find.text('Landlord'), findsWidgets);
+      expect(find.text('All invoices'), findsOneWidget);
       expect(find.text('Paid'), findsWidgets);
       expect(find.text('Pay'), findsWidgets);
       expect(find.text('Remind'), findsWidgets);

@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
 import 'package:tashil_real_estate/features/image_moderation/services/ai_image_moderation_service.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class AiPropertyMediaUploader extends StatefulWidget {
   final ValueChanged<List<ImageModerationItem>>? onPhotosUpdated;
@@ -50,7 +51,7 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          Icons.auto_awesome_rounded,
+                          Symbols.auto_awesome_rounded,
                           color: theme.colorScheme.onPrimaryContainer,
                           size: 18,
                         ),
@@ -77,7 +78,7 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                     ],
                   ),
                   TashilButton.tonal(
-                    icon: Icons.tune_rounded,
+                    icon: Symbols.tune_rounded,
                     label: loc.tr('openAiStudioInspector'),
                     onPressed: () => AiImageModeratorDialog.show(context),
                   ),
@@ -99,7 +100,7 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.cloud_upload_outlined, size: 36, color: theme.colorScheme.primary),
+                      Icon(Symbols.cloud_upload_rounded, size: 36, color: theme.colorScheme.primary),
                       const SizedBox(height: 8),
                       Text(
                         loc.tr('dragDropPropertyPhotosPrompt'),
@@ -136,21 +137,15 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                       children: [
                         Text(
                           '${approvedItems.length} ${loc.tr('approved')}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold),
                         ),
                         if (rejectedItems.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Text(
                             '${rejectedItems.length} ${loc.tr('rejected')}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.colorScheme.error,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.error,
+                              fontWeight: FontWeight.bold),
                           ),
                         ],
                       ],
@@ -199,11 +194,8 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                               ),
                               child: Text(
                                 isApproved ? '✓' : '✕',
-                                style: TextStyle(
-                                  color: isApproved ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onErrorContainer,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isApproved ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onErrorContainer,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -218,7 +210,7 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                                   color: theme.colorScheme.surface.withValues(alpha: 0.8),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.close, color: theme.colorScheme.onSurface, size: 12),
+                                child: Icon(Symbols.close_rounded, color: theme.colorScheme.onSurface, size: 12),
                               ),
                             ),
                           ),

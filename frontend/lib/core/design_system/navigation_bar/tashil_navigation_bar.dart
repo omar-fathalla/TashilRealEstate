@@ -43,7 +43,6 @@ class TashilNavigationBar extends StatelessWidget {
         borderColor ?? colorScheme.outlineVariant.withValues(alpha: 0.5);
 
     return Container(
-      height: height + MediaQuery.paddingOf(context).bottom,
       decoration: BoxDecoration(
         color: effectiveBg,
         border: hasTopBorder
@@ -57,14 +56,16 @@ class TashilNavigationBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: height,
+        child: ConstrainedBox(
+          // minHeight lets large text grow the bar. Do not wrap destinations
+          // in Center/Align: Scaffold gives bottomNavigationBar a loose max
+          // height, and those widgets expand to it, covering the body.
+          constraints: BoxConstraints(minHeight: height),
           child: Row(
-            children: destinations.map((dest) {
-              return Expanded(
-                child: Center(child: dest),
-              );
-            }).toList(),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (final dest in destinations) Expanded(child: dest),
+            ],
           ),
         ),
       ),

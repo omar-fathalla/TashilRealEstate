@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -20,6 +21,8 @@ import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warnin
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tax_invoice_viewer_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Redesigned Material Design 3 Rent Collection & Automated Payouts View.
 ///
@@ -61,6 +64,18 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     super.initState();
     _syncInvoices();
     PropertyLifecycleService().propertiesNotifier.addListener(_syncInvoices);
+    final emirate = ScreenshotHooks.legalEmirate;
+    if (emirate != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openHookedLegalNotice(emirate));
+    }
+  }
+
+  void _openHookedLegalNotice(String emirate) {
+    if (!mounted) return;
+    LegalWarningNoticeDialog.show(
+      context,
+      ScreenshotHooks.demoLegalInvoice(emirate),
+    );
   }
 
   void _syncInvoices() {
@@ -154,7 +169,10 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           final screenWidth = constraints.maxWidth;
                           final isCompact = screenWidth < 768;
 
-                          return SingleChildScrollView(
+                          return RefreshIndicator.adaptive(
+                            onRefresh: () async => _syncInvoices(),
+                            child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.symmetric(
                               horizontal: isCompact ? 16 : 28,
                               vertical: isCompact ? 20 : 28,
@@ -240,6 +258,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                         ),
                                     ],
                                   ),
+                            ),
                           );
                         },
                       ),
@@ -289,12 +308,11 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   }) {
     final showBack = widget.showBackButton ??
         (Navigator.of(context).canPop() || Navigator.of(context, rootNavigator: true).canPop());
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     final backButton = showBack
         ? TashilButton.tonal(
             onPressed: () => _handleBack(context),
-            icon: isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+            icon: Symbols.arrow_back_rounded,
             label: loc.tr('back'),
           )
         : null;
@@ -304,21 +322,15 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       children: [
         Text(
           loc.tr('rentCollectionTitle'),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isCompact ? 20 : 24,
+          style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.bold,
             color: colorScheme.onSurface,
-            letterSpacing: -0.3,
-          ),
+            letterSpacing: -0.3),
         ),
         const SizedBox(height: 4),
         Text(
           isUAE ? loc.tr('rentCollectionSubtitle_ae') : loc.tr('rentCollectionSubtitle_eg'),
-          style: TextStyle(
-            fontSize: isCompact ? 12 : 13,
-            color: colorScheme.onSurfaceVariant,
-            height: 1.4,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+            height: 1.4),
         ),
       ],
     );
@@ -333,12 +345,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         if (showTrash)
           TashilButton.tonal(
             onPressed: () => setState(() => _isTrashView = true),
-            icon: Icons.auto_delete_outlined,
+            icon: Symbols.auto_delete_rounded,
             label: '${loc.tr('deletedInvoicesTitle')}${deletedCount > 0 ? ' ($deletedCount)' : ''}',
           ),
         TashilButton(
           onPressed: () => CreateRentInvoiceDialog.show(context),
-          icon: Icons.add_rounded,
+          icon: Symbols.add_rounded,
           label: loc.tr('generateInvoiceBtn'),
         ),
       ],
@@ -398,8 +410,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           title: loc.tr('totalRentCollected'),
           value: '${CurrencyFormatter.formatAmount(totalCollected, langCode: lang)} $currency',
           subtitle: loc.tr('totalRentCollectedSubtitle'),
-          icon: Icons.savings_rounded,
-          subtitleIcon: Icons.check_circle_outline_rounded,
+          icon: Symbols.savings_rounded,
+          subtitleIcon: Symbols.check_circle_outline_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -407,8 +419,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           title: loc.tr('dueSoonRent'),
           value: '${CurrencyFormatter.formatAmount(totalDueSoon, langCode: lang)} $currency',
           subtitle: loc.tr('dueSoonRentSubtitle'),
-          icon: Icons.schedule_rounded,
-          subtitleIcon: Icons.hourglass_bottom_rounded,
+          icon: Symbols.schedule_rounded,
+          subtitleIcon: Symbols.hourglass_bottom_rounded,
           iconColor: colorScheme.tertiary,
           iconBgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         ),
@@ -416,8 +428,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           title: loc.tr('overdueArrearsAndPenalties'),
           value: '${CurrencyFormatter.formatAmount(totalArrears, langCode: lang)} $currency',
           subtitle: loc.tr('overduePenaltiesSubtitle'),
-          icon: Icons.warning_amber_rounded,
-          subtitleIcon: Icons.notification_important_outlined,
+          icon: Symbols.warning_amber_rounded,
+          subtitleIcon: Symbols.notification_important_rounded,
           iconColor: colorScheme.error,
           iconBgColor: colorScheme.errorContainer.withValues(alpha: 0.5),
         ),
@@ -425,8 +437,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           title: loc.tr('netTransferredToOwnersKpi'),
           value: '${CurrencyFormatter.formatAmount(netTransferred, langCode: lang)} $currency',
           subtitle: loc.tr('netTransferredSubtitle'),
-          icon: Icons.account_balance_rounded,
-          subtitleIcon: Icons.verified_rounded,
+          icon: Symbols.account_balance_rounded,
+          subtitleIcon: Symbols.verified_rounded,
           iconColor: colorScheme.secondary,
           iconBgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         ),
@@ -459,7 +471,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
-            Icons.search_rounded,
+            Symbols.search_rounded,
             size: 20,
             color: colorScheme.onSurfaceVariant,
           ),
@@ -468,16 +480,10 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: (_) => setState(() {}),
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: loc.tr('searchInvoicesPlaceholder'),
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
+                hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                 isDense: true,
                 filled: false,
                 fillColor: Colors.transparent,
@@ -511,25 +517,25 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         TashilConnectedButtonSegment(
           value: 'all',
           label: loc.tr('filterAllInvoices'),
-          icon: Icons.receipt_long_rounded,
+          icon: Symbols.receipt_long_rounded,
           badge: '$allCount',
         ),
         TashilConnectedButtonSegment(
           value: 'paid',
           label: loc.tr('filterPaidInvoices'),
-          icon: Icons.check_circle_rounded,
+          icon: Symbols.check_circle_rounded,
           badge: '$paidCount',
         ),
         TashilConnectedButtonSegment(
           value: 'due_soon',
           label: loc.tr('filterDueSoonInvoices'),
-          icon: Icons.schedule_rounded,
+          icon: Symbols.schedule_rounded,
           badge: '$dueSoonCount',
         ),
         TashilConnectedButtonSegment(
           value: 'overdue',
           label: loc.tr('filterOverdueInvoices'),
-          icon: Icons.error_outline_rounded,
+          icon: Symbols.error_outline_rounded,
           badge: '$overdueCount',
         ),
       ],
@@ -543,12 +549,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         TashilConnectedButtonSegment(
           value: 'table',
           label: loc.tr('viewModeTable'),
-          icon: Icons.table_chart_rounded,
+          icon: Symbols.table_chart_rounded,
         ),
         TashilConnectedButtonSegment(
           value: 'cards',
           label: loc.tr('viewModeCards'),
-          icon: Icons.grid_view_rounded,
+          icon: Symbols.grid_view_rounded,
         ),
       ],
     );
@@ -605,18 +611,18 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
     Color statusBg = colorScheme.tertiaryContainer;
     Color statusText = colorScheme.onTertiaryContainer;
-    IconData statusIcon = Icons.schedule_rounded;
+    IconData statusIcon = Symbols.schedule_rounded;
     String statusLabel = loc.tr('statusDueSoon');
 
     if (isPaid) {
       statusBg = colorScheme.primaryContainer;
       statusText = colorScheme.onPrimaryContainer;
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = Symbols.check_circle_rounded;
       statusLabel = loc.tr('statusPaid');
     } else if (isOverdue) {
       statusBg = colorScheme.errorContainer;
       statusText = colorScheme.onErrorContainer;
-      statusIcon = Icons.error_rounded;
+      statusIcon = Symbols.error_rounded;
       statusLabel = '${loc.tr('statusOverdue')} (${inv.overdueDays} ${loc.tr('days')})';
     }
 
@@ -663,11 +669,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           statusLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: statusText,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusText,
+                            fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -690,15 +693,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.stars_rounded, size: 12, color: colorScheme.onPrimary),
+                        Icon(Symbols.stars_rounded, size: 12, color: colorScheme.onPrimary),
                         const SizedBox(width: 4),
                         Text(
                           loc.tr('currentMonthSpot'),
-                          style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10.5,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -707,7 +707,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.receipt_rounded,
+                      Symbols.receipt_rounded,
                       size: 14,
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -717,16 +717,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         inv.invoiceNumber,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                       ),
                     ),
                     const SizedBox(width: 8),
                     TashilIconButton.tonal(
-                      icon: Icons.edit_outlined,
+                      icon: Symbols.edit_rounded,
                       size: 28,
                       iconSize: 14,
                       tooltip: loc.tr('editInvoiceAction'),
@@ -740,7 +737,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     ),
                     const SizedBox(width: 4),
                     TashilIconButton.tonal(
-                      icon: Icons.delete_outline_rounded,
+                      icon: Symbols.delete_outline_rounded,
                       size: 28,
                       iconSize: 14,
                       tooltip: loc.tr('moveToTrashAction'),
@@ -789,7 +786,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   child: Row(
                     children: [
                       Icon(
-                        isPaid ? Icons.account_balance_wallet_rounded : Icons.pending_actions_rounded,
+                        isPaid ? Symbols.account_balance_wallet_rounded : Symbols.pending_actions_rounded,
                         size: 16,
                         color: isPaid ? colorScheme.primary : colorScheme.onSurfaceVariant,
                       ),
@@ -801,11 +798,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                               : '${loc.tr('scheduledPayoutToOwner')}: ${CurrencyFormatter.formatAmount(inv.netPayoutToOwner, langCode: lang)} $currency',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: isPaid ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                            color: isPaid ? colorScheme.primary : colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ],
@@ -820,11 +814,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     ),
                     child: Text(
                       '${loc.tr('remindersSentCount')}: ${inv.reminderCount}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold),
                     ),
                   ),
               ],
@@ -866,29 +857,29 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                 TashilConnectedButtonSegment(
                   value: 'receipt',
                   label: loc.tr('viewOfficialReceipt'),
-                  icon: Icons.receipt_long_rounded,
+                  icon: Symbols.receipt_long_rounded,
                 ),
                 TashilConnectedButtonSegment(
                   value: 'invoice',
                   label: loc.tr('linkedTaxInvoice'),
-                  icon: Icons.description_outlined,
+                  icon: Symbols.description_rounded,
                 ),
               ] else ...[
                 TashilConnectedButtonSegment(
                   value: 'pay',
                   label: loc.tr('payRentNowAction'),
-                  icon: Icons.payment_rounded,
+                  icon: Symbols.payment_rounded,
                 ),
                 TashilConnectedButtonSegment(
                   value: 'remind',
                   label: loc.tr('sendReminderWhatsApp'),
-                  icon: Icons.send_to_mobile_rounded,
+                  icon: Symbols.send_to_mobile_rounded,
                 ),
                 if (isOverdue) ...[
                   TashilConnectedButtonSegment(
                     value: 'warning',
                     label: loc.tr('issueLegalWarningAction'),
-                    icon: Icons.gavel_rounded,
+                    icon: Symbols.gavel_rounded,
                     activeColor: colorScheme.error,
                     activeForegroundColor: colorScheme.onError,
                     unselectedForegroundColor: colorScheme.error,
@@ -917,7 +908,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     final unitItem = _buildCardDetailItem(
       label: loc.tr('unit'),
       value: '${inv.unitTitle} (${inv.unitNumber})',
-      icon: Icons.apartment_rounded,
+      icon: Symbols.apartment_rounded,
       colorScheme: colorScheme,
     );
 
@@ -925,7 +916,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       label: loc.tr('tenant'),
       value: inv.tenant.name,
       subtitle: inv.tenant.phone,
-      icon: Icons.person_outline_rounded,
+      icon: Symbols.person_outline_rounded,
       colorScheme: colorScheme,
     );
 
@@ -933,14 +924,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       label: loc.tr('landlord'),
       value: inv.owner.name,
       subtitle: inv.owner.bankName,
-      icon: Icons.account_balance_outlined,
+      icon: Symbols.account_balance_rounded,
       colorScheme: colorScheme,
     );
 
     final totalRentItem = _buildCardDetailItem(
       label: loc.tr('totalRentValue'),
       value: '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-      icon: Icons.payments_outlined,
+      icon: Symbols.payments_rounded,
       colorScheme: colorScheme,
       isHighlight: true,
     );
@@ -1031,22 +1022,16 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: isHighlight ? 14 : 12,
-                  fontWeight: FontWeight.bold,
-                  color: isHighlight ? colorScheme.primary : colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: isHighlight ? colorScheme.primary : colorScheme.onSurface),
               ),
               if (subtitle != null && subtitle.isNotEmpty) ...[
                 const SizedBox(height: 1),
@@ -1054,10 +1039,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                 ),
               ],
             ],
@@ -1082,7 +1064,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               ),
               child: Center(
                 child: Icon(
-                  Icons.receipt_long_outlined,
+                  Symbols.receipt_long_rounded,
                   size: 40,
                   color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 ),
@@ -1091,19 +1073,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             const SizedBox(height: 16),
             Text(
               loc.tr('noInvoicesFound'),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
             const SizedBox(height: 6),
             Text(
               loc.tr('noInvoicesSubtitle'),
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -1118,12 +1094,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     required bool isDark,
   }) {
     final lower = typeCode.toLowerCase().trim();
-    final isVilla = lower.contains('villa') || lower.contains('فيلا');
-    final isOffice = lower.contains('office') || lower.contains('مكتب');
-    final isCommercial = lower.contains('commercial') || lower.contains('تجاري');
-    final isChalet = lower.contains('chalet') || lower.contains('شاليه');
-    final isDuplex = lower.contains('duplex') || lower.contains('دوبلكس');
-    final isStudio = lower.contains('studio') || lower.contains('استوديو') || lower.contains('استديو');
+    final isVilla = lower.contains('villa') || lower.contains(AppLocalizations.trStatic('uiCopy253'));
+    final isOffice = lower.contains('office') || lower.contains(AppLocalizations.trStatic('uiCopy302'));
+    final isCommercial = lower.contains('commercial') || lower.contains(AppLocalizations.trStatic('uiCopy168'));
+    final isChalet = lower.contains('chalet') || lower.contains(AppLocalizations.trStatic('uiCopy218'));
+    final isDuplex = lower.contains('duplex') || lower.contains(AppLocalizations.trStatic('uiCopy206'));
+    final isStudio = lower.contains('studio') || lower.contains(AppLocalizations.trStatic('uiCopy115')) || lower.contains(AppLocalizations.trStatic('uiCopy113'));
 
     Color bg;
     Color border;
@@ -1136,43 +1112,43 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       border = isDark ? const Color(0xFF10B981).withValues(alpha: 0.70) : const Color(0xFFA7F3D0);
       text = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857);
       label = loc.tr('propTypeVilla');
-      icon = Icons.villa_rounded;
+      icon = Symbols.villa_rounded;
     } else if (isOffice) {
       bg = isDark ? const Color(0xFF134E4A).withValues(alpha: 0.35) : const Color(0xFFF0FDFA);
       border = isDark ? const Color(0xFF14B8A6).withValues(alpha: 0.70) : const Color(0xFF99F6E4);
       text = isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E);
       label = loc.tr('propTypeOffice');
-      icon = Icons.business_center_rounded;
+      icon = Symbols.business_center_rounded;
     } else if (isCommercial) {
       bg = isDark ? const Color(0xFF701A75).withValues(alpha: 0.35) : const Color(0xFFFDF4FF);
       border = isDark ? const Color(0xFFD946EF).withValues(alpha: 0.70) : const Color(0xFFF5D0FE);
       text = isDark ? const Color(0xFFF0ABFC) : const Color(0xFFA21CAF);
       label = loc.tr('propTypeCommercial');
-      icon = Icons.storefront_rounded;
+      icon = Symbols.storefront_rounded;
     } else if (isChalet) {
       bg = isDark ? const Color(0xFF78350F).withValues(alpha: 0.35) : const Color(0xFFFFFBEB);
       border = isDark ? const Color(0xFFF59E0B).withValues(alpha: 0.70) : const Color(0xFFFDE68A);
       text = isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309);
       label = loc.tr('propTypeChalet');
-      icon = Icons.beach_access_rounded;
+      icon = Symbols.beach_access_rounded;
     } else if (isDuplex) {
       bg = isDark ? const Color(0xFF312E81).withValues(alpha: 0.35) : const Color(0xFFEEF2FF);
       border = isDark ? const Color(0xFF6366F1).withValues(alpha: 0.70) : const Color(0xFFC7D2FE);
       text = isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA);
       label = loc.tr('propTypeDuplex');
-      icon = Icons.holiday_village_rounded;
+      icon = Symbols.holiday_village_rounded;
     } else if (isStudio) {
       bg = isDark ? const Color(0xFF4C1D95).withValues(alpha: 0.35) : const Color(0xFFF5F3FF);
       border = isDark ? const Color(0xFF8B5CF6).withValues(alpha: 0.70) : const Color(0xFFDDD6FE);
       text = isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9);
       label = loc.tr('propTypeStudio');
-      icon = Icons.single_bed_rounded;
+      icon = Symbols.single_bed_rounded;
     } else {
       bg = isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.35) : const Color(0xFFEFF6FF);
       border = isDark ? const Color(0xFF3B82F6).withValues(alpha: 0.70) : const Color(0xFFBFDBFE);
       text = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
       label = loc.tr('propTypeApartment');
-      icon = Icons.apartment_rounded;
+      icon = Symbols.apartment_rounded;
     }
 
     return Container(
@@ -1189,11 +1165,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              color: text,
-              fontSize: 10.5,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: text,
+              fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -1227,7 +1200,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         children: [
           // 1. Details Action Pill
           _TableConnectedActionIconPill(
-            icon: Icons.visibility_outlined,
+            icon: Symbols.visibility_rounded,
             tooltip: loc.tr('viewDetailsBtn'),
             foregroundColor: colorScheme.onSurface,
             size: 31.0,
@@ -1243,7 +1216,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           const SizedBox(width: 4.0),
           // 2. Edit Action Pill
           _TableConnectedActionIconPill(
-            icon: Icons.edit_outlined,
+            icon: Symbols.edit_rounded,
             tooltip: loc.tr('editInvoiceAction'),
             foregroundColor: colorScheme.onSurface,
             size: 31.0,
@@ -1258,7 +1231,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           const SizedBox(width: 4.0),
           // 3. Move to Trash Action Pill
           _TableConnectedActionIconPill(
-            icon: Icons.delete_outline_rounded,
+            icon: Symbols.delete_outline_rounded,
             tooltip: loc.tr('moveToTrashAction'),
             foregroundColor: colorScheme.error,
             hoverColor: colorScheme.error,
@@ -1301,7 +1274,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           ),
         ),
         child: _TableConnectedActionPill(
-          icon: Icons.receipt_long_rounded,
+          icon: Symbols.receipt_long_rounded,
           label: loc.tr('viewOfficialReceipt'),
           isFilled: true,
           filledColor: colorScheme.secondaryContainer,
@@ -1328,7 +1301,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         children: [
           // 1. Pay Pill (Filled Primary stadium capsule matching Connected Button Group)
           _TableConnectedActionPill(
-            icon: Icons.payment_rounded,
+            icon: Symbols.payment_rounded,
             label: loc.tr('payRentNowAction'),
             isFilled: true,
             filledColor: colorScheme.primary,
@@ -1339,7 +1312,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           const SizedBox(width: 5.0),
           // 2. Remind WhatsApp Pill (Shaded stadium capsule with confirmation dialog)
           _TableConnectedActionPill(
-            icon: Icons.send_to_mobile_rounded,
+            icon: Symbols.send_to_mobile_rounded,
             label: loc.tr('sendReminderWhatsApp'),
             isFilled: false,
             height: 31.0,
@@ -1356,7 +1329,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             const SizedBox(width: 5.0),
             // 3. Legal Warning Pill
             _TableConnectedActionPill(
-              icon: Icons.gavel_rounded,
+              icon: Symbols.gavel_rounded,
               label: loc.tr('issueLegalWarningAction'),
               isFilled: true,
               filledColor: colorScheme.errorContainer,
@@ -1415,15 +1388,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.table_chart_rounded, size: 20, color: colorScheme.primary),
+                      Icon(Symbols.table_chart_rounded, size: 20, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         loc.tr('navCollection'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -1437,11 +1407,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       _groupByContracts
                           ? '${groups.length} ${loc.tr('navContracts')} • ${invoices.length} ${loc.tr('contractInstallmentsCount')}'
                           : '${invoices.length}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ],
@@ -1456,7 +1423,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   if (_groupByContracts && groups.length > 1) ...[
                     TashilButton.text(
                       label: loc.tr('expandAll'),
-                      icon: Icons.unfold_more_rounded,
+                      icon: Symbols.unfold_more_rounded,
                       onPressed: () {
                         setState(() {
                           _expandedGroupIds.addAll(groups.map((g) => g.groupId));
@@ -1466,7 +1433,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     const SizedBox(width: 4),
                     TashilButton.text(
                       label: loc.tr('collapseAll'),
-                      icon: Icons.unfold_less_rounded,
+                      icon: Symbols.unfold_less_rounded,
                       onPressed: () {
                         setState(() {
                           _expandedGroupIds.clear();
@@ -1481,12 +1448,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     segments: [
                       TashilConnectedButtonSegment(
                         value: true,
-                        icon: Icons.account_tree_rounded,
+                        icon: Symbols.account_tree_rounded,
                         label: loc.tr('groupByContract'),
                       ),
                       TashilConnectedButtonSegment(
                         value: false,
-                        icon: Icons.list_alt_rounded,
+                        icon: Symbols.list_alt_rounded,
                         label: loc.tr('flatInvoices'),
                       ),
                     ],
@@ -1561,7 +1528,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isCurrentMonthPaid ? Icons.stars_rounded : Icons.schedule_rounded,
+            isCurrentMonthPaid ? Symbols.stars_rounded : Symbols.schedule_rounded,
             size: 13,
             color: isCurrentMonthPaid
                 ? colorScheme.onPrimaryContainer
@@ -1571,13 +1538,10 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           Flexible(
             child: Text(
               '${loc.tr('currentMonthSpot')}: ${isCurrentMonthPaid ? loc.tr('statusPaid') : loc.tr('statusDueSoon')}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                 color: isCurrentMonthPaid
                     ? colorScheme.onPrimaryContainer
-                    : colorScheme.onTertiaryContainer,
-              ),
+                    : colorScheme.onTertiaryContainer),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -1658,7 +1622,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                              Symbols.keyboard_arrow_down_rounded,
                               size: 20,
                               color: colorScheme.primary,
                             ),
@@ -1674,7 +1638,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         const SizedBox(width: 8),
 
                         Icon(
-                          Icons.location_on_outlined,
+                          Symbols.location_on_rounded,
                           size: 14,
                           color: colorScheme.primary,
                         ),
@@ -1682,11 +1646,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         Expanded(
                           child: Text(
                             group.district.isNotEmpty ? group.district : group.buildingName,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1707,11 +1668,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           ),
                         Text(
                           isExpanded ? loc.tr('hideInstallments') : loc.tr('viewInstallments'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -1729,7 +1687,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                              Symbols.keyboard_arrow_down_rounded,
                               size: 20,
                               color: colorScheme.primary,
                             ),
@@ -1745,7 +1703,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         const SizedBox(width: 8),
 
                         Icon(
-                          Icons.location_on_outlined,
+                          Symbols.location_on_rounded,
                           size: 14,
                           color: colorScheme.primary,
                         ),
@@ -1753,11 +1711,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         Expanded(
                           child: Text(
                             group.district.isNotEmpty ? group.district : group.buildingName,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1775,11 +1730,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
                         Text(
                           isExpanded ? loc.tr('hideInstallments') : loc.tr('viewInstallments'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -1798,16 +1750,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.date_range_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                            Icon(Symbols.date_range_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 5),
                             Flexible(
                               child: Text(
                                 '${group.dateRangeFormatted} (${group.totalCount} ${loc.tr('contractInstallmentsCount')})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1821,16 +1770,16 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.person_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                            Icon(Symbols.person_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 5),
                             Text(
                               '${loc.tr('tableHeaderTenant')}: ',
-                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                             Flexible(
                               child: Text(
                                 group.tenant.name,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1844,16 +1793,16 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.account_balance_outlined, size: 15, color: colorScheme.onSurfaceVariant),
+                            Icon(Symbols.account_balance_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 5),
                             Text(
                               '${loc.tr('landlord')}: ',
-                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                             Flexible(
                               child: Text(
                                 group.owner.name,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1865,15 +1814,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.payments_outlined, size: 15, color: colorScheme.primary),
+                          Icon(Symbols.payments_rounded, size: 15, color: colorScheme.primary),
                           const SizedBox(width: 5),
                           Text(
                             '${CurrencyFormatter.formatAmount(group.totalContractAmount, langCode: lang)} $currency',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.primary),
                           ),
                         ],
                       ),
@@ -1890,11 +1836,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           children: [
                             Text(
                               '${group.paidCount}/${group.totalCount} ${loc.tr('statusPaid')}',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface),
                             ),
                             const SizedBox(width: 6),
                             SizedBox(
@@ -1974,55 +1917,55 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderUnitAndInvoice'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderTenant'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('landlord'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderDueDate'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderAmount'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderPaymentStatus'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderPayout'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderPaymentAndReminder'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
             DataColumn(
               label: Text(
                 loc.tr('tableHeaderActions'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ),
           ],
@@ -2035,18 +1978,18 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
             Color statusBg = colorScheme.tertiaryContainer;
             Color statusText = colorScheme.onTertiaryContainer;
-            IconData statusIcon = Icons.schedule_rounded;
+            IconData statusIcon = Symbols.schedule_rounded;
             String statusLabel = loc.tr('statusDueSoon');
 
             if (isPaid) {
               statusBg = colorScheme.primaryContainer;
               statusText = colorScheme.onPrimaryContainer;
-              statusIcon = Icons.check_circle_rounded;
+              statusIcon = Symbols.check_circle_rounded;
               statusLabel = loc.tr('statusPaid');
             } else if (isOverdue) {
               statusBg = colorScheme.errorContainer;
               statusText = colorScheme.onErrorContainer;
-              statusIcon = Icons.error_rounded;
+              statusIcon = Symbols.error_rounded;
               statusLabel = '${loc.tr('statusOverdue')} (${inv.overdueDays} ${loc.tr('days')})';
             }
 
@@ -2086,7 +2029,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                             const SizedBox(width: 8),
                             // Location with Icon (e.g. حي الجمرك - بحري، الإسكندرية)
                             Icon(
-                              Icons.location_on_outlined,
+                              Symbols.location_on_rounded,
                               size: 13,
                               color: colorScheme.primary,
                             ),
@@ -2097,11 +2040,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                 inv.district.isNotEmpty ? inv.district : inv.buildingName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                                  color: colorScheme.onSurfaceVariant),
                               ),
                             ),
                             // ⭐ Current Month Spotlight Badge
@@ -2123,15 +2063,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.stars_rounded, size: 12, color: colorScheme.onPrimary),
+                                    Icon(Symbols.stars_rounded, size: 12, color: colorScheme.onPrimary),
                                     const SizedBox(width: 3),
                                     Text(
                                       loc.tr('currentMonthSpot'),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.onPrimary,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onPrimary),
                                     ),
                                   ],
                                 ),
@@ -2143,30 +2080,24 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
+                            Icon(Symbols.tag_rounded, size: 12, color: colorScheme.primary.withValues(alpha: 0.8)),
                             const SizedBox(width: 4),
                             Text(
                               inv.invoiceNumber,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
                                 color: colorScheme.primary,
-                                letterSpacing: 0.2,
-                              ),
+                                letterSpacing: 0.2),
                             ),
                             if (totalInGroup != null && totalInGroup > 1)
                               Text(
                                 ' • ${loc.tr('installmentNumber')} ${index + 1} ${loc.tr('ofInstallments')} $totalInGroup',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                                  color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurfaceVariant),
                               )
                             else if (inv.unitNumber.isNotEmpty)
                               Text(
                                 ' • ${inv.unitNumber}',
-                                style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                           ],
                         ),
@@ -2184,11 +2115,11 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         inv.tenant.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600),
                       ),
                       Text(
                         inv.tenant.phone,
-                        style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -2203,13 +2134,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         inv.owner.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600),
                       ),
                       Text(
                         inv.owner.bankName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -2218,22 +2149,16 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                 DataCell(
                   Text(
                     '${inv.dueDate.year}-${inv.dueDate.month.toString().padLeft(2, '0')}-${inv.dueDate.day.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isCurrentMonth ? FontWeight.bold : FontWeight.normal,
-                      color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isCurrentMonth ? FontWeight.bold : FontWeight.normal,
+                      color: isCurrentMonth ? colorScheme.primary : colorScheme.onSurface),
                   ),
                 ),
                 // 5. Total Amount
                 DataCell(
                   Text(
                     '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ),
                 // 6. Status Chip
@@ -2251,11 +2176,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         const SizedBox(width: 4),
                         Text(
                           statusLabel,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: statusText,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: statusText),
                         ),
                       ],
                     ),
@@ -2268,8 +2190,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     children: [
                       Icon(
                         inv.payoutStatus == 'transferred_to_owner'
-                            ? Icons.account_balance_rounded
-                            : Icons.history_toggle_off_rounded,
+                            ? Symbols.account_balance_rounded
+                            : Symbols.history_toggle_off_rounded,
                         size: 14,
                         color: inv.payoutStatus == 'transferred_to_owner'
                             ? colorScheme.primary
@@ -2280,13 +2202,10 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         inv.payoutStatus == 'transferred_to_owner'
                             ? '${CurrencyFormatter.formatAmount(inv.netPayoutToOwner, langCode: lang)} $currency'
                             : loc.tr('scheduledPayoutToOwner'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
                           color: inv.payoutStatus == 'transferred_to_owner'
                               ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                        ),
+                              : colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -2337,25 +2256,25 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
     Color statusBg = colorScheme.tertiaryContainer;
     Color statusText = colorScheme.onTertiaryContainer;
-    IconData statusIcon = Icons.schedule_rounded;
+    IconData statusIcon = Symbols.schedule_rounded;
     String statusLabel = loc.tr('statusDueSoon');
 
     if (isPaid) {
       statusBg = colorScheme.primaryContainer;
       statusText = colorScheme.onPrimaryContainer;
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = Symbols.check_circle_rounded;
       statusLabel = loc.tr('statusPaid');
     } else if (isOverdue) {
       statusBg = colorScheme.errorContainer;
       statusText = colorScheme.onErrorContainer;
-      statusIcon = Icons.error_rounded;
+      statusIcon = Symbols.error_rounded;
       statusLabel = '${loc.tr('statusOverdue')} (${inv.overdueDays} ${loc.tr('days')})';
     }
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surfaceContainerLowest,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -2382,7 +2301,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                   color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(Icons.receipt_long_rounded, color: colorScheme.primary, size: 22),
+                                child: Icon(Symbols.receipt_long_rounded, color: colorScheme.primary, size: 22),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -2391,13 +2310,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                   children: [
                                     Text(
                                       inv.invoiceNumber,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${loc.tr('tableHeaderDueDate')}: ${inv.dueDate.year}-${inv.dueDate.month.toString().padLeft(2, '0')}-${inv.dueDate.day.toString().padLeft(2, '0')}',
-                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
@@ -2423,7 +2342,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                   const SizedBox(width: 5),
                                   Text(
                                     statusLabel,
-                                    style: TextStyle(color: statusText, fontWeight: FontWeight.bold, fontSize: 11),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusText, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -2445,7 +2364,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     // Section 1: Financial Breakdown
                     Text(
                       loc.tr('financialBreakdownTitle'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -2506,7 +2425,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     // Section 2: Property & Contract Info
                     Text(
                       loc.tr('tableHeaderUnit'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -2517,14 +2436,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.apartment_rounded, color: colorScheme.primary, size: 20),
+                          Icon(Symbols.apartment_rounded, color: colorScheme.primary, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${inv.unitTitle} (${inv.unitNumber})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text(inv.buildingName, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                Text('${inv.unitTitle} (${inv.unitNumber})', style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold)),
+                                Text(inv.buildingName, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                               ],
                             ),
                           ),
@@ -2536,7 +2455,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     // Section 3: Tenant Info
                     Text(
                       loc.tr('tableHeaderTenant'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -2547,14 +2466,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.person_rounded, color: colorScheme.primary, size: 20),
+                          Icon(Symbols.person_rounded, color: colorScheme.primary, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(inv.tenant.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text('${inv.tenant.phone} • ${loc.tr('nationalId')}: ${inv.tenant.idNumber}', style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                Text(inv.tenant.name, style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold)),
+                                Text('${inv.tenant.phone} • ${loc.tr('nationalId')}: ${inv.tenant.idNumber}', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                               ],
                             ),
                           ),
@@ -2573,7 +2492,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         if (isPaid) ...[
                           TashilButton(
                             variant: TashilButtonVariant.filled,
-                            icon: Icons.receipt_rounded,
+                            icon: Symbols.receipt_rounded,
                             label: loc.tr('viewOfficialReceipt'),
                             onPressed: () {
                               Navigator.pop(ctx);
@@ -2582,7 +2501,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           ),
                           TashilButton(
                             variant: TashilButtonVariant.outlined,
-                            icon: Icons.description_outlined,
+                            icon: Symbols.description_rounded,
                             label: loc.tr('linkedTaxInvoice'),
                             onPressed: () {
                               Navigator.pop(ctx);
@@ -2592,7 +2511,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         ] else ...[
                           TashilButton(
                             variant: TashilButtonVariant.filled,
-                            icon: Icons.payment_rounded,
+                            icon: Symbols.payment_rounded,
                             label: loc.tr('payRentNowAction'),
                             onPressed: () {
                               Navigator.pop(ctx);
@@ -2601,7 +2520,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           ),
                           TashilButton(
                             variant: TashilButtonVariant.tonal,
-                            icon: Icons.send_to_mobile_rounded,
+                            icon: Symbols.send_to_mobile_rounded,
                             label: loc.tr('sendReminderWhatsApp'),
                             onPressed: () => _confirmSendWhatsAppReminder(
                               context: context,
@@ -2615,7 +2534,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           if (isOverdue)
                             TashilButton(
                               variant: TashilButtonVariant.tonal,
-                              icon: Icons.gavel_rounded,
+                              icon: Symbols.gavel_rounded,
                               label: loc.tr('issueLegalWarningAction'),
                               onPressed: () {
                                 Navigator.pop(ctx);
@@ -2647,19 +2566,13 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: isBold ? 13.5 : 12.5,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+            color: colorScheme.onSurfaceVariant),
         ),
         Text(
           value,
-          style: TextStyle(
-            fontSize: isBold ? 14 : 12.5,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: valueColor ?? colorScheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            color: valueColor ?? colorScheme.onSurface),
         ),
       ],
     );
@@ -2676,8 +2589,6 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     required bool isCompact,
     required ColorScheme colorScheme,
   }) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2693,7 +2604,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               children: [
                 TashilButton.tonal(
                   onPressed: () => setState(() => _isTrashView = false),
-                  icon: isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                  icon: Symbols.arrow_back_rounded,
                   label: loc.tr('backToActiveInvoices'),
                 ),
                 const SizedBox(width: 14),
@@ -2703,23 +2614,20 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_delete_outlined, color: colorScheme.primary, size: 24),
+                        Icon(Symbols.auto_delete_rounded, color: colorScheme.primary, size: 24),
                         const SizedBox(width: 8),
                         Text(
                           loc.tr('deletedInvoicesTitle'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: isCompact ? 20 : 24,
+                          style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.bold,
                             color: colorScheme.onSurface,
-                            letterSpacing: -0.3,
-                          ),
+                            letterSpacing: -0.3),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${deletedInvoices.length} ${loc.tr('filterAllInvoices')}',
-                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -2728,7 +2636,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             if (deletedInvoices.isNotEmpty)
               TashilButton(
                 variant: TashilButtonVariant.outlined,
-                icon: Icons.delete_sweep_rounded,
+                icon: Symbols.delete_sweep_rounded,
                 label: loc.tr('emptyTrashAction'),
                 onPressed: () => _confirmEmptyTrash(context, loc, countryCode, colorScheme),
               ),
@@ -2746,12 +2654,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline_rounded, color: colorScheme.primary, size: 20),
+              Icon(Symbols.info_rounded, color: colorScheme.primary, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   loc.tr('deletedInvoicesDesc'),
-                  style: TextStyle(fontSize: 12.5, color: colorScheme.onSurface, height: 1.4),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface, height: 1.4),
                 ),
               ),
             ],
@@ -2773,22 +2681,22 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       color: colorScheme.surfaceContainerHigh,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.delete_sweep_outlined, size: 48, color: colorScheme.onSurfaceVariant),
+                    child: Icon(Symbols.delete_sweep_rounded, size: 48, color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     loc.tr('noDeletedInvoicesTitle'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     loc.tr('noDeletedInvoicesDesc'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 20),
                   TashilButton.tonal(
-                    icon: isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                    icon: Symbols.arrow_back_rounded,
                     label: loc.tr('backToActiveInvoices'),
                     onPressed: () => setState(() => _isTrashView = false),
                   ),
@@ -2815,7 +2723,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.receipt_long_rounded, color: colorScheme.onSurfaceVariant, size: 22),
+                      child: Icon(Symbols.receipt_long_rounded, color: colorScheme.onSurfaceVariant, size: 22),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -2829,7 +2737,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                   inv.unitTitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -2843,15 +2751,12 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.timer_outlined, size: 12, color: colorScheme.onErrorContainer),
+                                    Icon(Symbols.timer_rounded, size: 12, color: colorScheme.onErrorContainer),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${loc.tr('remainingDaysForAutoDelete')} ${inv.remainingDaysBeforePermanentDelete} ${loc.tr('daysCountdown')}',
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.onErrorContainer,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onErrorContainer),
                                     ),
                                   ],
                                 ),
@@ -2861,7 +2766,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           const SizedBox(height: 3),
                           Text(
                             '${inv.invoiceNumber} • ${inv.tenant.name} • ${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -2873,7 +2778,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         TashilButton(
                           variant: TashilButtonVariant.filled,
                           height: 34.0,
-                          icon: Icons.restore_rounded,
+                          icon: Symbols.restore_rounded,
                           label: loc.tr('restoreShort'),
                           onPressed: () {
                             _service.restoreInvoice(inv.id);
@@ -2885,7 +2790,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         ),
                         const SizedBox(width: 6),
                         TashilIconButton.tonal(
-                          icon: Icons.delete_forever_rounded,
+                          icon: Symbols.delete_forever_rounded,
                           size: 34,
                           iconSize: 16,
                           tooltip: loc.tr('deletePermanentlyAction'),
@@ -2921,7 +2826,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
-            return Dialog(
+            return TashilDialogFrame(
               backgroundColor: colorScheme.surfaceContainerLowest,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
               insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -2945,7 +2850,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                   color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(Icons.edit_note_rounded, color: colorScheme.primary, size: 24),
+                                child: Icon(Symbols.edit_note_rounded, color: colorScheme.primary, size: 24),
                               ),
                               const SizedBox(width: 12),
                               Column(
@@ -2953,11 +2858,11 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                 children: [
                                   Text(
                                     loc.tr('editInvoiceTitle'),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                   Text(
                                     inv.invoiceNumber,
-                                    style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -2977,7 +2882,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       // Base Rent Amount Field
                       Text(
                         loc.tr('baseRentAmount'),
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -2985,7 +2890,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           suffixText: currency,
-                          prefixIcon: const Icon(Icons.payments_outlined, size: 20),
+                          prefixIcon: const Icon(Symbols.payments_rounded, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
@@ -2995,7 +2900,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       // Due Date Picker Field
                       Text(
                         loc.tr('tableHeaderDueDate'),
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                       ),
                       const SizedBox(height: 6),
                       InkWell(
@@ -3022,15 +2927,15 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today_rounded, size: 18, color: colorScheme.primary),
+                                  Icon(Symbols.calendar_today_rounded, size: 18, color: colorScheme.primary),
                                   const SizedBox(width: 10),
                                   Text(
                                     '${selectedDueDate.year}-${selectedDueDate.month.toString().padLeft(2, '0')}-${selectedDueDate.day.toString().padLeft(2, '0')}',
-                                    style: const TextStyle(fontSize: 14),
+                                    style: Theme.of(context).textTheme.bodyMedium!,
                                   ),
                                 ],
                               ),
-                              Icon(Icons.edit_calendar_rounded, size: 18, color: colorScheme.onSurfaceVariant),
+                              Icon(Symbols.edit_calendar_rounded, size: 18, color: colorScheme.onSurfaceVariant),
                             ],
                           ),
                         ),
@@ -3040,7 +2945,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       // Notes Field
                       Text(
                         loc.tr('invoiceNotes'),
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -3067,7 +2972,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           const SizedBox(width: 8),
                           TashilButton(
                             variant: TashilButtonVariant.filled,
-                            icon: Icons.check_rounded,
+                            icon: Symbols.check_rounded,
                             label: loc.tr('saveChangesAction'),
                             onPressed: () {
                               final amount = double.tryParse(amountController.text.trim()) ?? inv.baseAmount;
@@ -3158,14 +3063,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         return TashilAlertDialog(
           title: loc.tr('confirmMoveToTrashTitle'),
           contentText: loc.tr('confirmMoveToTrashDesc'),
-          iconData: Icons.delete_outline_rounded,
+          iconData: Symbols.delete_outline_rounded,
           actions: [
             _buildDialogConnectedActionGroup(
               context: context,
               colorScheme: colorScheme,
               cancelLabel: loc.tr('cancel'),
               confirmLabel: loc.tr('deleteAction'),
-              confirmIcon: Icons.delete_rounded,
+              confirmIcon: Symbols.delete_rounded,
               confirmColor: colorScheme.error,
               confirmTextColor: colorScheme.onError,
               onCancel: () => Navigator.pop(ctx),
@@ -3200,14 +3105,14 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         return TashilAlertDialog(
           title: loc.tr('confirmDeletePermanentlyTitle'),
           contentText: loc.tr('confirmDeletePermanentlyDesc'),
-          iconData: Icons.warning_amber_rounded,
+          iconData: Symbols.warning_amber_rounded,
           actions: [
             _buildDialogConnectedActionGroup(
               context: context,
               colorScheme: colorScheme,
               cancelLabel: loc.tr('cancel'),
               confirmLabel: loc.tr('deletePermanentlyAction'),
-              confirmIcon: Icons.delete_forever_rounded,
+              confirmIcon: Symbols.delete_forever_rounded,
               confirmColor: colorScheme.error,
               confirmTextColor: colorScheme.onError,
               onCancel: () => Navigator.pop(ctx),
@@ -3241,18 +3146,15 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       builder: (ctx) {
         return TashilAlertDialog(
           title: loc.tr('confirmSendReminderTitle'),
-          iconData: Icons.send_to_mobile_rounded,
+          iconData: Symbols.send_to_mobile_rounded,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 loc.tr('confirmSendReminderDesc'),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.45,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                  height: 1.45),
               ),
               const SizedBox(height: 16),
               Container(
@@ -3271,22 +3173,19 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.person_outline_rounded, size: 16, color: colorScheme.primary),
+                        Icon(Symbols.person_outline_rounded, size: 16, color: colorScheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             inv.tenant.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text(
                           inv.tenant.phone,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -3298,21 +3197,18 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.payments_outlined, size: 16, color: colorScheme.primary),
+                            Icon(Symbols.payments_rounded, size: 16, color: colorScheme.primary),
                             const SizedBox(width: 8),
                             Text(
                               loc.tr('tableHeaderAmount'),
-                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
                         Text(
                           '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13.5,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -3327,7 +3223,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               colorScheme: colorScheme,
               cancelLabel: loc.tr('cancel'),
               confirmLabel: loc.tr('sendReminderAction'),
-              confirmIcon: Icons.send_rounded,
+              confirmIcon: Symbols.send_rounded,
               confirmColor: colorScheme.primary,
               confirmTextColor: colorScheme.onPrimary,
               onCancel: () => Navigator.pop(ctx),
@@ -3358,7 +3254,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
         return TashilAlertDialog(
           title: loc.tr('emptyTrashAction'),
           contentText: loc.tr('emptyTrashConfirmDesc'),
-          iconData: Icons.delete_sweep_rounded,
+          iconData: Symbols.delete_sweep_rounded,
           actions: [
             TashilButton.text(
               label: loc.tr('cancel'),
@@ -3366,7 +3262,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             ),
             TashilButton(
               variant: TashilButtonVariant.filled,
-              icon: Icons.delete_sweep_rounded,
+              icon: Symbols.delete_sweep_rounded,
               label: loc.tr('emptyTrashAction'),
               onPressed: () {
                 Navigator.pop(ctx);
@@ -3450,7 +3346,7 @@ class _TableConnectedActionPillState extends State<_TableConnectedActionPill> {
     final shadow = widget.isFilled
         ? [
             BoxShadow(
-              color: Colors.black.withValues(alpha: _isHovered ? 0.20 : 0.12),
+              color: colorScheme.shadow.withValues(alpha: _isHovered ? 0.20 : 0.12),
               blurRadius: _isHovered ? 4.0 : 2.5,
               offset: Offset(0, _isHovered ? 2.0 : 1.0),
             ),
@@ -3490,11 +3386,8 @@ class _TableConnectedActionPillState extends State<_TableConnectedActionPill> {
                   ],
                   Text(
                     widget.label,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: widget.isFilled ? FontWeight.bold : FontWeight.w600,
-                      color: fg,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: widget.isFilled ? FontWeight.bold : FontWeight.w600,
+                      color: fg),
                   ),
                 ],
               ),

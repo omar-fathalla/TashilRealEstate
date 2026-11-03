@@ -10,6 +10,8 @@ import '../../../core/utils/responsive_layout.dart';
 import '../models/vision_maintenance_model.dart';
 import '../services/ai_vision_maintenance_service.dart';
 import '../../owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiVisionMaintenanceDialog extends StatefulWidget {
   final String? initialPhotoUrl;
@@ -79,7 +81,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -144,7 +146,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
-            Icons.troubleshoot_rounded,
+            Symbols.troubleshoot_rounded,
             color: theme.colorScheme.onPrimaryContainer,
             size: 22,
           ),
@@ -158,11 +160,8 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                 children: [
                   Text(
                     loc.tr('visionMaintenanceTitle'),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -173,12 +172,9 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
                     child: Text(
-                      'Gemini 2.0 Flash Vision',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSecondaryContainer,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      AppLocalizations.trStatic('uiCopy050'),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -186,7 +182,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
               const SizedBox(height: 2),
               Text(
                 loc.tr('visionMaintenanceSubtitle'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -194,7 +190,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
         TashilIconButton(
           onPressed: () => Navigator.of(context).pop(),
           tooltip: loc.tr('close'),
-          icon: Icons.close_rounded,
+          icon: Symbols.close_rounded,
         ),
       ],
     );
@@ -243,11 +239,8 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                     const SizedBox(width: 8),
                     Text(
                       sample.getTitle(lang),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -282,11 +275,8 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                       const SizedBox(height: 12),
                       Text(
                         'Gemini Vision Scanning...',
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -305,15 +295,12 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.camera_alt_rounded, size: 12, color: theme.colorScheme.primary),
+                  Icon(Symbols.camera_alt_rounded, size: 12, color: theme.colorScheme.primary),
                   const SizedBox(width: 4),
                   Text(
                     'Uploaded Defect Photo',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -358,18 +345,15 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isUrgent ? Icons.warning_rounded : Icons.info_rounded,
+                      isUrgent ? Symbols.warning_rounded : Symbols.info_rounded,
                       size: 14,
                       color: isUrgent ? theme.colorScheme.error : theme.colorScheme.onSecondaryContainer,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       isUrgent ? loc.tr('urgencyCritical') : loc.tr('urgencyHigh'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isUrgent ? theme.colorScheme.error : theme.colorScheme.onSecondaryContainer,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: isUrgent ? theme.colorScheme.error : theme.colorScheme.onSecondaryContainer),
                     ),
                   ],
                 ),
@@ -385,15 +369,12 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified_rounded, size: 14, color: theme.colorScheme.onPrimaryContainer),
+                    Icon(Symbols.verified_rounded, size: 14, color: theme.colorScheme.onPrimaryContainer),
                     const SizedBox(width: 4),
                     Text(
                       '${(res.confidenceScore * 100).toStringAsFixed(1)}% ${loc.tr('diagnosisConfidence')}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onPrimaryContainer),
                     ),
                   ],
                 ),
@@ -405,11 +386,8 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
           // Problem Title
           Text(
             res.getTitle(lang),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
 
@@ -426,26 +404,20 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.psychology_rounded, size: 16, color: theme.colorScheme.primary),
+                    Icon(Symbols.psychology_rounded, size: 16, color: theme.colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
                       loc.tr('rootCauseAnalysisTitle'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   res.getRootCause(lang),
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.45,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.45),
                 ),
               ],
             ),
@@ -468,16 +440,13 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                     children: [
                       Text(
                         loc.tr('estimatedRepairCost'),
-                        style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onPrimaryContainer),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${res.estimatedCostMin.toInt()} - ${res.estimatedCostMax.toInt()} ${res.currencyCode}',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onPrimaryContainer),
                       ),
                     ],
                   ),
@@ -497,16 +466,13 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                     children: [
                       Text(
                         loc.tr('assignedTechnicianLabel'),
-                        style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         res.getTechnicianType(lang),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -521,11 +487,8 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
           // Spare Parts Needed
           Text(
             loc.tr('requiredSparePartsTitle'),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -542,15 +505,12 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.build_circle_outlined, size: 12, color: theme.colorScheme.primary),
+                    Icon(Symbols.build_circle_rounded, size: 12, color: theme.colorScheme.primary),
                     const SizedBox(width: 4),
                     Text(
                       part,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -589,7 +549,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
                   ),
                 );
               },
-              icon: Icons.engineering_rounded,
+              icon: Symbols.engineering_rounded,
               label: loc.tr('dispatchTechnicianBtn'),
             ),
           ),

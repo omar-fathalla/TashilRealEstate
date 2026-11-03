@@ -11,6 +11,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/executive_report_model.dart';
 import '../services/ai_executive_reporting_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class ExecutiveReportingTabView extends StatefulWidget {
   final String? initialPeriod;
@@ -99,7 +100,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                 color: theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.analytics_rounded, color: theme.colorScheme.onPrimary, size: 22),
+              child: Icon(Symbols.analytics_rounded, color: theme.colorScheme.onPrimary, size: 22),
             ),
             const SizedBox(width: 12),
             Column(
@@ -112,11 +113,8 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                   children: [
                     Text(
                       loc.tr('executiveReportTitle'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -127,11 +125,8 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                       ),
                       child: Text(
                         'Gemini Pro Insights',
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -139,7 +134,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                 const SizedBox(height: 2),
                 Text(
                   loc.tr('executiveReportSubtitle'),
-                  style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -172,7 +167,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             TashilIconButton.standard(
               tooltip: loc.tr('regenerateReportBtn'),
               onPressed: _loadReport,
-              icon: Icons.refresh_rounded,
+              icon: Symbols.refresh_rounded,
             ),
           ],
         ),
@@ -191,12 +186,12 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
           const SizedBox(height: 16),
           Text(
             loc.tr('generatingExecutiveReportProgress'),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 4),
           Text(
             loc.tr('geminiAggregatingFinancialMetrics'),
-            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -259,7 +254,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             title: loc.tr('grossRentalIncomeLabel'),
             value: '${CurrencyFormatter.formatAmount(report.grossRentalIncome, langCode: lang)} $currency',
             subtitle: '${loc.tr('operatingExpensesShort')}: ${CurrencyFormatter.formatAmount(report.operatingExpenses, langCode: lang)}',
-            icon: Icons.account_balance_wallet_rounded,
+            icon: Symbols.account_balance_wallet_rounded,
             accentColor: theme.colorScheme.primary,
             width: cardWidth,
             theme: theme,
@@ -268,7 +263,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             title: loc.tr('netOperatingIncomeNoi'),
             value: '${CurrencyFormatter.formatAmount(report.netOperatingIncome, langCode: lang)} $currency',
             subtitle: '${loc.tr('growthQuarterly')}: +14.2%',
-            icon: Icons.trending_up_rounded,
+            icon: Symbols.trending_up_rounded,
             accentColor: theme.colorScheme.secondary,
             width: cardWidth,
             theme: theme,
@@ -277,7 +272,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             title: loc.tr('capRateLabel'),
             value: '${report.capRatePercentage}%',
             subtitle: '${loc.tr('cashOnCashReturn')}: ${report.cashOnCashReturnPercentage}%',
-            icon: Icons.pie_chart_rounded,
+            icon: Symbols.pie_chart_rounded,
             accentColor: theme.colorScheme.tertiary,
             width: cardWidth,
             theme: theme,
@@ -286,7 +281,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             title: loc.tr('rentCollectionEfficiency'),
             value: '${report.rentCollectionEfficiencyPercentage}%',
             subtitle: '${loc.tr('occupancy')}: ${report.occupancyRatePercentage}% (${report.activeLeasesCount}/${report.totalManagedUnits})',
-            icon: Icons.verified_user_rounded,
+            icon: Symbols.verified_user_rounded,
             accentColor: theme.colorScheme.primary,
             width: cardWidth,
             theme: theme,
@@ -322,11 +317,8 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -345,18 +337,15 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -395,19 +384,19 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                   color: theme.colorScheme.onPrimary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.auto_awesome, size: 16, color: theme.colorScheme.onPrimary),
+                child: Icon(Symbols.auto_awesome_rounded, size: 16, color: theme.colorScheme.onPrimary),
               ),
               const SizedBox(width: 8),
               Text(
                 loc.tr('geminiExecutiveSummaryHeading'),
-                style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 13.5),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             report.getExecutiveSummary(lang),
-            style: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), fontSize: 12, height: 1.5),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), height: 1.5),
           ),
           const SizedBox(height: 12),
           Container(
@@ -418,12 +407,12 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
             ),
             child: Row(
               children: [
-                Icon(Icons.insights_rounded, size: 16, color: theme.colorScheme.onPrimary),
+                Icon(Symbols.insights_rounded, size: 16, color: theme.colorScheme.onPrimary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     report.getCashFlowOutlook(lang),
-                    style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 11.5),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary),
                   ),
                 ),
               ],
@@ -446,7 +435,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
       children: [
         Text(
           loc.tr('monthlyFinancialTrends'),
-          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: 10),
         Container(
@@ -466,7 +455,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                       width: 100,
                       child: Text(
                         item.getMonthLabel(lang),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                     ),
                     Expanded(
@@ -477,7 +466,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                     const SizedBox(width: 16),
                     Text(
                       '${loc.tr('netOperatingIncomeNoi')}: ${CurrencyFormatter.formatAmount(item.netIncome, langCode: lang)} $currency',
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -501,11 +490,11 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
       children: [
         Row(
           children: [
-            Icon(Icons.warning_amber_rounded, size: 18, color: theme.colorScheme.error),
+            Icon(Symbols.warning_amber_rounded, size: 18, color: theme.colorScheme.error),
             const SizedBox(width: 6),
             Text(
               loc.tr('leaseExpirationAlertsTitle'),
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: theme.colorScheme.error),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.error),
             ),
           ],
         ),
@@ -530,7 +519,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                   ),
                   child: Text(
                     '${risk.daysRemaining} ${loc.tr('daysRemaining')}',
-                    style: TextStyle(color: theme.colorScheme.onError, fontSize: 10.5, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onError, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -540,19 +529,19 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                     children: [
                       Text(
                         '${risk.getTitle(lang)} • ${loc.tr('tenantLabel')}: ${risk.tenantName}',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.error),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.error),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${loc.tr('recommendedAction')}: ${risk.getRecommendation(lang)}',
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onErrorContainer),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onErrorContainer),
                       ),
                     ],
                   ),
                 ),
                 Text(
                   '${CurrencyFormatter.formatAmount(risk.currentMonthlyRent, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: theme.colorScheme.error),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.error),
                 ),
               ],
             ),
@@ -573,11 +562,11 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
       children: [
         Row(
           children: [
-            Icon(Icons.rocket_launch_rounded, size: 18, color: theme.colorScheme.primary),
+            Icon(Symbols.rocket_launch_rounded, size: 18, color: theme.colorScheme.primary),
             const SizedBox(width: 6),
             Text(
               loc.tr('strategicGrowthOpportunitiesTitle'),
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
             ),
           ],
         ),
@@ -600,7 +589,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                     color: theme.colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.trending_up_rounded, size: 18, color: theme.colorScheme.primary),
+                  child: Icon(Symbols.trending_up_rounded, size: 18, color: theme.colorScheme.primary),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -612,7 +601,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                           Expanded(
                             child: Text(
                               rec.getTitle(lang),
-                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                             ),
                           ),
                           Container(
@@ -623,7 +612,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                             ),
                             child: Text(
                               '+${rec.projectedRoiPercentage}% ROI',
-                              style: TextStyle(color: theme.colorScheme.onTertiaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onTertiaryContainer, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -631,12 +620,12 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
                       const SizedBox(height: 4),
                       Text(
                         rec.getDescription(lang),
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${loc.tr('targetRegion')}: ${rec.targetRegion} • ${loc.tr('capitalRequired')}: ${rec.estimatedCapitalRequired}',
-                        style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -661,7 +650,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
               message: loc.tr('pdfReportExportedNotification'),
             );
           },
-          icon: Icons.picture_as_pdf_outlined,
+          icon: Symbols.picture_as_pdf_rounded,
           label: loc.tr('exportPdfReportBtn'),
           variant: TashilButtonVariant.filled,
         ),
@@ -672,7 +661,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
               message: loc.tr('csvExportedNotification'),
             );
           },
-          icon: Icons.table_chart_outlined,
+          icon: Symbols.table_chart_rounded,
           label: loc.tr('exportCsvBtn'),
         ),
         TashilButton.tonal(
@@ -682,7 +671,7 @@ class _ExecutiveReportingTabViewState extends State<ExecutiveReportingTabView> {
               message: loc.tr('whatsAppDigestCopiedNotification'),
             );
           },
-          icon: Icons.share_rounded,
+          icon: Symbols.share_rounded,
           label: loc.tr('shareWhatsAppDigestBtn'),
         ),
       ],

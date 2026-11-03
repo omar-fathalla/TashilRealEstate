@@ -52,12 +52,9 @@ class TashilKpiCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurfaceVariant),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -77,13 +74,10 @@ class TashilKpiCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                 color: colorScheme.onSurface,
-                letterSpacing: -0.3,
-              ),
-              maxLines: 1,
+                letterSpacing: -0.3),
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
@@ -94,12 +88,9 @@ class TashilKpiCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                      color: colorScheme.onSurfaceVariant),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -132,7 +123,7 @@ class TashilKpiGrid extends StatelessWidget {
       builder: (context, constraints) {
         final double cardWidth;
         if (constraints.maxWidth < 650) {
-          cardWidth = constraints.maxWidth;
+          cardWidth = (constraints.maxWidth - spacing) / 2;
         } else if (constraints.maxWidth < 1150) {
           cardWidth = (constraints.maxWidth - spacing) / 2;
         } else {

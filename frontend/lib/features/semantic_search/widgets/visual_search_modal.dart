@@ -9,6 +9,8 @@ import '../../../core/utils/responsive_layout.dart';
 import '../../public_marketplace/widgets/property_details_dialog.dart';
 import '../models/semantic_search_result_model.dart';
 import '../services/ai_semantic_vector_search_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class VisualSearchModal extends StatefulWidget {
   final String countryCode;
@@ -86,7 +88,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
@@ -117,11 +119,8 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                     // Moodboard Style Selector Bar
                     Text(
                       loc.tr('selectMoodboardStyle'),
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     _buildMoodboardsGrid(lang, isMobile),
@@ -133,15 +132,12 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.auto_awesome, color: theme.colorScheme.primary, size: 18),
+                            Icon(Symbols.auto_awesome_rounded, color: theme.colorScheme.primary, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'الوحدات المطابقة للطراز المعماري (${_results.length})',
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -204,7 +200,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
               shape: BoxShape.circle,
               border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
             ),
-            child: Icon(Icons.image_search_rounded, color: theme.colorScheme.primary, size: 20),
+            child: Icon(Symbols.image_search_rounded, color: theme.colorScheme.primary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -213,19 +209,13 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
               children: [
                 Text(
                   loc.tr('semanticSearchTitle'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   loc.tr('semanticSearchSubtitle'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -233,7 +223,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
             ),
           ),
           TashilIconButton.standard(
-            icon: Icons.close_rounded,
+            icon: Symbols.close_rounded,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -295,16 +285,13 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                         children: [
                           Text(
                             m.badge,
-                            style: TextStyle(fontSize: 10, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             title,
-                            style: TextStyle(
-                              color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface,
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -335,7 +322,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
           const SizedBox(height: 16),
           Text(
             loc.tr('semanticSearchingProgress'),
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -348,7 +335,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text('لا توجد وحدات مطابقة حالياً', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+          child: Text(AppLocalizations.trStatic('uiCopy270'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
         ),
       );
     }
@@ -415,11 +402,11 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.gps_fixed_rounded, size: 11, color: theme.colorScheme.onPrimary),
+                                Icon(Symbols.gps_fixed_rounded, size: 11, color: theme.colorScheme.onPrimary),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${(item.similarityScore * 100).toStringAsFixed(1)}%',
-                                  style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -441,18 +428,15 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                               children: [
                                 Text(
                                   p.getTitle(lang),
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   p.getLocation(lang),
-                                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -466,7 +450,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                               ),
                               child: Text(
                                 item.getMatchReason(lang),
-                                style: TextStyle(color: theme.colorScheme.primary, fontSize: 9.5),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),

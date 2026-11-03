@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,7 @@ void main() {
               onPressed: () {
                 TashilAlertDialog.show(
                   context: context,
-                  iconData: Icons.notifications_active_outlined,
+                  iconData: Symbols.notifications_active_rounded,
                   title: 'إشعار هام',
                   contentText: 'محتوى تجريبي للتنبيه الإرشادي لماتريال 3.',
                   actions: [
@@ -59,7 +60,7 @@ void main() {
       // Verify presence of M3 title, content, icon, and button
       expect(find.text('إشعار هام'), findsOneWidget);
       expect(find.text('محتوى تجريبي للتنبيه الإرشادي لماتريال 3.'), findsOneWidget);
-      expect(find.byIcon(Icons.notifications_active_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.notifications_active_rounded), findsWidgets);
       expect(find.text('موافق'), findsOneWidget);
 
       // Verify 28dp corner radius on dialog
@@ -83,7 +84,7 @@ void main() {
           TashilModalDialog(
             title: 'تعديل بيانات الإعلان',
             subtitle: 'تقسيم ذكي بين الحقول الإجبارية والاختيارية',
-            icon: Icons.edit_note_rounded,
+            icon: Symbols.edit_note_rounded,
             onClose: () => closed = true,
             footer: const Text('شريط الأزرار السفلي'),
             child: const Text('محتوى النموذج'),
@@ -94,7 +95,7 @@ void main() {
       // Verify header, title, subtitle, content, footer
       expect(find.text('تعديل بيانات الإعلان'), findsOneWidget);
       expect(find.text('تقسيم ذكي بين الحقول الإجبارية والاختيارية'), findsOneWidget);
-      expect(find.byIcon(Icons.edit_note_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.edit_note_rounded), findsWidgets);
       expect(find.text('محتوى النموذج'), findsOneWidget);
       expect(find.text('شريط الأزرار السفلي'), findsOneWidget);
 
@@ -104,7 +105,7 @@ void main() {
       expect(shape.borderRadius, equals(BorderRadius.circular(28.0)));
 
       // Tap close button
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       expect(closed, isTrue);
     });
 
@@ -132,7 +133,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify currency options with flags and labels
-      expect(find.text('اختيار العملة النقدية'), findsOneWidget);
+      expect(find.text('اختيار العملة'), findsOneWidget);
       expect(find.text('ج.م (جنيه مصري)'), findsOneWidget);
       expect(find.text('د.إ (درهم إماراتي)'), findsOneWidget);
       expect(find.text('\$ (دولار أمريكي)'), findsOneWidget);
@@ -142,7 +143,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selectedCurrency, equals('AED'));
-      expect(find.text('اختيار العملة النقدية'), findsNothing);
+      expect(find.text('اختيار العملة'), findsNothing);
     });
   });
 }

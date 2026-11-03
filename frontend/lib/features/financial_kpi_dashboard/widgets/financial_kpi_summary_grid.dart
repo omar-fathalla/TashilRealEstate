@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/core/utils/content_sized_grid.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class FinancialKpiSummaryGrid extends StatelessWidget {
   final FinancialKpiSummary summary;
@@ -26,46 +28,57 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
 
     final cards = [
       _buildCard(
+        context: context,
         title: loc.tr('netCollectedProfitsKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalCollectedNet, langCode: lang)} $currency',
         subtitle: '${loc.tr('netMarginRatio')}: ${summary.netProfitMargin.toStringAsFixed(1)}%',
-        icon: Icons.account_balance_wallet_rounded,
+        icon: Symbols.account_balance_wallet_rounded,
         color: colorScheme.secondary,
         bgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('grossInvoicedTotalKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalGrossInvoiced, langCode: lang)} $currency',
         subtitle: '${loc.tr('grossRentalYield')}: ${summary.grossRentalYield.toStringAsFixed(1)}%',
-        icon: Icons.receipt_long_rounded,
+        icon: Symbols.receipt_long_rounded,
         color: colorScheme.primary,
         bgColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('collectionEfficiencyRateKpi'),
         value: '${summary.collectionEfficiencyRate.toStringAsFixed(1)}%',
         subtitle: loc.tr('onTimeCollectionHighPerformance'),
-        icon: Icons.speed_rounded,
+        icon: Symbols.speed_rounded,
         color: colorScheme.tertiary,
         bgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('totalOverdueArrearsKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalOverdueArrears, langCode: lang)} $currency',
         subtitle: loc.tr('escalationNoticeActiveNotice'),
-        icon: Icons.warning_amber_rounded,
-        color: colorScheme.error,
-        bgColor: colorScheme.errorContainer.withValues(alpha: 0.5),
+        icon: Symbols.warning_amber_rounded,
+        color: colorScheme.tertiary,
+        bgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
     ];
 
     if (isMobile) {
-      return Column(
-        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c)).toList(),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - 12) / 2;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: cards.map((card) => SizedBox(width: cardWidth, child: card)).toList(),
+          );
+        },
       );
     }
 
@@ -74,15 +87,11 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
         final isNarrow = constraints.maxWidth < 1100;
         final isSingleColumn = constraints.maxWidth < 620;
         final crossAxisCount = isSingleColumn ? 1 : (isNarrow ? 2 : 4);
-        final aspectRatio = isSingleColumn ? 2.5 : (isNarrow ? 1.75 : 1.35);
 
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 14,
-          mainAxisSpacing: 14,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: aspectRatio,
+        return ContentSizedGrid(
+          maxWidth: constraints.maxWidth,
+          columns: crossAxisCount,
+          spacing: 14,
           children: cards,
         );
       },
@@ -90,6 +99,7 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
   }
 
   Widget _buildCard({
+    required BuildContext context,
     required String title,
     required String value,
     required String subtitle,
@@ -102,7 +112,7 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -113,12 +123,9 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.3,
-                  ),
+                    height: 1.3),
                 ),
               ),
               const SizedBox(width: 8),
@@ -136,39 +143,39 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                  letterSpacing: -0.2,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                    letterSpacing: -0.2),
+                  maxLines: 1,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 5),
               Row(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                      ),
-                      maxLines: 1,
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                        color: color),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

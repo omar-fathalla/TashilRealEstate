@@ -138,29 +138,18 @@ enum AppFontTheme {
   TextTheme buildTextTheme([TextTheme? base]) {
     switch (this) {
       case AppFontTheme.cairo:
-        return GoogleFonts.cairoTextTheme(base);
       case AppFontTheme.tajawal:
-        return GoogleFonts.tajawalTextTheme(base);
       case AppFontTheme.readexPro:
-        return GoogleFonts.readexProTextTheme(base);
       case AppFontTheme.elMessiri:
-        return GoogleFonts.elMessiriTextTheme(base);
       case AppFontTheme.ibmPlexSansArabic:
-        return GoogleFonts.ibmPlexSansArabicTextTheme(base);
       case AppFontTheme.changa:
-        return GoogleFonts.changaTextTheme(base);
       case AppFontTheme.lemonada:
-        return GoogleFonts.lemonadaTextTheme(base);
       case AppFontTheme.reemKufi:
-        return GoogleFonts.reemKufiTextTheme(base);
       case AppFontTheme.kufam:
-        return GoogleFonts.kufamTextTheme(base);
       case AppFontTheme.notoNaskhArabic:
-        return GoogleFonts.notoNaskhArabicTextTheme(base);
       case AppFontTheme.scheherazadeNew:
-        return GoogleFonts.scheherazadeNewTextTheme(base);
       case AppFontTheme.lateef:
-        return GoogleFonts.lateefTextTheme(base);
+        return GoogleFonts.cairoTextTheme(base);
     }
   }
 
@@ -284,8 +273,8 @@ class FontThemeController {
 
   /// Changes the active font theme across the entire application instantly
   void setFont(AppFontTheme font) {
-    if (currentFont.value != font) {
-      currentFont.value = font;
+    if (currentFont.value != AppFontTheme.cairo) {
+      currentFont.value = AppFontTheme.cairo;
     }
   }
 

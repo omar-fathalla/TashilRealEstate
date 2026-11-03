@@ -307,7 +307,7 @@ class TashilListTile extends StatelessWidget {
                               color: supportingColor,
                               letterSpacing: 0.5,
                             ) ??
-                            TextStyle(color: supportingColor, fontSize: 11),
+                            Theme.of(context).textTheme.labelSmall!.copyWith(color: supportingColor),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         child: overline!,
@@ -319,11 +319,8 @@ class TashilListTile extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: headlineColor,
                           ) ??
-                          TextStyle(
-                            color: headlineColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          Theme.of(context).textTheme.titleMedium!.copyWith(color: headlineColor,
+                            fontWeight: FontWeight.w600),
                       maxLines: lines == TashilListTileLines.oneLine ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       child: headline,
@@ -334,7 +331,7 @@ class TashilListTile extends StatelessWidget {
                         style: theme.textTheme.bodyMedium?.copyWith(
                               color: supportingColor,
                             ) ??
-                            TextStyle(color: supportingColor, fontSize: 14),
+                            Theme.of(context).textTheme.bodyMedium!.copyWith(color: supportingColor),
                         maxLines: lines == TashilListTileLines.threeLine ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         child: supportingText!,
@@ -349,7 +346,7 @@ class TashilListTile extends StatelessWidget {
                 const SizedBox(width: 16.0), // Official M3 16dp spacing
                 Align(
                   alignment: lines == TashilListTileLines.threeLine
-                      ? Alignment.topRight
+                      ? AlignmentDirectional.topEnd
                       : Alignment.center,
                   child: trailing!,
                 ),

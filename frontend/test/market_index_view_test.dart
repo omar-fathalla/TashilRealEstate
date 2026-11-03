@@ -47,16 +47,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check title
-      expect(find.text('مؤشر عقارماب'), findsOneWidget);
+      expect(find.text('مؤشر السوق'), findsOneWidget);
 
       // Check table is rendered on desktop by default
       expect(find.byType(Table), findsOneWidget);
-      expect(find.text('التجمع الخامس (القاهرة الجديدة)'), findsOneWidget);
+      expect(find.text('دبي مارينا'), findsOneWidget);
 
       // Check historical trajectory chart
       expect(find.byType(MarketHistoricalChart), findsOneWidget);
       expect(find.text('المسار التاريخي لحركة المؤشر والطلب العقاري'), findsOneWidget);
-      expect(find.text('بيانات تجريبية للمؤشر'), findsOneWidget);
+      expect(find.text('بيانات تجريبية'), findsOneWidget);
     });
 
     testWidgets('Renders properly on narrow mobile (375x800) without any overflow error', (tester) async {
@@ -72,7 +72,7 @@ void main() {
 
       // On mobile, card view is displayed for top districts
       final pageScrollable = find.byType(Scrollable).first;
-      final districtFinder = find.text('التجمع الخامس (القاهرة الجديدة)');
+      final districtFinder = find.text('دبي مارينا');
       await tester.scrollUntilVisible(districtFinder, 300, scrollable: pageScrollable);
       expect(districtFinder, findsOneWidget);
 
@@ -160,15 +160,15 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const MarketIndexView(), locale: const Locale('en')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aqarmap Index'), findsOneWidget);
-      expect(find.text('Market Index & Demand Historical Trajectory'), findsOneWidget);
+      expect(find.text('Market index'), findsOneWidget);
+      expect(find.text('Market index & demand historical trajectory'), findsOneWidget);
       expect(find.text('6 Months'), findsOneWidget);
       expect(find.text('12 Months'), findsOneWidget);
-      expect(find.text('Strong Growth Scenario'), findsOneWidget);
-      expect(find.text('Live Market Pulse & Breaking Signals'), findsOneWidget);
-      expect(find.text('Live — Updated Today at 09:00 AM'), findsOneWidget);
-      expect(find.text('Instant Refresh Now'), findsOneWidget);
-      expect(find.text('Verified Market Data Sources'), findsOneWidget);
+      expect(find.text('Strong growth scenario'), findsOneWidget);
+      expect(find.text('Market pulse'), findsOneWidget);
+      expect(find.text('Live — updated today at 09:00 am'), findsOneWidget);
+      expect(find.text('Refresh'), findsOneWidget);
+      expect(find.text('Verified market data sources'), findsOneWidget);
     });
 
     testWidgets('Renders Live Market Pulse and triggers instant refresh', (tester) async {
@@ -180,9 +180,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify ticker title and 09:00 AM update badge
-      expect(find.text('نبض السوق والأخبار العاجلة'), findsOneWidget);
+      expect(find.text('نبض السوق'), findsOneWidget);
       expect(find.text('مباشر — تحديث اليوم 09:00 ص'), findsOneWidget);
-      expect(find.text('تحديث فوري الآن'), findsOneWidget);
+      expect(find.text('تحديث'), findsWidgets);
 
       // Verify verified sources footer
       final pageScrollable = find.byType(Scrollable).first;
@@ -191,7 +191,7 @@ void main() {
       expect(sourcesFinder, findsOneWidget);
 
       // Tap instant refresh button
-      final refreshBtn = find.text('تحديث فوري الآن');
+      final refreshBtn = find.text('تحديث');
       await tester.ensureVisible(refreshBtn);
       await tester.pumpAndSettle();
       await tester.tap(refreshBtn);
@@ -212,7 +212,7 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const MarketIndexView(), locale: const Locale('hi')));
       await tester.pumpAndSettle();
 
-      expect(find.text('अकारमैप इंडेक्स'), findsOneWidget);
+      expect(find.text('बाज़ार सूचकांक'), findsOneWidget);
       expect(find.text('लाइव मार्केट पल्स और ब्रेकिंग संकेत'), findsOneWidget);
       expect(find.text('लाइव — आज सुबह 09:00 बजे अपडेट किया गया'), findsOneWidget);
       expect(find.text('अभी तुरंत रीफ्रेश करें'), findsOneWidget);

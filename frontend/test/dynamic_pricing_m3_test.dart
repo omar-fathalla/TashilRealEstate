@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/dynamic_pricing/services/dynamic_pricing_optimizer_service.dart';
 import 'package:tashil_real_estate/features/dynamic_pricing/widgets/dynamic_pricing_tab_view.dart';
 import 'package:tashil_real_estate/features/dynamic_pricing/widgets/dynamic_yield_optimizer_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget _buildTestApp(Widget child, {Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -113,8 +114,8 @@ void main() {
       expect(find.text('الإيجار الجديد الموصى به'), findsOneWidget);
       expect(find.text('تأكيد'), findsOneWidget);
       expect(find.text('إلغاء'), findsOneWidget);
-      expect(find.byIcon(Icons.check_rounded), findsWidgets);
-      expect(find.byIcon(Icons.close_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Tap confirm button in Connected Button Group
       await tester.tap(find.text('تأكيد'));
@@ -218,7 +219,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DynamicYieldOptimizerDialog), findsOneWidget);
-      expect(find.text('Dynamic Pricing Engine'), findsOneWidget);
+      expect(find.text('Dynamic pricing engine'), findsOneWidget);
       expect(find.textContaining('EGP'), findsWidgets);
 
       // Close dialog
@@ -271,12 +272,12 @@ void main() {
       // Verify Cancel segment
       expect(groupWidget.segments[0].value, equals('cancel'));
       expect(groupWidget.segments[0].label, equals('إلغاء'));
-      expect(groupWidget.segments[0].icon, equals(Icons.close_rounded));
+      expect(groupWidget.segments[0].icon, equals(Symbols.close_rounded));
 
       // Verify Confirm segment: exact 'تأكيد' label with Google check_rounded icon
       expect(groupWidget.segments[1].value, equals('confirm'));
       expect(groupWidget.segments[1].label, equals('تأكيد'));
-      expect(groupWidget.segments[1].icon, equals(Icons.check_rounded));
+      expect(groupWidget.segments[1].icon, equals(Symbols.check_rounded));
 
       // Tap cancel to close without applying
       await tester.tap(find.text('إلغاء'));
@@ -305,7 +306,7 @@ void main() {
       await tester.tap(find.text('Confirm'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsNothing);
-      expect(find.text('Price Applied'), findsWidgets);
+      expect(find.text('Price applied'), findsWidgets);
     });
   });
 }

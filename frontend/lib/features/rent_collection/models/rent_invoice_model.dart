@@ -83,6 +83,7 @@ class RentInvoiceModel {
   final String unitNumber;
   final String buildingName;
   final String district;
+  final String cityCode;
   final TenantInfo tenant;
   final OwnerPayoutInfo owner;
   final double baseAmount;
@@ -126,6 +127,7 @@ class RentInvoiceModel {
     required this.unitNumber,
     required this.buildingName,
     required this.district,
+    this.cityCode = '',
     required this.tenant,
     required this.owner,
     required this.baseAmount,
@@ -210,6 +212,7 @@ class RentInvoiceModel {
     bool? isDeleted,
     DateTime? deletedAt,
     String? notes,
+    String? cityCode,
     OwnerPayoutInfo? owner,
     TenantInfo? tenant,
   }) {
@@ -222,6 +225,7 @@ class RentInvoiceModel {
       unitNumber: unitNumber,
       buildingName: buildingName,
       district: district,
+      cityCode: cityCode ?? this.cityCode,
       tenant: tenant ?? this.tenant,
       owner: owner ?? this.owner,
       baseAmount: baseAmount ?? this.baseAmount,

@@ -3,6 +3,8 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'tashil_navigation_drawer.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive Showcase and Verification Dialog for Google Material Design 3 Navigation Drawer.
 ///
@@ -35,7 +37,7 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
     final colorScheme = theme.colorScheme;
     final loc = AppLocalizations.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)),
@@ -56,7 +58,7 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                       borderRadius: BorderRadius.circular(14.0),
                     ),
                     child: Icon(
-                      Icons.menu_open_rounded,
+                      Symbols.menu_open_rounded,
                       color: colorScheme.onSecondaryContainer,
                       size: 24.0,
                     ),
@@ -85,13 +87,13 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                   ),
                   // Collapse / Expand toggle button in showcase
                   TashilButton.tonal(
-                    icon: _isCollapsed ? Icons.open_in_full_rounded : Icons.close_fullscreen_rounded,
+                    icon: _isCollapsed ? Symbols.open_in_full_rounded : Symbols.close_fullscreen_rounded,
                     label: _isCollapsed ? loc.tr('expandedMode') : loc.tr('collapsedMode'),
                     onPressed: () => setState(() => _isCollapsed = !_isCollapsed),
                   ),
                   const SizedBox(width: 8.0),
                   TashilIconButton.standard(
-                    icon: Icons.close_rounded,
+                    icon: Symbols.close_rounded,
                     size: 38.0,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -132,14 +134,11 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                               if (!_isCollapsed)
                                 Text(
                                   loc.tr('menu'),
-                                  style: TextStyle(
-                                    fontSize: 12.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurfaceVariant),
                                 ),
                               TashilIconButton.standard(
-                                icon: _isCollapsed ? Icons.menu_rounded : Icons.menu_open_rounded,
+                                icon: _isCollapsed ? Symbols.menu_rounded : Symbols.menu_open_rounded,
                                 size: 34.0,
                                 iconSize: 18.0,
                                 onPressed: () => setState(() => _isCollapsed = !_isCollapsed),
@@ -149,16 +148,16 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                         ),
                         destinations: [
                           TashilDrawerDestination(
-                            icon: Icons.dashboard_outlined,
-                            selectedIcon: Icons.dashboard_rounded,
+                            icon: Symbols.dashboard_rounded,
+                            selectedIcon: Symbols.dashboard_rounded,
                             label: loc.tr('portfolioOverview'),
                             isSelected: _selectedIndex == 0,
                             isCollapsed: _isCollapsed,
                             onTap: () => setState(() => _selectedIndex = 0),
                           ),
                           TashilDrawerDestination(
-                            icon: Icons.apartment_outlined,
-                            selectedIcon: Icons.apartment_rounded,
+                            icon: Symbols.apartment_rounded,
+                            selectedIcon: Symbols.apartment_rounded,
                             label: loc.tr('myProperties'),
                             badgeCount: '5',
                             isSelected: _selectedIndex == 1,
@@ -166,16 +165,16 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                             onTap: () => setState(() => _selectedIndex = 1),
                           ),
                           TashilDrawerDestination(
-                            icon: Icons.account_balance_wallet_outlined,
-                            selectedIcon: Icons.account_balance_wallet_rounded,
+                            icon: Symbols.account_balance_wallet_rounded,
+                            selectedIcon: Symbols.account_balance_wallet_rounded,
                             label: loc.tr('financialsAndPayouts'),
                             isSelected: _selectedIndex == 2,
                             isCollapsed: _isCollapsed,
                             onTap: () => setState(() => _selectedIndex = 2),
                           ),
                           TashilDrawerDestination(
-                            icon: Icons.build_outlined,
-                            selectedIcon: Icons.build_rounded,
+                            icon: Symbols.build_rounded,
+                            selectedIcon: Symbols.build_rounded,
                             label: loc.tr('maintenanceTickets'),
                             badgeCount: '1',
                             isSelected: _selectedIndex == 3,
@@ -187,7 +186,7 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                             isCollapsed: _isCollapsed,
                           ),
                           TashilDrawerDestination(
-                            icon: Icons.tune_rounded,
+                            icon: Symbols.tune_rounded,
                             label: loc.tr('settings'),
                             isSelected: _selectedIndex == 4,
                             isCollapsed: _isCollapsed,
@@ -227,16 +226,13 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.straighten_rounded, size: 20.0, color: colorScheme.primary),
+                                  Icon(Symbols.straighten_rounded, size: 20.0, color: colorScheme.primary),
                                   const SizedBox(width: 10.0),
                                   Expanded(
                                     child: Text(
                                       loc.tr('navDrawerSpecsInfo'),
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurface),
                                     ),
                                   ),
                                 ],
@@ -348,11 +344,8 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
             backgroundColor: colorScheme.surfaceContainerHighest,
             child: Text(
               stateNumber,
-              style: TextStyle(
-                fontSize: 11.0,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
           ),
           const SizedBox(width: 10.0),
@@ -362,11 +355,11 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
               children: [
                 Text(
                   stateName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   description,
-                  style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -387,18 +380,15 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inbox_rounded, size: 18.0, color: contentColor),
+                Icon(Symbols.inbox_rounded, size: 18.0, color: contentColor),
                 const SizedBox(width: 6.0),
                 Flexible(
                   child: Text(
                     stateName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: contentColor,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: contentColor),
                   ),
                 ),
               ],

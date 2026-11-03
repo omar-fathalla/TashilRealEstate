@@ -8,6 +8,7 @@ import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/ai_model_definition.dart';
 import '../services/ai_engine_config_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Full-featured Material Design 3 AI Models & Engine Hub View for Super Admin.
 /// Enables switching between the top 3 latest models per AI service, with comprehensive
@@ -146,7 +147,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(Icons.smart_toy_rounded, color: colorScheme.onPrimaryContainer, size: 28),
+                child: Icon(Symbols.smart_toy_rounded, color: colorScheme.onPrimaryContainer, size: 28),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -160,12 +161,9 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                       children: [
                         Text(
                           loc.tr('aiEngineHubTitle'),
-                          style: TextStyle(
-                            fontSize: isMobile ? 18 : 22,
-                            fontWeight: FontWeight.bold,
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                             color: colorScheme.onSurface,
-                            letterSpacing: -0.5,
-                          ),
+                            letterSpacing: -0.5),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -175,32 +173,26 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                           ),
                           child: Text(
                             'Gemini & Imagen Mesh',
-                            style: TextStyle(
-                              color: colorScheme.onTertiaryContainer,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onTertiaryContainer,
+                              fontWeight: FontWeight.bold),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.12),
+                            color: colorScheme.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.green.withValues(alpha: 0.35)),
+                            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.35)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.cloud_done_rounded, size: 12, color: Colors.green),
+                              Icon(Symbols.cloud_done_rounded, size: 12, color: colorScheme.primary),
                               const SizedBox(width: 4),
                               Text(
                                 loc.tr('autoSaveActiveBadge'),
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -210,17 +202,14 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                     const SizedBox(height: 4),
                     Text(
                       loc.tr('aiEngineHubSubtitle'),
-                      style: TextStyle(
-                        fontSize: isMobile ? 12 : 13.5,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               if (!isMobile)
                 TashilButton.tonal(
-                  icon: Icons.restore_rounded,
+                  icon: Symbols.restore_rounded,
                   label: loc.tr('resetAiDefaultsBtn'),
                   onPressed: () {
                     _controller.resetToDefaults();
@@ -238,7 +227,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
           if (isMobile) ...[
             const SizedBox(height: 12),
             TashilButton.tonal(
-              icon: Icons.restore_rounded,
+              icon: Symbols.restore_rounded,
               label: loc.tr('resetAiDefaultsBtn'),
               onPressed: () {
                 _controller.resetToDefaults();
@@ -263,7 +252,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             children: [
               _buildMetricPill(
                 context: context,
-                icon: Icons.all_inclusive_rounded,
+                icon: Symbols.all_inclusive_rounded,
                 title: loc.tr('activeAiEnginesCount'),
                 value: '6 / 6',
                 subtitle: loc.tr('allEnginesOperational'),
@@ -271,7 +260,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
               ),
               _buildMetricPill(
                 context: context,
-                icon: Icons.token_rounded,
+                icon: Symbols.token_rounded,
                 title: loc.tr('monthlyTokenEstimate'),
                 value: '${(totalTokens / 1000).toStringAsFixed(1)}K',
                 subtitle: loc.tr('basedOnMonthlyRequests'),
@@ -279,7 +268,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
               ),
               _buildMetricPill(
                 context: context,
-                icon: Icons.attach_money_rounded,
+                icon: Symbols.attach_money_rounded,
                 title: loc.tr('estimatedMonthlySpend'),
                 value: '\$$totalCost',
                 subtitle: loc.tr('monthlyAiBudget'),
@@ -287,11 +276,11 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
               ),
               _buildMetricPill(
                 context: context,
-                icon: Icons.trending_down_rounded,
+                icon: Symbols.trending_down_rounded,
                 title: loc.tr('tokenSavingsIndex'),
                 value: '+$savings%',
                 subtitle: loc.tr('savingsComparedToHeavy'),
-                color: Colors.teal,
+                color: colorScheme.tertiary,
               ),
             ],
           ),
@@ -336,22 +325,19 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             children: [
               Text(
                 title,
-                style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               Row(
                 children: [
                   Text(
                     value,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: color, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -376,22 +362,22 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
         TashilConnectedButtonSegment<String>(
           value: 'ALL',
           label: loc.tr('allAiServicesFilter'),
-          icon: Icons.apps_rounded,
+          icon: Symbols.apps_rounded,
         ),
         TashilConnectedButtonSegment<String>(
           value: 'TEXT',
           label: loc.tr('textAndIngestionFilter'),
-          icon: Icons.edit_note_rounded,
+          icon: Symbols.edit_note_rounded,
         ),
         TashilConnectedButtonSegment<String>(
           value: 'VALUATION_SEARCH',
           label: loc.tr('valuationAndSearchFilter'),
-          icon: Icons.query_stats_rounded,
+          icon: Symbols.query_stats_rounded,
         ),
         TashilConnectedButtonSegment<String>(
           value: 'LEGAL_VISION',
           label: loc.tr('legalAndVisionFilter'),
-          icon: Icons.gavel_rounded,
+          icon: Symbols.gavel_rounded,
         ),
       ],
     );
@@ -446,11 +432,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                           Flexible(
                             child: Text(
                               title,
-                              style: TextStyle(
-                                fontSize: isMobile ? 15 : 17,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -462,11 +445,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                             ),
                             child: Text(
                               category.featureBadge,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ],
@@ -474,7 +454,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                       const SizedBox(height: 3),
                       Text(
                         loc.tr('switchBetweenLatest3ModelsNotice'),
-                        style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -490,15 +470,12 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 14),
+                      Icon(Symbols.check_circle_rounded, color: colorScheme.primary, size: 14),
                       const SizedBox(width: 5),
                       Text(
                         activeModel.name,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
                       ),
                     ],
                   ),
@@ -523,12 +500,12 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline_rounded, size: 15, color: colorScheme.primary),
+                      Icon(Symbols.info_rounded, size: 15, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurface, height: 1.4),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface, height: 1.4),
                             children: [
                               TextSpan(
                                 text: '${loc.tr('whatIsItUsedForLabel')}: ',
@@ -545,12 +522,12 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.place_outlined, size: 15, color: colorScheme.secondary),
+                      Icon(Symbols.place_rounded, size: 15, color: colorScheme.secondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant, height: 1.3),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.3),
                             children: [
                               TextSpan(
                                 text: '${loc.tr('locationInWebsiteLabel')}: ',
@@ -572,11 +549,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             // 3. The 3 Models Switcher Cards (Top 3 Latest Models)
             Text(
               loc.tr('selectActiveModelHeadline'),
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
             const SizedBox(height: 10),
 
@@ -654,8 +628,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
 
     // Color code token level
     final (tokenColor, tokenLabel) = switch (model.tokenLevel) {
-      TokenConsumptionLevel.ultraLow => (Colors.teal, loc.tr('tokenLevelUltraLow')),
-      TokenConsumptionLevel.balanced => (Colors.amber.shade800, loc.tr('tokenLevelBalanced')),
+      TokenConsumptionLevel.ultraLow => (colorScheme.tertiary, loc.tr('tokenLevelUltraLow')),
+      TokenConsumptionLevel.balanced => (colorScheme.tertiary, loc.tr('tokenLevelBalanced')),
       TokenConsumptionLevel.high => (colorScheme.error, loc.tr('tokenLevelHigh')),
     };
 
@@ -692,7 +666,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             Row(
               children: [
                 Icon(
-                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  isSelected ? Symbols.check_circle_rounded : Symbols.radio_button_unchecked_rounded,
                   color: isSelected ? colorScheme.primary : colorScheme.outline,
                   size: 18,
                 ),
@@ -700,11 +674,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                 Expanded(
                   child: Text(
                     model.name,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: isSelected ? colorScheme.primary : colorScheme.onSurface),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -719,11 +690,8 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   ),
                   child: Text(
                     model.generationBadge,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -754,7 +722,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                       const SizedBox(width: 4),
                       Text(
                         tokenLabel,
-                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: tokenColor),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: tokenColor),
                       ),
                     ],
                   ),
@@ -767,7 +735,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                   ),
                   child: Text(
                     '⚡ ~${model.averageLatencySeconds}s',
-                    style: TextStyle(fontSize: 9.5, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -778,7 +746,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             // Cost per 1M tokens
             Text(
               '\$${model.inputCostPerMillion} / 1M ${loc.tr('inputTokensLabel')}  •  \$${model.outputCostPerMillion} / 1M ${loc.tr('outputTokensLabel')}',
-              style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
             ),
 
             const SizedBox(height: 6),
@@ -786,7 +754,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
             // Description
             Text(
               modelDesc,
-              style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withValues(alpha: 0.8), height: 1.3),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.8), height: 1.3),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -814,17 +782,17 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
         children: [
           Row(
             children: [
-              Icon(Icons.analytics_outlined, size: 16, color: colorScheme.primary),
+              Icon(Symbols.analytics_rounded, size: 16, color: colorScheme.primary),
               const SizedBox(width: 8),
               Text(
                 '${loc.tr('averageTokenPerCallLabel')}: ~${activeModel.typicalTokensPerCall} ${loc.tr('tokensUnit')}',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
               ),
             ],
           ),
           Text(
             '${loc.tr('costPerThousandCallsLabel')}: ~\$${activeModel.costPerThousandCalls.toStringAsFixed(3)}',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.primary),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
           ),
         ],
       ),

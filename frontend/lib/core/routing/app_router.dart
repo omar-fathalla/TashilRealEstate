@@ -19,36 +19,57 @@ import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_scre
 import 'package:tashil_real_estate/features/owner_portal/payment_schedule_screen.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_login_screen.dart';
 import 'package:tashil_real_estate/features/auth/views/email_action_handler_screen.dart';
+import 'package:tashil_real_estate/features/brokers/broker_profile_screen.dart';
+import 'package:tashil_real_estate/features/public_marketplace/listing_details_page.dart';
+import 'package:tashil_real_estate/core/routing/not_found_screen.dart';
+import 'package:tashil_real_estate/core/routing/role_gate.dart';
+import 'package:tashil_real_estate/core/routing/route_access.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
+
+bool _isLoggedIn() {
+  try {
+    return FirebaseAuth.instance.currentUser != null;
+  } catch (_) {
+    return false;
+  }
+}
+
+String? _signedInRole() {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    final profile = UserProfileService().profileNotifier.value;
+    if (!UserProfileService().roleConfirmed.value || profile.uid != user.uid) {
+      return null;
+    }
+    return profile.role;
+  } catch (_) {
+    return null;
+  }
+}
+
+bool _roleKnown() {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final profile = UserProfileService().profileNotifier.value;
+    return UserProfileService().roleConfirmed.value && profile.uid == user.uid;
+  } catch (_) {
+    return false;
+  }
+}
 
 GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
   initialLocation: initialLocation,
+  errorBuilder: (context, state) => const NotFoundScreen(),
   redirect: (context, state) {
-    final bool isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final String location = state.matchedLocation;
-    final bool isAdminRoute = location == '/admin' || location == '/admin/login' || location == '/super-admin';
-    final bool isPublicRoute = location == '/' ||
-        location == '/login' ||
-        location == '/admin' ||
-        location == '/admin/login' ||
-        location == '/valuation' ||
-        location == '/lease-builder' ||
-        location == '/rent-collection' ||
-        location == '/image-moderation' ||
-        location == '/investor-dashboard' ||
-        location == '/market-index' ||
-        location == '/fast-onboarding' ||
-        location == '/financial-dashboard' ||
-        location == '/checkout' ||
-        location == '/payment-schedule';
-
-    if (!isLoggedIn && !isPublicRoute) {
-      if (isAdminRoute) {
-        return '/admin/login';
-      }
-      return '/login'; // Redirect unauthenticated users to client login
-    }
-    
-    return null;
+    final location = state.matchedLocation;
+    return RouteAccess.redirect(
+      isLoggedIn: _isLoggedIn(),
+      role: _signedInRole(),
+      roleKnown: _roleKnown(),
+      location: location,
+    );
   },
   routes: [
     GoRoute(
@@ -61,45 +82,81 @@ GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
     ),
     GoRoute(
       path: '/lease-builder',
-      builder: (context, state) => const LeaseBuilderScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: LeaseBuilderScreen(),
+      ),
     ),
     GoRoute(
       path: '/rent-collection',
-      builder: (context, state) => const RentCollectionScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: RentCollectionScreen(),
+      ),
     ),
     GoRoute(
       path: '/checkout',
-      builder: (context, state) => const TenantCheckoutScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Tenant', 'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: TenantCheckoutScreen(),
+      ),
     ),
     GoRoute(
       path: '/payment-schedule',
-      builder: (context, state) => const PaymentScheduleScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: PaymentScheduleScreen(),
+      ),
     ),
     GoRoute(
       path: '/image-moderation',
-      builder: (context, state) => const ImageModerationScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: ImageModerationScreen(),
+      ),
     ),
     GoRoute(
       path: '/investor-dashboard',
-      builder: (context, state) => const InvestorDashboardScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin', 'Investor'},
+        child: InvestorDashboardScreen(),
+      ),
     ),
     GoRoute(
       path: '/market-index',
       builder: (context, state) => const MarketIndexScreen(),
     ),
     GoRoute(
+      path: '/listing/:listingId',
+      builder: (context, state) => ListingDetailsPage(
+        listingId: state.pathParameters['listingId'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/brokers/:brokerId',
+      builder: (context, state) => BrokerProfileScreen(
+        brokerId: state.pathParameters['brokerId'] ?? '',
+      ),
+    ),
+    GoRoute(
       path: '/fast-onboarding',
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
-        return FastOnboardingScreen(
-          initialDraft: extra?['initialDraft'] as FastPropertyDraft?,
-          existingPropertyId: extra?['existingPropertyId'] as String?,
+        return RoleGate(
+          allowedRoles: const {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+          child: FastOnboardingScreen(
+            initialDraft: extra?['initialDraft'] as FastPropertyDraft?,
+            existingPropertyId: extra?['existingPropertyId'] as String?,
+          ),
         );
       },
     ),
     GoRoute(
       path: '/financial-dashboard',
-      builder: (context, state) => const FinancialKpiScreen(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'AgencyAdmin', 'SuperAdmin'},
+        child: FinancialKpiScreen(),
+      ),
     ),
     GoRoute(
       path: '/login',
@@ -107,7 +164,10 @@ GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
     ),
     GoRoute(
       path: '/admin',
-      redirect: (context, state) => '/admin/login',
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'SuperAdmin'},
+        child: SuperAdminDashboard(),
+      ),
     ),
     GoRoute(
       path: '/admin/login',
@@ -115,19 +175,31 @@ GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
     ),
     GoRoute(
       path: '/super-admin',
-      builder: (context, state) => const SuperAdminDashboard(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'SuperAdmin'},
+        child: SuperAdminDashboard(),
+      ),
     ),
     GoRoute(
       path: '/agency',
-      builder: (context, state) => const AgencyDashboard(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'AgencyAdmin', 'SuperAdmin'},
+        child: AgencyDashboard(),
+      ),
     ),
     GoRoute(
       path: '/owner',
-      builder: (context, state) => const OwnerDashboard(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Owner', 'SuperAdmin'},
+        child: OwnerDashboard(),
+      ),
     ),
     GoRoute(
       path: '/tenant',
-      builder: (context, state) => const TenantDashboard(),
+      builder: (context, state) => const RoleGate(
+        allowedRoles: {'Tenant', 'SuperAdmin'},
+        child: TenantDashboard(),
+      ),
     ),
     GoRoute(
       path: '/auth/action',

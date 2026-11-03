@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 export 'm3_snackbar_showcase_dialog.dart';
 
@@ -139,7 +140,7 @@ class TashilSnackBar {
     required BuildContext context,
     required String message,
     String? title,
-    IconData icon = Icons.check_circle_rounded,
+    IconData icon = Symbols.check_circle_rounded,
     TashilSnackBarAction? action,
     bool showCloseIcon = false,
     Duration? duration,
@@ -162,7 +163,7 @@ class TashilSnackBar {
     required BuildContext context,
     required String message,
     String? title,
-    IconData icon = Icons.error_outline_rounded,
+    IconData icon = Symbols.error_outline_rounded,
     TashilSnackBarAction? action,
     bool showCloseIcon = true,
     Duration? duration,
@@ -185,7 +186,7 @@ class TashilSnackBar {
     required BuildContext context,
     required String message,
     String? title,
-    IconData icon = Icons.warning_amber_rounded,
+    IconData icon = Symbols.warning_amber_rounded,
     TashilSnackBarAction? action,
     bool showCloseIcon = false,
     Duration? duration,
@@ -208,7 +209,7 @@ class TashilSnackBar {
     required BuildContext context,
     required String message,
     String? title,
-    IconData icon = Icons.info_outline_rounded,
+    IconData icon = Symbols.info_rounded,
     TashilSnackBarAction? action,
     bool showCloseIcon = false,
     Duration? duration,
@@ -274,10 +275,10 @@ class TashilSnackBar {
         final border = colorScheme.error.withValues(alpha: 0.35);
         final iconColor = Color.lerp(
           colorScheme.error,
-          Colors.redAccent.shade100,
+          colorScheme.errorContainer,
           0.6,
         )!;
-        final actionColor = Colors.redAccent.shade100;
+        final actionColor = colorScheme.errorContainer;
 
         return _TashilSnackBarColors(
           containerColor: container,
@@ -331,13 +332,13 @@ class TashilSnackBar {
   static IconData _resolveDefaultIcon(TashilSnackBarTone tone) {
     switch (tone) {
       case TashilSnackBarTone.success:
-        return Icons.check_circle_rounded;
+        return Symbols.check_circle_rounded;
       case TashilSnackBarTone.error:
-        return Icons.error_outline_rounded;
+        return Symbols.error_outline_rounded;
       case TashilSnackBarTone.warning:
-        return Icons.warning_amber_rounded;
+        return Symbols.warning_amber_rounded;
       case TashilSnackBarTone.info:
-        return Icons.info_outline_rounded;
+        return Symbols.info_rounded;
     }
   }
 }
@@ -480,7 +481,7 @@ class _TashilSnackBarContent extends StatelessWidget {
             const SizedBox(width: 4.0),
             IconButton(
               icon: Icon(
-                Icons.close_rounded,
+                Symbols.close_rounded,
                 size: 18.0,
                 color: closeIconColor,
               ),

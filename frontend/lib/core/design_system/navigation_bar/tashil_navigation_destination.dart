@@ -135,11 +135,8 @@ class _TashilNavigationDestinationState
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontSize: 12.0,
-                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: widget.isSelected ? activeTextColor : inactiveTextColor,
-                ),
+                style: theme.textTheme.labelMedium?.copyWith(fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: widget.isSelected ? activeTextColor : inactiveTextColor),
               ),
             ],
           ),

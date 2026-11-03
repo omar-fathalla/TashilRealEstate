@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warnin
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tax_invoice_viewer_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class OwnerFinancialsView extends StatefulWidget {
   const OwnerFinancialsView({super.key});
@@ -77,17 +78,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         TashilConnectedButtonSegment<int>(
                           value: 0,
                           label: loc.tr('rentInvoicingAndCollectionTab'),
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                         TashilConnectedButtonSegment<int>(
                           value: 1,
                           label: loc.tr('arrearsAndLegalNoticesTab'),
-                          icon: Icons.gavel_rounded,
+                          icon: Symbols.gavel_rounded,
                         ),
                         TashilConnectedButtonSegment<int>(
                           value: 2,
                           label: loc.tr('recentPayouts'),
-                          icon: Icons.account_balance_rounded,
+                          icon: Symbols.account_balance_rounded,
                         ),
                       ],
                     ),
@@ -169,19 +170,19 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                       children: [
                         Text(
                           loc.tr('rentInvoicingAndCollectionHub'),
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: colorScheme.onSurface),
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           loc.tr('rentInvoicingHubSubtitle'),
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
                     TashilButton(
                       onPressed: () => CreateRentInvoiceDialog.show(context),
-                      icon: Icons.add_rounded,
+                      icon: Symbols.add_rounded,
                       label: loc.tr('issueNewRentInvoice'),
                       variant: TashilButtonVariant.filled,
                     ),
@@ -198,12 +199,12 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         children: [
                           Text(
                             loc.tr('rentInvoicingAndCollectionHub'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             loc.tr('rentInvoicingHubSubtitle'),
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -211,7 +212,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     const SizedBox(width: 16),
                     TashilButton(
                       onPressed: () => CreateRentInvoiceDialog.show(context),
-                      icon: Icons.add_rounded,
+                      icon: Symbols.add_rounded,
                       label: loc.tr('issueNewRentInvoice'),
                       variant: TashilButtonVariant.filled,
                     ),
@@ -241,8 +242,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         hintText: loc.tr('searchInvoiceOrTenantPlaceholder'),
-                        hintStyle: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                        prefixIcon: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
+                        hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                        prefixIcon: Icon(Symbols.search_rounded, size: 18, color: colorScheme.onSurfaceVariant),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -271,22 +272,22 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     TashilConnectedButtonSegment<String>(
                       value: 'all',
                       label: '${loc.tr('filterAllInvoices')} (${countryInvoices.length})',
-                      icon: Icons.receipt_long_rounded,
+                      icon: Symbols.receipt_long_rounded,
                     ),
                     TashilConnectedButtonSegment<String>(
                       value: 'paid',
                       label: '${loc.tr('statusPaidElectronically')} (${countryInvoices.where((i) => i.status == 'paid').length})',
-                      icon: Icons.check_circle_rounded,
+                      icon: Symbols.check_circle_rounded,
                     ),
                     TashilConnectedButtonSegment<String>(
                       value: 'due_soon',
                       label: '${loc.tr('statusPendingPayment')} (${countryInvoices.where((i) => i.status == 'due_soon').length})',
-                      icon: Icons.schedule_rounded,
+                      icon: Symbols.schedule_rounded,
                     ),
                     TashilConnectedButtonSegment<String>(
                       value: 'overdue',
                       label: '${loc.tr('statusOverdue')} (${countryInvoices.where((i) => i.status == 'overdue').length})',
-                      icon: Icons.warning_amber_rounded,
+                      icon: Symbols.warning_amber_rounded,
                     ),
                   ],
                 ),
@@ -304,11 +305,11 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.receipt_outlined, size: 40, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.receipt_rounded, size: 40, color: colorScheme.onSurfaceVariant),
                         const SizedBox(height: 12),
                         Text(
                           loc.tr('noInvoicesFound'),
-                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -348,8 +349,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           title: loc.tr('totalCollectedThisMonth'),
           value: '${CurrencyFormatter.formatAmount(totalCollected, langCode: lang)} $currency',
           subtitle: loc.tr('collectedThisMonthSubtitle'),
-          icon: Icons.check_circle_outline_rounded,
-          subtitleIcon: Icons.verified_rounded,
+          icon: Symbols.check_circle_outline_rounded,
+          subtitleIcon: Symbols.verified_rounded,
           iconColor: colorScheme.secondary,
           iconBgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         ),
@@ -357,8 +358,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           title: loc.tr('pendingReceivables'),
           value: '${CurrencyFormatter.formatAmount(totalPending, langCode: lang)} $currency',
           subtitle: loc.tr('pendingReceivablesSubtitle'),
-          icon: Icons.hourglass_top_rounded,
-          subtitleIcon: Icons.schedule_rounded,
+          icon: Symbols.hourglass_top_rounded,
+          subtitleIcon: Symbols.schedule_rounded,
           iconColor: colorScheme.tertiary,
           iconBgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         ),
@@ -366,8 +367,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           title: loc.tr('accumulatedOverdueArrears'),
           value: '${CurrencyFormatter.formatAmount(totalOverdue, langCode: lang)} $currency',
           subtitle: loc.tr('overdueArrearsSubtitle'),
-          icon: Icons.warning_amber_rounded,
-          subtitleIcon: Icons.notification_important_outlined,
+          icon: Symbols.warning_amber_rounded,
+          subtitleIcon: Symbols.notification_important_rounded,
           iconColor: colorScheme.error,
           iconBgColor: colorScheme.errorContainer.withValues(alpha: 0.5),
         ),
@@ -375,8 +376,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           title: loc.tr('totalManagedInvoices'),
           value: '$totalInvoicesCount ${loc.tr('invoicesCount')}',
           subtitle: loc.tr('managedInvoicesSubtitle'),
-          icon: Icons.receipt_long_rounded,
-          subtitleIcon: Icons.description_outlined,
+          icon: Symbols.receipt_long_rounded,
+          subtitleIcon: Symbols.description_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -409,17 +410,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
       statusBg = colorScheme.secondaryContainer;
       statusFg = colorScheme.onSecondaryContainer;
       statusLabel = loc.tr('statusPaidElectronically');
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = Symbols.check_circle_rounded;
     } else if (isOverdue) {
       statusBg = colorScheme.errorContainer;
       statusFg = colorScheme.onErrorContainer;
       statusLabel = '${loc.tr('statusOverdue')} (${invoice.overdueDays} ${loc.tr('days')})';
-      statusIcon = Icons.warning_amber_rounded;
+      statusIcon = Symbols.warning_amber_rounded;
     } else {
       statusBg = colorScheme.primaryContainer;
       statusFg = colorScheme.onPrimaryContainer;
       statusLabel = loc.tr('statusPendingPayment');
-      statusIcon = Icons.schedule_rounded;
+      statusIcon = Symbols.schedule_rounded;
     }
 
     return TashilCard.outlined(
@@ -450,19 +451,13 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         children: [
                           Text(
                             '${invoice.unitTitle} • ${loc.tr('unitNumber')} ${invoice.unitNumber}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13.5,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${invoice.buildingName} - ${invoice.district}',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -476,22 +471,19 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                 children: [
                   Text(
                     '${CurrencyFormatter.formatAmount(invoice.totalAmountDue, langCode: lang)} $currency',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: isOverdue ? colorScheme.error : colorScheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                      letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 2),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.receipt_rounded, size: 12, color: colorScheme.onSurfaceVariant),
+                      Icon(Symbols.receipt_rounded, size: 12, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
                       Text(
                         invoice.invoiceNumber,
-                        style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -521,18 +513,18 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.person_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                    Icon(Symbols.person_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 6),
                     Text(
                       invoice.tenant.name,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                     ),
                     const SizedBox(width: 6),
                     Directionality(
                       textDirection: TextDirection.ltr,
                       child: Text(
                         '(${invoice.tenant.phone})',
-                        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
                   ],
@@ -542,18 +534,15 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.calendar_today_outlined,
+                      Symbols.calendar_today_rounded,
                       size: 13,
                       color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       '${loc.tr('dueDate')}: ${invoice.dueDate.year}-${invoice.dueDate.month.toString().padLeft(2, '0')}-${invoice.dueDate.day.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: isOverdue ? FontWeight.bold : FontWeight.normal,
-                        color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isOverdue ? FontWeight.bold : FontWeight.normal,
+                        color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -567,11 +556,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     ),
                     child: Text(
                       '${loc.tr('lateDays')}: ${invoice.overdueDays} ${loc.tr('days')}',
-                      style: TextStyle(
-                        color: colorScheme.onErrorContainer,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.bold),
                     ),
                   )
                 else
@@ -583,11 +569,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     ),
                     child: Text(
                       statusLabel,
-                      style: TextStyle(
-                        color: statusFg,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusFg,
+                        fontWeight: FontWeight.bold),
                     ),
                   ),
               ],
@@ -636,28 +619,28 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                   TashilConnectedButtonSegment<String>(
                     value: 'receipt',
                     label: loc.tr('viewPaymentReceipt'),
-                    icon: Icons.check_circle_outline_rounded,
+                    icon: Symbols.check_circle_outline_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'invoice',
                     label: loc.tr('viewOfficialTaxInvoice'),
-                    icon: Icons.receipt_long_outlined,
+                    icon: Symbols.receipt_long_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'link',
                     label: loc.tr('sendPaymentLink'),
-                    icon: Icons.link_rounded,
+                    icon: Symbols.link_rounded,
                   ),
                 ] else if (isOverdue) ...[
                   TashilConnectedButtonSegment<String>(
                     value: 'pay',
                     label: loc.tr('payNowOnline'),
-                    icon: Icons.payment_rounded,
+                    icon: Symbols.payment_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'warning',
                     label: loc.tr('issueLegalWarningNotice'),
-                    icon: Icons.gavel_rounded,
+                    icon: Symbols.gavel_rounded,
                     activeColor: colorScheme.error,
                     activeForegroundColor: colorScheme.onError,
                     unselectedForegroundColor: colorScheme.error,
@@ -668,33 +651,33 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                   TashilConnectedButtonSegment<String>(
                     value: 'link',
                     label: loc.tr('sendPaymentLink'),
-                    icon: Icons.link_rounded,
+                    icon: Symbols.link_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'invoice',
                     label: loc.tr('viewOfficialTaxInvoice'),
-                    icon: Icons.receipt_long_outlined,
+                    icon: Symbols.receipt_long_rounded,
                   ),
                 ] else ...[
                   TashilConnectedButtonSegment<String>(
                     value: 'pay',
                     label: loc.tr('payNowOnline'),
-                    icon: Icons.payment_rounded,
+                    icon: Symbols.payment_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'remind',
                     label: loc.tr('sendReminderWhatsApp'),
-                    icon: Icons.send_to_mobile_rounded,
+                    icon: Symbols.send_to_mobile_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'link',
                     label: loc.tr('sendPaymentLink'),
-                    icon: Icons.link_rounded,
+                    icon: Symbols.link_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'invoice',
                     label: loc.tr('viewOfficialTaxInvoice'),
-                    icon: Icons.receipt_long_outlined,
+                    icon: Symbols.receipt_long_rounded,
                   ),
                 ],
               ],
@@ -732,17 +715,14 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
               // Header
               Text(
                 loc.tr('arrearsTrackerAndLegalNoticesTitle'),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
-                  letterSpacing: -0.3,
-                ),
+                  letterSpacing: -0.3),
               ),
               const SizedBox(height: 2),
               Text(
                 loc.tr('arrearsTrackerSubtitle'),
-                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
 
@@ -759,7 +739,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         color: colorScheme.errorContainer,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.warning_rounded, color: colorScheme.error, size: 26),
+                      child: Icon(Symbols.warning_rounded, color: colorScheme.error, size: 26),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -768,21 +748,15 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         children: [
                           Text(
                             '${loc.tr('totalActiveArrears')}: ${CurrencyFormatter.formatAmount(totalOverdueAmount, langCode: lang)} $currency',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15.5,
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                               color: colorScheme.onErrorContainer,
-                              letterSpacing: -0.2,
-                            ),
+                              letterSpacing: -0.2),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             loc.tr('statutoryLegalNoticeAlertDesc'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onErrorContainer.withValues(alpha: 0.85),
-                              height: 1.35,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onErrorContainer.withValues(alpha: 0.85),
+                              height: 1.35),
                           ),
                         ],
                       ),
@@ -809,17 +783,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.verified_user_rounded, size: 36, color: colorScheme.secondary),
+                          child: Icon(Symbols.verified_user_rounded, size: 36, color: colorScheme.secondary),
                         ),
                         const SizedBox(height: 14),
                         Text(
                           loc.tr('zeroArrearsCongratulations'),
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: colorScheme.onSurface),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           loc.tr('allRentPaymentsUpToDate'),
-                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12.5),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -871,12 +845,12 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                   color: colorScheme.surfaceContainerHigh,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.account_balance_wallet_outlined, size: 28, color: colorScheme.onSurfaceVariant),
+                child: Icon(Symbols.account_balance_wallet_rounded, size: 28, color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
               Text(
                 loc.tr('noRecentPayoutsTitle'),
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
@@ -884,7 +858,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: Text(
                   loc.tr('noRecentPayoutsDesc'),
-                  style: TextStyle(fontSize: 13, height: 1.5, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.5, color: colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -902,11 +876,11 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           children: [
             Text(
               loc.tr('recentPayouts'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             Text(
               loc.tr('clickToViewMonthDetails'),
-              style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -968,7 +942,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  Icons.account_balance_rounded,
+                                  Symbols.account_balance_rounded,
                                   color: isExpanded ? colorScheme.onPrimary : colorScheme.primary,
                                   size: 20,
                                 ),
@@ -980,19 +954,13 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                                   children: [
                                     Text(
                                       title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13.5,
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '$date • $bankName • Ref: $ref',
-                                      style: TextStyle(
-                                        color: colorScheme.onSurfaceVariant,
-                                        fontSize: 11,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1011,16 +979,13 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                               children: [
                                 Text(
                                   '+ ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
-                                  style: TextStyle(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                                    fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   loc.tr('payoutCompleted'),
-                                  style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -1029,7 +994,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                               turns: isExpanded ? 0.5 : 0.0,
                               duration: const Duration(milliseconds: 200),
                               child: Icon(
-                                Icons.keyboard_arrow_down_rounded,
+                                Symbols.keyboard_arrow_down_rounded,
                                 color: isExpanded ? colorScheme.primary : colorScheme.onSurfaceVariant,
                                 size: 22,
                               ),
@@ -1051,19 +1016,19 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                         runSpacing: 8,
                         children: [
                           _buildMonthChip(
-                            icon: Icons.verified_rounded,
+                            icon: Symbols.verified_rounded,
                             label: loc.tr('settlementCompleted'),
                             color: colorScheme.primary,
                             bgColor: colorScheme.primaryContainer,
                           ),
                           _buildMonthChip(
-                            icon: Icons.account_balance_wallet_rounded,
+                            icon: Symbols.account_balance_wallet_rounded,
                             label: loc.tr('bankTransferDeposit'),
                             color: colorScheme.secondary,
                             bgColor: colorScheme.secondaryContainer,
                           ),
                           _buildMonthChip(
-                            icon: Icons.account_balance_rounded,
+                            icon: Symbols.account_balance_rounded,
                             label: bankName,
                             color: colorScheme.tertiary,
                             bgColor: colorScheme.tertiaryContainer,
@@ -1085,23 +1050,23 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             // Bank Reference Number with Copy Action
                             Row(
                               children: [
-                                Icon(Icons.tag_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.tag_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('bankReferenceNumber')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     ref,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 TashilIconButton.standard(
-                                  icon: Icons.copy_rounded,
+                                  icon: Symbols.content_copy_rounded,
                                   tooltip: loc.tr('copyRefSuccess'),
                                   onPressed: () {
                                     Clipboard.setData(ClipboardData(text: ref));
@@ -1117,17 +1082,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             // Receiving Bank Account
                             Row(
                               children: [
-                                Icon(Icons.account_balance_outlined, size: 16, color: colorScheme.secondary),
+                                Icon(Symbols.account_balance_rounded, size: 16, color: colorScheme.secondary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('transferredToAccount')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     bankName,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -1136,17 +1101,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             // Linked Tax Invoice
                             Row(
                               children: [
-                                Icon(Icons.receipt_long_rounded, size: 16, color: colorScheme.tertiary),
+                                Icon(Symbols.receipt_long_rounded, size: 16, color: colorScheme.tertiary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('linkedTaxInvoice')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     invoiceNo,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -1155,17 +1120,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             // Linked Unit & Tenant
                             Row(
                               children: [
-                                Icon(Icons.apartment_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.apartment_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('linkedUnitAndTenant')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     title,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1191,7 +1156,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             Expanded(
                               child: Text(
                                 '${loc.tr('grossRentalCollected')}: + ${CurrencyFormatter.formatAmount(grossAmount, langCode: lang)} $currency',
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1199,7 +1164,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             const SizedBox(width: 8),
                             Text(
                               '${loc.tr('managementFeeDeduction')}: - ${CurrencyFormatter.formatAmount(managementFee, langCode: lang)} $currency',
-                              style: TextStyle(fontSize: 11, color: colorScheme.error),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.error),
                             ),
                           ],
                         ),
@@ -1236,17 +1201,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                             TashilConnectedButtonSegment<String>(
                               value: 'downloadReceipt',
                               label: loc.tr('downloadTransferReceipt'),
-                              icon: Icons.download_rounded,
+                              icon: Symbols.download_rounded,
                             ),
                             TashilConnectedButtonSegment<String>(
                               value: 'shareNotice',
                               label: loc.tr('shareTransferNotice'),
-                              icon: Icons.share_rounded,
+                              icon: Symbols.share_rounded,
                             ),
                             TashilConnectedButtonSegment<String>(
                               value: 'copyRef',
                               label: loc.tr('copyRef'),
-                              icon: Icons.copy_rounded,
+                              icon: Symbols.content_copy_rounded,
                             ),
                           ],
                         ),
@@ -1282,7 +1247,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),

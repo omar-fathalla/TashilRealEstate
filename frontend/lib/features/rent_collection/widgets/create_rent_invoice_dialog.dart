@@ -11,6 +11,8 @@ import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class _RegisteredUnitOption {
   final String id;
@@ -27,7 +29,7 @@ class _RegisteredUnitOption {
   final String tenantId;
   final String countryCode;
 
-  const _RegisteredUnitOption({
+  _RegisteredUnitOption({
     required this.id,
     required this.title,
     required this.unitNumber,
@@ -88,12 +90,12 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
     // 1. Standard registered unit templates (preserves baseline defaults and test expectations)
     final templateList = isUAE
         ? [
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_ae_1',
-              title: 'Luxury Marina View 2BR',
+              title: AppLocalizations.trStatic('uiCopy061'),
               unitNumber: '1402',
               buildingName: 'Marina Heights',
-              district: 'دبي مارينا',
+              district: AppLocalizations.trStatic('uiCopy204'),
               contractNumber: 'AE-2026-DXB-9042',
               baseRent: 12000,
               dailyPenalty: 150,
@@ -103,12 +105,12 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
               tenantId: '784-1992-1234567-1',
               countryCode: 'AE',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_ae_2',
-              title: 'Luxury 2BR Apartment with Marina View',
+              title: AppLocalizations.trStatic('uiCopy060'),
               unitNumber: 'Unit 2204',
               buildingName: 'Marina Gate 2',
-              district: 'دبي مارينا',
+              district: AppLocalizations.trStatic('uiCopy204'),
               contractNumber: 'AE-2026-DXB-9021',
               baseRent: 18000,
               dailyPenalty: 150,
@@ -118,12 +120,12 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
               tenantId: '784-1990-1234567-1',
               countryCode: 'AE',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_ae_3',
-              title: 'Executive 1BR Suite near Burj Khalifa',
+              title: AppLocalizations.trStatic('uiCopy044'),
               unitNumber: 'Suite 1805',
               buildingName: 'The Address Downtown',
-              district: 'وسط مدينة دبي',
+              district: AppLocalizations.trStatic('uiCopy326'),
               contractNumber: 'AE-2026-DOWNTOWN-4412',
               baseRent: 14500,
               dailyPenalty: 100,
@@ -133,12 +135,12 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
               tenantId: '784-1988-7654321-2',
               countryCode: 'AE',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_ae_4',
-              title: 'Beachfront 3BR Penthouse',
+              title: AppLocalizations.trStatic('uiCopy031'),
               unitNumber: 'Penthouse 45',
               buildingName: 'Rimal 1',
-              district: 'جميرا بيتش ريزيدنس (JBR)',
+              district: AppLocalizations.trStatic('uiCopy189'),
               contractNumber: 'AE-2026-JBR-5510',
               baseRent: 24000,
               dailyPenalty: 200,
@@ -150,76 +152,76 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
             ),
           ]
         : [
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_eg_1',
-              title: 'شقة فاخرة بالتجمع الخامس',
+              title: AppLocalizations.trStatic('uiCopy230'),
               unitNumber: '302',
-              buildingName: 'عمارة النرجس 88',
-              district: 'القاهرة الجديدة',
+              buildingName: AppLocalizations.trStatic('uiCopy247'),
+              district: AppLocalizations.trStatic('uiCopy139'),
               contractNumber: 'EG-2026-CAI-7719',
               baseRent: 22000,
               dailyPenalty: 50,
-              tenantName: 'محمود عبدالحميد السعدني',
+              tenantName: AppLocalizations.trStatic('uiCopy281'),
               tenantPhone: '+201098765432',
               tenantEmail: 'm.elsadani@gmail.com',
               tenantId: '29004051234567',
               countryCode: 'EG',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_eg_2',
-              title: 'فيلا مستقلة بحمام سباحة',
+              title: AppLocalizations.trStatic('uiCopy257'),
               unitNumber: 'Villa 12',
-              buildingName: 'كمبوند الربوة',
-              district: 'الشيخ زايد',
+              buildingName: AppLocalizations.trStatic('uiCopy267'),
+              district: AppLocalizations.trStatic('uiCopy134'),
               contractNumber: 'EG-2026-ZAYED-1104',
               baseRent: 55000,
               dailyPenalty: 100,
-              tenantName: 'سارة خالد الدسوقي',
+              tenantName: AppLocalizations.trStatic('uiCopy214'),
               tenantPhone: '+201123456789',
               tenantEmail: 'sara.desouky@gmail.com',
               tenantId: '29505051234568',
               countryCode: 'EG',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_eg_3',
-              title: 'دوبلكس حديث بحديقة خاصة',
+              title: AppLocalizations.trStatic('uiCopy208'),
               unitNumber: 'D-101',
-              buildingName: 'كمبوند بالم هيلز',
-              district: 'السادس من أكتوبر',
+              buildingName: AppLocalizations.trStatic('uiCopy268'),
+              district: AppLocalizations.trStatic('uiCopy132'),
               contractNumber: 'EG-2026-OCT-3391',
               baseRent: 32000,
               dailyPenalty: 60,
-              tenantName: 'كريم عصام الشناوي',
+              tenantName: AppLocalizations.trStatic('uiCopy265'),
               tenantPhone: '+201234567890',
               tenantEmail: 'karim.chennawy@gmail.com',
               tenantId: '28803031234569',
               countryCode: 'EG',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_eg_4',
-              title: 'شقة مطلة على النيل - جاردن سيتي',
+              title: AppLocalizations.trStatic('uiCopy234'),
               unitNumber: '701',
-              buildingName: 'برج النيل بلازا',
-              district: 'جاردن سيتي',
+              buildingName: AppLocalizations.trStatic('uiCopy160'),
+              district: AppLocalizations.trStatic('uiCopy185'),
               contractNumber: 'EG-2026-CAI-3301',
               baseRent: 21000,
               dailyPenalty: 50,
-              tenantName: 'أحمد محمود القاضي',
+              tenantName: AppLocalizations.trStatic('uiCopy086'),
               tenantPhone: '+201012345678',
               tenantEmail: 'ahmed.kadi@gmail.com',
               tenantId: '29201011234567',
               countryCode: 'EG',
             ),
-            const _RegisteredUnitOption(
+            _RegisteredUnitOption(
               id: 'unit_eg_5',
-              title: 'شاليه بحري صف أول - أمواج',
+              title: AppLocalizations.trStatic('uiCopy219'),
               unitNumber: '104',
-              buildingName: 'قرية أمواج',
-              district: 'الساحل الشمالي',
+              buildingName: AppLocalizations.trStatic('uiCopy260'),
+              district: AppLocalizations.trStatic('uiCopy131'),
               contractNumber: 'EG-2026-SAH-5502',
               baseRent: 25000,
               dailyPenalty: 75,
-              tenantName: 'عمر فاروق الشريف',
+              tenantName: AppLocalizations.trStatic('uiCopy248'),
               tenantPhone: '+201009871234',
               tenantEmail: 'omar.elcherif@gmail.com',
               tenantId: '28907101234560',
@@ -249,7 +251,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
               contractNumber: contractNumber,
               baseRent: p.pricePerMonth,
               dailyPenalty: isUAE ? 100 : 50,
-              tenantName: p.tenantName ?? (isUAE ? 'John Doe' : 'عميل مسجل'),
+              tenantName: p.tenantName ?? (isUAE ? 'John Doe' : AppLocalizations.trStatic('uiCopy249')),
               tenantPhone: p.tenantPhone ?? (isUAE ? '+971500000000' : '+201000000000'),
               tenantEmail: isUAE ? 'tenant@example.ae' : 'tenant@example.eg',
               tenantId: isUAE ? '784-1990-0000000-0' : '29000000000000',
@@ -358,9 +360,9 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
       ),
       owner: () {
         final profile = UserProfileService().profileNotifier.value;
-        final defaultOwnerName = isUAE ? 'عبدالله راشد النعيمي' : 'محمد فتح الله';
+        final defaultOwnerName = isUAE ? AppLocalizations.trStatic('uiCopy239') : AppLocalizations.trStatic('uiCopy280');
         final ownerName = profile.hasFullName ? profile.fullName : defaultOwnerName;
-        final defaultBank = isUAE ? 'Emirates NBD' : 'البنك الأهلي المصري (NBE)';
+        final defaultBank = isUAE ? 'Emirates NBD' : AppLocalizations.trStatic('uiCopy122');
         final ownerBank = profile.bankName.isNotEmpty ? profile.bankName : defaultBank;
         final defaultIban = isUAE ? 'AE400330005544332211009' : 'EG380003000012345678901234567';
         final ownerIban = profile.iban.isNotEmpty
@@ -408,7 +410,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
     final isUAE = CountryController.isUAE;
     final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,
@@ -438,7 +440,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              Icons.receipt_long_rounded,
+                              Symbols.receipt_long_rounded,
                               color: theme.colorScheme.onPrimaryContainer,
                               size: 20,
                             ),
@@ -450,15 +452,12 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                               children: [
                                 Text(
                                   loc.tr('createNewRentInvoice'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 Text(
                                   loc.tr('issueElectronicTaxInvoiceDesc'),
-                                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -483,7 +482,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Section 1: Property Unit & Contract Info
-                        _buildSectionHeader(loc.tr('unitAndContractInfo'), Icons.apartment_rounded),
+                        _buildSectionHeader(loc.tr('unitAndContractInfo'), Symbols.apartment_rounded),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -492,13 +491,13 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                               child: TashilDropdownMenu<String>(
                                 value: _selectedUnitId,
                                 labelText: loc.tr('propertyTitle'),
-                                prefixIcon: Icons.apartment_rounded,
+                                prefixIcon: Symbols.apartment_rounded,
                                 items: _unitOptions.map((unit) {
                                   return TashilDropdownMenuItem<String>(
                                     value: unit.id,
                                     label: unit.title,
                                     supportingText: '${unit.buildingName} - ${unit.unitNumber} (${unit.district})',
-                                    icon: Icons.apartment_rounded,
+                                    icon: Symbols.apartment_rounded,
                                   );
                                 }).toList(),
                                 onChanged: (val) {
@@ -548,7 +547,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                         const SizedBox(height: 20),
 
                         // Section 2: Tenant Details
-                        _buildSectionHeader(loc.tr('tenantDetailsTitle'), Icons.person_rounded),
+                        _buildSectionHeader(loc.tr('tenantDetailsTitle'), Symbols.person_rounded),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -586,7 +585,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                             Expanded(
                               child: _buildTextField(
                                 controller: _tenantIdCtrl,
-                                label: isUAE ? 'Emirates ID' : 'الرقم القومي',
+                                label: isUAE ? 'Emirates ID' : AppLocalizations.trStatic('uiCopy130'),
                                 isNumber: true,
                                 keyboardType: TextInputType.number,
                               ),
@@ -596,7 +595,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                         const SizedBox(height: 20),
 
                         // Section 3: Financials & Due Dates
-                        _buildSectionHeader(loc.tr('financialTermsTitle'), Icons.payments_rounded),
+                        _buildSectionHeader(loc.tr('financialTermsTitle'), Symbols.payments_rounded),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -651,15 +650,15 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(loc.tr('dueDate'), style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)),
+                                          Text(loc.tr('dueDate'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                           const SizedBox(height: 2),
                                           Text(
                                             '${_dueDate.year}-${_dueDate.month.toString().padLeft(2, '0')}-${_dueDate.day.toString().padLeft(2, '0')}',
-                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                                           ),
                                         ],
                                       ),
-                                      Icon(Icons.calendar_today_rounded, size: 18, color: theme.colorScheme.primary),
+                                      Icon(Symbols.calendar_today_rounded, size: 18, color: theme.colorScheme.primary),
                                     ],
                                   ),
                                 ),
@@ -670,37 +669,37 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                               child: TashilDropdownMenu<int>(
                                 value: _graceDays,
                                 labelText: loc.tr('gracePeriod'),
-                                prefixIcon: Icons.timelapse_rounded,
+                                prefixIcon: Symbols.timelapse_rounded,
                                 items: [
                                   TashilDropdownMenuItem<int>(
                                     value: 0,
                                     label: loc.tr('gracePeriodZero'),
-                                    icon: Icons.timer_off_outlined,
+                                    icon: Symbols.timer_off_rounded,
                                   ),
                                   TashilDropdownMenuItem<int>(
                                     value: 3,
                                     label: loc.tr('gracePeriodOption').replaceAll('{days}', '3'),
-                                    icon: Icons.hourglass_top_rounded,
+                                    icon: Symbols.hourglass_top_rounded,
                                   ),
                                   TashilDropdownMenuItem<int>(
                                     value: 5,
                                     label: loc.tr('gracePeriodOption').replaceAll('{days}', '5'),
-                                    icon: Icons.hourglass_top_rounded,
+                                    icon: Symbols.hourglass_top_rounded,
                                   ),
                                   TashilDropdownMenuItem<int>(
                                     value: 7,
                                     label: loc.tr('gracePeriodOption').replaceAll('{days}', '7'),
-                                    icon: Icons.hourglass_top_rounded,
+                                    icon: Symbols.hourglass_top_rounded,
                                   ),
                                   TashilDropdownMenuItem<int>(
                                     value: 10,
                                     label: loc.tr('gracePeriodOption').replaceAll('{days}', '10'),
-                                    icon: Icons.hourglass_top_rounded,
+                                    icon: Symbols.hourglass_top_rounded,
                                   ),
                                   TashilDropdownMenuItem<int>(
                                     value: 14,
                                     label: loc.tr('gracePeriodOption').replaceAll('{days}', '14'),
-                                    icon: Icons.hourglass_top_rounded,
+                                    icon: Symbols.hourglass_top_rounded,
                                   ),
                                 ],
                                 onChanged: (v) {
@@ -719,7 +718,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
                 // Submit Button
                 TashilButton(
                   onPressed: _submitInvoice,
-                  icon: Icons.verified_outlined,
+                  icon: Symbols.verified_rounded,
                   label: loc.tr('issueAndSendInvoiceBtn'),
                 ),
               ],
@@ -738,7 +737,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
         const SizedBox(width: 6),
         Text(
           title,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
       ],
     );

@@ -69,7 +69,7 @@ void main() {
 
       // 2. Verify Zero Language Mixing: raw "paymentMethod" key must not appear
       expect(find.textContaining('paymentMethod:'), findsNothing, reason: 'Raw paymentMethod key must not be displayed');
-      expect(find.text('طريقة الدفع: بطاقة بنكية مصرفية'), findsOneWidget, reason: 'Must display localized payment method');
+      expect(find.text('طريقة الدفع: بطاقة خصم أو ائتمان'), findsOneWidget, reason: 'Must display localized payment method');
 
       // 3. Verify Receipt Ref & Status
       expect(find.text('إيصال سداد رقمي معتمد وموثق'), findsOneWidget);
@@ -100,9 +100,9 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en'), country: 'AE'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Official Rent Payment Receipt'), findsOneWidget);
-      expect(find.text('Payment Method: Debit / Credit Card'), findsOneWidget);
-      expect(find.text('Certified Receipt Verification QR Code'), findsOneWidget);
+      expect(find.text('Official rent payment receipt'), findsOneWidget);
+      expect(find.text('Payment method: Debit or credit card'), findsOneWidget);
+      expect(find.text('Certified receipt verification QR code'), findsOneWidget);
       expect(find.text('Export PDF'), findsOneWidget);
       expect(find.text('Done'), findsOneWidget);
 

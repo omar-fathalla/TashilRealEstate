@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class InvoiceStatusPieChartCard extends StatelessWidget {
   final InvoiceStatusDistribution distribution;
@@ -44,7 +45,7 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                   color: colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.pie_chart_rounded, color: colorScheme.primary, size: 20),
+                child: Icon(Symbols.pie_chart_rounded, color: colorScheme.primary, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -53,12 +54,12 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                   children: [
                     Text(
                       loc.tr('invoiceStatusDistributionChartTitle'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${loc.tr('totalInvoicesCount')}: $totalCount ${loc.tr('invoicesWord')}',
-                      style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -94,11 +95,11 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                       children: [
                         Text(
                           '${distribution.paidPercentage.toInt()}%',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: paidColor),
+                          style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: paidColor),
                         ),
                         Text(
                           loc.tr('paidRateShort'),
-                          style: TextStyle(fontSize: 9, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -112,6 +113,7 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildBreakdownRow(
+                      context: context,
                       title: loc.tr('statusPaidElectronically'),
                       amount: distribution.paidAmount,
                       count: distribution.paidCount,
@@ -121,6 +123,7 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     _buildBreakdownRow(
+                      context: context,
                       title: loc.tr('statusPendingPayment'),
                       amount: distribution.pendingAmount,
                       count: distribution.pendingCount,
@@ -130,6 +133,7 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     _buildBreakdownRow(
+                      context: context,
                       title: loc.tr('statusOverdue'),
                       amount: distribution.overdueAmount,
                       count: distribution.overdueCount,
@@ -148,6 +152,7 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
   }
 
   Widget _buildBreakdownRow({
+    required BuildContext context,
     required String title,
     required double amount,
     required int count,
@@ -179,17 +184,17 @@ class InvoiceStatusPieChartCard extends StatelessWidget {
               ),
               Text(
                 title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
               Text(
                 '($count)',
-                style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
           Text(
             '${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency (${percentage.toStringAsFixed(0)}%)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: color),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),

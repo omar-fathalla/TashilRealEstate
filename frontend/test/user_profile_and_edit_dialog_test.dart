@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/owner_dashboard.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   group('UserProfileData & Service Tests', () {
@@ -191,11 +192,11 @@ void main() {
       expect(find.text('100%'), findsOneWidget);
 
       // Verify that the top header has the shaded close button and no redundant edit button
-      expect(find.byIcon(Icons.edit_outlined), findsNothing);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.edit_rounded), findsNothing);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Verify photo change icon button exists on avatar
-      expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.camera_alt_rounded), findsWidgets);
 
       // Verify Official Identity & Address Section renders
       expect(find.text('بيانات الهوية الرسمية والعنوان'), findsOneWidget);
@@ -208,7 +209,7 @@ void main() {
 
       // Verify full-width quick edit button at bottom exists without icon
       expect(find.text('تعديل الملف الشخصي'), findsOneWidget);
-      expect(find.byIcon(Icons.edit_note_rounded), findsNothing);
+      expect(find.byIcon(Symbols.edit_note_rounded), findsNothing);
       expect(find.text('مزامنة بيانات Google'), findsNothing);
     });
 
@@ -286,7 +287,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify AI OCR Scan button exists
-      expect(find.text('مسح AI'), findsOneWidget);
+      expect(find.text('مسح بالذكاء الاصطناعي'), findsOneWidget);
       expect(find.text('مسح البطاقة بالذكاء الاصطناعي'), findsOneWidget);
 
       // Verify National ID & Address fields render prefilled values

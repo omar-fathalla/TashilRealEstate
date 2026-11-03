@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/utils/advertising_permit.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/widgets/public_header_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,11 +27,13 @@ import 'package:tashil_real_estate/core/services/storage/property_draft_cache_se
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/property_media_gallery_uploader.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/voice_property_input_modal.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
 import 'package:tashil_real_estate/features/public_marketplace/repositories/property_repository.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class FastOnboardingScreen extends StatefulWidget {
   final FastPropertyDraft? initialDraft;
@@ -56,6 +59,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
 
   // Section 1 Controllers
   late TextEditingController _cityCtrl;
+  late TextEditingController _permitCtrl;
   late TextEditingController _districtCtrl;
   late TextEditingController _buildingNameCtrl;
   late TextEditingController _unitNumberCtrl;
@@ -124,6 +128,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     }
 
     _cityCtrl = TextEditingController(text: _draft.city);
+    _permitCtrl = TextEditingController(text: _draft.advertisingPermitNumber);
     _districtCtrl = TextEditingController(text: _draft.district);
     _buildingNameCtrl = TextEditingController(text: _draft.buildingName ?? '');
     _unitNumberCtrl = TextEditingController(text: _draft.unitNumber ?? '');
@@ -180,11 +185,17 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         });
       }
     }
+    if (ScreenshotHooks.sheet == 'voice') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) VoicePropertyInputModal.show(context);
+      });
+    }
   }
 
   @override
   void dispose() {
     _cityCtrl.dispose();
+    _permitCtrl.dispose();
     _districtCtrl.dispose();
     _buildingNameCtrl.dispose();
     _unitNumberCtrl.dispose();
@@ -240,6 +251,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
       );
       _cityCtrl.clear();
       _districtCtrl.clear();
+      _permitCtrl.clear();
       _buildingNameCtrl.clear();
       _unitNumberCtrl.clear();
       _rentCtrl.clear();
@@ -267,6 +279,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     setState(() {
       _draft = draft;
       _cityCtrl.text = draft.city;
+      _permitCtrl.text = draft.advertisingPermitNumber;
       _districtCtrl.text = draft.district;
       _buildingNameCtrl.text = draft.buildingName ?? '';
       _unitNumberCtrl.text = draft.unitNumber ?? '';
@@ -407,9 +420,20 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     }
   }
 
+  String? _permitError(AppLocalizations loc, String? value) {
+    final cityCode = deriveCityCode(
+      city: _cityCtrl.text,
+      district: _districtCtrl.text,
+      countryCode: _draft.countryCode,
+    );
+    final key = AdvertisingPermit.errorKey(value: value ?? '', cityCode: cityCode);
+    return key == null ? null : loc.tr(key);
+  }
+
   void _syncControllersToDraft() {
     _draft.city = _cityCtrl.text.trim();
     _draft.district = _districtCtrl.text.trim();
+    _draft.advertisingPermitNumber = _permitCtrl.text.trim();
     _draft.buildingName = _buildingNameCtrl.text.trim();
     _draft.unitNumber = _unitNumberCtrl.text.trim();
     _draft.monthlyRent = double.tryParse(_rentCtrl.text.trim()) ?? _draft.monthlyRent;
@@ -502,7 +526,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
       if (!mounted) return;
       TashilAlertDialog.show(
         context: context,
-        iconData: Icons.lock_outline_rounded,
+        iconData: Symbols.lock_outline_rounded,
         title: loc.tr('authRequiredToSavePropertyTitle'),
         contentText: loc.tr('authRequiredToSavePropertyDesc'),
         actions: [
@@ -521,7 +545,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               Navigator.of(context).pop();
               context.go('/login?redirect=/fast-onboarding');
             },
-            icon: Icons.login_rounded,
+            icon: Symbols.login_rounded,
             label: loc.tr('loginToPublishAction'),
           ),
         ],
@@ -568,6 +592,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         propertyTypeCode: _draft.propertyType,
         unitNumber: _draft.unitNumber ?? '',
         buildingName: _draft.buildingName ?? '',
@@ -604,6 +629,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           'hi': locationAr,
         },
         cityCode: cityCode,
+        advertisingPermitNumber: _draft.advertisingPermitNumber,
         pricePerMonth: _draft.monthlyRent,
         bedrooms: _draft.bedrooms,
         bathrooms: _draft.bathrooms,
@@ -613,10 +639,10 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           'ar': [
             if (_draft.furnishingStatus == FurnishingStatus.fullyFurnished) 'مفروش بالكامل',
             if (_draft.furnishingStatus == FurnishingStatus.semiFurnished) 'نصف مفروش',
-            if (_draft.hasCentralAc) 'تكييف مركزي',
-            if (_draft.hasParking) 'موقف سيارات خاص',
-            if (_draft.hasSecurity) 'حراسة وأمن 24/7',
-            if (_draft.hasBalconyView) 'شرفة / إطلالة مميزة',
+            if (_draft.hasCentralAc) AppLocalizations.trStatic('uiCopy174'),
+            if (_draft.hasParking) AppLocalizations.trStatic('uiCopy316'),
+            if (_draft.hasSecurity) AppLocalizations.trStatic('uiCopy195'),
+            if (_draft.hasBalconyView) AppLocalizations.trStatic('uiCopy221'),
             if (_draft.hasPoolGym) 'مسبح ونادٍ رياضي',
             if (_draft.isPetFriendly) 'السماح بالحيوانات الأليفة',
           ],
@@ -644,11 +670,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         isFurnished: _draft.furnishingStatus != FurnishingStatus.unfurnished,
         isFeatured: true,
         agencyNames: {
-          'ar': 'شركة تسهيل لإدارة الأملاك',
-          'en': 'Tashil Property Management',
-          'hi': 'तशिल संपत्ति प्रबंधन',
+          'ar': 'تسهيل عقار',
+          'en': 'Tashil Aqar',
+          'hi': 'ताशिल अकार',
         },
-        agencyPhone: '+20 100 123 4567',
+        agencyPhone: CountryController.isUAE ? '+971 50 000 0000' : '+20 100 123 4567',
         rating: 5.0,
       );
 
@@ -683,7 +709,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
 
       TashilAlertDialog.show(
         context: context,
-        iconData: Icons.verified_rounded,
+        iconData: Symbols.verified_rounded,
         title: isEditing
             ? loc.tr('listingUpdatedSuccessSnackbar')
             : loc.tr('propertyPublishedSuccessNotice'),
@@ -698,7 +724,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                 context.go('/owner');
               }
             },
-            icon: Icons.dashboard_rounded,
+            icon: Symbols.dashboard_rounded,
             label: loc.tr('exploreUnits'),
           ),
         ],
@@ -727,8 +753,11 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           builder: (context, countryCode, _) {
             final loc = AppLocalizations.of(context);
 
-            return Scaffold(
+            return PopScope(
+              canPop: !_isSubmitting,
+              child: Scaffold(
               backgroundColor: theme.colorScheme.surface,
+              resizeToAvoidBottomInset: true,
               appBar: const PublicHeaderNavbar(isSubPage: true, currentRoute: '/fast-onboarding'),
               bottomNavigationBar: isMobile
                   ? Container(
@@ -743,28 +772,30 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
                             blurRadius: 12,
                             offset: const Offset(0, -3),
                           ),
                         ],
                       ),
                       child: SafeArea(
-                        child: SizedBox(
-                          height: 50,
-                          child: TashilButton.filled(
+                        child: TashilButton.filled(
                             onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
-                            icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
+                            icon: isEditing ? Symbols.save_rounded : Symbols.publish_rounded,
                             label: _isSubmitting
                                 ? loc.tr('savingListing')
                                 : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
                           ),
-                        ),
                       ),
                     )
                   : null,
               body: SingleChildScrollView(
-                padding: EdgeInsets.all(isMobile ? 14 : 24),
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  isMobile ? 14 : 24,
+                  isMobile ? 14 : 24,
+                  isMobile ? 14 : 24,
+                  (isMobile ? 120 : 24) + MediaQuery.viewInsetsOf(context).bottom,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),
@@ -788,7 +819,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.edit_note_rounded, color: theme.colorScheme.primary, size: 24),
+                                  Icon(Symbols.edit_note_rounded, color: theme.colorScheme.primary, size: 24),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
@@ -846,7 +877,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                               height: 52,
                               child: TashilButton.filled(
                                 onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
-                                icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
+                                icon: isEditing ? Symbols.save_rounded : Symbols.publish_rounded,
                                 label: _isSubmitting
                                     ? loc.tr('savingListing')
                                     : (isEditing ? loc.tr('saveChangesAction') : loc.tr('publishPropertyDirectBtn')),
@@ -859,6 +890,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   ),
                 ),
               ),
+            ),
             );
           },
         );
@@ -881,7 +913,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
       child: Row(
         children: [
           Icon(
-            Icons.save_as_rounded,
+            Symbols.save_as_rounded,
             color: theme.colorScheme.primary,
             size: 24,
           ),
@@ -898,7 +930,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           const SizedBox(width: 8),
           TashilButton.text(
             onPressed: _clearDraftAndReset,
-            icon: Icons.delete_sweep_outlined,
+            icon: Symbols.delete_sweep_rounded,
             label: loc.tr('clearDraftAction'),
           ),
           const SizedBox(width: 4),
@@ -931,7 +963,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.mic_rounded, color: theme.colorScheme.primary, size: 24),
+                child: Icon(Symbols.mic_rounded, color: theme.colorScheme.primary, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -963,15 +995,12 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.auto_awesome_rounded, size: 12, color: theme.colorScheme.primary),
+                              Icon(Symbols.auto_awesome_rounded, size: 12, color: theme.colorScheme.primary),
                               const SizedBox(width: 4),
                               Text(
                                 'Gemini AI',
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -994,10 +1023,9 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 44,
             child: TashilButton.filled(
               onPressed: _handleVoiceAutofill,
-              icon: Icons.record_voice_over_rounded,
+              icon: Symbols.record_voice_over_rounded,
               label: loc.tr('startVoiceDictationBtn'),
             ),
           ),
@@ -1079,7 +1107,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     return _buildSectionCard(
       sectionIndex: 1,
       title: loc.tr('section1LocationTitle'),
-      icon: Icons.location_on_rounded,
+      icon: Symbols.location_on_rounded,
       isMobile: isMobile,
       theme: theme,
       child: Column(
@@ -1096,32 +1124,28 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TashilAssistChip(
-                        icon: Icons.my_location_rounded,
-                        label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
-                        onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TashilAssistChip(
-                        icon: Icons.map_rounded,
-                        label: loc.tr('viewOnGoogleMapsBtn'),
-                        onPressed: _handleOpenInGoogleMaps,
-                      ),
-                    ),
-                  ],
+                TashilButton.outlined(
+                  label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
+                  icon: Symbols.my_location_rounded,
+                  height: 48,
+                  width: double.infinity,
+                  onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
+                ),
+                const SizedBox(height: 8),
+                TashilButton.outlined(
+                  label: loc.tr('viewOnGoogleMapsBtn'),
+                  icon: Symbols.map_rounded,
+                  height: 48,
+                  width: double.infinity,
+                  onPressed: _handleOpenInGoogleMaps,
                 ),
                 const SizedBox(height: 10),
                 TashilTextField.outlined(
                   controller: _addressSearchCtrl,
                   labelText: loc.tr('searchAddressPlaceholderCompact'),
-                  prefixIcon: Icons.search_rounded,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
-                  suffixIcon: _isSearchingAddress ? null : Icons.arrow_forward_rounded,
+                  prefixIcon: Symbols.search_rounded,
+                  style: theme.textTheme.bodyMedium,
+                  suffixIcon: _isSearchingAddress ? null : Symbols.arrow_forward_rounded,
                   suffix: _isSearchingAddress
                       ? const Padding(
                           padding: EdgeInsets.all(12),
@@ -1139,16 +1163,13 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 16),
+                      Icon(Symbols.check_circle_rounded, color: theme.colorScheme.primary, size: 16),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           '${_draft.latitude.toStringAsFixed(4)}, ${_draft.longitude.toStringAsFixed(4)} (${_draft.city} - ${_draft.district})',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1166,7 +1187,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               controller: _cityCtrl,
               labelText: '${loc.tr('cityLabel')} *',
               hintText: loc.tr('cityHint'),
-              prefixIcon: Icons.location_city_rounded,
+              prefixIcon: Symbols.location_city_rounded,
               validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
               onChanged: (v) => _draft.city = v,
             ),
@@ -1175,7 +1196,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               controller: _districtCtrl,
               labelText: '${loc.tr('districtLabel')} *',
               hintText: loc.tr('districtHint'),
-              prefixIcon: Icons.map_rounded,
+              prefixIcon: Symbols.map_rounded,
               validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
               onChanged: (v) => _draft.district = v,
             ),
@@ -1188,7 +1209,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     controller: _cityCtrl,
                     labelText: '${loc.tr('cityLabel')} *',
                     hintText: loc.tr('cityHint'),
-                    prefixIcon: Icons.location_city_rounded,
+                    prefixIcon: Symbols.location_city_rounded,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.city = v,
                   ),
@@ -1199,7 +1220,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     controller: _districtCtrl,
                     labelText: '${loc.tr('districtLabel')} *',
                     hintText: loc.tr('districtHint'),
-                    prefixIcon: Icons.map_rounded,
+                    prefixIcon: Symbols.map_rounded,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.district = v,
                   ),
@@ -1207,6 +1228,16 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               ],
             ),
           ],
+          const SizedBox(height: 14),
+          TashilTextField.outlined(
+            controller: _permitCtrl,
+            labelText: loc.tr('adPermitNumberLabel'),
+            hintText: loc.tr('adPermitNumberHint'),
+            prefixIcon: Symbols.qr_code_2_rounded,
+            keyboardType: TextInputType.number,
+            validator: (value) => _permitError(loc, value),
+            onChanged: (value) => _draft.advertisingPermitNumber = value.trim(),
+          ),
           const SizedBox(height: 16),
 
           // Building / Compound & Unit Number (Responsive)
@@ -1215,7 +1246,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               controller: _buildingNameCtrl,
               labelText: loc.tr('buildingCompoundLabel'),
               hintText: loc.tr('buildingCompoundHint'),
-              prefixIcon: Icons.domain_rounded,
+              prefixIcon: Symbols.domain_rounded,
               onChanged: (v) => _draft.buildingName = v,
             ),
             const SizedBox(height: 14),
@@ -1223,7 +1254,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               controller: _unitNumberCtrl,
               labelText: loc.tr('unitNumberFieldLabel'),
               hintText: loc.tr('unitNumberFieldHint'),
-              prefixIcon: Icons.meeting_room_rounded,
+              prefixIcon: Symbols.meeting_room_rounded,
               onChanged: (v) => _draft.unitNumber = v,
             ),
           ] else ...[
@@ -1235,7 +1266,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     controller: _buildingNameCtrl,
                     labelText: loc.tr('buildingCompoundLabel'),
                     hintText: loc.tr('buildingCompoundHint'),
-                    prefixIcon: Icons.domain_rounded,
+                    prefixIcon: Symbols.domain_rounded,
                     onChanged: (v) => _draft.buildingName = v,
                   ),
                 ),
@@ -1245,7 +1276,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     controller: _unitNumberCtrl,
                     labelText: loc.tr('unitNumberFieldLabel'),
                     hintText: loc.tr('unitNumberFieldHint'),
-                    prefixIcon: Icons.meeting_room_rounded,
+                    prefixIcon: Symbols.meeting_room_rounded,
                     onChanged: (v) => _draft.unitNumber = v,
                   ),
                 ),
@@ -1262,7 +1293,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     return _buildSectionCard(
       sectionIndex: 2,
       title: loc.tr('section2FinancialsTitle'),
-      icon: Icons.account_balance_wallet_rounded,
+      icon: Symbols.account_balance_wallet_rounded,
       isMobile: isMobile,
       theme: theme,
       child: Column(
@@ -1277,7 +1308,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                 child: TashilTextField.outlined(
                   controller: _rentCtrl,
                   labelText: '${loc.tr('rentPriceFieldLabel')} *',
-                  prefixIcon: Icons.payments_outlined,
+                  prefixIcon: Symbols.payments_rounded,
                   keyboardType: TextInputType.number,
                   validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                   onChanged: (v) => _draft.monthlyRent = double.tryParse(v) ?? _draft.monthlyRent,
@@ -1289,7 +1320,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                 child: TashilDropdownMenu<String>(
                   value: _draft.currency,
                   height: 56.0,
-                  prefixIcon: Icons.currency_exchange_rounded,
+                  prefixIcon: Symbols.currency_exchange_rounded,
                   items: const [
                     TashilDropdownMenuItem(value: 'EGP', label: 'EGP'),
                     TashilDropdownMenuItem(value: 'AED', label: 'AED'),
@@ -1324,19 +1355,19 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                 value: PaymentFrequency.monthly,
                 label: loc.tr('freq_monthly_short'),
                 selectedLabel: loc.tr('freq_monthly_full'),
-                icon: Icons.calendar_month_rounded,
+                icon: Symbols.calendar_month_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: PaymentFrequency.quarterly,
                 label: loc.tr('freq_quarterly_short'),
                 selectedLabel: loc.tr('freq_quarterly_full'),
-                icon: Icons.date_range_rounded,
+                icon: Symbols.date_range_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: PaymentFrequency.annual,
                 label: loc.tr('freq_annual_short'),
                 selectedLabel: loc.tr('freq_annual_full'),
-                icon: Icons.event_available_rounded,
+                icon: Symbols.event_available_rounded,
               ),
             ],
           ),
@@ -1347,7 +1378,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             controller: _depositCtrl,
             labelText: loc.tr('securityDepositLabel'),
             hintText: loc.tr('securityDepositHint'),
-            prefixIcon: Icons.shield_outlined,
+            prefixIcon: Symbols.shield_rounded,
             keyboardType: TextInputType.number,
             onChanged: (v) => _draft.securityDeposit = double.tryParse(v),
           ),
@@ -1358,13 +1389,10 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             TashilSwitchListTile(
               title: Text(
                 loc.tr('billsIncludedOption'),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface),
               ),
-              secondary: Icon(Icons.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
+              secondary: Icon(Symbols.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
               value: _draft.isBillsIncluded,
               onChanged: (v) => setState(() => _draft.isBillsIncluded = v),
             ),
@@ -1372,13 +1400,10 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             TashilSwitchListTile(
               title: Text(
                 loc.tr('isNegotiableOption'),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface),
               ),
-              secondary: Icon(Icons.handshake_outlined, color: theme.colorScheme.secondary, size: 20),
+              secondary: Icon(Symbols.handshake_rounded, color: theme.colorScheme.secondary, size: 20),
               value: _draft.isNegotiable,
               onChanged: (v) => setState(() => _draft.isNegotiable = v),
             ),
@@ -1389,13 +1414,10 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   child: TashilSwitchListTile(
                     title: Text(
                       loc.tr('billsIncludedOption'),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface),
                     ),
-                    secondary: Icon(Icons.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
+                    secondary: Icon(Symbols.receipt_long_rounded, color: theme.colorScheme.primary, size: 20),
                     value: _draft.isBillsIncluded,
                     onChanged: (v) => setState(() => _draft.isBillsIncluded = v),
                   ),
@@ -1405,13 +1427,10 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   child: TashilSwitchListTile(
                     title: Text(
                       loc.tr('isNegotiableOption'),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface),
                     ),
-                    secondary: Icon(Icons.handshake_outlined, color: theme.colorScheme.secondary, size: 20),
+                    secondary: Icon(Symbols.handshake_rounded, color: theme.colorScheme.secondary, size: 20),
                     value: _draft.isNegotiable,
                     onChanged: (v) => setState(() => _draft.isNegotiable = v),
                   ),
@@ -1432,17 +1451,17 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         : 'apartment';
 
     final propertyTypes = [
-      {'key': 'apartment', 'label': loc.tr('propTypeApartment'), 'icon': Icons.apartment_rounded},
-      {'key': 'villa', 'label': loc.tr('propTypeVilla'), 'icon': Icons.villa_rounded},
-      {'key': 'studio', 'label': loc.tr('propTypeStudio'), 'icon': Icons.single_bed_rounded},
-      {'key': 'office', 'label': loc.tr('propTypeOffice'), 'icon': Icons.business_center_rounded},
-      {'key': 'chalet', 'label': loc.tr('propTypeChalet'), 'icon': Icons.beach_access_rounded},
+      {'key': 'apartment', 'label': loc.tr('propTypeApartment'), 'icon': Symbols.apartment_rounded},
+      {'key': 'villa', 'label': loc.tr('propTypeVilla'), 'icon': Symbols.villa_rounded},
+      {'key': 'studio', 'label': loc.tr('propTypeStudio'), 'icon': Symbols.single_bed_rounded},
+      {'key': 'office', 'label': loc.tr('propTypeOffice'), 'icon': Symbols.business_center_rounded},
+      {'key': 'chalet', 'label': loc.tr('propTypeChalet'), 'icon': Symbols.beach_access_rounded},
     ];
 
     return _buildSectionCard(
       sectionIndex: 3,
       title: loc.tr('section3TechnicalSpecsTitle'),
-      icon: Icons.tune_rounded,
+      icon: Symbols.tune_rounded,
       isMobile: isMobile,
       theme: theme,
       child: Column(
@@ -1481,7 +1500,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             TashilTextField.outlined(
               controller: _areaCtrl,
               labelText: '${loc.tr('areaSqmFieldLabel')} (م²) *',
-              prefixIcon: Icons.square_foot_rounded,
+              prefixIcon: Symbols.square_foot_rounded,
               keyboardType: TextInputType.number,
               validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
               onChanged: (v) => _draft.areaSqm = int.tryParse(v) ?? _draft.areaSqm,
@@ -1491,7 +1510,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               controller: _floorCtrl,
               labelText: loc.tr('floorNumberLabel'),
               hintText: loc.tr('floorNumberHint'),
-              prefixIcon: Icons.layers_rounded,
+              prefixIcon: Symbols.layers_rounded,
               keyboardType: TextInputType.number,
               onChanged: (v) => _draft.floor = int.tryParse(v),
             ),
@@ -1503,7 +1522,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   child: TashilTextField.outlined(
                     controller: _areaCtrl,
                     labelText: '${loc.tr('areaSqmFieldLabel')} (م²) *',
-                    prefixIcon: Icons.square_foot_rounded,
+                    prefixIcon: Symbols.square_foot_rounded,
                     keyboardType: TextInputType.number,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.areaSqm = int.tryParse(v) ?? _draft.areaSqm,
@@ -1515,7 +1534,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     controller: _floorCtrl,
                     labelText: loc.tr('floorNumberLabel'),
                     hintText: loc.tr('floorNumberHint'),
-                    prefixIcon: Icons.layers_rounded,
+                    prefixIcon: Symbols.layers_rounded,
                     keyboardType: TextInputType.number,
                     onChanged: (v) => _draft.floor = int.tryParse(v),
                   ),
@@ -1530,7 +1549,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             TashilTextField.outlined(
               controller: _bedroomsCtrl,
               labelText: '${loc.tr('bedroomsLabel')} *',
-              prefixIcon: Icons.bed_rounded,
+              prefixIcon: Symbols.bed_rounded,
               keyboardType: TextInputType.number,
               validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
               onChanged: (v) => _draft.bedrooms = int.tryParse(v) ?? _draft.bedrooms,
@@ -1539,7 +1558,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             TashilTextField.outlined(
               controller: _bathroomsCtrl,
               labelText: '${loc.tr('bathroomsLabel')} *',
-              prefixIcon: Icons.bathtub_rounded,
+              prefixIcon: Symbols.bathtub_rounded,
               keyboardType: TextInputType.number,
               validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
               onChanged: (v) => _draft.bathrooms = int.tryParse(v) ?? _draft.bathrooms,
@@ -1552,7 +1571,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   child: TashilTextField.outlined(
                     controller: _bedroomsCtrl,
                     labelText: '${loc.tr('bedroomsLabel')} *',
-                    prefixIcon: Icons.bed_rounded,
+                    prefixIcon: Symbols.bed_rounded,
                     keyboardType: TextInputType.number,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.bedrooms = int.tryParse(v) ?? _draft.bedrooms,
@@ -1563,7 +1582,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                   child: TashilTextField.outlined(
                     controller: _bathroomsCtrl,
                     labelText: '${loc.tr('bathroomsLabel')} *',
-                    prefixIcon: Icons.bathtub_rounded,
+                    prefixIcon: Symbols.bathtub_rounded,
                     keyboardType: TextInputType.number,
                     validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                     onChanged: (v) => _draft.bathrooms = int.tryParse(v) ?? _draft.bathrooms,
@@ -1592,17 +1611,17 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               TashilConnectedButtonSegment(
                 value: BuildingAge.brandNew,
                 label: loc.tr('ageBrandNew'),
-                icon: Icons.fiber_new_rounded,
+                icon: Symbols.fiber_new_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: BuildingAge.oneToFive,
                 label: loc.tr('ageOneToFive'),
-                icon: Icons.history_rounded,
+                icon: Symbols.history_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: BuildingAge.older,
                 label: loc.tr('ageOlder'),
-                icon: Icons.domain_verification_rounded,
+                icon: Symbols.domain_verification_rounded,
               ),
             ],
           ),
@@ -1616,7 +1635,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     return _buildSectionCard(
       sectionIndex: 4,
       title: loc.tr('section4AmenitiesTitle'),
-      icon: Icons.auto_awesome_rounded,
+      icon: Symbols.auto_awesome_rounded,
       isMobile: isMobile,
       theme: theme,
       child: Column(
@@ -1640,17 +1659,17 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
               TashilConnectedButtonSegment(
                 value: FurnishingStatus.fullyFurnished,
                 label: loc.tr('fullyFurnishedOption'),
-                icon: Icons.chair_rounded,
+                icon: Symbols.chair_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: FurnishingStatus.semiFurnished,
                 label: loc.tr('semiFurnishedOption'),
-                icon: Icons.weekend_outlined,
+                icon: Symbols.weekend_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: FurnishingStatus.unfurnished,
                 label: loc.tr('unfurnishedOption'),
-                icon: Icons.meeting_room_outlined,
+                icon: Symbols.meeting_room_rounded,
               ),
             ],
           ),
@@ -1669,49 +1688,49 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           if (isMobile) ...[
             TashilCheckboxListTile(
               title: Text(loc.tr('parkingAmenity')),
-              secondary: Icon(Icons.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasParking,
               onChanged: (v) => setState(() => _draft.hasParking = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('centralAcAmenity')),
-              secondary: Icon(Icons.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasCentralAc,
               onChanged: (v) => setState(() => _draft.hasCentralAc = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('poolGymAmenity')),
-              secondary: Icon(Icons.pool_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.pool_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasPoolGym,
               onChanged: (v) => setState(() => _draft.hasPoolGym = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('securityAmenity')),
-              secondary: Icon(Icons.security_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.security_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasSecurity,
               onChanged: (v) => setState(() => _draft.hasSecurity = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('balconyViewAmenity')),
-              secondary: Icon(Icons.balcony_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.balcony_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasBalconyView,
               onChanged: (v) => setState(() => _draft.hasBalconyView = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('petFriendlyAmenity')),
-              secondary: Icon(Icons.pets_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.pets_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.isPetFriendly,
               onChanged: (v) => setState(() => _draft.isPetFriendly = v ?? false),
             ),
             const SizedBox(height: 8),
             TashilCheckboxListTile(
               title: Text(loc.tr('hasMaidsRoomOption')),
-              secondary: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
+              secondary: Icon(Symbols.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
               value: _draft.hasMaidsRoom,
               onChanged: (v) => setState(() => _draft.hasMaidsRoom = v ?? false),
             ),
@@ -1724,28 +1743,28 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     children: [
                       TashilCheckboxListTile(
                         title: Text(loc.tr('parkingAmenity')),
-                        secondary: Icon(Icons.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.local_parking_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasParking,
                         onChanged: (v) => setState(() => _draft.hasParking = v ?? false),
                       ),
                       const SizedBox(height: 8),
                       TashilCheckboxListTile(
                         title: Text(loc.tr('poolGymAmenity')),
-                        secondary: Icon(Icons.pool_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.pool_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasPoolGym,
                         onChanged: (v) => setState(() => _draft.hasPoolGym = v ?? false),
                       ),
                       const SizedBox(height: 8),
                       TashilCheckboxListTile(
                         title: Text(loc.tr('balconyViewAmenity')),
-                        secondary: Icon(Icons.balcony_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.balcony_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasBalconyView,
                         onChanged: (v) => setState(() => _draft.hasBalconyView = v ?? false),
                       ),
                       const SizedBox(height: 8),
                       TashilCheckboxListTile(
                         title: Text(loc.tr('hasMaidsRoomOption')),
-                        secondary: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.person_outline_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasMaidsRoom,
                         onChanged: (v) => setState(() => _draft.hasMaidsRoom = v ?? false),
                       ),
@@ -1758,21 +1777,21 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
                     children: [
                       TashilCheckboxListTile(
                         title: Text(loc.tr('centralAcAmenity')),
-                        secondary: Icon(Icons.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.ac_unit_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasCentralAc,
                         onChanged: (v) => setState(() => _draft.hasCentralAc = v ?? false),
                       ),
                       const SizedBox(height: 8),
                       TashilCheckboxListTile(
                         title: Text(loc.tr('securityAmenity')),
-                        secondary: Icon(Icons.security_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.security_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.hasSecurity,
                         onChanged: (v) => setState(() => _draft.hasSecurity = v ?? false),
                       ),
                       const SizedBox(height: 8),
                       TashilCheckboxListTile(
                         title: Text(loc.tr('petFriendlyAmenity')),
-                        secondary: Icon(Icons.pets_rounded, color: theme.colorScheme.primary, size: 22),
+                        secondary: Icon(Symbols.pets_rounded, color: theme.colorScheme.primary, size: 22),
                         value: _draft.isPetFriendly,
                         onChanged: (v) => setState(() => _draft.isPetFriendly = v ?? false),
                       ),
@@ -1793,7 +1812,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     return _buildSectionCard(
       sectionIndex: 5,
       title: loc.tr('section5MediaTitle'),
-      icon: Icons.photo_library_rounded,
+      icon: Symbols.photo_library_rounded,
       isMobile: isMobile,
       theme: theme,
       child: Column(
@@ -1806,12 +1825,12 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
           ),
           const SizedBox(height: 18),
 
-          // AI Title & Description Generation Button (Gemini 3.8 Flash)
+          // AI Title & Description Generation Button (Gemini 2.5 Flash)
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TashilButton.tonal(
               onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
-              icon: Icons.auto_awesome_rounded,
+              icon: Symbols.auto_awesome_rounded,
               label: _isGeneratingDesc
                   ? loc.tr('savingListing')
                   : loc.tr('generateTitleAndDescAiBtn'),
@@ -1826,7 +1845,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             controller: _titleArCtrl,
             labelText: '${loc.tr('propertyTitleField')} *',
             hintText: loc.tr('propertyTitleHint'),
-            prefixIcon: Icons.title_rounded,
+            prefixIcon: Symbols.title_rounded,
             validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
             onChanged: (v) => _draft.titleAr = v,
           ),
@@ -1848,7 +1867,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             controller: _videoTourCtrl,
             labelText: loc.tr('videoTourUrlLabel'),
             hintText: loc.tr('videoTourUrlHint'),
-            prefixIcon: Icons.videocam_outlined,
+            prefixIcon: Symbols.videocam_rounded,
             onChanged: (v) => _draft.videoTourUrl = v,
           ),
         ],

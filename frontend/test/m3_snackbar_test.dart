@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -70,7 +71,7 @@ void main() {
 
       // Check message and success icon
       expect(find.text('تم نسخ رابط العقار بنجاح'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_circle_rounded), findsWidgets);
 
       // Verify SnackBar attributes (floating behavior, 8dp radius)
       final snackBarFinder = find.byType(SnackBar);
@@ -119,9 +120,9 @@ void main() {
 
       expect(find.text('خطأ في الشبكة'), findsOneWidget);
       expect(find.text('تعذر الاتصال بالخادم الرئيسي'), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.error_outline_rounded), findsWidgets);
       expect(find.text('إعادة المحاولة'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Tap action button
       await tester.tap(find.text('إعادة المحاولة'));
@@ -154,8 +155,8 @@ void main() {
       await tester.tap(find.text('Show Info'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsNothing);
@@ -190,7 +191,7 @@ void main() {
       // On mobile screen (< 600dp), width is null and margin is used
       expect(snackBar.width, isNull);
       expect(snackBar.margin, isNotNull);
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.warning_amber_rounded), findsWidgets);
     });
 
     testWidgets('TashilSnackBar enforces No Stacking rule by dismissing active snackbar', (tester) async {
@@ -258,7 +259,7 @@ void main() {
       expect(find.text('معاينة'), findsNWidgets(4));
 
       // Verify M3 specification rules are displayed
-      expect(find.byIcon(Icons.check_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
     });
   });
 }

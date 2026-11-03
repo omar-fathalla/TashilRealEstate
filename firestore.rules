@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,66 +10,217 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
     }
 
+    // Custom claims win. The document role is only a fallback, and users
+    // cannot write SuperAdmin or AgencyAdmin into their own profile.
+    function claimedRole() {
+      return request.auth.token.get('role', '');
+    }
+
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/Users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && (
+        claimedRole() == role ||
+        (claimedRole() == '' && userDocExists() && getUserData().get('role', '') == role)
+      );
+    }
+
     function isSuperAdmin() {
-      return isAuthenticated() && getUserData().role == 'SuperAdmin';
+      return hasRole('SuperAdmin');
     }
 
     function isAgencyAdmin() {
-      return isAuthenticated() && getUserData().role == 'AgencyAdmin';
+      return hasRole('AgencyAdmin');
     }
 
     function isOwner() {
-      return isAuthenticated() && getUserData().role == 'Owner';
+      return hasRole('Owner');
     }
 
     function isTenant() {
-      return isAuthenticated() && getUserData().role == 'Tenant';
+      return hasRole('Tenant');
     }
 
-    // 1. Users Collection
-    match /Users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    function cityCode() {
+      return request.resource.data.get('cityCode', request.resource.data.get('city_code', '')).lower();
+    }
 
-      // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
+    function isDubaiListing() {
+      return cityCode() == 'dubai';
+    }
+
+    function isPublishedListing() {
+      return request.resource.data.get('isPublished', false) == true
+        || request.resource.data.get('is_published', false) == true
+        || request.resource.data.get('status', '') == 'published';
+    }
+
+    function hasAdvertisingPermit() {
+      return request.resource.data.get('adPermitNumber', request.resource.data.get('advertisingPermitNumber', '')) is string
+        && request.resource.data.get('adPermitNumber', request.resource.data.get('advertisingPermitNumber', '')).matches('^[0-9]{6,15}$');
+    }
+
+    function dubaiPermitOk() {
+      return !isDubaiListing() || !isPublishedListing() || hasAdvertisingPermit();
+    }
+
+    function privilegedUserFields() {
+      return ['role', 'agency_id', 'agencyId', 'verified', 'status', 'isSuperAdmin', 'customClaims'];
+    }
+
+    function selfUserCreate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.role in ['Tenant', 'Owner']
+        && !('agency_id' in request.resource.data)
+        && !('agencyId' in request.resource.data)
+        && !('verified' in request.resource.data)
+        && !('isSuperAdmin' in request.resource.data);
+    }
+
+    function selfUserUpdate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(privilegedUserFields());
+    }
+
+    // 1. Users. Role changes are admin-only (Admin SDK or the setUserRole callable).
+    match /Users/{userId} {
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if selfUserCreate(userId);
+      allow update: if isSuperAdmin() || selfUserUpdate(userId);
+      allow delete: if isSuperAdmin();
+
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
-        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if (isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId))
+          && dubaiPermitOk();
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isSuperAdmin() || request.auth.uid == userId;
+        allow write: if false;
       }
     }
 
-    // 2. Properties Collection (Public Marketplace)
+    // 2. Public marketplace listings.
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties
-      allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
-      
-      // Agency admins and Owners can create/update properties
-      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
-      allow update, delete: if isSuperAdmin() || 
-        (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
-        (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+      allow read: if resource.data.status == 'vacant'
+        || resource.data.is_published == true
+        || resource.data.status == 'published';
+
+      allow create: if dubaiPermitOk() && (
+        isSuperAdmin()
+        || (isAuthenticated() && request.resource.data.owner_id == request.auth.uid)
+        || (isAgencyAdmin() && request.resource.data.agency_id == getUserData().agency_id)
+      );
+
+      allow update: if dubaiPermitOk() && (
+        isSuperAdmin()
+        || (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+        || (isAuthenticated() && resource.data.owner_id == request.auth.uid)
+      );
+
+      allow delete: if isSuperAdmin()
+        || (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+        || (isAuthenticated() && resource.data.owner_id == request.auth.uid);
     }
 
-    // 3. Agencies Collection
+    // Public broker cards. Phone, WhatsApp, and identity numbers stay off this document.
+    match /Brokers/{brokerId} {
+      allow read: if true;
+
+      allow create, update: if brokerWriteOk() && !brokerHasPrivateContact();
+      allow delete: if isSuperAdmin()
+        || (isAgencyAdmin() && resource.data.agencyId == getUserData().agency_id);
+
+      match /private/{docId} {
+        allow read, write: if isSuperAdmin()
+          || (isAgencyAdmin()
+            && get(/databases/$(database)/documents/Brokers/$(brokerId)).data.agencyId == getUserData().agency_id);
+      }
+    }
+
+    function brokerWriteOk() {
+      return isSuperAdmin()
+        || (isAgencyAdmin() && request.resource.data.agencyId == getUserData().agency_id);
+    }
+
+    function brokerHasPrivateContact() {
+      return request.resource.data.keys().hasAny([
+        'phone', 'whatsApp', 'email', 'emiratesId', 'nationalId', 'personalEmail'
+      ]);
+    }
+
     match /Agencies/{agencyId} {
       allow read: if true;
       allow write: if isSuperAdmin() || (isAgencyAdmin() && request.auth.uid == agencyId);
     }
 
-    // 4. Leases Collection
     match /Leases/{leaseId} {
-      allow read: if isSuperAdmin() || 
-        (isAuthenticated() && (
-          resource.data.tenant_id == request.auth.uid ||
-          resource.data.owner_id == request.auth.uid ||
-          (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
-        ));
-      allow write: if isSuperAdmin() || isAgencyAdmin();
+      allow read: if isSuperAdmin() || (
+        isAuthenticated() && (
+          resource.data.tenant_id == request.auth.uid
+          || resource.data.owner_id == request.auth.uid
+          || (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+        )
+      );
+      allow create: if isSuperAdmin()
+        || (isOwner() && request.resource.data.owner_id == request.auth.uid)
+        || (isAgencyAdmin() && request.resource.data.agency_id == getUserData().agency_id);
+      allow update, delete: if isSuperAdmin()
+        || (isAuthenticated() && resource.data.owner_id == request.auth.uid)
+        || (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id);
     }
 
-    // 5. Maintenance Requests
     match /Maintenance/{requestId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isSuperAdmin()
+        || (isAuthenticated() && (
+          resource.data.owner_id == request.auth.uid
+          || resource.data.tenant_id == request.auth.uid
+        ));
+      allow create: if isAuthenticated() && (
+        request.resource.data.owner_id == request.auth.uid
+        || request.resource.data.tenant_id == request.auth.uid
+      );
+      allow update, delete: if isSuperAdmin()
+        || (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+    }
+
+    // Server-written financial records. Clients may read their own rows only.
+    match /Transactions/{id} {
+      allow read: if isSuperAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.tenant_id == request.auth.uid
+        || resource.data.owner_id == request.auth.uid
+      ));
+      allow write: if false;
+    }
+
+    match /Invoices/{id} {
+      allow read: if isSuperAdmin() || (isAuthenticated() && (
+        resource.data.tenant_id == request.auth.uid
+        || resource.data.owner_id == request.auth.uid
+      ));
+      allow write: if false;
+    }
+
+    match /Notifications/{id} {
+      allow read: if isSuperAdmin()
+        || (isAuthenticated() && resource.data.recipientId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /MarketIndices/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /AiQuota/{uid} {
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == uid);
+      allow write: if false;
     }
   }
 }

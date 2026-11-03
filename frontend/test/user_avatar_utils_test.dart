@@ -5,7 +5,7 @@ void main() {
   group('UserAvatarUtils Tests', () {
     test('Extracts English initials correctly', () {
       expect(UserAvatarUtils.getInitials('Mohamed Fathallah'), equals('MF'));
-      expect(UserAvatarUtils.getInitials('Ahmed Fouad'), equals('AF'));
+      expect(UserAvatarUtils.getInitials('Ahmed fouad'), equals('AF'));
       expect(UserAvatarUtils.getInitials('John Doe'), equals('JD'));
     });
 

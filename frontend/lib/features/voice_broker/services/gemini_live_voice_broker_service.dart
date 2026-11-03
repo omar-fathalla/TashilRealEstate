@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import '../../../core/services/ai_processing_consent.dart';
 import '../../../core/services/ai_quota_manager.dart';
+import '../../../core/services/gemini_gateway.dart';
 import '../../public_marketplace/models/property_item.dart';
 import '../models/viewing_appointment_model.dart';
 import '../models/voice_broker_message.dart';
@@ -28,9 +29,7 @@ class GeminiLiveVoiceBrokerService {
   factory GeminiLiveVoiceBrokerService() => _instance;
   GeminiLiveVoiceBrokerService._internal();
 
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
-  static const String _endpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey';
+  static const String _model = 'gemini-2.5-flash';
 
   final ViewingAppointmentsService _appointmentsService = ViewingAppointmentsService();
 
@@ -99,7 +98,7 @@ class GeminiLiveVoiceBrokerService {
 
     try {
       // 1. Check Quota & ApiKey
-      if (_apiKey.isEmpty || !AiQuotaManager().hasAvailableQuota) {
+      if (!AiQuotaManager().hasAvailableQuota || !AiProcessingConsent.granted) {
         await Future.delayed(const Duration(milliseconds: 700));
         final fallbackMsg = _generateDeterministicResponse(
           userSpeechText: userSpeechText,
@@ -131,10 +130,11 @@ class GeminiLiveVoiceBrokerService {
         'parts': [{'text': userSpeechText}],
       });
 
-      final response = await http.post(
-        Uri.parse(_endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await GeminiGateway.generate(
+        model: _model,
+        purpose: 'voice',
+        processingConsent: AiProcessingConsent.granted,
+        body: {
           'system_instruction': {
             'parts': [{'text': systemPrompt}]
           },
@@ -144,7 +144,7 @@ class GeminiLiveVoiceBrokerService {
             'temperature': 0.6,
             'maxOutputTokens': 800,
           },
-        }),
+        },
       ).timeout(const Duration(seconds: 12));
 
       AiQuotaManager().recordUsage();

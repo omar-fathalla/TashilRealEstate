@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_divider.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Reorderable List item builder signature with index and typed data.
 typedef TashilReorderableItemBuilder<T> = Widget Function(
@@ -16,7 +17,7 @@ class TashilReorderHandle extends StatelessWidget {
   /// The index of the item this handle is attached to.
   final int index;
 
-  /// Custom icon for the handle. Defaults to [Icons.drag_indicator_rounded].
+  /// Custom icon for the handle. Defaults to [Symbols.drag_indicator_rounded].
   final IconData icon;
 
   /// Optional tooltip string explaining the drag action.
@@ -34,7 +35,7 @@ class TashilReorderHandle extends StatelessWidget {
   const TashilReorderHandle({
     super.key,
     required this.index,
-    this.icon = Icons.drag_indicator_rounded,
+    this.icon = Symbols.drag_indicator_rounded,
     this.tooltip,
     this.size = 36.0,
     this.iconSize = 20.0,

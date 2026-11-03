@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'tashil_menu_item.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Google Material Design 3 Dropdown Menu Component.
 /// Conforms to https://m3.material.io/components/menus/guidelines
@@ -166,7 +167,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
             // Animated Dropdown Menu Window anchored to the field
             Positioned.fill(
               child: Align(
-                alignment: Alignment.topLeft,
+                alignment: AlignmentDirectional.topStart,
                 child: CompositedTransformFollower(
                   link: _layerLink,
                   showWhenUnlinked: false,
@@ -190,7 +191,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                       },
                       child: Material(
                         elevation: 6,
-                        shadowColor: Colors.black.withValues(alpha: 0.18),
+                        shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
                         color: colorScheme.surfaceContainerLowest,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -209,24 +210,21 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                             children: [
                               if (widget.isSearchable) ...[
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                                  padding: const EdgeInsetsDirectional.fromSTEB(10, 8, 10, 6),
                                   child: TextField(
                                     controller: _searchController,
                                     autofocus: true,
                                     decoration: InputDecoration(
                                       hintText: widget.searchHintText ?? 'بحث...',
-                                      hintStyle: TextStyle(
-                                        fontSize: 12,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                      hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                       prefixIcon: Icon(
-                                        Icons.search_rounded,
+                                        Symbols.search_rounded,
                                         size: 18,
                                         color: colorScheme.primary,
                                       ),
                                       suffixIcon: _searchController.text.isNotEmpty
                                           ? IconButton(
-                                              icon: const Icon(Icons.clear_rounded, size: 16),
+                                              icon: const Icon(Symbols.clear_rounded, size: 16),
                                               onPressed: () {
                                                 _searchController.clear();
                                                 _overlayEntry?.markNeedsBuild();
@@ -250,7 +248,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                                         borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
                                       ),
                                     ),
-                                    style: const TextStyle(fontSize: 13),
+                                    style: Theme.of(context).textTheme.labelMedium!,
                                     onChanged: (_) {
                                       _overlayEntry?.markNeedsBuild();
                                     },
@@ -277,10 +275,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                                         alignment: Alignment.center,
                                         child: Text(
                                           'لا توجد نتائج مطابقة',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                         ),
                                       );
                                     }
@@ -372,11 +367,8 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                       color: colorScheme.surface,
                       child: Text(
                         widget.labelText!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: _isOpen ? FontWeight.bold : FontWeight.w500,
-                          color: _isOpen ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: _isOpen ? FontWeight.bold : FontWeight.w500,
+                          color: _isOpen ? colorScheme.primary : colorScheme.onSurfaceVariant),
                       ),
                     ),
                   ),
@@ -398,13 +390,10 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                     Expanded(
                       child: Text(
                         selected?.label ?? widget.hintText ?? '',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
                           color: selected != null
                               ? colorScheme.onSurface
-                              : colorScheme.onSurfaceVariant,
-                        ),
+                              : colorScheme.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -416,7 +405,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
                       child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                        Symbols.keyboard_arrow_down_rounded,
                         size: 20,
                         color: _isOpen ? colorScheme.primary : colorScheme.onSurfaceVariant,
                       ),

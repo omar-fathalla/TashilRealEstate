@@ -604,7 +604,7 @@ class _TashilSliderPainter extends CustomPainter {
       canvas.drawRRect(
         handleRect.shift(const Offset(0, 1.5)),
         Paint()
-          ..color = Colors.black.withValues(alpha: 0.18)
+          ..color = const Color(0x2E000000)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
       );
     }
@@ -649,12 +649,9 @@ class _ValueIndicatorBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6), // space for the bottom pointer
         child: Text(
           label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 12,
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: textColor,
             fontWeight: FontWeight.bold,
-            letterSpacing: 0.2,
-          ),
+            letterSpacing: 0.2),
           textAlign: TextAlign.center,
         ),
       ),
@@ -675,7 +672,7 @@ class _BubblePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.22)
+      ..color = const Color(0x38000000)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
 
     const radius = 16.0;

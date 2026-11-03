@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/features/tenant_portal/tenant_dashboard.dart'
 import 'package:tashil_real_estate/features/tenant_portal/views/tenant_home_view.dart';
 import 'package:tashil_real_estate/features/tenant_portal/views/tenant_payments_view.dart';
 import 'package:tashil_real_estate/features/tenant_portal/views/tenant_support_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -61,14 +62,14 @@ void main() {
       expect(find.byType(TenantPaymentsView), findsNothing);
 
       // Switch to Financials tab via Navigation Rail
-      await tester.tap(find.byIcon(Icons.payment_outlined));
+      await tester.tap(find.byIcon(Symbols.payment_rounded).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(TenantPaymentsView), findsOneWidget);
       expect(find.byType(TenantHomeView), findsNothing);
 
       // Switch to Maintenance tab via Navigation Rail
-      await tester.tap(find.byIcon(Icons.handyman_outlined));
+      await tester.tap(find.byIcon(Symbols.handyman_rounded).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(TenantSupportView), findsOneWidget);
@@ -109,7 +110,10 @@ void main() {
       expect(find.byType(TenantHomeView), findsOneWidget);
 
       // Tap on financials navigation destination
-      await tester.tap(find.byIcon(Icons.payment_outlined));
+      await tester.tap(find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Symbols.payment_rounded),
+      ));
       await tester.pumpAndSettle();
 
       expect(find.byType(TenantPaymentsView), findsOneWidget);

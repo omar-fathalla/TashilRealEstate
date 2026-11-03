@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
+import 'package:tashil_real_estate/core/utils/content_sized_grid.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
@@ -27,6 +28,8 @@ import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_mo
 import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_view.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   final int initialIndex;
@@ -52,10 +55,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   void _initSampleAgencies() {
     _agencies = [
       {
-        'name': 'إعمار مصر للإدارة العقارية',
+        'name': AppLocalizations.trStatic('uiCopy097'),
         'country': 'EG',
         'license': 'EG-REG-9824',
-        'authority': 'الهيئة العامة للرقابة المالية والسجل التجاري',
+        'authority': AppLocalizations.trStatic('uiCopy151'),
         'units': 420,
         'brokers': 28,
         'plan': 'Enterprise',
@@ -75,10 +78,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         },
       },
       {
-        'name': 'الدار العقارية دبي',
+        'name': AppLocalizations.trStatic('uiCopy128'),
         'country': 'AE',
         'license': 'AE-RERA-5510',
-        'authority': 'مؤسسة التنظيم العقاري (RERA) - دائرة الأراضي والأملاك',
+        'authority': AppLocalizations.trStatic('uiCopy273'),
         'units': 380,
         'brokers': 24,
         'plan': 'Enterprise',
@@ -98,10 +101,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         },
       },
       {
-        'name': 'بالم هيلز للوساطة والتسويق',
+        'name': AppLocalizations.trStatic('uiCopy156'),
         'country': 'EG',
         'license': 'EG-REG-4412',
-        'authority': 'الهيئة العامة للاستثمار والمناطق الحرة',
+        'authority': AppLocalizations.trStatic('uiCopy150'),
         'units': 290,
         'brokers': 18,
         'plan': 'Professional',
@@ -121,10 +124,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         },
       },
       {
-        'name': 'داماك العقارية أبوظبي',
+        'name': AppLocalizations.trStatic('uiCopy202'),
         'country': 'AE',
         'license': 'AE-RERA-8890',
-        'authority': 'دائرة البلديات والنقل - أبوظبي',
+        'authority': AppLocalizations.trStatic('uiCopy201'),
         'units': 330,
         'brokers': 22,
         'plan': 'Enterprise',
@@ -220,7 +223,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.admin_panel_settings_rounded,
+                  Symbols.admin_panel_settings_rounded,
                   color: colorScheme.onPrimaryContainer,
                   size: 20,
                 ),
@@ -232,20 +235,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15.5,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                      letterSpacing: -0.3),
                   ),
                   Text(
                     loc.tr('superAdminWorkspaceTitle'),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -262,7 +259,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   _buildEmailVerificationBadge(context, loc, colorScheme),
                   const SizedBox(width: 8),
                   TashilIconButton.tonal(
-                    icon: Icons.smart_toy_rounded,
+                    icon: Symbols.smart_toy_rounded,
                     size: 38,
                     iconSize: 20,
                     tooltip: loc.tr('aiEngineModelsBtn'),
@@ -270,13 +267,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   ),
                   const SizedBox(width: 8),
                   TashilButton.tonal(
-                    icon: Icons.hub_rounded,
+                    icon: Symbols.hub_rounded,
                     label: loc.tr('googleAiHubBtn'),
                     onPressed: () => GoogleAiArchitectureHubDialog.show(context),
                   ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.shield_outlined,
+                icon: Symbols.shield_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('aiImageModeratorTitle'),
@@ -284,7 +281,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.tune_rounded,
+                icon: Symbols.tune_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('settings'),
@@ -292,7 +289,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.travel_explore_rounded,
+                icon: Symbols.travel_explore_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('browseAsVisitor'),
@@ -300,7 +297,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.logout_rounded,
+                icon: Symbols.logout_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('logout'),
@@ -338,16 +335,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       menuTooltip: isExpanded ? loc.tr('collapseMenu') : loc.tr('expandMenu'),
       destinations: [
         TashilRailDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
+          icon: Symbols.analytics_rounded,
+          selectedIcon: Symbols.analytics_rounded,
           label: loc.tr('kpiCompact'),
           isSelected: _selectedIndex == 0,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 0),
         ),
         TashilRailDestination(
-          icon: Icons.business_outlined,
-          selectedIcon: Icons.business_rounded,
+          icon: Symbols.business_rounded,
+          selectedIcon: Symbols.business_rounded,
           label: loc.tr('agenciesCompact'),
           badgeCount: '48',
           isSelected: _selectedIndex == 1,
@@ -355,24 +352,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => setState(() => _selectedIndex = 1),
         ),
         TashilRailDestination(
-          icon: Icons.verified_user_outlined,
-          selectedIcon: Icons.verified_user_rounded,
+          icon: Symbols.verified_user_rounded,
+          selectedIcon: Symbols.verified_user_rounded,
           label: loc.tr('escrowCompact'),
           isSelected: _selectedIndex == 2,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 2),
         ),
         TashilRailDestination(
-          icon: Icons.palette_outlined,
-          selectedIcon: Icons.palette_rounded,
-          label: loc.tr('standardsCompact'),
-          isSelected: _selectedIndex == 3,
-          isExpanded: isExpanded,
-          onTap: () => setState(() => _selectedIndex = 3),
-        ),
-        TashilRailDestination(
-          icon: Icons.payments_outlined,
-          selectedIcon: Icons.payments_rounded,
+          icon: Symbols.payments_rounded,
+          selectedIcon: Symbols.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
           badgeCount: '3',
           isSelected: _selectedIndex == 4,
@@ -380,16 +369,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => setState(() => _selectedIndex = 4),
         ),
         TashilRailDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
+          icon: Symbols.show_chart_rounded,
+          selectedIcon: Symbols.show_chart_rounded,
           label: loc.tr('investorDashboardTitle'),
           isSelected: _selectedIndex == 5,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 5),
         ),
         TashilRailDestination(
-          icon: Icons.smart_toy_outlined,
-          selectedIcon: Icons.smart_toy_rounded,
+          icon: Symbols.smart_toy_rounded,
+          selectedIcon: Symbols.smart_toy_rounded,
           label: loc.tr('aiEngineHubNavTitle'),
           badgeCount: '6',
           isSelected: _selectedIndex == 6,
@@ -397,14 +386,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => setState(() => _selectedIndex = 6),
         ),
         TashilRailDestination(
-          icon: Icons.hub_outlined,
-          selectedIcon: Icons.hub_rounded,
+          icon: Symbols.hub_rounded,
+          selectedIcon: Symbols.hub_rounded,
           label: loc.tr('googleAiHubBtn'),
           isSelected: false,
           isExpanded: isExpanded,
           trailing: isExpanded
               ? Icon(
-                  Icons.chevron_right_rounded,
+                  Symbols.chevron_right_rounded,
                   size: 18.0,
                   color: colorScheme.outlineVariant,
                 )
@@ -412,14 +401,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => GoogleAiArchitectureHubDialog.show(context),
         ),
         TashilRailDestination(
-          icon: Icons.shield_outlined,
-          selectedIcon: Icons.shield_rounded,
+          icon: Symbols.shield_rounded,
+          selectedIcon: Symbols.shield_rounded,
           label: loc.tr('aiImageModeratorTitle'),
           isSelected: false,
           isExpanded: isExpanded,
           trailing: isExpanded
               ? Icon(
-                  Icons.chevron_right_rounded,
+                  Symbols.chevron_right_rounded,
                   size: 18.0,
                   color: colorScheme.outlineVariant,
                 )
@@ -427,14 +416,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => AiImageModeratorDialog.show(context),
         ),
         TashilRailDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
+          selectedIcon: Symbols.tune_rounded,
           label: loc.tr('settings'),
           isSelected: false,
           isExpanded: isExpanded,
           trailing: isExpanded
               ? Icon(
-                  Icons.chevron_right_rounded,
+                  Symbols.chevron_right_rounded,
                   size: 18.0,
                   color: colorScheme.outlineVariant,
                 )
@@ -470,11 +459,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     backgroundColor: colorScheme.primaryContainer,
                     child: Text(
                       'SA',
-                      style: TextStyle(
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer),
                     ),
                   ),
                 ),
@@ -492,7 +478,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           surfaceTintColor: colorScheme.surfaceTint,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -511,11 +497,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         backgroundColor: colorScheme.primaryContainer,
                         child: Text(
                           'SA',
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -528,17 +511,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                 Flexible(
                                   child: Text(
                                     loc.tr('superAdminProfile'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.5,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Icon(
-                                  Icons.verified_rounded,
+                                  Symbols.verified_rounded,
                                   size: 16,
                                   color: colorScheme.primary,
                                 ),
@@ -546,17 +526,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             ),
                             Text(
                               loc.tr('roleSuperAdmin'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
                       TashilIconButton.standard(
-                        icon: Icons.close_rounded,
+                        icon: Symbols.close_rounded,
                         size: 34,
                         iconSize: 18,
                         onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -613,12 +590,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   ListTile(
                     dense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: Icon(Icons.tune_rounded, size: 20, color: colorScheme.primary),
+                    leading: Icon(Symbols.tune_rounded, size: 20, color: colorScheme.primary),
                     title: Text(
                       loc.tr('settings'),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    trailing: Icon(Icons.chevron_right_rounded, size: 18, color: colorScheme.outlineVariant),
+                    trailing: Icon(Symbols.chevron_right_rounded, size: 18, color: colorScheme.outlineVariant),
                     onTap: () {
                       Navigator.of(dialogCtx).pop();
                       AppSettingsDialog.show(context);
@@ -629,12 +606,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   ListTile(
                     dense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: Icon(Icons.verified_user_rounded, size: 20, color: colorScheme.secondary),
+                    leading: Icon(Symbols.verified_user_rounded, size: 20, color: colorScheme.secondary),
                     title: Text(
                       loc.tr('escrowAndAuditLogsTab'),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    trailing: Icon(Icons.chevron_right_rounded, size: 18, color: colorScheme.outlineVariant),
+                    trailing: Icon(Symbols.chevron_right_rounded, size: 18, color: colorScheme.outlineVariant),
                     onTap: () {
                       Navigator.of(dialogCtx).pop();
                       setState(() => _selectedIndex = 2);
@@ -649,7 +626,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     width: double.infinity,
                     child: TashilButton(
                       label: loc.tr('logout'),
-                      icon: Icons.logout_rounded,
+                      icon: Symbols.logout_rounded,
                       variant: TashilButtonVariant.outlined,
                       onPressed: () async {
                         Navigator.of(dialogCtx).pop();
@@ -677,19 +654,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+            color: colorScheme.primary),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -702,14 +673,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   ) {
     final isVerified = FirebaseAuthService().isCurrentUserEmailVerified;
     final badgeColor = isVerified ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
-    final icon = isVerified ? Icons.verified_user_rounded : Icons.mark_email_unread_rounded;
+    final icon = isVerified ? Symbols.verified_user_rounded : Symbols.mark_email_unread_rounded;
     final label = isVerified ? loc.tr('emailVerifiedBadge') : loc.tr('emailPendingVerificationBadge');
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => _showEmailVerificationDialog(context, loc, isVerified),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: badgeColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
@@ -724,11 +696,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: badgeColor,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                color: badgeColor),
             ),
           ],
         ),
@@ -745,7 +714,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     if (isVerified) {
       await TashilAlertDialog.show(
         context: context,
-        iconData: Icons.verified_user_rounded,
+        iconData: Symbols.verified_user_rounded,
         title: loc.tr('verifyEmailTitle'),
         contentText: loc.tr('emailVerifiedSuccess'),
         actions: [
@@ -762,7 +731,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         builder: (dialogCtx) => StatefulBuilder(
           builder: (context, setDialogState) {
             return TashilAlertDialog(
-              iconData: Icons.mark_email_unread_rounded,
+              iconData: Symbols.mark_email_unread_rounded,
               title: loc.tr('verifyEmailTitle'),
               contentText: loc.tr('verifyEmailNotice'),
               actions: [
@@ -772,7 +741,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ),
                 TashilButton.tonal(
                   label: loc.tr('resendVerificationBtn'),
-                  icon: Icons.send_rounded,
+                  icon: Symbols.send_rounded,
                   isLoading: isActionLoading,
                   onPressed: isActionLoading
                       ? null
@@ -797,7 +766,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ),
                 TashilButton.filled(
                   label: loc.tr('checkVerificationStatus'),
-                  icon: Icons.sync_rounded,
+                  icon: Symbols.sync_rounded,
                   isLoading: isActionLoading,
                   onPressed: isActionLoading
                       ? null
@@ -848,7 +817,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.admin_panel_settings_rounded, color: colorScheme.onPrimaryContainer, size: 18),
+            child: Icon(Symbols.admin_panel_settings_rounded, color: colorScheme.onPrimaryContainer, size: 18),
           ),
         ),
         title: Column(
@@ -856,19 +825,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           children: [
             Text(
               loc.tr('appName'),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14.5,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
             Text(
               loc.tr('superAdminWorkspaceTitle'),
-              style: TextStyle(
-                fontSize: 11,
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -876,54 +839,83 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           _buildEmailVerificationBadge(context, loc, colorScheme),
           const SizedBox(width: 4),
           TashilIconButton.tonal(
-            icon: Icons.tune_rounded,
+            icon: Symbols.tune_rounded,
             size: 38,
             iconSize: 20,
             tooltip: loc.tr('settings'),
             onPressed: () => AppSettingsDialog.show(context),
           ),
+          if (!ResponsiveLayout.isMobile(context)) ...[
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
-              icon: Icons.menu_rounded,
+              icon: Symbols.menu_rounded,
               size: 38,
               iconSize: 20,
               tooltip: loc.tr('menu'),
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              onPressed: () => showModalBottomSheet<void>(
+                context: ctx,
+                isScrollControlled: true,
+                useSafeArea: true,
+                showDragHandle: true,
+                builder: (sheetContext) => SizedBox(
+                  height: MediaQuery.sizeOf(sheetContext).height * 0.8,
+                  child: _buildMobileDrawer(sheetContext, loc, colorScheme),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 8),
+          ],
         ],
       ),
-      endDrawer: _buildMobileDrawer(context, loc, colorScheme),
+      endDrawer: null,
       body: views[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex < 4 ? _selectedIndex : 0,
+        selectedIndex: switch (_selectedIndex) {
+          0 => 0,
+          1 => 1,
+          2 => 2,
+          _ => 3,
+        },
         onDestinationSelected: (index) {
+          if (index == 3) {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              showDragHandle: true,
+              builder: (sheetContext) => SizedBox(
+                height: MediaQuery.sizeOf(sheetContext).height * 0.8,
+                child: _buildMobileDrawer(sheetContext, loc, colorScheme),
+              ),
+            );
+            return;
+          }
           setState(() {
             _selectedIndex = index;
           });
         },
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics_rounded),
+            icon: const Icon(Symbols.analytics_rounded),
+            selectedIcon: const Icon(Symbols.analytics_rounded),
             label: loc.tr('kpiCompact'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.business_outlined),
-            selectedIcon: const Icon(Icons.business_rounded),
+            icon: const Icon(Symbols.business_rounded),
+            selectedIcon: const Icon(Symbols.business_rounded),
             label: loc.tr('agenciesCompact'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.verified_user_outlined),
-            selectedIcon: const Icon(Icons.verified_user_rounded),
+            icon: const Icon(Symbols.verified_user_rounded),
+            selectedIcon: const Icon(Symbols.verified_user_rounded),
             label: loc.tr('escrowCompact'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.palette_outlined),
-            selectedIcon: const Icon(Icons.palette_rounded),
-            label: loc.tr('m3Compact'),
+            icon: const Icon(Symbols.menu_rounded),
+            selectedIcon: const Icon(Symbols.menu_rounded),
+            label: loc.tr('navMore'),
           ),
         ],
       ),
@@ -949,7 +941,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 color: colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.admin_panel_settings_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+              child: Icon(Symbols.admin_panel_settings_rounded, color: colorScheme.onPrimaryContainer, size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -958,25 +950,19 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   Text(
                     loc.tr('superAdminWorkspaceTitle'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
             TashilIconButton.standard(
-              icon: Icons.close_rounded,
+              icon: Symbols.close_rounded,
               size: 36,
               iconSize: 20,
               onPressed: () => Navigator.pop(context),
@@ -986,8 +972,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       ),
       destinations: [
         TashilDrawerDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
+          icon: Symbols.analytics_rounded,
+          selectedIcon: Symbols.analytics_rounded,
           label: loc.tr('kpiCompact'),
           isSelected: _selectedIndex == 0,
           onTap: () {
@@ -996,8 +982,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.business_outlined,
-          selectedIcon: Icons.business_rounded,
+          icon: Symbols.business_rounded,
+          selectedIcon: Symbols.business_rounded,
           label: loc.tr('agenciesCompact'),
           badgeCount: '48',
           isSelected: _selectedIndex == 1,
@@ -1007,8 +993,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.verified_user_outlined,
-          selectedIcon: Icons.verified_user_rounded,
+          icon: Symbols.verified_user_rounded,
+          selectedIcon: Symbols.verified_user_rounded,
           label: loc.tr('escrowCompact'),
           isSelected: _selectedIndex == 2,
           onTap: () {
@@ -1017,8 +1003,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.palette_outlined,
-          selectedIcon: Icons.palette_rounded,
+          icon: Symbols.palette_rounded,
+          selectedIcon: Symbols.palette_rounded,
           label: loc.tr('standardsCompact'),
           isSelected: _selectedIndex == 3,
           onTap: () {
@@ -1027,8 +1013,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.payments_outlined,
-          selectedIcon: Icons.payments_rounded,
+          icon: Symbols.payments_rounded,
+          selectedIcon: Symbols.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
           badgeCount: '3',
           isSelected: _selectedIndex == 4,
@@ -1038,8 +1024,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
+          icon: Symbols.show_chart_rounded,
+          selectedIcon: Symbols.show_chart_rounded,
           label: loc.tr('investorDashboardTitle'),
           isSelected: _selectedIndex == 5,
           onTap: () {
@@ -1048,8 +1034,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.smart_toy_outlined,
-          selectedIcon: Icons.smart_toy_rounded,
+          icon: Symbols.smart_toy_rounded,
+          selectedIcon: Symbols.smart_toy_rounded,
           label: loc.tr('aiEngineHubNavTitle'),
           badgeCount: '6',
           isSelected: _selectedIndex == 6,
@@ -1059,12 +1045,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.hub_outlined,
-          selectedIcon: Icons.hub_rounded,
+          icon: Symbols.hub_rounded,
+          selectedIcon: Symbols.hub_rounded,
           label: loc.tr('googleAiHubBtn'),
           isSelected: false,
           trailing: Icon(
-            Icons.chevron_right_rounded,
+            Symbols.chevron_right_rounded,
             size: 18.0,
             color: colorScheme.outlineVariant,
           ),
@@ -1074,12 +1060,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.shield_outlined,
-          selectedIcon: Icons.shield_rounded,
+          icon: Symbols.shield_rounded,
+          selectedIcon: Symbols.shield_rounded,
           label: loc.tr('aiImageModeratorTitle'),
           isSelected: false,
           trailing: Icon(
-            Icons.chevron_right_rounded,
+            Symbols.chevron_right_rounded,
             size: 18.0,
             color: colorScheme.outlineVariant,
           ),
@@ -1092,12 +1078,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           title: loc.tr('settings'),
         ),
         TashilDrawerDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
+          selectedIcon: Symbols.tune_rounded,
           label: loc.tr('settings'),
           isSelected: false,
           trailing: Icon(
-            Icons.chevron_right_rounded,
+            Symbols.chevron_right_rounded,
             size: 18.0,
             color: colorScheme.outlineVariant,
           ),
@@ -1151,23 +1137,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   children: [
                     Text(
                       loc.tr('agenciesAndTenantsTab'),
-                      style: TextStyle(
-                        fontSize: isMobile ? 18 : 22,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$activeCount ${loc.tr('activeAgenciesWord')} | $totalUnits ${loc.tr('verifiedUnitsWord')}',
-                      style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               TashilButton(
                 label: loc.tr('addNewAgency'),
-                icon: Icons.add_business_rounded,
+                icon: Symbols.add_business_rounded,
                 onPressed: () => _showAddAgencyDialog(context, loc, colorScheme),
               ),
             ],
@@ -1178,20 +1161,17 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 700;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: isNarrow ? 2 : 4,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: isNarrow ? 1.45 : 1.7,
+              return ContentSizedGrid(
+                maxWidth: constraints.maxWidth,
+                columns: isNarrow ? 2 : 4,
+                spacing: 14,
                 children: [
                   _buildAgencyMetricCard(
                     title: '$activeCount',
                     subtitle: loc.tr('activeAgenciesWord'),
                     badgeText: '+12%',
-                    badgeColor: Colors.green,
-                    icon: Icons.business_rounded,
+                    badgeColor: colorScheme.primary,
+                    icon: Symbols.business_rounded,
                     colorScheme: colorScheme,
                   ),
                   _buildAgencyMetricCard(
@@ -1199,7 +1179,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     subtitle: loc.tr('verifiedUnitsWord'),
                     badgeText: '98.5%',
                     badgeColor: colorScheme.primary,
-                    icon: Icons.apartment_rounded,
+                    icon: Symbols.apartment_rounded,
                     colorScheme: colorScheme,
                   ),
                   _buildAgencyMetricCard(
@@ -1207,15 +1187,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     subtitle: loc.tr('activeBrokersWord'),
                     badgeText: '100%',
                     badgeColor: colorScheme.secondary,
-                    icon: Icons.badge_rounded,
+                    icon: Symbols.badge_rounded,
                     colorScheme: colorScheme,
                   ),
                   _buildAgencyMetricCard(
                     title: '99.4%',
                     subtitle: loc.tr('complianceRate'),
-                    badgeText: 'ISO 27001',
-                    badgeColor: Colors.teal,
-                    icon: Icons.verified_user_rounded,
+                    badgeText: loc.tr('complianceUnderReview'),
+                    badgeColor: colorScheme.tertiary,
+                    icon: Symbols.verified_user_rounded,
                     colorScheme: colorScheme,
                   ),
                 ],
@@ -1234,7 +1214,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 TashilConnectedButtonSegment<String>(
                   value: 'ALL',
                   label: loc.tr('allAgencies'),
-                  icon: Icons.domain_rounded,
+                  icon: Symbols.domain_rounded,
                 ),
                 TashilConnectedButtonSegment<String>(
                   value: 'EG',
@@ -1291,11 +1271,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                 alignment: Alignment.center,
                                 child: Text(
                                   agency['initials'] as String,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onPrimaryContainer,
-                                    fontSize: 14,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimaryContainer),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1308,34 +1285,28 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                         Flexible(
                                           child: Text(
                                             agency['name'] as String,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                              color: colorScheme.onSurface,
-                                            ),
+                                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                              color: colorScheme.onSurface),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         const SizedBox(width: 6),
-                                        Text(isEg ? '🇪🇬' : '🇦🇪', style: const TextStyle(fontSize: 15)),
+                                        Text(isEg ? '🇪🇬' : '🇦🇪', style: Theme.of(context).textTheme.bodyMedium!),
                                       ],
                                     ),
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.verified_rounded,
+                                          Symbols.verified_rounded,
                                           size: 14,
                                           color: colorScheme.primary,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           agency['license'] as String,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: colorScheme.onSurfaceVariant,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w500),
                                         ),
                                       ],
                                     ),
@@ -1350,11 +1321,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                 ),
                                 child: Text(
                                   agency['plan'] as String,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSecondaryContainer,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSecondaryContainer),
                                 ),
                               ),
                             ],
@@ -1373,7 +1341,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   child: _buildAgencyStatColumn(
                                     label: loc.tr('verifiedUnitsWord'),
                                     value: '${agency['units']}',
-                                    icon: Icons.apartment_rounded,
+                                    icon: Symbols.apartment_rounded,
                                     colorScheme: colorScheme,
                                   ),
                                 ),
@@ -1387,7 +1355,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   child: _buildAgencyStatColumn(
                                     label: loc.tr('activeBrokersWord'),
                                     value: '${agency['brokers']}',
-                                    icon: Icons.badge_rounded,
+                                    icon: Symbols.badge_rounded,
                                     colorScheme: colorScheme,
                                   ),
                                 ),
@@ -1413,7 +1381,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                       width: 7,
                                       height: 7,
                                       decoration: BoxDecoration(
-                                        color: agency['isSuspended'] == true ? Colors.orange : Colors.green,
+                                        color: agency['isSuspended'] == true ? colorScheme.tertiary : colorScheme.primary,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -1425,13 +1393,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                             : loc.tr('verifiedAgency'),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: agency['isSuspended'] == true
+                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: agency['isSuspended'] == true
                                               ? colorScheme.error
                                               : colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                          fontWeight: FontWeight.w500),
                                       ),
                                     ),
                                   ],
@@ -1443,12 +1408,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                 children: [
                                   TashilButton.tonal(
                                     label: loc.tr('viewAgencyDetails'),
-                                    icon: Icons.visibility_rounded,
+                                    icon: Symbols.visibility_rounded,
                                     onPressed: () => _showAgencyRegistryDialog(context, agency, loc, colorScheme),
                                   ),
                                   const SizedBox(width: 6),
                                   TashilIconButton.standard(
-                                    icon: Icons.shield_rounded,
+                                    icon: Symbols.shield_rounded,
                                     tooltip: loc.tr('managePermissions'),
                                     onPressed: () => _showAgencyPermissionsDialog(context, agency, loc, colorScheme),
                                   ),
@@ -1478,6 +1443,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final licenseController = TextEditingController();
+    final tradeLicenseController = TextEditingController();
     final brokersController = TextEditingController(text: '12');
     final unitsController = TextEditingController(text: '85');
     final emailController = TextEditingController();
@@ -1495,7 +1461,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             maxWidth: 680,
             title: loc.tr('addNewAgency'),
             subtitle: loc.tr('registerNewAgencySubtitle'),
-            icon: Icons.add_business_rounded,
+            icon: Symbols.add_business_rounded,
             onClose: () => Navigator.of(ctx).pop(),
             footer: Wrap(
               spacing: 12,
@@ -1509,7 +1475,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ),
                 TashilButton(
                   label: loc.tr('submitRegisterAgency'),
-                  icon: Icons.check_circle_rounded,
+                  icon: Symbols.check_circle_rounded,
                   onPressed: () {
                     if (formKey.currentState?.validate() ?? false) {
                       final name = nameController.text.trim();
@@ -1527,9 +1493,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         'license': licenseController.text.trim().isNotEmpty
                             ? licenseController.text.trim()
                             : (selectedCountry == 'EG' ? 'EG-REG-6520' : 'AE-RERA-7140'),
+                        if (selectedCountry == 'AE' && tradeLicenseController.text.trim().isNotEmpty)
+                          'tradeLicense': tradeLicenseController.text.trim(),
                         'authority': selectedCountry == 'EG'
-                            ? 'الهيئة العامة للرقابة المالية والسجل التجاري'
-                            : 'مؤسسة التنظيم العقاري (RERA) - دائرة الأراضي والأملاك',
+                            ? AppLocalizations.trStatic('uiCopy151')
+                            : AppLocalizations.trStatic('uiCopy273'),
                         'units': int.tryParse(unitsController.text.trim()) ?? 85,
                         'brokers': int.tryParse(brokersController.text.trim()) ?? 12,
                         'plan': selectedPlan,
@@ -1562,7 +1530,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(loc.tr('agencyAddedSuccess')),
-                          backgroundColor: Colors.green.shade800,
+                          backgroundColor: colorScheme.primary,
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -1581,11 +1549,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     // Country Selector
                     Text(
                       loc.tr('countryFilter'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     TashilConnectedButtonGroup<String>(
@@ -1610,7 +1575,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       decoration: InputDecoration(
                         labelText: loc.tr('agencyNameLabel'),
                         hintText: loc.tr('agencyNameHint'),
-                        prefixIcon: const Icon(Icons.apartment_rounded),
+                        prefixIcon: const Icon(Symbols.apartment_rounded),
                         filled: true,
                         fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                         border: OutlineInputBorder(
@@ -1622,13 +1587,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Commercial License No.
                     TextFormField(
                       controller: licenseController,
                       decoration: InputDecoration(
-                        labelText: loc.tr('commercialLicenseLabel'),
+                        labelText: selectedCountry == 'AE'
+                            ? loc.tr('officeRegistrationNumberLabel')
+                            : loc.tr('commercialLicenseLabel'),
                         hintText: loc.tr('commercialLicenseHint'),
-                        prefixIcon: const Icon(Icons.verified_rounded),
+                        prefixIcon: const Icon(Symbols.verified_rounded),
                         filled: true,
                         fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                         border: OutlineInputBorder(
@@ -1638,16 +1604,30 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       ),
                       validator: (val) => (val == null || val.trim().isEmpty) ? loc.tr('requiredField') : null,
                     ),
+                    if (selectedCountry == 'AE') ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: tradeLicenseController,
+                        decoration: InputDecoration(
+                          labelText: loc.tr('commercialLicenseLabel'),
+                          hintText: loc.tr('commercialLicenseHint'),
+                          prefixIcon: const Icon(Symbols.badge_rounded),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: colorScheme.outlineVariant),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // Plan Selector
                     Text(
                       loc.tr('subscriptionPlanLabel'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     TashilConnectedButtonGroup<String>(
@@ -1657,7 +1637,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         TashilConnectedButtonSegment<String>(
                           value: 'Enterprise',
                           label: loc.tr('planEnterprise'),
-                          icon: Icons.star_rounded,
+                          icon: Symbols.star_rounded,
                         ),
                         TashilConnectedButtonSegment<String>(
                           value: 'Professional',
@@ -1680,7 +1660,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: loc.tr('initialBrokersCount'),
-                              prefixIcon: const Icon(Icons.badge_rounded),
+                              prefixIcon: const Icon(Symbols.badge_rounded),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                               border: OutlineInputBorder(
@@ -1697,7 +1677,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: loc.tr('initialUnitsCount'),
-                              prefixIcon: const Icon(Icons.domain_rounded),
+                              prefixIcon: const Icon(Symbols.domain_rounded),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                               border: OutlineInputBorder(
@@ -1720,8 +1700,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               labelText: loc.tr('agencyEmailLabel'),
-                              hintText: 'admin@agency.com',
-                              prefixIcon: const Icon(Icons.email_outlined),
+                              hintText: AppLocalizations.trStatic('uiCopy085'),
+                              prefixIcon: const Icon(Symbols.email_rounded),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                               border: OutlineInputBorder(
@@ -1739,7 +1719,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             decoration: InputDecoration(
                               labelText: loc.tr('agencyPhoneLabel'),
                               hintText: selectedCountry == 'EG' ? '+20 10...' : '+971 50...',
-                              prefixIcon: const Icon(Icons.phone_outlined),
+                              prefixIcon: const Icon(Symbols.phone_rounded),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                               border: OutlineInputBorder(
@@ -1771,8 +1751,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       builder: (ctx) => TashilModalDialog(
         maxWidth: 640,
         title: agency['name'] as String,
-        subtitle: '${loc.tr('licenseNumber')}: ${agency['license']}',
-        icon: Icons.verified_user_rounded,
+        subtitle: isEg
+            ? '${loc.tr('commercialLicenseLabel')}: ${agency['license']}'
+            : '${loc.tr('officeRegistrationNumberLabel')}: ${agency['license']}',
+        icon: Symbols.verified_user_rounded,
         onClose: () => Navigator.of(ctx).pop(),
         footer: Wrap(
           spacing: 12,
@@ -1782,7 +1764,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           children: [
             TashilButton.outlined(
               label: loc.tr('exportOfficialAuditStatementBtn'),
-              icon: Icons.download_rounded,
+              icon: Symbols.download_rounded,
               onPressed: () {
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1795,7 +1777,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ),
             TashilButton(
               label: loc.tr('close'),
-              icon: Icons.check_rounded,
+              icon: Symbols.check_rounded,
               onPressed: () => Navigator.of(ctx).pop(),
             ),
           ],
@@ -1829,7 +1811,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       alignment: Alignment.center,
                       child: Text(
                         agency['initials'] as String,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -1844,11 +1826,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             children: [
                               Text(
                                 isSuspended ? loc.tr('suspendAgencyAccount') : loc.tr('verifiedAgency'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: isSuspended ? colorScheme.error : colorScheme.primary,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: isSuspended ? colorScheme.error : colorScheme.primary),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1858,19 +1837,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                 ),
                                 child: Text(
                                   agency['plan'] as String,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSecondaryContainer,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSecondaryContainer),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            isEg ? 'جمهورية مصر العربية' : 'دولة الإمارات العربية المتحدة',
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            isEg ? 'جمهورية مصر العربية' : AppLocalizations.trStatic('uiCopy209'),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -1887,28 +1863,28 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   child: Column(
                     children: [
                       _buildRegistryRow(
-                        icon: Icons.account_balance_rounded,
+                        icon: Symbols.account_balance_rounded,
                         label: loc.tr('regulatoryAuthority'),
-                        value: agency['authority'] as String? ?? (isEg ? 'هيئة الرقابة المالية والسجل التجاري' : 'مؤسسة التنظيم العقاري (RERA)'),
+                        value: agency['authority'] as String? ?? (isEg ? AppLocalizations.trStatic('uiCopy325') : 'مؤسسة التنظيم العقاري (RERA)'),
                         colorScheme: colorScheme,
                       ),
                       const Divider(height: 16),
                       _buildRegistryRow(
-                        icon: Icons.verified_rounded,
+                        icon: Symbols.verified_rounded,
                         label: loc.tr('auditComplianceLevel'),
-                        value: 'ISO 27001 / AML Tier 1',
+                        value: loc.tr('complianceUnderReview'),
                         colorScheme: colorScheme,
                       ),
                       const Divider(height: 16),
                       _buildRegistryRow(
-                        icon: Icons.calendar_today_rounded,
+                        icon: Symbols.calendar_today_rounded,
                         label: loc.tr('accreditationDate'),
                         value: agency['accreditationDate'] as String? ?? '2023-01-15',
                         colorScheme: colorScheme,
                       ),
                       const Divider(height: 16),
                       _buildRegistryRow(
-                        icon: Icons.update_rounded,
+                        icon: Symbols.update_rounded,
                         label: loc.tr('annualRenewalDate'),
                         value: agency['renewalDate'] as String? ?? '2027-01-14',
                         colorScheme: colorScheme,
@@ -1934,12 +1910,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         children: [
                           Text(
                             loc.tr('verifiedUnitsWord'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${agency['units']}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1958,12 +1934,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         children: [
                           Text(
                             loc.tr('activeBrokersWord'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${agency['brokers']}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1982,12 +1958,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         children: [
                           Text(
                             loc.tr('complianceRate'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             '100%',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                           ),
                         ],
                       ),
@@ -2010,22 +1986,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.email_outlined, size: 18, color: colorScheme.primary),
+                          Icon(Symbols.email_rounded, size: 18, color: colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
                             agency['email'] as String? ?? 'info@agency.com',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.phone_outlined, size: 18, color: colorScheme.primary),
+                          Icon(Symbols.phone_rounded, size: 18, color: colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
                             agency['phone'] as String? ?? '+20 2 0000 0000',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -2059,7 +2035,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             maxWidth: 640,
             title: loc.tr('agencyPermissionsTitle'),
             subtitle: '${loc.tr('agencyGovernanceSubtitle')}: ${agency['name']}',
-            icon: Icons.shield_rounded,
+            icon: Symbols.shield_rounded,
             onClose: () => Navigator.of(ctx).pop(),
             footer: Wrap(
               spacing: 12,
@@ -2073,7 +2049,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ),
                 TashilButton(
                   label: loc.tr('savePermissions'),
-                  icon: Icons.save_rounded,
+                  icon: Symbols.save_rounded,
                   onPressed: () {
                     setState(() {
                       agency['permissions'] = permissions;
@@ -2083,7 +2059,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(loc.tr('permissionsUpdatedSuccess')),
-                        backgroundColor: Colors.green.shade800,
+                        backgroundColor: colorScheme.primary,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -2111,8 +2087,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     child: Row(
                       children: [
                         Icon(
-                          isSuspended ? Icons.block_rounded : Icons.check_circle_rounded,
-                          color: isSuspended ? colorScheme.error : Colors.green,
+                          isSuspended ? Symbols.block_rounded : Symbols.check_circle_rounded,
+                          color: isSuspended ? colorScheme.error : colorScheme.primary,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2121,17 +2097,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             children: [
                               Text(
                                 isSuspended ? loc.tr('agencySuspendedWarning') : loc.tr('verifiedAgency'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: isSuspended ? colorScheme.error : colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: isSuspended ? colorScheme.error : colorScheme.onSurface),
                               ),
                               Text(
                                 isSuspended
-                                    ? 'الحساب معلق مؤقتاً ولا يمكن للوسطاء إبرام عقود'
-                                    : 'الحساب نشط ومعتمد ويمتلك كامل الصلاحيات المصرحة',
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                    ? AppLocalizations.trStatic('uiCopy125')
+                                    : AppLocalizations.trStatic('uiCopy126'),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -2151,18 +2124,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
                   Text(
                     loc.tr('managePermissions'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 8),
 
                   _buildPermissionSwitchTile(
                     title: loc.tr('permVerifiedBadge'),
-                    subtitle: 'إظهار شارة الثقة والاعتماد أمام العملاء في السوق العام',
-                    icon: Icons.verified_rounded,
+                    subtitle: AppLocalizations.trStatic('uiCopy095'),
+                    icon: Symbols.verified_rounded,
                     value: permissions['verifiedBadge'] ?? true,
                     onChanged: (val) => setDialogState(() => permissions['verifiedBadge'] = val),
                     colorScheme: colorScheme,
@@ -2170,8 +2140,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   const Divider(height: 12),
                   _buildPermissionSwitchTile(
                     title: loc.tr('permDirectContracts'),
-                    subtitle: 'تمكين الوكالة من إصدار وتوقيع عقود الإيجار والبيع رقمياً',
-                    icon: Icons.description_rounded,
+                    subtitle: AppLocalizations.trStatic('uiCopy182'),
+                    icon: Symbols.description_rounded,
                     value: permissions['directContracts'] ?? true,
                     onChanged: (val) => setDialogState(() => permissions['directContracts'] = val),
                     colorScheme: colorScheme,
@@ -2179,8 +2149,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   const Divider(height: 12),
                   _buildPermissionSwitchTile(
                     title: loc.tr('permEscrowAccess'),
-                    subtitle: 'الربط مع حساب الضمان البنكي لتسوية العمولات والدفعات',
-                    icon: Icons.shield_rounded,
+                    subtitle: AppLocalizations.trStatic('uiCopy129'),
+                    icon: Symbols.shield_rounded,
                     value: permissions['escrowAccess'] ?? false,
                     onChanged: (val) => setDialogState(() => permissions['escrowAccess'] = val),
                     colorScheme: colorScheme,
@@ -2188,8 +2158,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   const Divider(height: 12),
                   _buildPermissionSwitchTile(
                     title: loc.tr('permMultiBranch'),
-                    subtitle: 'السماح للوكالة بإدارة فروع ووسطاء في عدة مدن ومحافظات',
-                    icon: Icons.corporate_fare_rounded,
+                    subtitle: AppLocalizations.trStatic('uiCopy133'),
+                    icon: Symbols.corporate_fare_rounded,
                     value: permissions['multiBranch'] ?? true,
                     onChanged: (val) => setDialogState(() => permissions['multiBranch'] = val),
                     colorScheme: colorScheme,
@@ -2197,8 +2167,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   const Divider(height: 12),
                   _buildPermissionSwitchTile(
                     title: loc.tr('permApiAccess'),
-                    subtitle: 'منح مفاتيح الربط البرمجي لدمج أنظمة الوكالة السحابية',
-                    icon: Icons.api_rounded,
+                    subtitle: AppLocalizations.trStatic('uiCopy305'),
+                    icon: Symbols.api_rounded,
                     value: permissions['apiAccess'] ?? false,
                     onChanged: (val) => setDialogState(() => permissions['apiAccess'] = val),
                     colorScheme: colorScheme,
@@ -2224,7 +2194,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         const SizedBox(width: 10),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -2233,11 +2203,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             textAlign: TextAlign.end,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface),
           ),
         ),
       ],
@@ -2272,15 +2239,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -2315,21 +2279,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
               ),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -2384,12 +2342,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   ),
                   child: Text(
                     badgeText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                       color: badgeColor,
-                      letterSpacing: 0.2,
-                    ),
+                      letterSpacing: 0.2),
                   ),
                 ),
               ],
@@ -2399,21 +2354,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800,
                     color: colorScheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
+                    letterSpacing: -0.5),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2441,35 +2390,35 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
     final auditLogs = [
       {
-        'action': 'إيداع دفعة إيجار في حساب الضمان',
-        'actor': 'نظام الدفع الإلكتروني (CBE)',
+        'action': AppLocalizations.trStatic('uiCopy103'),
+        'actor': AppLocalizations.trStatic('uiCopy320'),
         'amount': CurrencyFormatter.formatPriceWithCurrency(amount: 45000, currencyCode: currency, langCode: langCode),
-        'time': 'منذ 12 دقيقة',
-        'status': 'مؤمن ومشفر',
+        'time': AppLocalizations.trStatic('uiCopy306'),
+        'status': AppLocalizations.trStatic('uiCopy274'),
         'signature': 'SHA256:7f8a9b...',
       },
       {
-        'action': 'صرف مستحقات المالك بعد مصادقة العقد',
-        'actor': 'إدارة المنصة المركزية',
+        'action': AppLocalizations.trStatic('uiCopy237'),
+        'actor': AppLocalizations.trStatic('uiCopy092'),
         'amount': CurrencyFormatter.formatPriceWithCurrency(amount: 120000, currencyCode: currency, langCode: langCode),
-        'time': 'منذ 45 دقيقة',
-        'status': 'تم التحويل',
+        'time': AppLocalizations.trStatic('uiCopy308'),
+        'status': AppLocalizations.trStatic('uiCopy178'),
         'signature': 'SHA256:3c2e1f...',
       },
       {
-        'action': 'تدقيق وتسوية إلكترونية آلية يومية',
-        'actor': 'مراقب التدقيق الذكي',
+        'action': AppLocalizations.trStatic('uiCopy170'),
+        'actor': AppLocalizations.trStatic('uiCopy284'),
         'amount': CurrencyFormatter.formatPriceWithCurrency(amount: 58450000, currencyCode: currency, langCode: langCode),
-        'time': 'منذ ساعتين',
-        'status': 'مطابقة 100%',
+        'time': AppLocalizations.trStatic('uiCopy309'),
+        'status': AppLocalizations.trStatic('uiCopy294'),
         'signature': 'SHA256:0d9e8c...',
       },
       {
-        'action': 'تأمين الوديعة التأمينية لوحدة سكنية',
-        'actor': 'محفظة المستأجر الذكية',
+        'action': AppLocalizations.trStatic('uiCopy165'),
+        'actor': AppLocalizations.trStatic('uiCopy279'),
         'amount': CurrencyFormatter.formatPriceWithCurrency(amount: 15000, currencyCode: currency, langCode: langCode),
-        'time': 'منذ 3 ساعات',
-        'status': 'محتجز بالضمان',
+        'time': AppLocalizations.trStatic('uiCopy307'),
+        'status': AppLocalizations.trStatic('uiCopy278'),
         'signature': 'SHA256:4a5b6c...',
       },
     ];
@@ -2489,23 +2438,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   children: [
                     Text(
                       loc.tr('escrowAndAuditLogsTab'),
-                      style: TextStyle(
-                        fontSize: isMobile ? 18 : 22,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       loc.tr('certifiedEscrowSecuritySubtitle'),
-                      style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               TashilButton(
                 label: loc.tr('exportOfficialAuditStatementBtn'),
-                icon: Icons.file_download_rounded,
+                icon: Symbols.file_download_rounded,
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -2523,13 +2469,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 800;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: isNarrow ? 1 : 3,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: isNarrow ? 2.3 : 1.8,
+              return ContentSizedGrid(
+                maxWidth: constraints.maxWidth,
+                columns: isNarrow ? 1 : 3,
+                spacing: 16,
                 children: [
                   TashilCard.elevated(
                     child: Padding(
@@ -2547,17 +2490,17 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   color: colorScheme.primaryContainer,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(Icons.account_balance_rounded, size: 20, color: colorScheme.onPrimaryContainer),
+                                child: Icon(Symbols.account_balance_rounded, size: 20, color: colorScheme.onPrimaryContainer),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withAlpha(25),
+                                  color: colorScheme.primary.withAlpha(25),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'CBE / CBUAE',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.green),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                                 ),
                               ),
                             ],
@@ -2567,11 +2510,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             children: [
                               Text(
                                 formattedVaultBalance,
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
                               ),
                               Text(
                                 loc.tr('escrowVaultBalance'),
-                                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -2595,7 +2538,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   color: colorScheme.secondaryContainer,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(Icons.security_rounded, size: 20, color: colorScheme.onSecondaryContainer),
+                                child: Icon(Symbols.security_rounded, size: 20, color: colorScheme.onSecondaryContainer),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2603,9 +2546,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   color: colorScheme.primary.withAlpha(25),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   '100% Secured',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
@@ -2613,13 +2556,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 '1,280',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
                               ),
                               Text(
                                 loc.tr('totalProtectedTransactions'),
-                                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -2643,7 +2586,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   color: colorScheme.tertiaryContainer,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(Icons.vpn_key_rounded, size: 20, color: colorScheme.onTertiaryContainer),
+                                child: Icon(Symbols.vpn_key_rounded, size: 20, color: colorScheme.onTertiaryContainer),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2651,9 +2594,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   color: colorScheme.tertiary.withAlpha(25),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'SHA-256',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
@@ -2661,13 +2604,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'ISO/IEC 27001',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
                               ),
                               Text(
                                 loc.tr('complianceRate'),
-                                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -2684,7 +2627,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           // 3. Audit Trail Table / List
           Text(
             loc.tr('auditLogTrail'),
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
@@ -2706,7 +2649,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                           color: colorScheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.verified_user_rounded, size: 18, color: colorScheme.primary),
+                        child: Icon(Symbols.verified_user_rounded, size: 18, color: colorScheme.primary),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -2715,12 +2658,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                           children: [
                             Text(
                               log['action'] as String,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${log['actor']} | ${log['signature']}',
-                              style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -2730,7 +2673,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         children: [
                           Text(
                             log['amount'] as String,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -2739,18 +2682,18 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withAlpha(25),
+                                  color: colorScheme.primary.withAlpha(25),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   log['status'] as String,
-                                  style: const TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 log['time'] as String,
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -2775,67 +2718,67 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       {
         'title': 'M3 Buttons Suite',
         'desc': '10 Official M3 Button Types (Filled, Tonal, Outlined, FABs, Speed Dial)',
-        'icon': Icons.touch_app_rounded,
+        'icon': Symbols.touch_app_rounded,
         'action': () => M3ButtonsShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Cards Suite',
         'desc': '3 Official M3 Card Types (Elevated, Filled, Outlined containers)',
-        'icon': Icons.dashboard_customize_rounded,
+        'icon': Symbols.dashboard_customize_rounded,
         'action': () => M3CardsShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Carousel Suite',
         'desc': 'Hero, Multi-Browse & Uncontained Carousels with mouse swipe',
-        'icon': Icons.view_carousel_rounded,
+        'icon': Symbols.view_carousel_rounded,
         'action': () => M3CarouselShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Chips Suite',
         'desc': 'Assist, Filter, Input & Suggestion Chips with animated checkmarks',
-        'icon': Icons.label_outline_rounded,
+        'icon': Symbols.label_outline_rounded,
         'action': () => M3ChipsShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Dialogs Suite',
         'desc': 'Alert, Modal & Selection Dialogs with 28dp radius and Level 3 elevation',
-        'icon': Icons.ad_units_rounded,
+        'icon': Symbols.ad_units_rounded,
         'action': () => M3DialogsShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Dividers Suite',
         'desc': 'Full-width, cardAction, text-inset, and middle-inset dividers',
-        'icon': Icons.horizontal_rule_rounded,
+        'icon': Symbols.horizontal_rule_rounded,
         'action': () => M3DividersShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Lists Suite',
         'desc': '1, 2, 3 line tiles and Reorderable Lists with floating Level 3 proxy',
-        'icon': Icons.format_list_bulleted_rounded,
+        'icon': Symbols.format_list_bulleted_rounded,
         'action': () => M3ListsShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Loading Indicators',
         'desc': 'Organic 4-petal morphing clover with harmonic breathing pulse',
-        'icon': Icons.refresh_rounded,
+        'icon': Symbols.refresh_rounded,
         'action': () => M3LoadingShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Navigation Drawer',
         'desc': 'Standard & Modal Drawers with 28dp pill destinations and badge counters',
-        'icon': Icons.menu_open_rounded,
+        'icon': Symbols.menu_open_rounded,
         'action': () => M3DrawerShowcaseDialog.show(context),
       },
       {
         'title': 'M3 Navigation Rail',
         'desc': '80dp compact rail with 260dp smooth cubic animated drawer expansion',
-        'icon': Icons.view_sidebar_rounded,
+        'icon': Symbols.view_sidebar_rounded,
         'action': () => M3RailShowcaseDialog.show(context),
       },
       {
         'title': 'Firebase Enterprise Hub',
         'desc': 'App Check, Cloud Messaging, Remote Config, Performance, and Invoicing Live Hub',
-        'icon': Icons.cloud_done_rounded,
+        'icon': Symbols.cloud_done_rounded,
         'action': () => FirebaseEnterpriseHubDialog.show(context),
       },
     ];
@@ -2853,7 +2796,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.palette_rounded, color: colorScheme.onPrimary, size: 24),
+                child: Icon(Symbols.palette_rounded, color: colorScheme.onPrimary, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -2862,16 +2805,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   children: [
                     Text(
                       loc.tr('m3DesignSystemTab'),
-                      style: TextStyle(
-                        fontSize: isMobile ? 18 : 22,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       loc.tr('m3ShowcaseSubtitle'),
-                      style: TextStyle(fontSize: 12.5, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -2916,11 +2856,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                               Expanded(
                                 child: Text(
                                   item['title'] as String,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -2928,7 +2865,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                           ),
                           Text(
                             item['desc'] as String,
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -2936,7 +2873,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             width: double.infinity,
                             child: TashilButton(
                               label: loc.tr('m3BtnShowcaseBtn'),
-                              icon: Icons.launch_rounded,
+                              icon: Symbols.launch_rounded,
                               onPressed: item['action'] as VoidCallback,
                             ),
                           ),

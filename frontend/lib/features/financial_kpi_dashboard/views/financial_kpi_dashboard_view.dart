@@ -13,6 +13,7 @@ import 'package:tashil_real_estate/features/financial_kpi_dashboard/widgets/arre
 import 'package:tashil_real_estate/features/investor_dashboard/services/investor_analytics_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/widgets/investor_report_dialog.dart';
 import 'package:tashil_real_estate/features/executive_reporting/widgets/executive_financial_report_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class FinancialKpiDashboardView extends StatelessWidget {
   final FinancialPortalRole role;
@@ -64,16 +65,13 @@ class FinancialKpiDashboardView extends StatelessWidget {
                         children: [
                           Text(
                             _getRoleTitle(role, loc),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             loc.tr('financialKpiDashboardSubtitle'),
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -84,7 +82,7 @@ class FinancialKpiDashboardView extends StatelessWidget {
                           if (role == FinancialPortalRole.superAdmin || role == FinancialPortalRole.agency)
                             TashilButton.tonal(
                               onPressed: () => ExecutiveFinancialReportDialog.show(context),
-                              icon: Icons.analytics_rounded,
+                              icon: Symbols.analytics_rounded,
                               label: loc.tr('executiveReportTitle'),
                             ),
                           TashilButton(
@@ -92,7 +90,7 @@ class FinancialKpiDashboardView extends StatelessWidget {
                               final investorSummary = InvestorAnalyticsService().currentSummary;
                               InvestorReportDialog.show(context, investorSummary);
                             },
-                            icon: Icons.picture_as_pdf_rounded,
+                            icon: Symbols.picture_as_pdf_rounded,
                             label: loc.tr('exportOfficialAuditStatementBtn'),
                           ),
                         ],

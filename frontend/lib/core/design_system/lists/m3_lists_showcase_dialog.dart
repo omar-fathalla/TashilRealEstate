@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/design_system/dialogs/tashil_modal_dialo
 import 'package:tashil_real_estate/core/design_system/lists/tashil_list_tile.dart';
 import 'package:tashil_real_estate/core/design_system/lists/tashil_reorderable_list.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive Material Design 3 Lists & Reordering Showcase Dialog.
 class M3ListsShowcaseDialog extends StatefulWidget {
@@ -45,7 +46,7 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
         titleEn: 'Luxury Apartment in 5th Settlement - El Narges',
         titleHi: '5वें सेटलमेंट में लक्जरी अपार्टमेंट',
         price: '23,000 ج.م',
-        icon: Icons.apartment_rounded,
+        icon: Symbols.apartment_rounded,
         color: const Color(0xFF3B82F6),
       ),
       _SampleListItem(
@@ -55,27 +56,27 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
         titleEn: 'Standalone Villa with Pool - Beverly Hills',
         titleHi: 'स्विमिंग पूल के साथ विला - बेवर्ली हिल्स',
         price: '35,000 ج.م',
-        icon: Icons.villa_rounded,
+        icon: Symbols.villa_rounded,
         color: const Color(0xFF10B981),
       ),
       _SampleListItem(
         id: '3',
         unit: '701',
-        titleAr: 'شقة مطلة على النيل - جاردن سيتي',
+        titleAr: AppLocalizations.trStatic('uiCopy234'),
         titleEn: 'Nile View Apartment - Garden City',
         titleHi: 'नाइल व्यू अपार्टमेंट - गार्डन सिटी',
         price: '21,000 ج.م',
-        icon: Icons.water_rounded,
+        icon: Symbols.water_rounded,
         color: const Color(0xFF8B5CF6),
       ),
       _SampleListItem(
         id: '4',
         unit: '104',
-        titleAr: 'شاليه بحري صف أول - أمواج',
+        titleAr: AppLocalizations.trStatic('uiCopy219'),
         titleEn: 'Seafront Chalet - Amwaj',
         titleHi: 'समुद्र तट शैले - अमवाज',
         price: '25,000 ج.م',
-        icon: Icons.beach_access_rounded,
+        icon: Symbols.beach_access_rounded,
         color: const Color(0xFFF59E0B),
       ),
     ];
@@ -101,14 +102,14 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
     return TashilModalDialog(
       title: loc.tr('m3ListsSuiteTitle'),
       subtitle: loc.tr('reorderablePropertiesTitle'),
-      icon: Icons.format_list_bulleted_rounded,
+      icon: Symbols.format_list_bulleted_rounded,
       maxWidth: 680,
       footer: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TashilButton(
             label: loc.tr('confirm'),
-            icon: Icons.check_circle_rounded,
+            icon: Symbols.check_circle_rounded,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -131,7 +132,7 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
               children: [
                 // 1-Line Item (56dp standard)
                 TashilListTile.oneLine(
-                  leading: const Icon(Icons.notifications_active_outlined),
+                  leading: const Icon(Symbols.notifications_active_rounded),
                   leadingType: TashilListTileLeadingType.icon,
                   headline: Text(loc.tr('oneLineListItem')),
                   trailing: Switch(
@@ -148,13 +149,13 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
                       color: colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.analytics_rounded, color: colorScheme.onPrimaryContainer),
+                    child: Icon(Symbols.analytics_rounded, color: colorScheme.onPrimaryContainer),
                   ),
                   leadingType: TashilListTileLeadingType.avatar,
                   headline: Text(loc.tr('twoLineListItem')),
                   supportingText: Text(loc.tr('investorDashboardSubtitle')),
                   trailing: TashilFilterChip(
-                    label: 'M3 72dp',
+                    label: AppLocalizations.trStatic('uiCopy062'),
                     selected: true,
                     onSelected: (_) {},
                   ),
@@ -168,19 +169,16 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
                       color: colorScheme.secondaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.home_work_rounded, color: colorScheme.onSecondaryContainer),
+                    child: Icon(Symbols.home_work_rounded, color: colorScheme.onSecondaryContainer),
                   ),
                   leadingType: TashilListTileLeadingType.thumbnail,
-                  overline: const Text('PROPTECH M3 COMPONENT'),
+                  overline: Text(AppLocalizations.trStatic('uiCopy070')),
                   headline: Text(loc.tr('threeLineListItem')),
                   supportingText: Text(loc.tr('heroSubtitle')),
                   trailing: Text(
                     '88dp',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                      fontSize: 13,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.primary),
                   ),
                 ),
               ],
@@ -192,7 +190,7 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
           // Section 2: Interactive Drag & Drop Reorderable List
           Row(
             children: [
-              Icon(Icons.drag_indicator_rounded, color: colorScheme.primary, size: 20),
+              Icon(Symbols.drag_indicator_rounded, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -201,7 +199,7 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
                 ),
               ),
               TashilIconButton.tonal(
-                icon: Icons.refresh_rounded,
+                icon: Symbols.refresh_rounded,
                 size: 32,
                 iconSize: 18,
                 tooltip: loc.tr('resetFilters'),
@@ -253,32 +251,26 @@ class _M3ListsShowcaseDialogState extends State<M3ListsShowcaseDialog> {
                         ),
                         child: Text(
                           '#${item.unit}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           item.getTitle(lang),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
                   supportingText: Text(
                     item.price,
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                   trailing: TashilIconButton.outlined(
-                    icon: Icons.touch_app_rounded,
+                    icon: Symbols.touch_app_rounded,
                     size: 32,
                     iconSize: 16,
                     onPressed: () {},

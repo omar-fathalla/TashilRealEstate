@@ -23,6 +23,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/lists/tashil_lists.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 enum PropertyQuickAction {
   onboard,
@@ -59,27 +60,27 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
   final lowerUnit = unitNumber.trim().toLowerCase();
 
   final isApartment = lowerType.contains('apart') ||
-      lowerType.contains('شقة') ||
-      lowerUnit.contains('شقة');
+      lowerType.contains(AppLocalizations.trStatic('uiCopy222')) ||
+      lowerUnit.contains(AppLocalizations.trStatic('uiCopy222'));
   final isVilla = lowerType.contains('villa') ||
-      lowerType.contains('فيلا') ||
-      lowerUnit.contains('فيلا');
+      lowerType.contains(AppLocalizations.trStatic('uiCopy253')) ||
+      lowerUnit.contains(AppLocalizations.trStatic('uiCopy253'));
   final isStudio = lowerType.contains('studio') ||
-      lowerType.contains('ستوديو') ||
-      lowerUnit.contains('ستوديو');
+      lowerType.contains(AppLocalizations.trStatic('uiCopy216')) ||
+      lowerUnit.contains(AppLocalizations.trStatic('uiCopy216'));
   final isOffice = lowerType.contains('office') ||
-      lowerType.contains('مكتب') ||
-      lowerType.contains('اداري') ||
-      lowerType.contains('إداري');
+      lowerType.contains(AppLocalizations.trStatic('uiCopy302')) ||
+      lowerType.contains(AppLocalizations.trStatic('uiCopy106')) ||
+      lowerType.contains(AppLocalizations.trStatic('uiCopy093'));
   final isChalet = lowerType.contains('chale') ||
-      lowerType.contains('شاليه') ||
-      lowerUnit.contains('شاليه');
+      lowerType.contains(AppLocalizations.trStatic('uiCopy218')) ||
+      lowerUnit.contains(AppLocalizations.trStatic('uiCopy218'));
   final isDuplex = lowerType.contains('dup') ||
-      lowerType.contains('دوبلكس') ||
+      lowerType.contains(AppLocalizations.trStatic('uiCopy206')) ||
       lowerType.contains('pent') ||
-      lowerType.contains('بنتهاوس') ||
+      lowerType.contains(AppLocalizations.trStatic('uiCopy162')) ||
       lowerType.contains('town') ||
-      lowerUnit.contains('دوبلكس');
+      lowerUnit.contains(AppLocalizations.trStatic('uiCopy206'));
 
   if (isApartment) {
     return _PropertyTypeBadgeStyle(
@@ -91,7 +92,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFFBFDBFE),
       textColor: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       label: loc.tr('propTypeApartment'),
-      icon: Icons.apartment_rounded,
+      icon: Symbols.apartment_rounded,
     );
   }
 
@@ -105,7 +106,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFFA7F3D0),
       textColor: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
       label: loc.tr('propTypeVilla'),
-      icon: Icons.villa_rounded,
+      icon: Symbols.villa_rounded,
     );
   }
 
@@ -119,7 +120,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFFDDD6FE),
       textColor: isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9),
       label: loc.tr('propTypeStudio'),
-      icon: Icons.single_bed_rounded,
+      icon: Symbols.single_bed_rounded,
     );
   }
 
@@ -133,7 +134,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFF99F6E4),
       textColor: isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E),
       label: loc.tr('propTypeOffice'),
-      icon: Icons.business_center_rounded,
+      icon: Symbols.business_center_rounded,
     );
   }
 
@@ -147,7 +148,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFFFDE68A),
       textColor: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
       label: loc.tr('propTypeChalet'),
-      icon: Icons.beach_access_rounded,
+      icon: Symbols.beach_access_rounded,
     );
   }
 
@@ -161,7 +162,7 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
           : const Color(0xFFC7D2FE),
       textColor: isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA),
       label: loc.tr('propTypeDuplex'),
-      icon: Icons.holiday_village_rounded,
+      icon: Symbols.holiday_village_rounded,
     );
   }
 
@@ -175,12 +176,13 @@ _PropertyTypeBadgeStyle _getPropertyTypeBadgeStyle(
         : const Color(0xFFBFDBFE),
     textColor: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
     label: loc.tr('propTypeApartment'),
-    icon: Icons.apartment_rounded,
+    icon: Symbols.apartment_rounded,
   );
 }
 
 /// Official M3 Property Type Chip with semantic icon and high-contrast styling
 Widget _buildPropertyTypeChip({
+  required BuildContext context,
   required ManagedPropertyModel prop,
   required AppLocalizations loc,
   required bool isDark,
@@ -205,7 +207,7 @@ Widget _buildPropertyTypeChip({
       boxShadow: isFloatingBadge
           ? [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: isDark ? 0.35 : 0.12),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -224,12 +226,9 @@ Widget _buildPropertyTypeChip({
         const SizedBox(width: 4.5),
         Text(
           hasUnit ? '${style.label} (${prop.unitNumber.trim()})' : style.label,
-          style: TextStyle(
-            color: style.textColor,
-            fontSize: isFloatingBadge ? 11 : 10.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: style.textColor,
             fontWeight: FontWeight.bold,
-            letterSpacing: 0.1,
-          ),
+            letterSpacing: 0.1),
         ),
       ],
     ),
@@ -254,7 +253,7 @@ Widget _buildLocationBadge(ColorScheme colorScheme, bool isDark, {bool isSmall =
     ),
     alignment: Alignment.center,
     child: Icon(
-      Icons.location_on_rounded,
+      Symbols.location_on_rounded,
       size: iconSize,
       color: colorScheme.primary,
     ),
@@ -291,7 +290,7 @@ _PropertyStatusBadgeStyle _getPropertyStatusBadgeStyle(
       borderColor: isDark ? const Color(0xFF4285F4).withValues(alpha: 0.70) : const Color(0xFF8AB4F8),
       foregroundColor: isDark ? const Color(0xFF8AB4F8) : const Color(0xFF174EA6),
       label: '${loc.tr('statusOccupied')} (${prop.tenantName ?? ""})',
-      icon: Icons.vpn_key_rounded,
+      icon: Symbols.vpn_key_rounded,
     );
   }
 
@@ -301,7 +300,7 @@ _PropertyStatusBadgeStyle _getPropertyStatusBadgeStyle(
       borderColor: isDark ? const Color(0xFF34A853).withValues(alpha: 0.70) : const Color(0xFF81C995),
       foregroundColor: isDark ? const Color(0xFF81C995) : const Color(0xFF137333),
       label: loc.tr('statusPublishedOnMarketplace'),
-      icon: Icons.storefront_rounded,
+      icon: Symbols.storefront_rounded,
     );
   }
 
@@ -311,7 +310,7 @@ _PropertyStatusBadgeStyle _getPropertyStatusBadgeStyle(
     borderColor: isDark ? const Color(0xFF5F6368) : const Color(0xFFBDC1C6),
     foregroundColor: isDark ? const Color(0xFFE8EAED) : const Color(0xFF3C4043),
     label: loc.tr('statusHiddenDraft'),
-    icon: Icons.visibility_off_rounded,
+    icon: Symbols.visibility_off_rounded,
   );
 }
 
@@ -477,11 +476,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
               const SizedBox(height: 4),
               Text(
                 loc.tr('ownerPropertiesSubtitle'),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                  height: 1.4),
               ),
             ],
           ),
@@ -502,18 +498,15 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.apartment_rounded,
+                  Symbols.apartment_rounded,
                   size: 16,
                   color: colorScheme.primary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '$propertiesCount ${loc.tr('totalProperties')}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface),
                 ),
               ],
             ),
@@ -541,7 +534,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             TashilButton(
               height: 40.0,
               onPressed: () => context.push('/fast-onboarding'),
-              icon: Icons.rocket_launch_rounded,
+              icon: Symbols.rocket_launch_rounded,
               label: loc.tr('fastPropertyOnboardingShort'),
             ),
             const SizedBox(width: 12),
@@ -554,19 +547,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 TashilConnectedButtonSegment<PropertyQuickAction>(
                   value: PropertyQuickAction.valuation,
                   label: loc.tr('aiValuationShort'),
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Symbols.auto_awesome_rounded,
                 ),
                 TashilConnectedButtonSegment<PropertyQuickAction>(
                   value: PropertyQuickAction.lease,
                   label: loc.tr('createNewLeaseShort'),
-                  icon: Icons.description_outlined,
+                  icon: Symbols.description_rounded,
                 ),
               ],
             ),
             const SizedBox(width: 8),
             TashilIconButton.tonal(
               onPressed: () => AiImageModeratorDialog.show(context),
-              icon: Icons.shield_outlined,
+              icon: Symbols.shield_rounded,
               size: 40,
               iconSize: 20,
               tooltip: loc.tr('aiImageModeratorTitle'),
@@ -589,12 +582,12 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             TashilConnectedButtonSegment<bool>(
               value: false,
               label: loc.tr('cardsView'),
-              icon: Icons.grid_view_rounded,
+              icon: Symbols.grid_view_rounded,
             ),
             TashilConnectedButtonSegment<bool>(
               value: true,
               label: loc.tr('tableView'),
-              icon: Icons.table_rows_rounded,
+              icon: Symbols.table_rows_rounded,
             ),
           ],
         ),
@@ -615,7 +608,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
         TashilButton(
           height: 44.0,
           onPressed: () => context.push('/fast-onboarding'),
-          icon: Icons.rocket_launch_rounded,
+          icon: Symbols.rocket_launch_rounded,
           label: loc.tr('fastPropertyOnboardingShort'),
         ),
         const SizedBox(height: 12),
@@ -636,19 +629,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                   TashilConnectedButtonSegment<PropertyQuickAction>(
                     value: PropertyQuickAction.valuation,
                     label: loc.tr('aiValuationShort'),
-                    icon: Icons.auto_awesome_rounded,
+                    icon: Symbols.auto_awesome_rounded,
                   ),
                   TashilConnectedButtonSegment<PropertyQuickAction>(
                     value: PropertyQuickAction.lease,
                     label: loc.tr('createNewLeaseShort'),
-                    icon: Icons.description_outlined,
+                    icon: Symbols.description_rounded,
                   ),
                 ],
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
                 onPressed: () => AiImageModeratorDialog.show(context),
-                icon: Icons.shield_outlined,
+                icon: Symbols.shield_rounded,
                 size: 38,
                 iconSize: 18,
                 tooltip: loc.tr('aiImageModeratorTitle'),
@@ -668,12 +661,12 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             TashilConnectedButtonSegment<bool>(
               value: false,
               label: loc.tr('cardsView'),
-              icon: Icons.grid_view_rounded,
+              icon: Symbols.grid_view_rounded,
             ),
             TashilConnectedButtonSegment<bool>(
               value: true,
               label: loc.tr('tableView'),
-              icon: Icons.table_rows_rounded,
+              icon: Symbols.table_rows_rounded,
             ),
           ],
         ),
@@ -786,11 +779,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             const SizedBox(width: 4),
                             Text(
                               statusStyle.label,
-                              style: TextStyle(
-                                color: statusStyle.foregroundColor,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusStyle.foregroundColor,
+                                fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -808,7 +798,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
+                              color: colorScheme.shadow.withValues(alpha: 0.08),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -822,7 +812,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             child: Tooltip(
                               message: loc.tr('shareAndOptions'),
                               child: Icon(
-                                Icons.more_vert_rounded,
+                                Symbols.more_vert_rounded,
                                 size: 17,
                                 color: colorScheme.onSurface,
                               ),
@@ -837,7 +827,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 PositionedDirectional(
                   top: 10,
                   start: 10,
-                  child: _buildPropertyTypeChip(
+                  child: _buildPropertyTypeChip(context: context, 
                     prop: prop,
                     loc: loc,
                     isDark: isDark,
@@ -866,11 +856,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     Expanded(
                       child: Text(
                         title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -883,20 +870,14 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                       children: [
                         Text(
                           '${CurrencyFormatter.formatAmount(prop.pricePerMonth, langCode: lang)} $currency',
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                            fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 3),
                         Text(
                           '/ ${loc.tr('perMonth')}',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -922,11 +903,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                                   prop.buildingName.trim().isNotEmpty
                                       ? '$location • ${prop.buildingName.trim()}'
                                       : location,
-                                  style: TextStyle(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -938,7 +916,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.payments_outlined,
+                                  Symbols.payments_rounded,
                                   size: 12,
                                   color: colorScheme.secondary,
                                 ),
@@ -946,11 +924,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                                 Expanded(
                                   child: Text(
                                     '${loc.tr('collectedTotal')}: ${CurrencyFormatter.formatAmount(prop.totalCollectedRevenue, langCode: lang)} $currency',
-                                    style: TextStyle(
-                                      color: colorScheme.secondary,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.secondary,
+                                      fontWeight: FontWeight.bold),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1005,7 +980,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
         children: [
           // Segment 1 (Primary Action)
           _buildActionSegment(
-            icon: prop.isOccupied ? Icons.calendar_month_rounded : Icons.vpn_key_rounded,
+            icon: prop.isOccupied ? Symbols.calendar_month_rounded : Symbols.vpn_key_rounded,
             label: showLabel ? (prop.isOccupied ? loc.tr('paymentScheduleShort') : loc.tr('markAsRentedBtn')) : null,
             tooltip: prop.isOccupied ? loc.tr('paymentScheduleShort') : loc.tr('markAsRentedBtn'),
             isPrimary: true,
@@ -1025,7 +1000,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           ),
           // Segment 2 (Secondary Action)
           _buildActionSegment(
-            icon: prop.isOccupied ? Icons.tune_rounded : Icons.edit_outlined,
+            icon: prop.isOccupied ? Symbols.tune_rounded : Symbols.edit_rounded,
             label: showLabel ? (prop.isOccupied ? loc.tr('manageListingShort') : loc.tr('editListingShort')) : null,
             tooltip: prop.isOccupied ? loc.tr('manageListingShort') : loc.tr('editListingShort'),
             isPrimary: false,
@@ -1051,7 +1026,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           ),
           // Segment 3 (Tertiary Action)
           _buildActionSegment(
-            icon: prop.isOccupied ? Icons.edit_outlined : Icons.visibility_outlined,
+            icon: prop.isOccupied ? Symbols.edit_rounded : Symbols.visibility_rounded,
             label: showLabel ? (prop.isOccupied ? loc.tr('editListingShort') : loc.tr('previewVisitorShort')) : null,
             tooltip: prop.isOccupied ? loc.tr('editListingShort') : loc.tr('previewVisitorShort'),
             isPrimary: false,
@@ -1111,11 +1086,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                   const SizedBox(width: 5),
                   Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: isPrimary ? FontWeight.bold : FontWeight.w600,
-                      color: fg,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isPrimary ? FontWeight.bold : FontWeight.w600,
+                      color: fg),
                   ),
                 ],
               ],
@@ -1255,12 +1227,9 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 flex: 5,
                 child: Text(
                   loc.tr('tableHeaderProperty'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.2,
-                  ),
+                    letterSpacing: 0.2),
                 ),
               ),
               const SizedBox(width: 14),
@@ -1268,12 +1237,9 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 width: 180,
                 child: Text(
                   loc.tr('tableHeaderStatus'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.2,
-                  ),
+                    letterSpacing: 0.2),
                 ),
               ),
               const SizedBox(width: 20),
@@ -1282,12 +1248,9 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 child: Text(
                   loc.tr('tableHeaderPrice'),
                   textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.2,
-                  ),
+                    letterSpacing: 0.2),
                 ),
               ),
               const SizedBox(width: 20),
@@ -1296,12 +1259,9 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 child: Text(
                   loc.tr('tableHeaderActions'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.2,
-                  ),
+                    letterSpacing: 0.2),
                 ),
               ),
             ],
@@ -1382,7 +1342,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     height: 54,
                     color: colorScheme.surfaceContainerHigh,
                     child: Icon(
-                      Icons.apartment_rounded,
+                      Symbols.apartment_rounded,
                       color: colorScheme.primary,
                     ),
                   ),
@@ -1412,11 +1372,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             ),
                             child: Text(
                               prop.unitNumber.trim(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: (typeStyle ?? _getPropertyTypeBadgeStyle(prop.propertyTypeCode, prop.unitNumber, loc, isDark)).textColor,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: (typeStyle ?? _getPropertyTypeBadgeStyle(prop.propertyTypeCode, prop.unitNumber, loc, isDark)).textColor),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1424,10 +1381,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1437,7 +1391,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        _buildPropertyTypeChip(prop: prop, loc: loc, isDark: isDark),
+                        _buildPropertyTypeChip(context: context, prop: prop, loc: loc, isDark: isDark),
                         const SizedBox(width: 10),
                         _buildLocationBadge(colorScheme, isDark),
                         const SizedBox(width: 6),
@@ -1446,11 +1400,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             prop.buildingName.trim().isNotEmpty
                                 ? '$location • ${prop.buildingName.trim()}'
                                 : location,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1485,11 +1436,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                         Flexible(
                           child: Text(
                             statusLabel,
-                            style: TextStyle(
-                              color: statusFg,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusFg,
+                              fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -1508,18 +1456,12 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                   children: [
                     Text(
                       '${CurrencyFormatter.formatAmount(prop.pricePerMonth, langCode: lang)} $currency',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                        fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '/ ${loc.tr('perMonth')}',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 10.5,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -1569,7 +1511,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
         children: [
           // 1. Primary Action Segment (Colored/Tonal container)
           _buildActionSegmentItem(
-            icon: prop.isOccupied ? Icons.calendar_month_rounded : Icons.vpn_key_rounded,
+            icon: prop.isOccupied ? Symbols.calendar_month_rounded : Symbols.vpn_key_rounded,
             tooltip: prop.isOccupied ? loc.tr('paymentScheduleShort') : loc.tr('markAsRentedBtn'),
             backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.65),
             foregroundColor: colorScheme.onPrimaryContainer,
@@ -1588,7 +1530,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           ),
           // 2. Secondary Action Segment (Tune if occupied, View if unoccupied)
           _buildActionSegmentItem(
-            icon: prop.isOccupied ? Icons.tune_rounded : Icons.visibility_outlined,
+            icon: prop.isOccupied ? Symbols.tune_rounded : Symbols.visibility_rounded,
             tooltip: prop.isOccupied ? loc.tr('manageListingShort') : loc.tr('previewVisitorShort'),
             foregroundColor: colorScheme.onSurface,
             onTap: () {
@@ -1607,7 +1549,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           ),
           // 3. Edit Action Segment
           _buildActionSegmentItem(
-            icon: Icons.edit_outlined,
+            icon: Symbols.edit_rounded,
             tooltip: loc.tr('editListingShort'),
             foregroundColor: colorScheme.onSurface,
             onTap: () => context.push(
@@ -1625,7 +1567,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           ),
           // 4. Share & Options Segment
           _buildActionSegmentItem(
-            icon: Icons.share_rounded,
+            icon: Symbols.share_rounded,
             tooltip: loc.tr('shareAndOptions'),
             foregroundColor: colorScheme.onSurface,
             onTap: () => PropertyShareDialog.show(context, prop),
@@ -1646,7 +1588,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
       color: backgroundColor ?? Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        hoverColor: Colors.black.withValues(alpha: 0.08),
+        hoverColor: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
         child: Tooltip(
           message: tooltip,
           child: SizedBox(
@@ -1723,7 +1665,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     width: 54,
                     height: 54,
                     color: colorScheme.surfaceContainerHigh,
-                    child: Icon(Icons.apartment_rounded, color: colorScheme.primary),
+                    child: Icon(Symbols.apartment_rounded, color: colorScheme.primary),
                   ),
                 ),
               ),
@@ -1749,11 +1691,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             ),
                             child: Text(
                               prop.unitNumber.trim(),
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: (typeStyle ?? _getPropertyTypeBadgeStyle(prop.propertyTypeCode, prop.unitNumber, loc, isDark)).textColor,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: (typeStyle ?? _getPropertyTypeBadgeStyle(prop.propertyTypeCode, prop.unitNumber, loc, isDark)).textColor),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1761,7 +1700,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1771,7 +1710,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        _buildPropertyTypeChip(prop: prop, loc: loc, isDark: isDark),
+                        _buildPropertyTypeChip(context: context, prop: prop, loc: loc, isDark: isDark),
                         const SizedBox(width: 8),
                         _buildLocationBadge(colorScheme, isDark, isSmall: true),
                         const SizedBox(width: 5),
@@ -1780,11 +1719,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                             prop.buildingName.trim().isNotEmpty
                                 ? '$location • ${prop.buildingName.trim()}'
                                 : location,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1794,11 +1730,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     const SizedBox(height: 4),
                     Text(
                       '${CurrencyFormatter.formatAmount(prop.pricePerMonth, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1827,7 +1760,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     const SizedBox(width: 4),
                     Text(
                       statusLabel,
-                      style: TextStyle(color: statusFg, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusFg, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1867,7 +1800,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
       child: Row(
         children: [
           Icon(
-            Icons.drag_indicator_rounded,
+            Symbols.drag_indicator_rounded,
             size: isMobile ? 18 : 20,
             color: colorScheme.primary,
           ),
@@ -1875,11 +1808,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
           Expanded(
             child: Text(
               loc.tr('reorderableListHint'),
-              style: TextStyle(
-                fontSize: isMobile ? 12 : 12.5,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant),
             ),
           ),
         ],
@@ -1905,7 +1835,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.apartment_rounded,
+                Symbols.apartment_rounded,
                 size: 48,
                 color: colorScheme.primary.withValues(alpha: 0.6),
               ),
@@ -1913,11 +1843,8 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             const SizedBox(height: 16),
             Text(
               loc.tr('noPropertiesFound'),
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500),
             ),
           ],
         ),

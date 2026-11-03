@@ -8,9 +8,12 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/services/investor_analytics_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 (M3) Investment Simulator Dialog for Tashil Real Estate.
 /// Conforms to:
@@ -61,7 +64,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
     _priceController = TextEditingController(text: initialPrice.toStringAsFixed(0));
     _rentController = TextEditingController(text: initialRent.toStringAsFixed(0));
     _nameController = TextEditingController(
-      text: isUAE ? 'شقة استثمارية - دبي داون تاون' : 'شقة استثمارية - التجمع الخامس',
+      text: isUAE ? 'شقة استثمارية - دبي داون تاون' : AppLocalizations.trStatic('uiCopy225'),
     );
 
     _annualMaintenance = isUAE ? 8000.0 : 15000.0;
@@ -118,7 +121,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
         final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
         final lang = currentLocale.languageCode;
 
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           elevation: 3.0,
           shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.25),
@@ -149,7 +152,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                Icons.calculate_rounded,
+                                Symbols.calculate_rounded,
                                 color: theme.colorScheme.onPrimaryContainer,
                                 size: 24,
                               ),
@@ -161,21 +164,15 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                                 children: [
                                   Text(
                                     loc.tr('investmentSimulatorTitle'),
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onSurface,
-                                      fontSize: 17,
-                                    ),
+                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     loc.tr('investmentSimulatorSubtitle'),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -238,7 +235,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                     alignment: AlignmentDirectional.centerEnd,
                     child: TashilButton(
                       onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-                      icon: Icons.check_rounded,
+                      icon: Symbols.check_rounded,
                       label: loc.tr('close'),
                     ),
                   ),
@@ -258,18 +255,15 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
         Row(
           children: [
             Icon(
-              Icons.tune_rounded,
+              Symbols.tune_rounded,
               size: 18,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(width: 8),
             Text(
               loc.tr('unitParameters'),
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: theme.colorScheme.onSurface,
-              ),
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface),
             ),
           ],
         ),
@@ -280,7 +274,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
           controller: _nameController,
           decoration: InputDecoration(
             labelText: loc.tr('propertyName'),
-            prefixIcon: const Icon(Icons.apartment_rounded, size: 20),
+            prefixIcon: const Icon(Symbols.apartment_rounded, size: 20),
             filled: true,
             fillColor: theme.colorScheme.surfaceContainerLowest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -304,7 +298,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
           onChanged: (_) => _recalculate(),
           decoration: InputDecoration(
             labelText: '${loc.tr('purchasePrice')} ($currency)',
-            prefixIcon: const Icon(Icons.monetization_on_rounded, size: 20),
+            prefixIcon: const Icon(Symbols.monetization_on_rounded, size: 20),
             filled: true,
             fillColor: theme.colorScheme.surfaceContainerLowest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -328,11 +322,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
             Expanded(
               child: Text(
                 '${loc.tr('downPaymentPercentage')}: ${_downPaymentPercent.toInt()}%',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -340,11 +331,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
             const SizedBox(width: 8),
             Text(
               '${CurrencyFormatter.formatAmount(_currentResult.downPayment, langCode: lang)} $currency',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary),
             ),
           ],
         ),
@@ -371,7 +359,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
           onChanged: (_) => _recalculate(),
           decoration: InputDecoration(
             labelText: '${loc.tr('expectedMonthlyRent')} ($currency)',
-            prefixIcon: const Icon(Icons.payments_rounded, size: 20),
+            prefixIcon: const Icon(Symbols.payments_rounded, size: 20),
             filled: true,
             fillColor: theme.colorScheme.surfaceContainerLowest,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -398,7 +386,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                 onChanged: (_) => _recalculate(),
                 decoration: InputDecoration(
                   labelText: '${loc.tr('annualMaintenance')} ($currency)',
-                  prefixIcon: const Icon(Icons.handyman_rounded, size: 18),
+                  prefixIcon: const Icon(Symbols.handyman_rounded, size: 18),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerLowest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -422,7 +410,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                 onChanged: (_) => _recalculate(),
                 decoration: InputDecoration(
                   labelText: '${loc.tr('annualServiceFees')} ($currency)',
-                  prefixIcon: const Icon(Icons.room_service_rounded, size: 18),
+                  prefixIcon: const Icon(Symbols.room_service_rounded, size: 18),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerLowest,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -449,11 +437,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
             Expanded(
               child: Text(
                 '${loc.tr('annualAppreciationForecast')}: ${_annualGrowthRate.toStringAsFixed(1)}%',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -495,11 +480,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
               Expanded(
                 child: Text(
                   loc.tr('simulationResultsTitle'),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -515,18 +497,15 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.analytics_rounded,
+                      Symbols.analytics_rounded,
                       size: 14,
                       color: theme.colorScheme.onSecondaryContainer,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       '${loc.tr('capRate')}: ${_currentResult.capRatePercentage.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -546,7 +525,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                     loc.tr('netOperatingIncomeNoi'),
                     '${CurrencyFormatter.formatAmount(_currentResult.netOperatingIncome, langCode: lang)} $currency',
                     theme.colorScheme.primary,
-                    Icons.trending_up_rounded,
+                    Symbols.trending_up_rounded,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -556,7 +535,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                     loc.tr('cashOnCashReturn'),
                     '${_currentResult.cashOnCashReturnPercentage.toStringAsFixed(2)}%',
                     theme.colorScheme.secondary,
-                    Icons.percent_rounded,
+                    Symbols.percent_rounded,
                   ),
                 ),
               ],
@@ -573,7 +552,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                     loc.tr('paybackPeriod'),
                     '${_currentResult.paybackPeriodYears.toStringAsFixed(1)} ${loc.tr('years')}',
                     theme.colorScheme.tertiary,
-                    Icons.timelapse_rounded,
+                    Symbols.timelapse_rounded,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -583,7 +562,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                     loc.tr('fiveYearProjectedValue'),
                     '${CurrencyFormatter.formatAmount(_currentResult.fiveYearProjectedValue, langCode: lang)} $currency',
                     theme.colorScheme.primary,
-                    Icons.auto_graph_rounded,
+                    Symbols.auto_graph_rounded,
                   ),
                 ),
               ],
@@ -592,17 +571,16 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
           const SizedBox(height: 16),
 
           // 5-Year Cumulative Profit Breakdown Box
-          Container(
+          Builder(builder: (context) {
+            final onBanner = TashilBannerColors.foreground(theme.colorScheme);
+            return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  Color.lerp(theme.colorScheme.primary, Colors.black, 0.18) ?? theme.colorScheme.primary,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: TashilBannerColors.gradient(theme.colorScheme),
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -618,11 +596,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
               children: [
                 Text(
                   loc.tr('fiveYearCumulativeReturn'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner.withValues(alpha: 0.85),
+                    fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 6),
                 FittedBox(
@@ -630,26 +605,21 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                   alignment: AlignmentDirectional.centerStart,
                   child: Text(
                     '+ ${CurrencyFormatter.formatAmount(_currentResult.totalEstimated5YearProfit, langCode: lang)} $currency',
-                    style: TextStyle(
-                      color: theme.colorScheme.onPrimary,
-                      fontSize: 20,
+                    style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
+                      letterSpacing: -0.5),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   loc.tr('fiveYearSimulationNote'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
-                    fontSize: 11,
-                    height: 1.35,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.75),
+                    height: 1.35),
                 ),
               ],
             ),
-          ),
+          );
+          }),
         ],
       ),
     );
@@ -674,12 +644,9 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
               Expanded(
                 child: Text(
                   label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11.5,
-                    color: theme.colorScheme.onSurfaceVariant,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
-                    height: 1.25,
-                  ),
+                    height: 1.25),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -692,11 +659,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
             alignment: AlignmentDirectional.centerStart,
             child: Text(
               value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: theme.colorScheme.onSurface,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface),
               maxLines: 1,
             ),
           ),

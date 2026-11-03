@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/owner_portal/owner_dashboard.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -71,7 +72,7 @@ void main() {
                         activeIndex = 1;
                       });
                     },
-                    child: const Icon(Icons.arrow_forward),
+                    child: const Icon(Symbols.arrow_forward_rounded),
                   ),
                 ),
               );
@@ -136,10 +137,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Motion button exists in header
-      expect(find.byIcon(Icons.animation_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.animation_rounded), findsWidgets);
 
       // Tap to open motion preference modal
-      await tester.tap(find.byIcon(Icons.animation_rounded));
+      await tester.tap(find.byIcon(Symbols.animation_rounded));
       await tester.pumpAndSettle();
 
       // Modal dialog title exists in Arabic

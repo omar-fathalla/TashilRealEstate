@@ -10,6 +10,8 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/models/investor_portfolio_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class InvestorReportDialog extends StatelessWidget {
   final InvestorPortfolioSummary summary;
@@ -35,7 +37,7 @@ class InvestorReportDialog extends StatelessWidget {
 
     final String reportDate;
     if (lang == 'ar') {
-      reportDate = '30 نوفمبر 2026';
+      reportDate = AppLocalizations.trStatic('uiCopy025');
     } else if (lang == 'hi') {
       reportDate = '30 नवंबर 2026';
     } else {
@@ -43,7 +45,7 @@ class InvestorReportDialog extends StatelessWidget {
     }
     final refNumber = isUAE ? 'INV-AE-2026-8819' : 'INV-EG-2026-9941';
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       elevation: 6.0,
       shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.25),
@@ -74,7 +76,7 @@ class InvestorReportDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            Icons.picture_as_pdf_rounded,
+                            Symbols.picture_as_pdf_rounded,
                             color: theme.colorScheme.onPrimaryContainer,
                             size: 22,
                           ),
@@ -88,20 +90,14 @@ class InvestorReportDialog extends StatelessWidget {
                                 loc.tr('officialInvestorReportTitle'),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface),
                               ),
                               Text(
                                 'Ref: $refNumber • $reportDate',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -143,18 +139,15 @@ class InvestorReportDialog extends StatelessWidget {
                                   Row(
                                     children: [
                                       Icon(
-                                        Icons.domain_verification_rounded,
+                                        Symbols.domain_verification_rounded,
                                         color: theme.colorScheme.primary,
                                         size: 24,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         loc.tr('appName'),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: theme.colorScheme.primary,
-                                        ),
+                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.primary),
                                       ),
                                     ],
                                   ),
@@ -163,10 +156,7 @@ class InvestorReportDialog extends StatelessWidget {
                                     isUAE
                                         ? loc.tr('regulatoryAuthorityAe')
                                         : loc.tr('regulatoryAuthorityEg'),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -181,11 +171,8 @@ class InvestorReportDialog extends StatelessWidget {
                               ),
                               child: Text(
                                 loc.tr('certifiedAuditedStatement'),
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSecondaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -203,7 +190,7 @@ class InvestorReportDialog extends StatelessWidget {
                           child: Row(
                             children: [
                               Expanded(
-                                child: _buildReportMetric(
+                                child: _buildReportMetric(context, 
                                   theme,
                                   loc.tr('livePortfolioValuation'),
                                   '${CurrencyFormatter.formatAmount(summary.totalPortfolioValue, langCode: lang)} $currency',
@@ -211,7 +198,7 @@ class InvestorReportDialog extends StatelessWidget {
                               ),
                               Container(height: 36, width: 1, color: theme.colorScheme.outlineVariant),
                               Expanded(
-                                child: _buildReportMetric(
+                                child: _buildReportMetric(context, 
                                   theme,
                                   loc.tr('netAnnualCashFlow'),
                                   '${CurrencyFormatter.formatAmount(summary.netAnnualCashFlow, langCode: lang)} $currency',
@@ -219,7 +206,7 @@ class InvestorReportDialog extends StatelessWidget {
                               ),
                               Container(height: 36, width: 1, color: theme.colorScheme.outlineVariant),
                               Expanded(
-                                child: _buildReportMetric(
+                                child: _buildReportMetric(context, 
                                   theme,
                                   loc.tr('netRoi'),
                                   '${summary.portfolioNetRoi.toStringAsFixed(2)}%',
@@ -227,7 +214,7 @@ class InvestorReportDialog extends StatelessWidget {
                               ),
                               Container(height: 36, width: 1, color: theme.colorScheme.outlineVariant),
                               Expanded(
-                                child: _buildReportMetric(
+                                child: _buildReportMetric(context, 
                                   theme,
                                   loc.tr('portfolioOccupancy'),
                                   '${summary.occupancyRate.toStringAsFixed(0)}% (${summary.occupiedUnitsCount}/${summary.totalUnitsCount})',
@@ -241,11 +228,8 @@ class InvestorReportDialog extends StatelessWidget {
                         // Asset Inventory Table
                         Text(
                           loc.tr('assetInventoryTitle'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface),
                         ),
                         const SizedBox(height: 10),
 
@@ -260,12 +244,12 @@ class InvestorReportDialog extends StatelessWidget {
                             dataRowMinHeight: 48,
                             dataRowMaxHeight: 56,
                             columns: [
-                              DataColumn(label: Text(loc.tr('propertyName'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
-                              DataColumn(label: Text(loc.tr('purchasePrice'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
-                              DataColumn(label: Text(loc.tr('currentMarketValuation'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
-                              DataColumn(label: Text(loc.tr('grossYield'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
-                              DataColumn(label: Text(loc.tr('netRoi'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
-                              DataColumn(label: Text(loc.tr('status'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('propertyName'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('purchasePrice'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('currentMarketValuation'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('grossYield'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('netRoi'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                              DataColumn(label: Text(loc.tr('status'), style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
                             ],
                             rows: summary.assets.map((a) {
                               final name = AiTranslationService.getLocalizedText(a.name, lang);
@@ -278,15 +262,15 @@ class InvestorReportDialog extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.onSurface)),
-                                        Text(AiTranslationService.getLocalizedText(a.location, lang), style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)),
+                                        Text(name, style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                                        Text(AiTranslationService.getLocalizedText(a.location, lang), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                       ],
                                     ),
                                   ),
-                                  DataCell(Text('${CurrencyFormatter.formatAmount(a.purchasePrice, langCode: lang)} $currency', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface))),
-                                  DataCell(Text('${CurrencyFormatter.formatAmount(a.currentMarketValue, langCode: lang)} $currency', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
-                                  DataCell(Text('${a.grossYieldPercentage.toStringAsFixed(2)}%', style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold))),
-                                  DataCell(Text('${a.netRoiPercentage.toStringAsFixed(2)}%', style: TextStyle(fontSize: 11, color: theme.colorScheme.secondary, fontWeight: FontWeight.bold))),
+                                  DataCell(Text('${CurrencyFormatter.formatAmount(a.purchasePrice, langCode: lang)} $currency', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface))),
+                                  DataCell(Text('${CurrencyFormatter.formatAmount(a.currentMarketValue, langCode: lang)} $currency', style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                                  DataCell(Text('${a.grossYieldPercentage.toStringAsFixed(2)}%', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold))),
+                                  DataCell(Text('${a.netRoiPercentage.toStringAsFixed(2)}%', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.secondary, fontWeight: FontWeight.bold))),
                                   DataCell(
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -298,13 +282,10 @@ class InvestorReportDialog extends StatelessWidget {
                                       ),
                                       child: Text(
                                         isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                           color: isOccupied
                                               ? theme.colorScheme.onPrimaryContainer
-                                              : theme.colorScheme.onTertiaryContainer,
-                                        ),
+                                              : theme.colorScheme.onTertiaryContainer),
                                       ),
                                     ),
                                   ),
@@ -324,11 +305,8 @@ class InvestorReportDialog extends StatelessWidget {
                               children: [
                                 Text(
                                   loc.tr('certifiedFinancialAdvisorSignature'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 const SizedBox(height: 6),
                                 Container(
@@ -341,7 +319,7 @@ class InvestorReportDialog extends StatelessWidget {
                                   ),
                                   child: Center(
                                     child: Icon(
-                                      Icons.qr_code_2_rounded,
+                                      Symbols.qr_code_2_rounded,
                                       size: 44,
                                       color: theme.colorScheme.primary,
                                     ),
@@ -357,15 +335,15 @@ class InvestorReportDialog extends StatelessWidget {
                               ),
                               child: Column(
                                 children: [
-                                  Icon(Icons.verified_user_rounded, color: theme.colorScheme.primary, size: 20),
+                                  Icon(Symbols.verified_user_rounded, color: theme.colorScheme.primary, size: 20),
                                   const SizedBox(height: 2),
                                   Text(
                                     loc.tr('appName'),
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.primary),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                                   ),
                                   Text(
                                     loc.tr('officiallyVerified'),
-                                    style: TextStyle(fontSize: 8, letterSpacing: 1.1, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 1.1, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -395,7 +373,7 @@ class InvestorReportDialog extends StatelessWidget {
                       );
                       Navigator.of(context, rootNavigator: true).pop();
                     },
-                    icon: Icons.download_rounded,
+                    icon: Symbols.download_rounded,
                     label: loc.tr('downloadOfficialPdfStatement'),
                   ),
                 ],
@@ -407,16 +385,13 @@ class InvestorReportDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildReportMetric(ThemeData theme, String label, String value) {
+  Widget _buildReportMetric(BuildContext context, ThemeData theme, String label, String value) {
     return Column(
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -426,11 +401,8 @@ class InvestorReportDialog extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
             textAlign: TextAlign.center,
             maxLines: 1,
           ),

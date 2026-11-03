@@ -135,13 +135,13 @@ class DynamicPricingOptimizerService {
         vacancySaved = 30;
         yieldInc = 1.6;
         strategy = {
-          'ar': 'تعديل الإيجار بزيادة 8% بالتوافق مع مؤشر حاسبة زيادة الإيجار لمؤسسة التنظيم العقاري (RERA).',
-          'en': 'Adjust rent upward by 8% in accordance with RERA rental increase index guidelines.',
-          'hi': 'रेरा रेंटल इंडेक्स दिशानिर्देशों के अनुसार किराए में 8% की वृद्धि करें।',
+          'ar': 'تعديل الإيجار بزيادة 8% بالتوافق مع مؤشر الإيجارات الصادر عن دائرة الأراضي والأملاك.',
+          'en': 'Adjust the rent upward by 8% in line with the Dubai Land Department Rental Index.',
+          'hi': 'दुबई भूमि विभाग के रेंटल इंडेक्स के अनुसार किराया 8% बढ़ाएँ।',
         };
-        driversAr = ['مؤشر ريرا المحدث', 'نمو مطرد في الطلب', 'تجديد عقود الإيجار السنوية'];
-        driversEn = ['Updated RERA Index', 'Steady Inflow Demand', 'Annual Tenancy Renewals'];
-        driversHi = ['अद्यतन रेरा सूचकांक', 'स्थिर प्रवाह मांग', 'वार्षिक किरायेदारी नवीनीकरण'];
+        driversAr = ['مؤشر الإيجارات', 'نمو مطرد في الطلب', 'تجديد عقود الإيجار السنوية'];
+        driversEn = ['Rental Index', 'Steady inflow demand', 'Annual tenancy renewals'];
+        driversHi = ['रेंटल इंडेक्स', 'मांग का स्थिर प्रवाह', 'वार्षिक किरायेदारी नवीनीकरण'];
       }
     } else {
       // Egypt Seasonality (Student Academic AUC vs Summer Coast vs General)

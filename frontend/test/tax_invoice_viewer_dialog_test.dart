@@ -94,7 +94,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('تنزيل الفاتورة'), findsOneWidget);
-      expect(find.text('دفع إلكتروني فوري'), findsOneWidget);
+      expect(find.text('ادفع الآن'), findsOneWidget);
       expect(find.byType(TashilButton), findsNWidgets(2));
     });
 
@@ -107,9 +107,9 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en'), country: 'EG', forcePaid: true));
       await tester.pumpAndSettle();
 
-      expect(find.text('Official Electronic Tax Invoice'), findsOneWidget);
-      expect(find.text('Leased Property'), findsOneWidget);
-      expect(find.text('Download Invoice'), findsOneWidget);
+      expect(find.text('Official electronic tax invoice'), findsOneWidget);
+      expect(find.text('Leased property'), findsOneWidget);
+      expect(find.text('Download invoice'), findsOneWidget);
       expect(find.byType(QrImageView), findsOneWidget);
 
       // Hindi

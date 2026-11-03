@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/features/document_ocr/services/ai_document_oc
 import 'package:tashil_real_estate/features/document_ocr/widgets/ai_document_ocr_modal.dart';
 
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget buildTestableWidget(Widget child, {Locale locale = const Locale('ar')}) {
   LocaleController.setLocale(locale);
@@ -101,8 +102,8 @@ void main() {
       expect(find.text('رفع صورة'), findsOneWidget);
 
       // 4. Contains upload and camera icons
-      expect(find.byIcon(Icons.photo_camera_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.upload_file_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.photo_camera_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.upload_file_rounded), findsWidgets);
     });
 
     testWidgets('Profile Mode shortens bottom action button to "تطبيق البيانات" with modern task_alt_rounded checkmark', (tester) async {
@@ -128,7 +129,7 @@ void main() {
       expect(find.text('تطبيق البيانات'), findsOneWidget);
 
       // 2. Action button features the modern Google M3 task_alt_rounded open checkmark icon
-      expect(find.byIcon(Icons.task_alt_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.task_alt_rounded), findsWidgets);
 
       // 3. Long contract-specific button is NOT displayed
       expect(find.text('تفريغ وتطبيق البيانات في العقد فوراً'), findsNothing);
@@ -137,7 +138,7 @@ void main() {
       expect(find.text('إلغاء'), findsOneWidget);
 
       // 5. Close button adheres to M3 shaded close button variant
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
     });
 
     testWidgets('Contract Mode retains contract-specific "تفريغ وتطبيق البيانات في العقد فوراً" and template chips', (tester) async {
@@ -185,11 +186,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1400));
 
       // English labels
-      expect(find.text('Identity Document Type'), findsOneWidget);
-      expect(find.text('Egypt: National ID'), findsOneWidget);
-      expect(find.text('Upload Photo'), findsOneWidget);
-      expect(find.text('Take Photo'), findsOneWidget);
-      expect(find.text('Apply Data'), findsOneWidget);
+      expect(find.text('Identity document type'), findsOneWidget);
+      expect(find.text('Egypt: national ID'), findsOneWidget);
+      expect(find.text('Upload photo'), findsOneWidget);
+      expect(find.text('Take photo'), findsOneWidget);
+      expect(find.text('Apply data'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
     });
 
@@ -213,16 +214,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1400));
 
       // Rotation and Zoom buttons are present
-      expect(find.byIcon(Icons.rotate_left_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.rotate_right_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.zoom_in_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.rotate_left_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.rotate_right_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.zoom_in_rounded), findsWidgets);
 
       // Initially rotation turns is 0
       final initialRotatedBox = tester.widget<RotatedBox>(find.byType(RotatedBox));
       expect(initialRotatedBox.quarterTurns, equals(0));
 
       // Tap rotate right (90°)
-      await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+      await tester.tap(find.byIcon(Symbols.rotate_right_rounded));
       await tester.pump();
 
       // Degree indicator "90°" appears and RotatedBox has quarterTurns = 1
@@ -260,7 +261,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1400));
 
       // Tap Zoom button
-      await tester.tap(find.byIcon(Icons.zoom_in_rounded));
+      await tester.tap(find.byIcon(Symbols.zoom_in_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -271,7 +272,7 @@ void main() {
       // Dismiss dialog via close button
       final closeFinder = find.descendant(
         of: find.byType(Dialog),
-        matching: find.byIcon(Icons.close_rounded),
+        matching: find.byIcon(Symbols.close_rounded),
       );
       await tester.tap(closeFinder.last);
       await tester.pump();

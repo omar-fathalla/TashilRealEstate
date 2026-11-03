@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive Material Design 3 Action Handler for Email Verification and Password Reset.
 /// Replaces the generic/raw Firebase white screen with a celebratory branded experience.
@@ -159,8 +160,8 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           height: 80,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                              begin: AlignmentDirectional.topStart,
+                              end: AlignmentDirectional.bottomEnd,
                               colors: [
                                 colorScheme.primary,
                                 colorScheme.secondary,
@@ -177,12 +178,12 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           ),
                           child: Icon(
                             _isSuccess
-                                ? Icons.mark_email_read_rounded
+                                ? Symbols.mark_email_read_rounded
                                 : (widget.mode == 'resetPassword'
-                                    ? Icons.lock_reset_rounded
-                                    : Icons.mark_email_unread_rounded),
+                                    ? Symbols.lock_reset_rounded
+                                    : Symbols.mark_email_unread_rounded),
                             size: 42,
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                           ),
                         ),
                       ),
@@ -215,15 +216,12 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF10B981)),
+                              const Icon(Symbols.verified_rounded, size: 16, color: Color(0xFF10B981)),
                               const SizedBox(width: 6),
                               Text(
                                 loc.tr('emailVerifiedBadge'),
-                                style: const TextStyle(
-                                  color: Color(0xFF10B981),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -259,7 +257,7 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.handshake_rounded, color: colorScheme.primary, size: 24),
+                              Icon(Symbols.handshake_rounded, color: colorScheme.primary, size: 24),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -279,14 +277,14 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                         // Actions
                         TashilButton.filled(
                           label: loc.tr('proceedToDashboard'),
-                          icon: Icons.dashboard_rounded,
+                          icon: Symbols.dashboard_rounded,
                           height: 48,
                           onPressed: () => context.go('/admin/login'),
                         ),
                         const SizedBox(height: 12),
                         TashilButton.outlined(
                           label: loc.tr('returnToMarketplace'),
-                          icon: Icons.storefront_outlined,
+                          icon: Symbols.storefront_rounded,
                           height: 44,
                           onPressed: () => context.go('/'),
                         ),
@@ -306,10 +304,10 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           textDirection: TextDirection.ltr,
                           decoration: InputDecoration(
                             labelText: loc.tr('newPasswordLabel'),
-                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            prefixIcon: const Icon(Symbols.lock_outline_rounded),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                _obscurePassword ? Symbols.visibility_rounded : Symbols.visibility_off_rounded,
                               ),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
@@ -325,7 +323,7 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           textDirection: TextDirection.ltr,
                           decoration: InputDecoration(
                             labelText: loc.tr('confirmPasswordLabel'),
-                            prefixIcon: const Icon(Icons.lock_reset_rounded),
+                            prefixIcon: const Icon(Symbols.lock_reset_rounded),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -334,7 +332,7 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                         const SizedBox(height: 24),
                         TashilButton.filled(
                           label: loc.tr('confirm'),
-                          icon: Icons.check_circle_rounded,
+                          icon: Symbols.check_circle_rounded,
                           height: 48,
                           isLoading: _isLoading,
                           onPressed: () => _confirmResetPassword(loc),

@@ -2,6 +2,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/audio/audio_feedback_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Google Material Design 3 (M3) Switch Component.
 ///
@@ -26,7 +27,7 @@ import '../../utils/audio/audio_feedback_service.dart';
 ///    - Unselected fill: colorScheme.outline
 /// 3. Embedded Icon:
 ///    - Size: 16.0dp
-///    - Default selected icon: [Icons.check_rounded] in colorScheme.primary
+///    - Default selected icon: [Symbols.check_rounded] in colorScheme.primary
 ///    - Configurable for: selected-only (M3 default), both, or none
 /// 4. State Layer & Interaction:
 ///    - 40.0dp state layer aura centered on the handle
@@ -53,7 +54,7 @@ class TashilSwitch extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.showIcon = true,
-    this.selectedIcon = Icons.check_rounded,
+    this.selectedIcon = Symbols.check_rounded,
     this.unselectedIcon,
     this.activeTrackColor,
     this.inactiveTrackColor,
@@ -423,7 +424,7 @@ class TashilSwitchListTile extends StatelessWidget {
     required this.onChanged,
     this.contentPadding = const EdgeInsetsDirectional.symmetric(horizontal: 16.0, vertical: 8.0),
     this.showIcon = true,
-    this.selectedIcon = Icons.check_rounded,
+    this.selectedIcon = Symbols.check_rounded,
     this.unselectedIcon,
     this.enabled = true,
   });

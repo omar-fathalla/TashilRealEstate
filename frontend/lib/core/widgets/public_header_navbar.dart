@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dial
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSubPage;
@@ -84,9 +85,9 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                   value: 'dashboard',
                   child: Row(
                     children: [
-                      Icon(Icons.dashboard_rounded, size: 18, color: colorScheme.primary),
+                      Icon(Symbols.dashboard_rounded, size: 18, color: colorScheme.primary),
                       const SizedBox(width: 10),
-                      Text(loc.tr('backToDashboard'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(loc.tr('backToDashboard'), style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -95,16 +96,16 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout_rounded, size: 18, color: colorScheme.error),
+                      Icon(Symbols.logout_rounded, size: 18, color: colorScheme.error),
                       const SizedBox(width: 10),
-                      Text(loc.tr('logout'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.error)),
+                      Text(loc.tr('logout'), style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.error)),
                     ],
                   ),
                 ),
               ],
               child: Container(
-                width: 38,
-                height: 38,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: colorScheme.primaryContainer,
@@ -113,31 +114,26 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                 alignment: Alignment.center,
                 child: Text(
                   info.initials,
-                  style: TextStyle(
-                    color: colorScheme.onPrimaryContainer,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold),
                 ),
               ),
             );
           }
 
-          return TashilIconButton.tonal(
-            icon: Icons.lock_person_outlined,
-            size: 38,
-            iconSize: 19,
-            tooltip: loc.tr('portalLogin'),
+          return TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            icon: Icon(Symbols.login_rounded, color: colorScheme.primary),
+            label: Text(loc.tr('signIn')),
             onPressed: () => _navigateSafely(context, '/login'),
           );
         },
       );
     } catch (_) {
-      return TashilIconButton.tonal(
-        icon: Icons.lock_person_outlined,
-        size: 38,
-        iconSize: 19,
-        tooltip: loc.tr('portalLogin'),
+      return TextButton.icon(
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        icon: Icon(Symbols.login_rounded, color: colorScheme.primary),
+        label: Text(loc.tr('signIn')),
         onPressed: () => _navigateSafely(context, '/login'),
       );
     }
@@ -148,24 +144,27 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
     AppLocalizations loc,
     ColorScheme colorScheme,
   ) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // PHYSICAL LEFT: Brand Icon + English "Tashil Aqar"
-            InkWell(
+            Flexible(
+            child: InkWell(
               onTap: () => _navigateSafely(context, '/'),
               borderRadius: BorderRadius.circular(10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final showMark = !isSubPage || constraints.maxWidth >= 160;
+                  return Row(
                 children: [
                   if (isSubPage) ...[
                     IconButton(
-                      icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
-                      tooltip: loc.tr('browseAsVisitor'),
+                      icon: Icon(
+                        Symbols.arrow_back_rounded,
+                        color: colorScheme.onSurface,
+                      ),
+                      tooltip: loc.tr('back'),
+                      style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                       onPressed: () {
                         if (context.canPop()) {
                           context.pop();
@@ -176,6 +175,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     ),
                     const SizedBox(width: 2),
                   ],
+                  if (showMark) ...[
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
@@ -183,31 +183,36 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      Icons.apartment_rounded,
+                      Symbols.apartment_rounded,
                       color: colorScheme.onPrimary,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Tashil Aqar',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: colorScheme.onSurface,
-                      letterSpacing: -0.3,
+                  ],
+                  Expanded(
+                    child: Text(
+                      loc.tr('appName'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.3),
                     ),
                   ),
                 ],
+                  );
+                },
               ),
             ),
-
-            // PHYSICAL RIGHT: Circular Login / Account Button Only
-            _buildMobileCircularLoginButton(context, loc, colorScheme),
+            ),
+            if (currentRoute != '/') ...[
+              const SizedBox(width: 8),
+              _buildMobileCircularLoginButton(context, loc, colorScheme),
+            ],
           ],
         ),
-      ),
-    );
+      );
   }
 
   @override
@@ -222,7 +227,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         backgroundColor: colorScheme.surfaceContainerLowest,
         elevation: 0,
         scrolledUnderElevation: 1,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
         titleSpacing: 0,
         automaticallyImplyLeading: false,
         centerTitle: false,
@@ -234,7 +239,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
       backgroundColor: colorScheme.surfaceContainerLowest,
       elevation: 0,
       scrolledUnderElevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
       titleSpacing: 16,
       automaticallyImplyLeading: false,
       centerTitle: false,
@@ -249,8 +254,12 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
               // Back Button on Subpages
               if (isSubPage) ...[
                 IconButton(
-                  icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
-                  tooltip: loc.tr('browseAsVisitor'),
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                  icon: Icon(
+                    Symbols.arrow_back_rounded,
+                    color: colorScheme.onSurface,
+                  ),
+                  tooltip: loc.tr('back'),
                   onPressed: () {
                     if (context.canPop()) {
                       context.pop();
@@ -270,7 +279,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.apartment_rounded,
+                  Symbols.apartment_rounded,
                   color: colorScheme.onPrimary,
                   size: 20,
                 ),
@@ -287,22 +296,16 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                       loc.tr('appName'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
-                        letterSpacing: -0.5,
-                      ),
+                        letterSpacing: -0.5),
                     ),
                     Text(
                       loc.tr('appSlogan'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -351,14 +354,14 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         items: [
           // 1. AI Smart Valuation Icon Button
           TashilConnectedIconItem(
-            icon: Icons.auto_awesome_rounded,
+            icon: Symbols.auto_awesome_rounded,
             tooltip: loc.tr('aiValuationTitle'),
             onTap: () => SmartValuationDialog.show(context),
           ),
 
           // 2. Real Estate Market Index Icon Button
           TashilConnectedIconItem(
-            icon: Icons.analytics_rounded,
+            icon: Symbols.analytics_rounded,
             tooltip: CountryController.isUAE
                 ? loc.tr('dxbMarketIndexTitle')
                 : loc.tr('aqarmapIndexTitle'),
@@ -368,7 +371,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
 
           // 3. Unified App Settings Icon Button (Country, Language, Theme Palette & Font)
           TashilConnectedIconItem(
-            icon: Icons.tune_rounded,
+            icon: Symbols.tune_rounded,
             tooltip: _getSettingsTooltip(loc),
             onTap: () => AppSettingsDialog.show(context),
           ),
@@ -380,7 +383,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             )
           else
             TashilConnectedIconItem(
-              icon: Icons.lock_person_outlined,
+              icon: Symbols.lock_person_rounded,
               tooltip: loc.tr('portalLogin'),
               isSelected: true,
               activeColor: colorScheme.primary,
@@ -410,7 +413,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         ),
         color: colorScheme.surfaceContainerLowest,
         elevation: 8,
-        shadowColor: Colors.black.withValues(alpha: 0.12),
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.12),
         onSelected: (action) async {
           if (action == 'dashboard') {
             _navigateSafely(context, info.dashboardRoute);
@@ -434,11 +437,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                     radius: 18,
                     child: Text(
                       info.initials,
-                      style: TextStyle(
-                        color: colorScheme.onPrimaryContainer,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -449,21 +449,15 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                       children: [
                         Text(
                           info.displayName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           info.roleTitle,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                            fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -480,15 +474,12 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             value: 'dashboard',
             child: Row(
               children: [
-                Icon(Icons.dashboard_rounded, color: colorScheme.onSurface, size: 18),
+                Icon(Symbols.dashboard_rounded, color: colorScheme.onSurface, size: 18),
                 const SizedBox(width: 10),
                 Text(
                   loc.tr('backToDashboard'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface),
                 ),
               ],
             ),
@@ -501,15 +492,12 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             value: 'logout',
             child: Row(
               children: [
-                Icon(Icons.logout_rounded, color: colorScheme.error, size: 18),
+                Icon(Symbols.logout_rounded, color: colorScheme.error, size: 18),
                 const SizedBox(width: 10),
                 Text(
                   loc.tr('logout'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: colorScheme.error,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                    color: colorScheme.error),
                 ),
               ],
             ),
@@ -518,8 +506,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: Container(
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: colorScheme.primaryContainer,
@@ -531,11 +519,8 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
             alignment: Alignment.center,
             child: Text(
               info.initials,
-              style: TextStyle(
-                color: colorScheme.onPrimaryContainer,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -544,6 +529,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
 
   static _UserRoleInfo _resolveUserInfo(User user, AppLocalizations loc) {
     final email = (user.email ?? '').toLowerCase();
+    final roleTitle = headerRoleTitleForEmail(email, loc.tr);
 
     if (email.contains('admin')) {
       final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
@@ -551,7 +537,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : 'Super Admin';
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleSuperAdmin'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'SA'),
         dashboardRoute: '/super-admin',
       );
@@ -561,9 +547,19 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('roleAgency');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleAgency'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'AG'),
         dashboardRoute: '/agency',
+      );
+    } else if (email.contains('investor')) {
+      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
+          ? user.displayName!
+          : loc.tr('roleInvestor');
+      return _UserRoleInfo(
+        displayName: name,
+        roleTitle: roleTitle,
+        initials: UserAvatarUtils.getInitials(name, 'IN'),
+        dashboardRoute: '/investor-dashboard',
       );
     } else if (email.contains('tenant')) {
       final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
@@ -571,7 +567,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('roleTenant');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleTenant'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'TN'),
         dashboardRoute: '/tenant',
       );
@@ -581,12 +577,22 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           : loc.tr('ownerProfile');
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('ownerRoleTitle'),
+        roleTitle: roleTitle,
         initials: UserAvatarUtils.getInitials(name, 'AF'),
         dashboardRoute: '/owner',
       );
     }
   }
+}
+
+/// Role shown on the signed-in avatar. Investor is not an owner.
+String headerRoleTitleForEmail(String email, String Function(String key) tr) {
+  final value = email.toLowerCase();
+  if (value.contains('admin')) return tr('roleSuperAdmin');
+  if (value.contains('agency') || value.contains('broker')) return tr('roleAgency');
+  if (value.contains('investor')) return tr('roleInvestor');
+  if (value.contains('tenant')) return tr('roleTenant');
+  return tr('ownerRoleTitle');
 }
 
 class _UserRoleInfo {

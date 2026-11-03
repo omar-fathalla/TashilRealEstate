@@ -108,11 +108,11 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Lease & Tenancy Management'), findsOneWidget);
-      expect(find.text('Create Lease'), findsOneWidget);
-      expect(find.text('All Leases'), findsOneWidget);
+      expect(find.text('Lease & tenancy management'), findsOneWidget);
+      expect(find.text('Create lease'), findsOneWidget);
+      expect(find.text('All leases'), findsOneWidget);
       expect(find.text('Active'), findsWidgets);
-      expect(find.text('Pending Signature'), findsWidgets);
+      expect(find.text('Pending signature'), findsWidgets);
       expect(find.text('Preview'), findsWidgets);
       expect(find.textContaining('months'), findsWidgets);
     });

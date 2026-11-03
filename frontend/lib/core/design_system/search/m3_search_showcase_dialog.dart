@@ -4,6 +4,8 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'tashil_search_bar.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 (M3) Search Suite.
 /// Conforms to:
@@ -40,12 +42,12 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
   String _searchFeedback = '';
 
   final List<String> _demoSuggestions = [
-    'شقة للبيع في الشيخ زايد',
+    AppLocalizations.trStatic('uiCopy233'),
     'Apartment for rent in Dubai Marina',
-    'فيلا بإطلالة بحرية',
+    AppLocalizations.trStatic('uiCopy254'),
     'Modern duplex with private pool',
     'Penthouse in New Cairo',
-    'مكتب تجاري في العاصمة الإدارية',
+    AppLocalizations.trStatic('uiCopy304'),
   ];
 
   @override
@@ -64,7 +66,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -85,7 +87,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.search_rounded,
+                          Symbols.search_rounded,
                           color: colorScheme.onPrimaryContainer,
                           size: 24,
                         ),
@@ -97,7 +99,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                           children: [
                             Text(
                               lang == 'ar'
-                                  ? 'منظومة البحث الذكي M3 Search'
+                                  ? AppLocalizations.trStatic('uiCopy310')
                                   : (lang == 'hi'
                                       ? 'M3 स्मार्ट खोज प्रणाली'
                                       : 'M3 Smart Search System'),
@@ -107,7 +109,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                             ),
                             Text(
                               lang == 'ar'
-                                  ? 'معايير جوجل الرسمية للبحث وشريط البحث المتقدم'
+                                  ? AppLocalizations.trStatic('uiCopy297')
                                   : (lang == 'hi'
                                       ? 'Google Material Design 3 आधिकारिक खोज मानक'
                                       : 'Official Google M3 Search Bar & Search View Specifications'),
@@ -120,7 +122,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Symbols.close_rounded),
                         tooltip: 'Close',
                       ),
                     ],
@@ -138,7 +140,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                           // Section 1: Live Search Bar Demo
                           Text(
                             lang == 'ar'
-                                ? '1. شريط البحث التفاعلي (Live M3 Search Bar)'
+                                ? AppLocalizations.trStatic('uiCopy007')
                                 : (lang == 'hi'
                                     ? '1. इंटरैक्टिव M3 सर्च बार'
                                     : '1. Live Interactive M3 Search Bar'),
@@ -150,7 +152,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                           const SizedBox(height: 8),
                           Text(
                             lang == 'ar'
-                                ? 'جرب الكتابة لرؤية قائمة المقترحات الذكية، أو فعّل البحث الدلالي بالذكاء الاصطناعي أو البحث بالصور:'
+                                ? AppLocalizations.trStatic('uiCopy187')
                                 : (lang == 'hi'
                                     ? 'सुझाव देखने के लिए टाइप करें, या AI सिमेंटिक सर्च और विज़ुअल सर्च आज़माएँ:'
                                     : 'Try typing to view suggestions view, toggle AI Semantic Search, or trigger Visual Search:'),
@@ -219,7 +221,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons.info_outline_rounded,
+                                    Symbols.info_rounded,
                                     size: 18,
                                     color: colorScheme.onSecondaryContainer,
                                   ),
@@ -253,7 +255,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                           // Section 2: Technical M3 Search Specifications
                           Text(
                             lang == 'ar'
-                                ? '2. المواصفات الهندسية الرسمية (M3 Search Specs)'
+                                ? AppLocalizations.trStatic('uiCopy014')
                                 : (lang == 'hi'
                                     ? '2. तकनीकी M3 विनिर्देश'
                                     : '2. Official Technical M3 Specifications'),
@@ -270,38 +272,38 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                             children: [
                               _buildSpecCard(
                                 context,
-                                icon: Icons.straighten_rounded,
+                                icon: Symbols.straighten_rounded,
                                 title: lang == 'ar' ? 'الارتفاع والأبعاد' : 'Dimensions',
                                 spec: '56dp Height • 28dp Stadium Radius',
                                 description: lang == 'ar'
-                                    ? 'ارتفاع قياسي 56dp مع زوايا دائرية بالكامل 28dp تعزز سهولة اللمس والتفاعل.'
+                                    ? AppLocalizations.trStatic('uiCopy107')
                                     : 'Standard 56dp container height with 28dp full stadium pill corners.',
                               ),
                               _buildSpecCard(
                                 context,
-                                icon: Icons.animation_rounded,
+                                icon: Symbols.animation_rounded,
                                 title: lang == 'ar' ? 'الحركة والانتقال' : 'Motion & Physics',
                                 spec: '240ms cubic easing • Level 1-2 Elevation',
                                 description: lang == 'ar'
-                                    ? 'انتقال ناعم مع زيادة طفيفة في التكبير (1.008x) وظل الارتفاع عند التركيز.'
+                                    ? AppLocalizations.trStatic('uiCopy154')
                                     : 'Smooth scale (1.008x) and elevation transition upon focus and hover.',
                               ),
                               _buildSpecCard(
                                 context,
-                                icon: Icons.auto_awesome_rounded,
+                                icon: Symbols.auto_awesome_rounded,
                                 title: lang == 'ar' ? 'تعدد الوسائط والذكاء' : 'Multi-Modal Search',
                                 spec: 'Text • AI Semantic • Visual Photo',
                                 description: lang == 'ar'
-                                    ? 'تناغم فوري بين البحث النصي التقليدي، والبحث الدلالي بالمتجهات، والبحث بالصور.'
+                                    ? AppLocalizations.trStatic('uiCopy183')
                                     : 'Seamless tri-modal search combining text query, AI vector search, and visual search.',
                               ),
                               _buildSpecCard(
                                 context,
-                                icon: Icons.format_list_bulleted_rounded,
+                                icon: Symbols.format_list_bulleted_rounded,
                                 title: lang == 'ar' ? 'قائمة المقترحات المتدفقة' : 'Search View Overlay',
                                 spec: 'Uncontained Overlay • 16dp Radius',
                                 description: lang == 'ar'
-                                    ? 'قائمة مقترحات تنبثق بنعومة من أسفل شريط البحث دون تشويه أو إزاحة باقي عناصر الصفحة.'
+                                    ? AppLocalizations.trStatic('uiCopy258')
                                     : 'Elevated suggestions menu unfolding smoothly below search bar without displacing page elements.',
                               ),
                             ],
@@ -322,7 +324,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
                       TashilButton(
                         label: loc.tr('close'),
                         variant: TashilButtonVariant.filled,
-                        icon: Icons.check_rounded,
+                        icon: Symbols.check_rounded,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -382,12 +384,9 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
             ),
             child: Text(
               spec,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 11,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontFamily: 'monospace',
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onPrimaryContainer,
-              ),
+                color: colorScheme.onPrimaryContainer),
             ),
           ),
           const SizedBox(height: 6),

@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PropertiesView extends StatelessWidget {
   const PropertiesView({super.key});
@@ -25,7 +26,7 @@ class PropertiesView extends StatelessWidget {
       backgroundColor: Colors.transparent,
       floatingActionButton: TashilExtendedFloatingActionButton(
         onPressed: () => FastPropertyOnboardingDialog.show(context),
-        icon: Icons.add,
+        icon: Symbols.add_rounded,
         label: loc.tr('addProperty'),
       ),
       body: Padding(
@@ -56,7 +57,7 @@ class PropertiesView extends StatelessWidget {
                   final unitTitle = isUAE
                       ? (index % 2 == 0 ? 'Dubai Marina Luxury Tower' : 'Downtown Burj Views')
                       : (index % 2 == 0 ? 'شقة فاخرة - التجمع الخامس' : 'فيلا مستقلة - الشيخ زايد');
-                  final locationStr = isUAE ? 'Dubai, UAE' : 'القاهرة، مصر';
+                  final locationStr = isUAE ? 'Dubai, UAE' : AppLocalizations.trStatic('uiCopy141');
 
                   return TashilCard.outlined(
                     color: colorScheme.surfaceContainerLowest,
@@ -71,7 +72,7 @@ class PropertiesView extends StatelessWidget {
                               color: colorScheme.surfaceContainerHigh,
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                             ),
-                            child: Icon(Icons.apartment_rounded, size: 40, color: colorScheme.onSurfaceVariant),
+                            child: Icon(Symbols.apartment_rounded, size: 40, color: colorScheme.onSurfaceVariant),
                           ),
                         ),
                         Expanded(
@@ -92,38 +93,32 @@ class PropertiesView extends StatelessWidget {
                                       ),
                                       child: Text(
                                         isRented ? loc.tr('statusRented') : loc.tr('statusVacant'),
-                                        style: TextStyle(
-                                          color: isRented ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
-                                        ),
+                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isRented ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
+                                          fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                     Text(
                                       '${CurrencyFormatter.formatAmount(price, langCode: lang)} $currency',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: colorScheme.primary,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   unitTitle,
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                                    Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                                     const SizedBox(width: 4),
                                     Text(
                                       locationStr,
-                                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                     ),
                                   ],
                                 ),

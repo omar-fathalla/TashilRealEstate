@@ -4,7 +4,10 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
+import 'package:tashil_real_estate/core/services/ai_processing_consent.dart';
 import 'package:tashil_real_estate/features/image_moderation/services/ai_image_moderation_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiImageModeratorDialog extends StatefulWidget {
   const AiImageModeratorDialog({super.key});
@@ -29,6 +32,8 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
   final _service = AiImageModerationService();
 
   Future<void> _simulateUpload(String type) async {
+    final allowed = await AiProcessingConsent.ensure(context);
+    if (!allowed || !mounted) return;
     setState(() => _isUploading = true);
 
     String name = 'property_photo.jpg';
@@ -70,7 +75,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final theme = Theme.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 20 : 28)),
       backgroundColor: theme.colorScheme.surface,
       elevation: 3.0,
@@ -113,7 +118,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                Icons.shield_outlined,
+                                Symbols.shield_rounded,
                                 color: theme.colorScheme.onPrimaryContainer,
                                 size: 22,
                               ),
@@ -186,12 +191,12 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      _buildQuickUploadBtn('living_room', loc.tr('sampleLivingRoom'), Icons.chair_rounded, theme.colorScheme.primary),
-                      _buildQuickUploadBtn('bedroom', loc.tr('sampleBedroom'), Icons.bed_rounded, theme.colorScheme.primary),
-                      _buildQuickUploadBtn('kitchen', loc.tr('sampleKitchen'), Icons.kitchen_rounded, theme.colorScheme.primary),
-                      _buildQuickUploadBtn('person', loc.tr('samplePersonSelfie'), Icons.person_off_rounded, theme.colorScheme.error),
-                      _buildQuickUploadBtn('car', loc.tr('sampleCarObject'), Icons.directions_car_rounded, theme.colorScheme.error),
-                      _buildQuickUploadBtn('blur', loc.tr('sampleBlurry'), Icons.blur_on_rounded, theme.colorScheme.error),
+                      _buildQuickUploadBtn('living_room', loc.tr('sampleLivingRoom'), Symbols.chair_rounded, theme.colorScheme.primary),
+                      _buildQuickUploadBtn('bedroom', loc.tr('sampleBedroom'), Symbols.bed_rounded, theme.colorScheme.primary),
+                      _buildQuickUploadBtn('kitchen', loc.tr('sampleKitchen'), Symbols.kitchen_rounded, theme.colorScheme.primary),
+                      _buildQuickUploadBtn('person', loc.tr('samplePersonSelfie'), Symbols.person_off_rounded, theme.colorScheme.error),
+                      _buildQuickUploadBtn('car', loc.tr('sampleCarObject'), Symbols.directions_car_rounded, theme.colorScheme.error),
+                      _buildQuickUploadBtn('blur', loc.tr('sampleBlurry'), Symbols.blur_on_rounded, theme.colorScheme.error),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -231,7 +236,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.image_search_outlined, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                                Icon(Symbols.image_search_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant),
                                 const SizedBox(height: 12),
                                 Text(
                                   loc.tr('noModeratedPhotosFound'),
@@ -317,7 +322,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
   Widget _buildMetricItem(String label, String value, Color color, ThemeData theme) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
+        Text(value, style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, color: color)),
         const SizedBox(height: 2),
         Text(
           label,
@@ -386,13 +391,13 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: theme.colorScheme.surfaceContainerHighest,
-                        child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
+                        child: Icon(Symbols.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
                       ),
                     )
                   else
                     Container(
                       color: theme.colorScheme.surfaceContainerHighest,
-                      child: Icon(Icons.image, size: 36, color: theme.colorScheme.onSurfaceVariant),
+                      child: Icon(Symbols.image_rounded, size: 36, color: theme.colorScheme.onSurfaceVariant),
                     ),
                   // Status Badge on top-start
                   PositionedDirectional(
@@ -409,14 +414,14 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isApproved ? Icons.verified_rounded : Icons.cancel_rounded,
+                            isApproved ? Symbols.verified_rounded : Symbols.cancel_rounded,
                             color: badgeText,
                             size: 12,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             statusText,
-                            style: TextStyle(color: badgeText, fontWeight: FontWeight.bold, fontSize: 10),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: badgeText, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -443,11 +448,8 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                   const SizedBox(height: 2),
                   Text(
                     loc.tr(item.categoryKey),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isApproved ? theme.colorScheme.primary : theme.colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isApproved ? theme.colorScheme.primary : theme.colorScheme.error,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -470,7 +472,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
         child: Center(
           child: Text(
             loc.tr('selectImageToInspect'),
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ),
       );
@@ -515,11 +517,8 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                   ),
                   child: Text(
                     isApproved ? loc.tr('statusApproved') : loc.tr('statusRejected'),
-                    style: TextStyle(
-                      color: isApproved ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onErrorContainer,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isApproved ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -540,18 +539,18 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 16),
+                        Icon(Symbols.error_outline_rounded, color: theme.colorScheme.error, size: 16),
                         const SizedBox(width: 6),
                         Text(
                           loc.tr('rejectionReasonLabel'),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onErrorContainer, fontSize: 12),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onErrorContainer),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _getRejectionMessage(item, loc),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onErrorContainer, height: 1.4),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onErrorContainer, height: 1.4),
                     ),
                   ],
                 ),
@@ -594,7 +593,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(loc.tr('detectedCategoryLabel'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                Text(loc.tr('detectedCategoryLabel'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 Text(
                   loc.tr(item.categoryKey),
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -608,10 +607,10 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(loc.tr('relevanceScoreLabel'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                Text(loc.tr('relevanceScoreLabel'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 Text(
                   '${(item.relevanceScore * 100).toInt()}%',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.secondary),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
                 ),
               ],
             ),
@@ -619,10 +618,10 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(loc.tr('qualityScoreLabel'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                Text(loc.tr('qualityScoreLabel'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 Text(
                   '${(item.qualityScore * 100).toInt()}%',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.colorScheme.primary),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ],
             ),
@@ -648,7 +647,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
-                    child: Text(f, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface)),
+                    child: Text(f, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface)),
                   );
                 }).toList(),
               ),
@@ -665,7 +664,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
       child: Row(
         children: [
           Icon(
-            isPassed ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            isPassed ? Symbols.check_circle_rounded : Symbols.cancel_rounded,
             size: 14,
             color: isPassed ? theme.colorScheme.primary : theme.colorScheme.error,
           ),
@@ -673,11 +672,8 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
           Expanded(
             child: Text(
               title,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isPassed ? FontWeight.w500 : FontWeight.bold,
-                color: isPassed ? theme.colorScheme.onSurface : theme.colorScheme.error,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isPassed ? FontWeight.w500 : FontWeight.bold,
+                color: isPassed ? theme.colorScheme.onSurface : theme.colorScheme.error),
             ),
           ),
         ],

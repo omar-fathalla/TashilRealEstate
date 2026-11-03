@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
@@ -19,6 +20,7 @@ import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dar
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class OwnerOverviewView extends StatefulWidget {
   const OwnerOverviewView({super.key});
@@ -35,6 +37,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
     final loc = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     final isMobile = ResponsiveLayout.isMobile(context);
     final isUAE = CountryController.isUAE;
     final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
@@ -67,7 +70,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
             ? ((occupiedUnits / totalUnits) * 100).toInt()
             : (hasAuth ? 0 : 80);
 
-        return SingleChildScrollView(
+        return RefreshIndicator.adaptive(
+          onRefresh: () async {},
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.all(isMobile ? 16 : 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,22 +114,19 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.verified_user_rounded, size: 18, color: colorScheme.primary),
+                          Icon(Symbols.verified_user_rounded, size: 18, color: colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
                             loc.tr('ownerRoleTitle'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 10),
                     TashilButton.tonal(
-                      icon: Icons.file_download_outlined,
+                      icon: Symbols.file_download_rounded,
                       label: loc.tr('exportStatement'),
                       height: 38,
                       onPressed: () {
@@ -143,12 +146,9 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      Color.lerp(colorScheme.primary, Colors.black, 0.22) ?? colorScheme.primary,
-                    ],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
+                    colors: TashilBannerColors.gradient(colorScheme),
+                    begin: AlignmentDirectional.topEnd,
+                    end: AlignmentDirectional.bottomStart,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
@@ -163,40 +163,42 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top Header: Icon + Title + Gemini Flash Badge
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: onBanner.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Symbols.auto_awesome_rounded, color: onBanner, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                loc.tr('aiValuationBannerTitle'),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: onBanner),
+                                softWrap: true,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          loc.tr('aiValuationBannerTitle'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: onBanner.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                            border: Border.all(color: onBanner.withValues(alpha: 0.3)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Gemini Flash',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner,
+                              fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -210,23 +212,23 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         children: [
                           TashilButton.elevated(
                             onPressed: () => SmartValuationDialog.show(context),
-                            icon: Icons.auto_awesome_rounded,
+                            icon: Symbols.auto_awesome_rounded,
                             label: loc.tr('calculateFairRent'),
                             height: 40,
                           ),
                           const SizedBox(height: 10),
                           TashilButton.tonal(
                             onPressed: () => InvestmentSimulatorDialog.show(context),
-                            icon: Icons.calculate_rounded,
+                            icon: Symbols.calculate_rounded,
                             label: loc.tr('investmentSimulatorTitle'),
                             height: 40,
                           ),
                           const SizedBox(height: 10),
                           TashilButton.outlined(
                             onPressed: () => context.go('/market-index'),
-                            icon: Icons.analytics_rounded,
+                            icon: Symbols.analytics_rounded,
                             label: CountryController.isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                            customColor: Colors.white,
+                            customColor: onBanner,
                             height: 40,
                           ),
                         ],
@@ -239,21 +241,21 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         children: [
                           TashilButton.elevated(
                             onPressed: () => SmartValuationDialog.show(context),
-                            icon: Icons.auto_awesome_rounded,
+                            icon: Symbols.auto_awesome_rounded,
                             label: loc.tr('calculateFairRent'),
                             height: 38,
                           ),
                           TashilButton.tonal(
                             onPressed: () => InvestmentSimulatorDialog.show(context),
-                            icon: Icons.calculate_rounded,
+                            icon: Symbols.calculate_rounded,
                             label: loc.tr('investmentSimulatorTitle'),
                             height: 38,
                           ),
                           TashilButton.outlined(
                             onPressed: () => context.go('/market-index'),
-                            icon: Icons.analytics_rounded,
+                            icon: Symbols.analytics_rounded,
                             label: CountryController.isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                            customColor: Colors.white,
+                            customColor: onBanner,
                             height: 38,
                           ),
                         ],
@@ -264,22 +266,19 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
+                        color: onBanner.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+                        border: Border.all(color: onBanner.withValues(alpha: 0.16)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, size: 16, color: Colors.white),
+                          Icon(Symbols.info_rounded, size: 16, color: onBanner),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               loc.tr('aiValuationBannerDesc'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withValues(alpha: 0.90),
-                                height: 1.4,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner.withValues(alpha: 0.90),
+                                height: 1.4),
                             ),
                           ),
                         ],
@@ -317,17 +316,17 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         title: loc.tr('totalUnits'),
                         value: '$totalUnits',
                         subtitle: totalUnitsSubtitle,
-                        icon: Icons.apartment_rounded,
-                        subtitleIcon: Icons.location_on_outlined,
+                        icon: Symbols.apartment_rounded,
+                        subtitleIcon: Symbols.location_on_rounded,
                         iconColor: colorScheme.primary,
                         iconBgColor: colorScheme.surfaceContainerHigh,
                       ),
                       TashilKpiCard(
                         title: loc.tr('occupiedUnits'),
                         value: '$occupiedUnits',
-                        subtitle: '$occupancyRate% ${loc.tr('occupancyRateSubtitle')}',
-                        icon: Icons.check_circle_outline_rounded,
-                        subtitleIcon: Icons.trending_up_rounded,
+                        subtitle: loc.tr('occupancyRateWithValue', {'rate': '$occupancyRate'}),
+                        icon: Symbols.check_circle_outline_rounded,
+                        subtitleIcon: Symbols.trending_up_rounded,
                         iconColor: colorScheme.primary,
                         iconBgColor: colorScheme.surfaceContainerHigh,
                       ),
@@ -335,8 +334,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         title: loc.tr('vacantUnits'),
                         value: '$vacantUnits',
                         subtitle: vacantSubtitle,
-                        icon: Icons.door_front_door_outlined,
-                        subtitleIcon: Icons.location_on_outlined,
+                        icon: Symbols.door_front_rounded,
+                        subtitleIcon: Symbols.location_on_rounded,
                         iconColor: colorScheme.primary,
                         iconBgColor: colorScheme.surfaceContainerHigh,
                       ),
@@ -344,8 +343,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         title: loc.tr('monthlyRevenue'),
                         value: '${CurrencyFormatter.formatAmount(totalRevenue, langCode: lang)} $currency',
                         subtitle: revenueSubtitle,
-                        icon: Icons.payments_outlined,
-                        subtitleIcon: Icons.verified_rounded,
+                        icon: Symbols.payments_rounded,
+                        subtitleIcon: Symbols.verified_rounded,
                         iconColor: colorScheme.primary,
                         iconBgColor: colorScheme.surfaceContainerHigh,
                       ),
@@ -364,7 +363,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                   border: Border.all(color: colorScheme.outlineVariant),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: colorScheme.shadow.withValues(alpha: 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -395,17 +394,17 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                             TashilConnectedButtonSegment(
                               value: 'all',
                               label: loc.tr('filterAllUnits'),
-                              icon: Icons.grid_view_rounded,
+                              icon: Symbols.grid_view_rounded,
                             ),
                             TashilConnectedButtonSegment(
                               value: 'occupied',
                               label: loc.tr('statusOccupied'),
-                              icon: Icons.check_circle_rounded,
+                              icon: Symbols.check_circle_rounded,
                             ),
                             TashilConnectedButtonSegment(
                               value: 'vacant',
                               label: loc.tr('statusVacant'),
-                              icon: Icons.door_front_door_rounded,
+                              icon: Symbols.door_front_rounded,
                             ),
                           ],
                         ),
@@ -433,6 +432,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               // Recent Payouts Table
               _buildRecentPayoutsCard(context, loc, isUAE, lang, currency, colorScheme, properties),
             ],
+          ),
           ),
         );
       },
@@ -488,36 +488,31 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 3),
+                        Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                         Text(
                           location,
-                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
+                          softWrap: true,
                         ),
                         if (isOccupied && tenant.isNotEmpty && tenant != '-') ...[
                           Text(' • ', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                          Icon(Icons.person_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant),
+                          Icon(Symbols.person_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              tenant,
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Text(
+                            tenant,
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500),
+                            softWrap: true,
                           ),
                         ],
                       ],
@@ -526,20 +521,22 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
+              Flexible(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     '${CurrencyFormatter.formatAmount(price, langCode: lang)} $currency',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: colorScheme.primary,
-                    ),
+                    textAlign: TextAlign.end,
+                    softWrap: true,
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.primary),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -547,22 +544,19 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                           color: isOccupied ? colorScheme.secondaryContainer : colorScheme.tertiaryContainer,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Icon(
-                              isOccupied ? Icons.check_rounded : Icons.door_front_door_rounded,
+                              isOccupied ? Symbols.check_rounded : Symbols.door_front_rounded,
                               size: 12,
                               color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
                             ),
-                            const SizedBox(width: 4),
                             Text(
                               isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer),
                             ),
                           ],
                         ),
@@ -570,7 +564,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       const SizedBox(width: 8),
                       TashilIconButton.tonal(
                         tooltip: loc.tr('monthlyInstallmentLedgerBtn'),
-                        icon: Icons.calendar_month_rounded,
+                        icon: Symbols.calendar_month_rounded,
                         size: 34,
                         iconSize: 16,
                         onPressed: () {
@@ -584,6 +578,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     ],
                   ),
                 ],
+              ),
               ),
             ],
           ),
@@ -627,7 +622,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.home_work_outlined,
+                  Symbols.home_work_rounded,
                   size: 30,
                   color: colorScheme.primary,
                 ),
@@ -635,24 +630,18 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               const SizedBox(height: 16),
               Text(
                 loc.tr('noPropertiesFound'),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
               ),
               const SizedBox(height: 6),
               Text(
                 loc.tr('ownerSubtitle'),
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
               TashilButton.filled(
-                icon: Icons.add_home_work_rounded,
+                icon: Symbols.add_home_work_rounded,
                 label: loc.tr('addNewProperty'),
                 onPressed: () {
                   FastPropertyOnboardingDialog.show(context);
@@ -704,34 +693,28 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                      Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 3),
                       Text(
                         location,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                       if (isOccupied && tenant.isNotEmpty && tenant != '-') ...[
                         Text(' • ', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                        Icon(Icons.person_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.person_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 3),
                         Flexible(
                           child: Text(
                             tenant,
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -747,11 +730,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               children: [
                 Text(
                   '${CurrencyFormatter.formatAmount(price, langCode: lang)} $currency',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: colorScheme.primary,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.primary),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -767,18 +747,15 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isOccupied ? Icons.check_rounded : Icons.door_front_door_rounded,
+                            isOccupied ? Symbols.check_rounded : Symbols.door_front_rounded,
                             size: 12,
                             color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                              color: isOccupied ? colorScheme.onSecondaryContainer : colorScheme.onTertiaryContainer),
                           ),
                         ],
                       ),
@@ -786,7 +763,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     const SizedBox(width: 8),
                     TashilIconButton.tonal(
                       tooltip: loc.tr('monthlyInstallmentLedgerBtn'),
-                      icon: Icons.calendar_month_rounded,
+                      icon: Symbols.calendar_month_rounded,
                       size: 34,
                       iconSize: 16,
                       onPressed: () {
@@ -839,7 +816,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: colorScheme.shadow.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -848,8 +825,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Row(
                 children: [
@@ -859,22 +838,22 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       color: colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.account_balance_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+                    child: Icon(Symbols.account_balance_rounded, color: colorScheme.onPrimaryContainer, size: 20),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    loc.tr('recentPayouts'),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+                  Expanded(
+                    child: Text(
+                      loc.tr('recentPayouts'),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
+                      softWrap: true,
                     ),
                   ),
                 ],
               ),
               TashilButton.tonal(
                 height: 36,
-                icon: Icons.receipt_long_rounded,
+                icon: Symbols.receipt_long_rounded,
                 label: loc.tr('exportStatement'),
                 onPressed: () {
                   if (shouldShowEmptyState) {
@@ -910,7 +889,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.account_balance_wallet_outlined,
+                        Symbols.account_balance_wallet_rounded,
                         size: 26,
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -918,11 +897,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     const SizedBox(height: 14),
                     Text(
                       loc.tr('noRecentPayoutsTitle'),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),
@@ -930,11 +906,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       constraints: const BoxConstraints(maxWidth: 440),
                       child: Text(
                         loc.tr('noRecentPayoutsDesc'),
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.5,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.5,
+                          color: colorScheme.onSurfaceVariant),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -958,7 +931,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: Row(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -966,39 +942,30 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         color: colorScheme.secondaryContainer,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.arrow_downward_rounded, color: colorScheme.onSecondaryContainer, size: 18),
+                      child: Icon(Symbols.arrow_downward_rounded, color: colorScheme.onSecondaryContainer, size: 18),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$date • Ref: ${p['ref']}',
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$date • Ref: ${p['ref']}',
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
                     Text(
                       '+ ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      textAlign: TextAlign.end,
+                      softWrap: true,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),

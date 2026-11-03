@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 export 'tashil_rail_destination.dart';
 export 'tashil_scaffold_canvas.dart';
@@ -79,7 +80,7 @@ class TashilNavigationRail extends StatelessWidget {
                   tooltip: menuTooltip,
                   onPressed: onToggleExpanded,
                   icon: Icon(
-                    isExpanded ? Icons.menu_open_rounded : Icons.menu_rounded,
+                    isExpanded ? Symbols.menu_open_rounded : Symbols.menu_rounded,
                     size: 24.0,
                     color: colorScheme.onSurfaceVariant,
                   ),

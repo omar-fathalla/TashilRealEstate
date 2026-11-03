@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_dashboard.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +53,7 @@ void main() {
       expect(find.text('100%'), findsWidgets);
 
       expect(find.text('99.4%'), findsOneWidget); // Compliance rate metric
-      expect(find.text('ISO 27001'), findsOneWidget);
+      expect(find.text('قيد المراجعة'), findsOneWidget);
 
       // Verify TashilConnectedButtonGroup component
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
@@ -115,7 +116,7 @@ void main() {
       // Verify modal opened
       expect(find.text('تسجيل واعتماد وكالة وساطة عقارية جديدة في المنصة'), findsOneWidget);
       expect(find.text('اسم الوكالة العقارية'), findsOneWidget);
-      expect(find.text('رقم السجل التجاري أو ترخيص الوساطة'), findsOneWidget);
+      expect(find.text('رقم الرخصة التجارية'), findsOneWidget);
 
       // Enter agency name
       await tester.enterText(find.widgetWithText(TextFormField, 'اسم الوكالة العقارية'), 'وكالة النيل العقارية الدولية');
@@ -146,7 +147,7 @@ void main() {
       // Verify registry dialog content
       expect(find.text('الجهة الرقابية المشرفة'), findsOneWidget);
       expect(find.text('مستوى الامتثال والرقابة'), findsOneWidget);
-      expect(find.text('ISO 27001 / AML Tier 1'), findsOneWidget);
+      expect(find.text('قيد المراجعة'), findsWidgets);
 
       // Close dialog
       final closeBtn = find.text('إغلاق');
@@ -163,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap first shield icon button
-      final shieldBtnFinder = find.byIcon(Icons.shield_rounded).first;
+      final shieldBtnFinder = find.byIcon(Symbols.shield_rounded).first;
       await tester.tap(shieldBtnFinder);
       await tester.pumpAndSettle();
 
@@ -171,10 +172,10 @@ void main() {
       expect(find.text('إدارة صلاحيات وحوكمة الوكالة'), findsOneWidget);
       expect(find.text('منح شارة وسيط عقاري معتمد'), findsOneWidget);
       expect(find.text('إصدار وتوثيق العقود الرقمية المباشرة'), findsOneWidget);
-      expect(find.text('الربط المالي مع حساب الضمان العقاري'), findsOneWidget);
+      expect(find.text('الوصول إلى حساب الضمان'), findsOneWidget);
 
       // Tap save permissions
-      final saveBtn = find.widgetWithText(TashilButton, 'حفظ الصلاحيات');
+      final saveBtn = find.widgetWithText(TashilButton, 'حفظ');
       expect(saveBtn, findsOneWidget);
       await tester.tap(saveBtn);
       await tester.pumpAndSettle();

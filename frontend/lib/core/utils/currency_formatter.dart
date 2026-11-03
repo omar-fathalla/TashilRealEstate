@@ -27,7 +27,7 @@ class CurrencyFormatter {
 
   static String getCurrencySymbol(String currencyCode, String langCode) {
     if (currencyCode == 'AED') {
-      if (langCode == 'ar') return 'د.إ';
+      if (langCode == 'ar') return 'درهم';
       return 'AED';
     } else {
       if (langCode == 'ar') return 'ج.م';

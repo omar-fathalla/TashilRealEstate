@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 
 /// Official Material Design 3 (M3) Large / Full-Screen Modal Dialog for Tashil Real Estate.
@@ -85,7 +86,7 @@ class TashilModalDialog extends StatelessWidget {
     final resolvedBg = backgroundColor ?? colorScheme.surface;
     final effectiveRadius = isMobile ? 20.0 : borderRadius;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: resolvedBg,
       elevation: elevation,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),
@@ -138,11 +139,8 @@ class TashilModalDialog extends StatelessWidget {
                             children: [
                               Text(
                                 title,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                  fontSize: 16.0,
-                                ),
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -150,10 +148,7 @@ class TashilModalDialog extends StatelessWidget {
                                 const SizedBox(height: 2.0),
                                 Text(
                                   subtitle!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 12.0,
-                                  ),
+                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),

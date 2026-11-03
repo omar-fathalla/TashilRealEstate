@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/search/tashil_search.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +59,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify search icon and hint text
-      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.search_rounded), findsWidgets);
       expect(find.text('ابحث عن عقارك المفضل...'), findsOneWidget);
 
       // Verify container height is 56dp
@@ -88,14 +89,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Clear button should not be visible when empty
-      expect(find.byIcon(Icons.close_rounded), findsNothing);
+      expect(find.byIcon(Symbols.close_rounded), findsNothing);
 
       // Type text into search field
       await tester.enterText(find.byType(TextField), 'فيلا في الشيخ زايد');
       await tester.pumpAndSettle();
 
       expect(controller.text, equals('فيلا في الشيخ زايد'));
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Test submit
       await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -103,12 +104,12 @@ void main() {
       expect(submittedQuery, equals('فيلا في الشيخ زايد'));
 
       // Test clear
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       await tester.pumpAndSettle();
 
       expect(controller.text, isEmpty);
       expect(clearTriggered, isTrue);
-      expect(find.byIcon(Icons.close_rounded), findsNothing);
+      expect(find.byIcon(Symbols.close_rounded), findsNothing);
     });
 
     testWidgets('AI Semantic Search badge and Visual Search button trigger appropriate callbacks', (tester) async {
@@ -132,14 +133,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find camera visual search button and click
-      final cameraFinder = find.byIcon(Icons.photo_camera_outlined);
+      final cameraFinder = find.byIcon(Symbols.photo_camera_rounded);
       expect(cameraFinder, findsOneWidget);
       await tester.tap(cameraFinder);
       await tester.pumpAndSettle();
       expect(visualSearchTriggered, isTrue);
 
       // Find AI semantic badge and click
-      final aiIconFinder = find.byIcon(Icons.auto_awesome_rounded);
+      final aiIconFinder = find.byIcon(Symbols.auto_awesome_rounded);
       expect(aiIconFinder, findsOneWidget);
       await tester.tap(aiIconFinder);
       await tester.pumpAndSettle();
@@ -208,7 +209,7 @@ void main() {
         expect(find.byType(M3SearchShowcaseDialog), findsOneWidget);
 
         // Close dialog
-        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.tap(find.byIcon(Symbols.close_rounded));
         await tester.pumpAndSettle();
         expect(find.byType(M3SearchShowcaseDialog), findsNothing);
       }
@@ -228,12 +229,12 @@ void main() {
                 TashilSplitButtonItem<String>(
                   value: 'location',
                   label: 'بحث بالمدينة',
-                  icon: Icons.location_on_outlined,
+                  icon: Symbols.location_on_rounded,
                 ),
                 TashilSplitButtonItem<String>(
                   value: 'ai',
                   label: 'بحث الذكاء الاصطناعي',
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Symbols.auto_awesome_rounded,
                 ),
               ],
               selectedSplitMenuValue: 'location',
@@ -252,10 +253,10 @@ void main() {
       expect(textField.decoration?.border, equals(InputBorder.none));
 
       // Verify chevron arrow down exists initially
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.keyboard_arrow_down_rounded), findsWidgets);
 
       // Open split menu
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+      await tester.tap(find.byIcon(Symbols.keyboard_arrow_down_rounded));
       await tester.pump(const Duration(milliseconds: 50));
 
       // Animated rotation turns to 0.5 (180° upward)

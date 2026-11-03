@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
 import 'package:tashil_real_estate/features/public_marketplace/widgets/property_details_dialog.dart';
 import 'package:tashil_real_estate/features/virtual_staging/widgets/ai_virtual_staging_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -55,17 +56,17 @@ void main() {
                   TashilConnectedButtonSegment(
                     value: 'opt1',
                     label: 'الخيار الأول',
-                    icon: Icons.first_page,
+                    icon: Symbols.first_page_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'opt2',
                     label: 'الخيار الثاني',
-                    icon: Icons.chair_rounded,
+                    icon: Symbols.chair_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'opt3',
                     label: 'الخيار الثالث',
-                    icon: Icons.forum_rounded,
+                    icon: Symbols.forum_rounded,
                   ),
                 ],
               );
@@ -76,12 +77,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Selected opt1 displays checkmark
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
       // Unselected opt2 and opt3 display their icons
-      expect(find.byIcon(Icons.chair_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.forum_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.chair_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.forum_rounded), findsWidgets);
       // opt1 icon was replaced by the checkmark
-      expect(find.byIcon(Icons.first_page), findsNothing);
+      expect(find.byIcon(Symbols.first_page_rounded), findsNothing);
 
       // Tap opt2
       await tester.tap(find.text('الخيار الثاني'));
@@ -89,12 +90,12 @@ void main() {
 
       expect(selected, equals('opt2'));
       // Now opt2 has the checkmark
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
       // opt1 has returned to its original icon
-      expect(find.byIcon(Icons.first_page), findsOneWidget);
+      expect(find.byIcon(Symbols.first_page_rounded), findsWidgets);
       // opt2 original icon is now replaced by checkmark
-      expect(find.byIcon(Icons.chair_rounded), findsNothing);
-      expect(find.byIcon(Icons.forum_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.chair_rounded), findsNothing);
+      expect(find.byIcon(Symbols.forum_rounded), findsWidgets);
     });
 
     testWidgets('TashilConnectedButtonGroup applies subtle elevation shadow to both selected and unselected segments', (tester) async {
@@ -107,12 +108,12 @@ void main() {
               TashilConnectedButtonSegment(
                 value: 'opt1',
                 label: 'الخيار الأول',
-                icon: Icons.first_page,
+                icon: Symbols.first_page_rounded,
               ),
               TashilConnectedButtonSegment(
                 value: 'opt2',
                 label: 'الخيار الثاني',
-                icon: Icons.chair_rounded,
+                icon: Symbols.chair_rounded,
               ),
             ],
           ),
@@ -156,18 +157,18 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
 
       // Verify the 2 segments exist for unfurnished property
-      expect(find.text('طلب معاينة / حجز'), findsOneWidget);
+      expect(find.text('طلب معاينة'), findsOneWidget);
       expect(find.text('التأثيث الافتراضي'), findsOneWidget);
       expect(find.text('التفاوض الذكي'), findsNothing);
 
       // Verify checkmark is active on initial selected segment (booking)
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
 
       // Verify Voice Broker icon button is in the header
-      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.mic_none_rounded), findsWidgets);
 
       // Verify redundant floating button on the hero photo is removed
-      expect(find.widgetWithIcon(TashilButton, Icons.chair_rounded), findsNothing);
+      expect(find.widgetWithIcon(TashilButton, Symbols.chair_rounded), findsNothing);
     });
 
     testWidgets('PropertyDetailsDialog bottom bar excludes Virtual Staging for already furnished properties', (tester) async {
@@ -188,7 +189,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify bottom bar has booking button only (single action renders TashilButton directly)
-      expect(find.text('طلب معاينة / حجز'), findsOneWidget);
+      expect(find.text('طلب معاينة'), findsOneWidget);
       expect(find.byType(TashilButton), findsWidgets);
       expect(find.text('التفاوض الذكي'), findsNothing);
       expect(find.text('التأثيث الافتراضي'), findsNothing);

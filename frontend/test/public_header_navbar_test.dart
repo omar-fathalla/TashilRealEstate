@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/widgets/public_header_navbar.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,10 +48,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the all-icon suite is present
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget); // Settings
-      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget); // Valuation
-      expect(find.byIcon(Icons.analytics_rounded), findsOneWidget); // Market Index
-      expect(find.byIcon(Icons.lock_person_outlined), findsOneWidget); // Login Icon
+      expect(find.byIcon(Symbols.tune_rounded), findsWidgets); // Settings
+      expect(find.byIcon(Symbols.auto_awesome_rounded), findsWidgets); // Valuation
+      expect(find.byIcon(Symbols.analytics_rounded), findsWidgets); // Market Index
+      expect(find.byIcon(Symbols.lock_person_rounded), findsWidgets); // Login Icon
 
       // Verify text buttons are removed from header (as requested by user)
       expect(find.text('استكشف الوحدات'), findsNothing);
@@ -70,13 +71,13 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const SizedBox()));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.analytics_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.lock_person_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.tune_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.auto_awesome_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.analytics_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.lock_person_rounded), findsWidgets);
 
-      expect(find.text('List Property'), findsNothing);
-      expect(find.text('Explore Units'), findsNothing);
+      expect(find.text('List property'), findsNothing);
+      expect(find.text('Explore units'), findsNothing);
     });
 
     testWidgets('Renders clean mobile header with brand and circular login button only', (tester) async {
@@ -87,13 +88,12 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const SizedBox()));
       await tester.pumpAndSettle();
 
-      // On mobile, brand English text and apartment icon are on the left
-      expect(find.text('Tashil Aqar'), findsOneWidget);
-      expect(find.byIcon(Icons.apartment_rounded), findsOneWidget);
-
-      // On mobile, the circular login button is on the right, and old menu button is removed
-      expect(find.byIcon(Icons.lock_person_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.menu_rounded), findsNothing);
+      // Mobile Arabic keeps the localized brand and a labeled sign-in control.
+      expect(find.text('تسهيل عقار'), findsOneWidget);
+      expect(find.text('Tashil Aqar'), findsNothing);
+      expect(find.byIcon(Symbols.apartment_rounded), findsWidgets);
+      expect(find.text('تسجيل الدخول'), findsOneWidget);
+      expect(find.byIcon(Symbols.menu_rounded), findsNothing);
     });
 
     testWidgets('Header icon buttons have descriptive tooltips', (tester) async {
@@ -106,7 +106,7 @@ void main() {
 
       // Tooltips for each icon
       expect(find.byTooltip('التقييم العقاري الذكي'), findsOneWidget);
-      expect(find.byTooltip('مؤشر عقارماب'), findsOneWidget);
+      expect(find.byTooltip('مؤشر السوق'), findsOneWidget);
       expect(find.byTooltip('تسجيل الدخول'), findsOneWidget);
     });
 
@@ -133,7 +133,7 @@ void main() {
       await tester.pumpWidget(wrapWithApp(const SizedBox(), locale: const Locale('ar')));
       await tester.pumpAndSettle();
 
-      final brandFinder = find.byIcon(Icons.apartment_rounded);
+      final brandFinder = find.byIcon(Symbols.apartment_rounded);
       expect(brandFinder, findsOneWidget);
 
       final brandCenter = tester.getCenter(brandFinder);

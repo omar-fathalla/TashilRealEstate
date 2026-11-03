@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../../../core/services/ai_quota_manager.dart';
+import '../../../core/services/gemini_gateway.dart';
 import '../../public_marketplace/repositories/property_repository.dart';
 import '../models/semantic_search_result_model.dart';
 
@@ -31,10 +31,7 @@ class AiSemanticVectorSearchService {
   factory AiSemanticVectorSearchService() => _instance;
   AiSemanticVectorSearchService._internal();
 
-  static const String _geminiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  static const String _model = 'gemini-2.5-flash';
 
   static final List<VisualMoodboardPreset> moodboards = [
     const VisualMoodboardPreset(
@@ -102,7 +99,7 @@ class AiSemanticVectorSearchService {
     if (cleanQuery.isEmpty) return [];
 
     // Check Gemini API for advanced semantic understanding
-    if (_apiKey.isNotEmpty && AiQuotaManager().hasAvailableQuota) {
+    if (AiQuotaManager().hasAvailableQuota) {
       try {
         final apiResults = await _callGeminiSemanticSearch(cleanQuery, countryCode);
         if (apiResults.isNotEmpty) {
@@ -217,11 +214,9 @@ Return ONLY valid JSON array with objects in this structure:
 ]
 ''';
 
-    final url = Uri.parse('$_geminiEndpoint?key=$_apiKey');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await GeminiGateway.generate(
+      model: _model,
+      body: {
         'contents': [
           {
             'parts': [
@@ -233,7 +228,7 @@ Return ONLY valid JSON array with objects in this structure:
           'temperature': 0.2,
           'maxOutputTokens': 1500,
         },
-      }),
+      },
     ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200) {

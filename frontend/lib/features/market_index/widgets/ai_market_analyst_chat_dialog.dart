@@ -6,6 +6,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/market_index/services/ai_market_index_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiMarketAnalystChatDialog extends StatefulWidget {
   const AiMarketAnalystChatDialog({super.key});
@@ -34,7 +36,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
     // Preload greeting
     final isEgypt = !CountryController.isUAE;
     final defaultGreeting = isEgypt
-        ? 'مرحباً بك! أنا مستشارك الذكي لتحليلات السوق العقاري المصري ومؤشر عقارماب. تفضل بطرح أي سؤال حول اتجاهات الأسعار، نمو الإيجارات، أو أفضل مناطق الاستثمار.'
+        ? AppLocalizations.trStatic('uiCopy286')
         : 'Welcome! I am your AI Real Estate Market Analyst for the UAE and Dubai Property Index. Ask me anything regarding rental yields, price trends, or investment timing.';
     _messages.add({'role': 'assistant', 'text': defaultGreeting});
   }
@@ -79,9 +81,9 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
     final isUAE = CountryController.isUAE;
 
     final sampleQuestionsEG = [
-      'هل الوقت مناسب لشراء شقة في التجمع الخامس؟',
-      'ما هي نسبة الزيادة الإيجارية المتوقعة في زايد خلال 2027؟',
-      'كيف يحمي العقار رأس المال ضد التضخم في مصر؟',
+      AppLocalizations.trStatic('uiCopy323'),
+      AppLocalizations.trStatic('uiCopy275'),
+      AppLocalizations.trStatic('uiCopy269'),
     ];
 
     final sampleQuestionsAE = [
@@ -92,7 +94,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
 
     final sampleQuestions = isUAE ? sampleQuestionsAE : sampleQuestionsEG;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,
@@ -119,7 +121,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.psychology_alt_rounded,
+                          Symbols.psychology_alt_rounded,
                           color: theme.colorScheme.onPrimaryContainer,
                           size: 22,
                         ),
@@ -132,11 +134,8 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                             children: [
                               Text(
                                 loc.tr('aiMarketAnalystTitle'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface),
                               ),
                               const SizedBox(width: 8),
                               Container(
@@ -147,28 +146,22 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                                 ),
                                 child: Text(
                                   'Gemini 1.5 Flash',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSecondaryContainer,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer,
+                                    fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
                           ),
                           Text(
                             loc.tr('aiMarketAnalystSubtitle'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
                     ],
                   ),
                   TashilIconButton(
-                    icon: Icons.close,
+                    icon: Symbols.close_rounded,
                     tooltip: loc.tr('close'),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -206,7 +199,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                                 const SizedBox(width: 10),
                                 Text(
                                   loc.tr('geminiAnalyzingMarketData'),
-                                  style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
                                 ),
                               ],
                             ),
@@ -232,11 +225,8 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                         ),
                         child: Text(
                           msg['text'] ?? '',
-                          style: TextStyle(
-                            color: isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                            fontSize: 13,
-                            height: 1.45,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                            height: 1.45),
                         ),
                       ),
                     );
@@ -258,7 +248,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                     return ActionChip(
                       label: Text(
                         q,
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       backgroundColor: theme.colorScheme.surfaceContainerHigh,
                       side: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -278,8 +268,8 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                       onSubmitted: _sendMessage,
                       decoration: InputDecoration(
                         hintText: loc.tr('askMarketAnalystPlaceholder'),
-                        hintStyle: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                        prefixIcon: Icon(Icons.search, size: 18, color: theme.colorScheme.onSurfaceVariant),
+                        hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        prefixIcon: Icon(Symbols.search_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -298,7 +288,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
                   ),
                   const SizedBox(width: 8),
                   TashilIconButton(
-                    icon: Icons.send_rounded,
+                    icon: Symbols.send_rounded,
                     tooltip: loc.tr('send'),
                     variant: TashilIconButtonVariant.filled,
                     onPressed: () => _sendMessage(_textController.text),

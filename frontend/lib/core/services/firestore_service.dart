@@ -118,6 +118,7 @@ class FirestoreService {
         // If property is rented or unpublished, hide it from the public marketplace
         await marketDocRef.set({
           'is_published': false,
+          'isPublished': false,
           'status': property.rentalStatus == PropertyRentalStatus.rented ? 'rented' : 'unavailable',
           'updated_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));

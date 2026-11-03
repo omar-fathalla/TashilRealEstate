@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/features/vision_maintenance/widgets/ai_vision
 import 'package:tashil_real_estate/features/vision_maintenance/services/ai_vision_maintenance_service.dart';
 import '../services/property_lifecycle_service.dart';
 import '../models/managed_property_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class OwnerMaintenanceView extends StatelessWidget {
   const OwnerMaintenanceView({super.key});
@@ -57,7 +58,7 @@ class OwnerMaintenanceView extends StatelessWidget {
                       ),
                       TashilButton(
                         onPressed: () => AiVisionMaintenanceDialog.show(context),
-                        icon: Icons.troubleshoot_rounded,
+                        icon: Symbols.troubleshoot_rounded,
                         label: loc.tr('visionMaintenanceTitle'),
                         variant: TashilButtonVariant.filled,
                       ),
@@ -82,7 +83,7 @@ class OwnerMaintenanceView extends StatelessWidget {
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
-                                  Icons.verified_outlined,
+                                  Symbols.verified_rounded,
                                   size: 48,
                                   color: colorScheme.primary,
                                 ),
@@ -107,7 +108,7 @@ class OwnerMaintenanceView extends StatelessWidget {
                               const SizedBox(height: 24),
                               TashilButton(
                                 onPressed: () => AiVisionMaintenanceDialog.show(context),
-                                icon: Icons.add_circle_outline_rounded,
+                                icon: Symbols.add_circle_outline_rounded,
                                 label: loc.tr('visionMaintenanceTitle'),
                                 variant: TashilButtonVariant.tonal,
                               ),
@@ -143,7 +144,7 @@ class OwnerMaintenanceView extends StatelessWidget {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Icon(
-                                        isResolved ? Icons.check_circle_outline : Icons.pending_actions_outlined,
+                                        isResolved ? Symbols.check_circle_rounded : Symbols.pending_actions_rounded,
                                         color: isResolved
                                             ? colorScheme.onSecondaryContainer
                                             : colorScheme.onTertiaryContainer,
@@ -153,11 +154,8 @@ class OwnerMaintenanceView extends StatelessWidget {
                                     const SizedBox(width: 12),
                                     Text(
                                       t['id'].toString(),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface),
                                     ),
                                   ],
                                 ),
@@ -171,13 +169,10 @@ class OwnerMaintenanceView extends StatelessWidget {
                                   ),
                                   child: Text(
                                     isResolved ? loc.tr('statusResolved') : loc.tr('statusPending'),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                       color: isResolved
                                           ? colorScheme.onSecondaryContainer
-                                          : colorScheme.onTertiaryContainer,
-                                    ),
+                                          : colorScheme.onTertiaryContainer),
                                   ),
                                 ),
                               ],
@@ -185,16 +180,13 @@ class OwnerMaintenanceView extends StatelessWidget {
                             const SizedBox(height: 12),
                             Text(
                               title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '${loc.tr('maintenanceForUnit')}: $unit',
-                              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                             Divider(height: 24, color: colorScheme.outlineVariant),
                             Row(
@@ -202,11 +194,8 @@ class OwnerMaintenanceView extends StatelessWidget {
                               children: [
                                 Text(
                                   '${loc.tr('maintenanceCost')}: ${CurrencyFormatter.formatAmount(cost, langCode: lang)} $currency',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: colorScheme.primary,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary),
                                 ),
                                 if (!isResolved)
                                   TashilButton(

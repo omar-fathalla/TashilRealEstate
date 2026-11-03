@@ -9,10 +9,13 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/lists/m3_lists_showcase_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/loading/m3_loading_showcase_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Minimalist, Icon-First Material Design 3 Settings Dialog for Tashil Real Estate.
 /// Integrates Country, Language, Dark Mode, Color Themes, and Font Themes with zero clutter.
@@ -37,7 +40,7 @@ class AppSettingsDialog extends StatelessWidget {
     return TashilTransitions.showM3Dialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => const Dialog(
+      builder: (_) => const TashilDialogFrame(
         backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: AppSettingsDialog(),
@@ -52,6 +55,8 @@ class AppSettingsDialog extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final isMobile = MediaQuery.of(context).size.width < 700;
     final currentLang = loc.locale.languageCode;
+    final profile = UserProfileService().profileNotifier.value;
+    final isOperator = profile.role == 'SuperAdmin' && profile.uid.isNotEmpty;
 
     final dialogContent = Container(
       constraints: BoxConstraints(
@@ -64,7 +69,7 @@ class AppSettingsDialog extends StatelessWidget {
         border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(isMobile ? 80 : 40),
+            color: colorScheme.onSurface.withAlpha(isMobile ? 80 : 40),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -89,33 +94,32 @@ class AppSettingsDialog extends StatelessWidget {
                   // Row 1: Quick Icon Controls (Country, Language, Dark Mode)
                   _buildQuickControlsBar(context, loc, colorScheme, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                  if (isOperator) ...[
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 2: لوحة الألوان (Color Palette)
-                  _buildColorPaletteSection(context, loc, colorScheme, currentLang),
+                    // Palette, fonts, and design-system tools stay on the operator console.
+                    _buildColorPaletteSection(context, loc, colorScheme, currentLang),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 3: الخطوط (Typography Card with Modal Picker Trigger)
-                  _buildFontSection(context, loc, colorScheme, currentLang, isMobile),
+                    _buildFontSection(context, loc, colorScheme, currentLang, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 4: معايير تصميم M3 والقوائم (Design System Standards & Lists)
-                  _buildDesignStandardsSection(context, loc, colorScheme, isMobile),
+                    _buildDesignStandardsSection(context, loc, colorScheme, isMobile),
 
-                  const SizedBox(height: 20),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    const TashilDivider.middleInset(),
+                    const SizedBox(height: 20),
 
-                  // Section 5: محركات ونماذج الذكاء الاصطناعي (AI Models & Engine Hub)
-                  _buildAiEngineSection(context, loc, colorScheme, isMobile),
+                    _buildAiEngineSection(context, loc, colorScheme, isMobile),
+                  ],
                 ],
               ),
             ),
@@ -151,7 +155,7 @@ class AppSettingsDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              Icons.tune_rounded,
+              Symbols.tune_rounded,
               color: colorScheme.onPrimaryContainer,
               size: 20,
             ),
@@ -159,11 +163,8 @@ class AppSettingsDialog extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             loc.tr('settings'),
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface),
           ),
           const Spacer(),
           // M3 Shaded Close Button standard
@@ -186,6 +187,9 @@ class AppSettingsDialog extends StatelessWidget {
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 640;
 
+        final profile = UserProfileService().profileNotifier.value;
+        final isOperator = profile.role == 'SuperAdmin' && profile.uid.isNotEmpty;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -194,30 +198,44 @@ class AppSettingsDialog extends StatelessWidget {
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                // 1. Country & Currency Selector (Google Icons Only)
+                // Country selector. End users stay on the UAE market.
+                // Super admins can still inspect Egypt records.
                 ValueListenableBuilder<String>(
                   valueListenable: CountryController.currentCountry,
                   builder: (context, currentCountry, _) {
+                    final segments = <TashilConnectedButtonSegment<String>>[
+                      if (isOperator)
+                        TashilConnectedButtonSegment(
+                          value: 'EG',
+                          label: '${loc.tr('country_eg')} (${loc.tr('currency_eg')})',
+                          icon: Symbols.flag_rounded,
+                        ),
+                      TashilConnectedButtonSegment(
+                        value: 'AE',
+                        label: '${loc.tr('country_ae')} (${loc.tr('currency_ae')})',
+                        icon: Symbols.flag_rounded,
+                      ),
+                    ];
+                    final selected = segments.any((segment) => segment.value == currentCountry)
+                        ? currentCountry
+                        : 'AE';
+                    if (!isOperator && currentCountry != 'AE') {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (CountryController.countryCode != 'AE') {
+                          CountryController.setCountry('AE');
+                        }
+                      });
+                    }
                     return SizedBox(
                       width: isNarrow ? (constraints.maxWidth > 340 ? constraints.maxWidth : null) : null,
                       child: TashilConnectedButtonGroup<String>(
                         height: 40,
-                        selectedValue: currentCountry,
+                        selectedValue: selected,
                         onSelectionChanged: (countryCode) {
+                          if (!isOperator && countryCode != 'AE') return;
                           CountryController.setCountry(countryCode);
                         },
-                        segments: [
-                          TashilConnectedButtonSegment(
-                            value: 'EG',
-                            label: '${loc.tr('country_eg')} (${loc.tr('currency_eg')})',
-                            icon: Icons.flag_rounded,
-                          ),
-                          TashilConnectedButtonSegment(
-                            value: 'AE',
-                            label: '${loc.tr('country_ae')} (${loc.tr('currency_ae')})',
-                            icon: Icons.flag_rounded,
-                          ),
-                        ],
+                        segments: segments,
                       ),
                     );
                   },
@@ -236,21 +254,21 @@ class AppSettingsDialog extends StatelessWidget {
                         onSelectionChanged: (selectedLang) {
                           LocaleController.setLanguage(selectedLang);
                         },
-                        segments: const [
+                        segments: [
                           TashilConnectedButtonSegment(
                             value: 'ar',
-                            label: 'عربي',
-                            icon: Icons.translate_rounded,
+                            label: AppLocalizations.trStatic('uiCopy242'),
+                            icon: Symbols.translate_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'en',
                             label: 'EN',
-                            icon: Icons.translate_rounded,
+                            icon: Symbols.translate_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'hi',
                             label: 'हिं',
-                            icon: Icons.translate_rounded,
+                            icon: Symbols.translate_rounded,
                           ),
                         ],
                       ),
@@ -274,12 +292,12 @@ class AppSettingsDialog extends StatelessWidget {
                         TashilConnectedButtonSegment(
                           value: false,
                           label: loc.tr('lightMode'),
-                          icon: Icons.light_mode_rounded,
+                          icon: Symbols.light_mode_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: true,
                           label: loc.tr('darkMode'),
-                          icon: Icons.dark_mode_rounded,
+                          icon: Symbols.dark_mode_rounded,
                         ),
                       ],
                     );
@@ -311,7 +329,7 @@ class AppSettingsDialog extends StatelessWidget {
                 color: colorScheme.primaryContainer.withAlpha(80),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.palette_rounded, size: 18, color: colorScheme.primary),
+              child: Icon(Symbols.palette_rounded, size: 18, color: colorScheme.primary),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -320,18 +338,12 @@ class AppSettingsDialog extends StatelessWidget {
                 children: [
                   Text(
                     loc.tr('colorThemesTitle'),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   Text(
                     loc.tr('colorThemesSubtitle'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -393,7 +405,7 @@ class AppSettingsDialog extends StatelessWidget {
                 color: colorScheme.primaryContainer.withAlpha(80),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.font_download_rounded, size: 18, color: colorScheme.primary),
+              child: Icon(Symbols.font_download_rounded, size: 18, color: colorScheme.primary),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -402,18 +414,12 @@ class AppSettingsDialog extends StatelessWidget {
                 children: [
                   Text(
                     loc.tr('fontThemesTitle'),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   Text(
                     loc.tr('fontSelectionSubtitle'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -425,7 +431,7 @@ class AppSettingsDialog extends StatelessWidget {
             Tooltip(
               message: loc.tr('changeFont'),
               child: TashilIconButton.tonal(
-                icon: Icons.tune_rounded,
+                icon: Symbols.tune_rounded,
                 size: 36,
                 iconSize: 18,
                 onPressed: () => FontPickerDialog.show(context),
@@ -469,7 +475,7 @@ class AppSettingsDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
-                            Icons.text_fields_rounded,
+                            Symbols.text_fields_rounded,
                             size: 22,
                             color: colorScheme.onPrimaryContainer,
                           ),
@@ -502,11 +508,8 @@ class AppSettingsDialog extends StatelessWidget {
                                     ),
                                     child: Text(
                                       categoryName,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.onSecondaryContainer,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSecondaryContainer),
                                     ),
                                   ),
                                 ],
@@ -514,10 +517,7 @@ class AppSettingsDialog extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 loc.tr(activeFont.descriptionKey),
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -526,10 +526,10 @@ class AppSettingsDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         isMobile
-                            ? Icon(Icons.chevron_right_rounded, color: colorScheme.primary)
+                            ? Icon(Symbols.chevron_right_rounded, color: colorScheme.primary)
                             : TashilButton.tonal(
                                 label: loc.tr('changeFont'),
-                                icon: Icons.tune_rounded,
+                                icon: Symbols.tune_rounded,
                                 height: 36,
                                 onPressed: () => FontPickerDialog.show(context),
                               ),
@@ -587,7 +587,7 @@ class AppSettingsDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                Icons.palette_outlined,
+                Symbols.palette_rounded,
                 size: 16,
                 color: colorScheme.onPrimaryContainer,
               ),
@@ -595,11 +595,8 @@ class AppSettingsDialog extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               loc.tr('m3DesignSystemTab'),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
             ),
           ],
         ),
@@ -611,28 +608,19 @@ class AppSettingsDialog extends StatelessWidget {
             children: [
               Text(
                 loc.tr('m3DesignSystemTabDesc'),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                  height: 1.4),
               ),
               const SizedBox(height: 14),
               Text(
                 loc.tr('m3MotionPreferenceTitle'),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
               ),
               const SizedBox(height: 4),
               Text(
                 loc.tr('m3MotionPreferenceDesc'),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 10),
               ValueListenableBuilder<TashilPageTransitionType>(
@@ -647,17 +635,17 @@ class AppSettingsDialog extends StatelessWidget {
                       TashilConnectedButtonSegment(
                         value: TashilPageTransitionType.fadeThrough,
                         label: loc.tr('m3MotionFadeThrough'),
-                        icon: Icons.auto_awesome_motion_rounded,
+                        icon: Symbols.auto_awesome_motion_rounded,
                       ),
                       TashilConnectedButtonSegment(
                         value: TashilPageTransitionType.sharedAxisX,
                         label: loc.tr('m3MotionSharedAxisX'),
-                        icon: Icons.swap_horiz_rounded,
+                        icon: Symbols.swap_horiz_rounded,
                       ),
                       TashilConnectedButtonSegment(
                         value: TashilPageTransitionType.sharedAxisZ,
                         label: loc.tr('m3MotionSharedAxisZ'),
-                        icon: Icons.zoom_in_map_rounded,
+                        icon: Symbols.zoom_in_map_rounded,
                       ),
                     ],
                   );
@@ -670,25 +658,25 @@ class AppSettingsDialog extends StatelessWidget {
                 children: [
                   TashilButton.tonal(
                     label: loc.tr('m3MotionSuiteButton'),
-                    icon: Icons.animation_rounded,
+                    icon: Symbols.animation_rounded,
                     height: 36,
                     onPressed: () => M3MotionShowcaseDialog.show(context),
                   ),
                   TashilButton.tonal(
                     label: loc.tr('m3ListsSuiteTitle'),
-                    icon: Icons.format_list_bulleted_rounded,
+                    icon: Symbols.format_list_bulleted_rounded,
                     height: 36,
                     onPressed: () => M3ListsShowcaseDialog.show(context),
                   ),
                   TashilButton.tonal(
                     label: loc.tr('m3LoadingIndicatorTitle'),
-                    icon: Icons.refresh_rounded,
+                    icon: Symbols.refresh_rounded,
                     height: 36,
                     onPressed: () => M3LoadingShowcaseDialog.show(context),
                   ),
                   TashilButton.filled(
                     label: loc.tr('firebaseHubButton'),
-                    icon: Icons.cloud_done_rounded,
+                    icon: Symbols.cloud_done_rounded,
                     height: 36,
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -719,16 +707,13 @@ class AppSettingsDialog extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  Icon(Icons.smart_toy_rounded, size: 20, color: colorScheme.primary),
+                  Icon(Symbols.smart_toy_rounded, size: 20, color: colorScheme.primary),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       loc.tr('appSettingsAiEngineSectionTitle'),
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -743,12 +728,9 @@ class AppSettingsDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Gemini 3.8 & 2.5 Active',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                loc.tr('aiModelsActive'),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onPrimaryContainer),
               ),
             ),
           ],
@@ -763,7 +745,7 @@ class AppSettingsDialog extends StatelessWidget {
               children: [
                 Text(
                   loc.tr('appSettingsAiEngineSectionDesc'),
-                  style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -776,8 +758,8 @@ class AppSettingsDialog extends StatelessWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.teal,
+                            decoration: BoxDecoration(
+                              color: colorScheme.tertiary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -785,11 +767,8 @@ class AppSettingsDialog extends StatelessWidget {
                           Flexible(
                             child: Text(
                               loc.tr('allEnginesOperational'),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.teal,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.tertiary),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -798,7 +777,7 @@ class AppSettingsDialog extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     TashilButton.filled(
-                      icon: Icons.tune_rounded,
+                      icon: Symbols.tune_rounded,
                       label: loc.tr('openAiEngineHubBtn'),
                       onPressed: () {
                         Navigator.of(context).pop();
@@ -858,7 +837,7 @@ class _PaletteCircleItemState extends State<_PaletteCircleItem> {
               shape: BoxShape.circle,
               border: Border.all(
                 color: widget.isSelected
-                    ? (isDark ? Colors.white : widget.colorScheme.onSurface)
+                    ? (isDark ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface)
                     : (_isHovered
                         ? widget.palette.color.withAlpha(180)
                         : Colors.transparent),
@@ -873,8 +852,8 @@ class _PaletteCircleItemState extends State<_PaletteCircleItem> {
               ],
             ),
             child: widget.isSelected
-                ? const Center(
-                    child: Icon(Icons.check_rounded, size: 20, color: Colors.white),
+                ? Center(
+                    child: Icon(Symbols.check_rounded, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                   )
                 : null,
           ),

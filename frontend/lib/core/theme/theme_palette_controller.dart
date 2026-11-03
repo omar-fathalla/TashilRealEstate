@@ -67,9 +67,10 @@ class ThemePaletteController {
   ThemePaletteController._();
   static final ThemePaletteController instance = ThemePaletteController._();
 
-  /// Default active seed palette: Ocean Royal Blue
+  /// Default active seed palette: Slate Navy, the brand seed.
+  /// The other palettes stay available for the super-admin design tools.
   final ValueNotifier<M3ThemePalette> currentPalette =
-      ValueNotifier<M3ThemePalette>(M3ThemePalette.oceanBlue);
+      ValueNotifier<M3ThemePalette>(M3ThemePalette.slateNavy);
 
   /// Dark mode state: default is Light mode (false)
   final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(false);

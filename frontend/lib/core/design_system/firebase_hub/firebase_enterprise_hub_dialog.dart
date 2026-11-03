@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/core/services/remote_config_service.dart';
 import 'package:tashil_real_estate/core/services/performance_monitoring_service.dart';
 import 'package:tashil_real_estate/core/services/crash_reporting_service.dart';
 import 'package:tashil_real_estate/core/services/invoice_receipt_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive Firebase Enterprise Services Hub and live testing suite dialog.
 /// Showcases App Check, Cloud Messaging, Remote Config, Performance Monitoring,
@@ -64,7 +65,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
     return TashilModalDialog(
       title: tr.tr('firebaseHubTitle'),
       subtitle: tr.tr('firebaseHubSubtitle'),
-      icon: Icons.cloud_done_rounded,
+      icon: Symbols.cloud_done_rounded,
       onClose: () => Navigator.of(context).pop(),
       footer: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -89,7 +90,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
               ),
               child: Row(
                 children: [
-                  Icon(Icons.verified_user_rounded, color: colorScheme.primary, size: 22),
+                  Icon(Symbols.verified_user_rounded, color: colorScheme.primary, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -108,13 +109,13 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 1: App Check Shield
             _buildStationCard(
               theme: theme,
-              icon: Icons.security_rounded,
-              iconColor: Colors.teal,
+              icon: Symbols.security_rounded,
+              iconColor: colorScheme.tertiary,
               title: tr.tr('appCheckStatus'),
               statusText: tr.tr('appCheckVerified'),
               actionButton: TashilButton.filled(
                 label: tr.tr('appCheckTestBtn'),
-                icon: Icons.shield_rounded,
+                icon: Symbols.shield_rounded,
                 isLoading: _isCheckingAppCheck,
                 onPressed: _testAppCheck,
               ),
@@ -138,7 +139,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 2: FCM Notification Station
             _buildStationCard(
               theme: theme,
-              icon: Icons.notifications_active_rounded,
+              icon: Symbols.notifications_active_rounded,
               iconColor: Colors.deepPurple,
               title: tr.tr('fcmTestTitle'),
               statusText: FcmNotificationService().fcmToken != null
@@ -146,7 +147,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
                   : tr.tr('firebaseServiceActive'),
               actionButton: TashilButton.filled(
                 label: tr.tr('fcmSendTestBtn'),
-                icon: Icons.send_rounded,
+                icon: Symbols.send_rounded,
                 isLoading: _isSendingNotif,
                 onPressed: _testFcmNotification,
               ),
@@ -155,19 +156,19 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
                       margin: const EdgeInsetsDirectional.only(top: 10),
                       padding: const EdgeInsetsDirectional.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.12),
+                        color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
+                          Icon(Symbols.check_circle_rounded, color: colorScheme.primary, size: 18),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _lastNotifMessage!,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.green.shade800,
+                                color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -182,13 +183,13 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 3: Remote Config
             _buildStationCard(
               theme: theme,
-              icon: Icons.tune_rounded,
-              iconColor: Colors.orange,
+              icon: Symbols.tune_rounded,
+              iconColor: colorScheme.tertiary,
               title: tr.tr('remoteConfigTitle'),
               statusText: 'Commission: ${RemoteConfigService().platformFeePercentage}% | Min: ${RemoteConfigService().minSearchPrice.toInt()} | Max: ${RemoteConfigService().maxSearchPrice.toInt()}',
               actionButton: TashilButton.tonal(
                 label: tr.tr('remoteConfigFetchBtn'),
-                icon: Icons.sync_rounded,
+                icon: Symbols.sync_rounded,
                 isLoading: _isSyncingConfig,
                 onPressed: _syncRemoteConfig,
               ),
@@ -198,15 +199,15 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 4: Performance Monitoring
             _buildStationCard(
               theme: theme,
-              icon: Icons.speed_rounded,
-              iconColor: Colors.blue,
+              icon: Symbols.speed_rounded,
+              iconColor: colorScheme.secondary,
               title: tr.tr('perfMonitoringTitle'),
               statusText: _benchmarkLatencyMs != null
                   ? '${tr.tr('perfBenchmarkResult')} $_benchmarkLatencyMs ms'
                   : 'FirebasePerformance Tracing Active',
               actionButton: TashilButton.filled(
                 label: tr.tr('perfRunBenchmarkBtn'),
-                icon: Icons.timer_outlined,
+                icon: Symbols.timer_rounded,
                 isLoading: _isRunningBenchmark,
                 onPressed: _runPerformanceBenchmark,
               ),
@@ -226,13 +227,13 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 5: Crash Reporting & Telemetry
             _buildStationCard(
               theme: theme,
-              icon: Icons.bug_report_rounded,
-              iconColor: Colors.redAccent,
+              icon: Symbols.bug_report_rounded,
+              iconColor: colorScheme.error,
               title: tr.tr('crashlyticsTitle'),
-              statusText: 'Framework Error Interceptor Active',
+              statusText: AppLocalizations.trStatic('uiCopy049'),
               actionButton: TashilButton.outlined(
                 label: tr.tr('crashlyticsTestBtn'),
-                icon: Icons.play_arrow_rounded,
+                icon: Symbols.play_arrow_rounded,
                 isLoading: _isTestingCrash,
                 onPressed: _testCrashReporting,
               ),
@@ -259,15 +260,15 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
             // Station 6: Digital Invoices & Receipts
             _buildStationCard(
               theme: theme,
-              icon: Icons.receipt_long_rounded,
-              iconColor: Colors.amber.shade800,
+              icon: Symbols.receipt_long_rounded,
+              iconColor: colorScheme.tertiary,
               title: tr.tr('invoiceGenTitle'),
               statusText: _generatedReceipt != null
                   ? '${_generatedReceipt!.invoiceNumber} • ${_generatedReceipt!.totalPaid.toStringAsFixed(0)} ${_generatedReceipt!.currencyCode}'
                   : 'Automated VAT & Payout Splits',
               actionButton: TashilButton.filled(
                 label: tr.tr('invoiceGenBtn'),
-                icon: Icons.create_new_folder_outlined,
+                icon: Symbols.create_new_folder_rounded,
                 isLoading: _isGeneratingInvoice,
                 onPressed: _testInvoiceGeneration,
               ),
@@ -293,12 +294,12 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
                               Container(
                                 padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.15),
+                                  color: colorScheme.primary.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   '✓ ${_generatedReceipt!.status}',
-                                  style: theme.textTheme.labelSmall?.copyWith(color: Colors.green.shade800),
+                                  style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.primary),
                                 ),
                               ),
                             ],
@@ -321,14 +322,14 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Owner Payout (90%):', style: theme.textTheme.bodySmall),
+                              Text(AppLocalizations.trStatic('uiCopy069'), style: theme.textTheme.bodySmall),
                               Text('${_generatedReceipt!.ownerPayout.toStringAsFixed(0)} ${_generatedReceipt!.currencyCode}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Total Paid:', style: theme.textTheme.bodySmall),
+                              Text(AppLocalizations.trStatic('uiCopy079'), style: theme.textTheme.bodySmall),
                               Text('${_generatedReceipt!.totalPaid.toStringAsFixed(0)} ${_generatedReceipt!.currencyCode}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -430,7 +431,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
+              Icon(Symbols.notifications_active_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
               const SizedBox(width: 10),
               Expanded(child: Text(tr.tr('fcmTestSuccess'))),
             ],
@@ -480,8 +481,8 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
     setState(() => _isGeneratingInvoice = true);
     final receipt = await InvoiceReceiptService().generateReceipt(
       leaseId: 'LS-2026-CAIRO-902',
-      tenantName: 'م. أحمد الشريف',
-      propertyTitle: 'شقة فاخرة بإطلالة بانورامية - التجمع الخامس',
+      tenantName: AppLocalizations.trStatic('uiCopy271'),
+      propertyTitle: AppLocalizations.trStatic('uiCopy228'),
       rentalAmount: 25000.0,
       countryCode: 'EG',
     );

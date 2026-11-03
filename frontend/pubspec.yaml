@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   firebase_core: ^4.14.0
   firebase_auth: ^6.6.1
   cloud_firestore: ^6.9.0
@@ -31,6 +33,7 @@ dependencies:
   firebase_performance: ^0.11.6
   cloud_functions: ^6.5.0
   firebase_storage: ^13.6.0
+  material_symbols_icons: ^4.2960.0
 
 dev_dependencies:
   flutter_test:

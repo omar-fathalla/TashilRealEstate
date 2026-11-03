@@ -6,10 +6,13 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/design_system/progress/tashil_progress.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/services/ai_processing_consent.dart';
 import 'package:tashil_real_estate/core/services/speech_recognition/speech_recognition_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 enum VoiceInputStep {
   listening,
@@ -205,40 +208,40 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
   String _formatPropertyType(String type) {
     switch (type.toLowerCase()) {
       case 'villa':
-        return 'فيلا';
+        return AppLocalizations.trStatic('uiCopy253');
       case 'studio':
-        return 'استوديو';
+        return AppLocalizations.trStatic('uiCopy115');
       case 'chalet':
-        return 'شاليه';
+        return AppLocalizations.trStatic('uiCopy218');
       case 'penthouse':
-        return 'بنتهاوس';
+        return AppLocalizations.trStatic('uiCopy162');
       case 'office':
-        return 'مكتب';
+        return AppLocalizations.trStatic('uiCopy302');
       default:
-        return 'شقة سكنية';
+        return AppLocalizations.trStatic('uiCopy227');
     }
   }
 
   String _formatFurnishing(FurnishingStatus status) {
     switch (status) {
       case FurnishingStatus.fullyFurnished:
-        return 'مفروش بالكامل';
+        return AppLocalizations.trStatic('uiCopy301');
       case FurnishingStatus.semiFurnished:
-        return 'نصف مفروش';
+        return AppLocalizations.trStatic('uiCopy319');
       case FurnishingStatus.unfurnished:
-        return 'غير مفروش';
+        return AppLocalizations.trStatic('uiCopy250');
     }
   }
 
   String _formatAmenitiesSummary(FastPropertyDraft draft) {
     final list = <String>[];
-    if (draft.hasParking) list.add('موقف');
-    if (draft.hasCentralAc) list.add('تكييف');
-    if (draft.hasPoolGym) list.add('مسبح/جيم');
-    if (draft.hasSecurity) list.add('أمن');
-    if (draft.hasBalconyView) list.add('شرفة');
-    if (draft.isPetFriendly) list.add('حيوانات');
-    return list.isNotEmpty ? list.join('، ') : 'بدون مرافق إضافية';
+    if (draft.hasParking) list.add(AppLocalizations.trStatic('uiCopy314'));
+    if (draft.hasCentralAc) list.add(AppLocalizations.trStatic('uiCopy173'));
+    if (draft.hasPoolGym) list.add(AppLocalizations.trStatic('uiCopy289'));
+    if (draft.hasSecurity) list.add(AppLocalizations.trStatic('uiCopy087'));
+    if (draft.hasBalconyView) list.add(AppLocalizations.trStatic('uiCopy220'));
+    if (draft.isPetFriendly) list.add(AppLocalizations.trStatic('uiCopy198'));
+    return list.isNotEmpty ? list.join('، ') : AppLocalizations.trStatic('uiCopy158');
   }
 
   List<MandatoryFieldStatus> _buildFieldStatuses(String text, String countryCode) {
@@ -254,76 +257,76 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
     return [
       // 1. Mandatory Location
       MandatoryFieldStatus(
-        icon: Icons.location_on_rounded,
+        icon: Symbols.location_on_rounded,
         titleKey: 'guideFieldLocation',
         descKey: 'guideFieldLocationDesc',
         isComplete: isLocationOk,
         detectedValue: isLocationOk ? '${draft.city} - ${draft.district}' : null,
-        missingWarningText: 'الموقع الجغرافي (المدينة والحي)',
+        missingWarningText: AppLocalizations.trStatic('uiCopy149'),
         sampleChips: const [],
         isMandatory: true,
       ),
       // 2. Mandatory Rent
       MandatoryFieldStatus(
-        icon: Icons.payments_rounded,
+        icon: Symbols.payments_rounded,
         titleKey: 'guideFieldRent',
         descKey: 'guideFieldRentDesc',
         isComplete: isRentOk,
         detectedValue: isRentOk ? '${draft.monthlyRent.toInt()} ${isUAE ? "AED" : "ج.م"}' : null,
-        missingWarningText: 'قيمة الإيجار الشهري المطلوب',
+        missingWarningText: AppLocalizations.trStatic('uiCopy262'),
         sampleChips: const [],
         isMandatory: true,
       ),
       // 3. Mandatory Area & Type
       MandatoryFieldStatus(
-        icon: Icons.square_foot_rounded,
+        icon: Symbols.square_foot_rounded,
         titleKey: 'guideFieldAreaOnly',
         descKey: 'guideFieldAreaOnlyDesc',
         isComplete: isAreaOk,
         detectedValue: isAreaOk ? '${draft.areaSqm} م² (${_formatPropertyType(draft.propertyType)})' : null,
-        missingWarningText: 'المساحة بالمتر المربع ونوع العقار',
+        missingWarningText: AppLocalizations.trStatic('uiCopy143'),
         sampleChips: const [],
         isMandatory: true,
       ),
       // 4. Mandatory Bedrooms
       MandatoryFieldStatus(
-        icon: Icons.bed_rounded,
+        icon: Symbols.bed_rounded,
         titleKey: 'guideFieldBedrooms',
         descKey: 'guideFieldBedroomsDesc',
         isComplete: isBedsOk,
         detectedValue: isBedsOk
             ? (draft.propertyType == 'studio' ? 'استوديو (0 غرف)' : '${draft.bedrooms} غرف نوم')
             : null,
-        missingWarningText: 'عدد غرف النوم',
-        sampleChips: const ['غرفة واحدة', 'غرفتين نوم', '3 غرف نوم', '4 غرف نوم'],
+        missingWarningText: AppLocalizations.trStatic('uiCopy241'),
+        sampleChips: ['غرفة واحدة', 'غرفتين نوم', '3 غرف نوم', AppLocalizations.trStatic('uiCopy026')],
         isMandatory: true,
       ),
       // 5. Mandatory Bathrooms
       MandatoryFieldStatus(
-        icon: Icons.bathtub_rounded,
+        icon: Symbols.bathtub_rounded,
         titleKey: 'guideFieldBathrooms',
         descKey: 'guideFieldBathroomsDesc',
         isComplete: isBathsOk,
         detectedValue: isBathsOk ? '${draft.bathrooms} حمام' : null,
-        missingWarningText: 'عدد الحمامات',
-        sampleChips: const ['1 حمام', '2 حمام', '3 حمامات'],
+        missingWarningText: AppLocalizations.trStatic('uiCopy240'),
+        sampleChips: ['1 حمام', AppLocalizations.trStatic('uiCopy011'), '3 حمامات'],
         isMandatory: true,
       ),
       // 6. Mandatory Furnishing
       MandatoryFieldStatus(
-        icon: Icons.chair_rounded,
+        icon: Symbols.chair_rounded,
         titleKey: 'guideFieldFurnishing',
         descKey: 'guideFieldFurnishingDesc',
         isComplete: true,
         detectedValue: _formatFurnishing(draft.furnishingStatus),
-        missingWarningText: 'حالة الفرش والتأثيث',
-        sampleChips: const ['غير مفروش', 'مفروش بالكامل', 'نصف مفروش'],
+        missingWarningText: AppLocalizations.trStatic('uiCopy191'),
+        sampleChips: [AppLocalizations.trStatic('uiCopy250'), AppLocalizations.trStatic('uiCopy301'), AppLocalizations.trStatic('uiCopy319')],
         isMandatory: true,
       ),
 
       // 7. Optional Building / Street / Unit
       MandatoryFieldStatus(
-        icon: Icons.signpost_rounded,
+        icon: Symbols.signpost_rounded,
         titleKey: 'guideFieldBuildingAddress',
         descKey: 'guideFieldBuildingAddressDesc',
         isComplete: (draft.buildingName != null && draft.buildingName!.isNotEmpty) ||
@@ -339,7 +342,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
       ),
       // 8. Optional Floor & Finishing
       MandatoryFieldStatus(
-        icon: Icons.layers_rounded,
+        icon: Symbols.layers_rounded,
         titleKey: 'guideFieldFloorFinishing',
         descKey: 'guideFieldFloorFinishingDesc',
         isComplete: draft.floor != null,
@@ -349,7 +352,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
       ),
       // 9. Optional Security Deposit
       MandatoryFieldStatus(
-        icon: Icons.security_rounded,
+        icon: Symbols.security_rounded,
         titleKey: 'guideFieldRentAndDeposit',
         descKey: 'guideFieldRentAndDepositDesc',
         isComplete: draft.securityDeposit != null && draft.securityDeposit! > 0,
@@ -359,7 +362,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
       ),
       // 10. Optional Amenities
       MandatoryFieldStatus(
-        icon: Icons.pool_rounded,
+        icon: Symbols.pool_rounded,
         titleKey: 'guideFieldAmenities',
         descKey: 'guideFieldAmenitiesDesc',
         isComplete: draft.hasParking || draft.hasCentralAc || draft.hasPoolGym || draft.hasSecurity || draft.hasBalconyView || draft.isPetFriendly,
@@ -397,12 +400,17 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
     _recordingTimer?.cancel();
     _speechService.stopListening();
 
+    final allowed = await AiProcessingConsent.ensure(context);
+    if (!mounted) return;
+
     setState(() => _step = VoiceInputStep.parsing);
 
-    final draft = await _service.parseVoiceTranscriptionToDraft(
-      voiceTranscription: text,
-      countryCode: countryCode,
-    );
+    final draft = allowed
+        ? await _service.parseVoiceTranscriptionToDraft(
+            voiceTranscription: text,
+            countryCode: countryCode,
+          )
+        : heuristicDraft;
 
     if (mounted) {
       setState(() => _step = VoiceInputStep.ready);
@@ -418,7 +426,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth >= 800;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 24,
@@ -471,7 +479,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.mic_rounded, color: theme.colorScheme.primary, size: 22),
+                child: Icon(Symbols.mic_rounded, color: theme.colorScheme.primary, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -480,13 +488,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   children: [
                     Text(
                       loc.tr('voicePropertyOnboardingTitle'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       loc.tr('speakOrTypePropertySpecsDesc'),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -531,18 +539,15 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.mic_rounded,
+                      Symbols.mic_rounded,
                       size: 15,
                       color: _mobileSelectedTab == 0 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       loc.tr('tabVoiceRecord'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _mobileSelectedTab == 0 ? FontWeight.bold : FontWeight.w500,
-                        color: _mobileSelectedTab == 0 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: _mobileSelectedTab == 0 ? FontWeight.bold : FontWeight.w500,
+                        color: _mobileSelectedTab == 0 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -566,18 +571,15 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.checklist_rounded,
+                      Symbols.checklist_rounded,
                       size: 15,
                       color: _mobileSelectedTab == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       loc.tr('tabRequiredFieldsGuide'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _mobileSelectedTab == 1 ? FontWeight.bold : FontWeight.w500,
-                        color: _mobileSelectedTab == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: _mobileSelectedTab == 1 ? FontWeight.bold : FontWeight.w500,
+                        color: _mobileSelectedTab == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -637,12 +639,12 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.error),
+                  Icon(Symbols.info_rounded, size: 16, color: theme.colorScheme.error),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.error),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
                 ],
@@ -658,7 +660,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
               Flexible(
                 child: Text(
                   loc.tr('spokenVoiceTranscription'),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -681,7 +683,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                       Flexible(
                         child: Text(
                           loc.tr('speechListeningLive'),
-                          style: TextStyle(fontSize: 10, color: theme.colorScheme.error, fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.w600),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -698,7 +700,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   ),
                   child: Text(
                     '$wordCount كلمة',
-                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -710,7 +712,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
             controller: _transcriptionController,
             maxLines: 5,
             readOnly: _step == VoiceInputStep.parsing,
-            style: const TextStyle(fontSize: 13, height: 1.45),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.45),
             decoration: InputDecoration(
               hintText: _step == VoiceInputStep.listening
                   ? loc.tr('speakNowPlaceholder')
@@ -739,12 +741,12 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.tips_and_updates_rounded, size: 16, color: theme.colorScheme.tertiary),
+                  Icon(Symbols.tips_and_updates_rounded, size: 16, color: theme.colorScheme.tertiary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       loc.tr('speechNoWordsDetected'),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ],
@@ -766,7 +768,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
           // Parse & Fill Button
           TashilButton(
             onPressed: (_step == VoiceInputStep.parsing || text.isEmpty) ? null : () => _processVoice(bypassValidation: false),
-            icon: _step == VoiceInputStep.parsing ? null : Icons.auto_awesome_rounded,
+            icon: _step == VoiceInputStep.parsing ? null : Symbols.auto_awesome_rounded,
             label: _step == VoiceInputStep.parsing
                 ? loc.tr('geminiParsingSpeech')
                 : loc.tr('parseAndAutofillWithAi'),
@@ -795,16 +797,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error, size: 20),
+              Icon(Symbols.warning_amber_rounded, color: theme.colorScheme.error, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   loc.tr('missingMandatoryWarning'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: theme.colorScheme.error,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.error),
                 ),
               ),
             ],
@@ -812,7 +811,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
           const SizedBox(height: 6),
           Text(
             loc.tr('missingMandatoryDesc'),
-            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           // List of missing mandatory fields formatted cleanly to avoid flex overflow
@@ -836,11 +835,8 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                       Expanded(
                         child: Text(
                           m.missingWarningText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -855,7 +851,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                       children: m.sampleChips.take(2).map((chip) {
                         return TashilAssistChip.outlined(
                           label: chip,
-                          icon: Icons.add_rounded,
+                          icon: Symbols.add_rounded,
                           height: 24.0,
                           borderRadius: 6.0,
                           onPressed: () => _appendSampleKeyword(chip),
@@ -875,7 +871,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 flex: 3,
                 child: TashilButton(
                   onPressed: () => _startListening(appendMode: true),
-                  icon: Icons.mic_rounded,
+                  icon: Symbols.mic_rounded,
                   label: loc.tr('speakMissingFieldsBtn'),
                   variant: TashilButtonVariant.filled,
                 ),
@@ -928,13 +924,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                     ],
                   ),
                   child: Center(
-                    child: Icon(Icons.graphic_eq_rounded, color: theme.colorScheme.onError, size: 30),
+                    child: Icon(Symbols.graphic_eq_rounded, color: theme.colorScheme.onError, size: 30),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   loc.tr('listeningToVoiceInput'),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.error),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.error),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -953,16 +949,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.fiber_manual_record, size: 8, color: theme.colorScheme.onError),
+                          Icon(Symbols.fiber_manual_record_rounded, size: 8, color: theme.colorScheme.onError),
                           const SizedBox(width: 4),
                           Text(
                             _formatDuration(_recordingSeconds),
-                            style: TextStyle(
-                              color: theme.colorScheme.onError,
-                              fontSize: 11,
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onError,
                               fontWeight: FontWeight.bold,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
+                              fontFeatures: const [FontFeature.tabularFigures()]),
                           ),
                         ],
                       ),
@@ -977,16 +970,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.stop_rounded, size: 14, color: theme.colorScheme.error),
+                          Icon(Symbols.stop_rounded, size: 14, color: theme.colorScheme.error),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               loc.tr('tapToStopRecordingAndReview'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.error,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.error),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1039,7 +1029,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 ),
                 child: Center(
                   child: Icon(
-                    hasText ? Icons.check_circle_rounded : Icons.mic_rounded,
+                    hasText ? Symbols.check_circle_rounded : Symbols.mic_rounded,
                     color: hasText ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
                     size: 26,
                   ),
@@ -1048,23 +1038,20 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
               const SizedBox(height: 8),
               Text(
                 hasText ? loc.tr('recordingCompletedReviewText') : loc.tr('tapMicToSpeak'),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: hasText ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: hasText ? theme.colorScheme.primary : theme.colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
                 hasText ? loc.tr('reviewTextInstructions') : loc.tr('speakOrTypePropertySpecsDesc'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               TashilButton.outlined(
                 onPressed: () => _startListening(appendMode: false),
-                icon: Icons.refresh_rounded,
+                icon: Symbols.refresh_rounded,
                 label: loc.tr('recordAgainBtn'),
               ),
             ],
@@ -1077,9 +1064,9 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
   Widget _buildQuickSamplePrompts(AppLocalizations loc) {
     final isUAE = CountryController.isUAE;
     final sampleAudioPromptsEG = [
-      'شقة 90 متر في بحري، الإسكندرية، 2 غرفة و1 حمام، غير مفروشة، إيجار 5000 جنيه',
-      'شقة 180 متر بالتجمع الخامس، 3 غرف نوم و2 حمام، مفروشة، إيجار 24 ألف جنيه',
-      'دوبلكس 250 متر في الشيخ زايد، 4 غرف، حديقة خاصة، نصف مفروش، 35 ألف جنيه',
+      AppLocalizations.trStatic('uiCopy224'),
+      AppLocalizations.trStatic('uiCopy223'),
+      AppLocalizations.trStatic('uiCopy207'),
     ];
 
     final sampleAudioPromptsAE = [
@@ -1100,7 +1087,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
           final p = prompts[index];
           return TashilSuggestionChip(
             label: p,
-            icon: Icons.mic_none_rounded,
+            icon: Symbols.mic_none_rounded,
             variant: TashilChipVariant.outlined,
             onPressed: () {
               setState(() {
@@ -1142,13 +1129,13 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.assignment_outlined, size: 16, color: theme.colorScheme.primary),
+              child: Icon(Symbols.assignment_rounded, size: 16, color: theme.colorScheme.primary),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 loc.tr('requiredFieldsGuideTitle'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1158,7 +1145,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
         const SizedBox(height: 4),
         Text(
           loc.tr('requiredFieldsGuideDesc'),
-          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 10),
 
@@ -1185,7 +1172,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                     child: Row(
                       children: [
                         Icon(
-                          isAllComplete ? Icons.verified_rounded : Icons.pie_chart_outline_rounded,
+                          isAllComplete ? Symbols.verified_rounded : Symbols.pie_chart_outline_rounded,
                           size: 15,
                           color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.tertiary,
                         ),
@@ -1195,11 +1182,8 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                             isAllComplete
                                 ? loc.tr('allMandatoryFieldsComplete')
                                 : loc.tr('mandatoryProgressBadge').replaceAll('{count}', '$completedCount').replaceAll('{total}', '${coreMandatoryChecks.length}'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                              color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.onSurface),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1210,11 +1194,8 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   const SizedBox(width: 8),
                   Text(
                     '${(progress * 100).toInt()}%',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: isAllComplete ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1241,16 +1222,16 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: BoxDecoration(color: theme.colorScheme.error, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: _showMissingWarning ? theme.colorScheme.error : theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('mandatoryFieldsSectionTitle'),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -1269,11 +1250,8 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('optionalFieldsSectionTitle'),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1288,7 +1266,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
 
   Widget _buildStatusCard(MandatoryFieldStatus item, AppLocalizations loc, ThemeData theme) {
     final isDone = item.isComplete;
-    final isMissingMandatory = item.isMandatory && !isDone;
+    final isMissingMandatory = _showMissingWarning && item.isMandatory && !isDone;
 
     final borderColor = isMissingMandatory
         ? theme.colorScheme.error.withValues(alpha: 0.45)
@@ -1325,20 +1303,17 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                     Flexible(
                       child: Text(
                         loc.tr(item.titleKey),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: isDone ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: isDone ? theme.colorScheme.primary : theme.colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (item.isMandatory) ...[
+                    if (isMissingMandatory) ...[
                       const SizedBox(width: 4),
                       Text(
                         '🔴',
-                        style: const TextStyle(fontSize: 8),
+                        style: Theme.of(context).textTheme.labelSmall!,
                       ),
                     ],
                   ],
@@ -1351,7 +1326,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                 decoration: BoxDecoration(
                   color: isDone
                       ? theme.colorScheme.primaryContainer
-                      : (item.isMandatory ? theme.colorScheme.errorContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainerHighest),
+                      : (isMissingMandatory ? theme.colorScheme.errorContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainerHighest),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -1359,12 +1334,12 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                   children: [
                     Icon(
                       isDone
-                          ? Icons.check_circle_rounded
-                          : (item.isMandatory ? Icons.error_outline_rounded : Icons.radio_button_unchecked_rounded),
+                          ? Symbols.check_circle_rounded
+                          : (isMissingMandatory ? Symbols.error_outline_rounded : Symbols.radio_button_unchecked_rounded),
                       size: 11,
                       color: isDone
                           ? theme.colorScheme.onPrimaryContainer
-                          : (item.isMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant),
+                          : (isMissingMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(width: 3),
                     Text(
@@ -1372,14 +1347,11 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
                           ? (item.detectedValue != null
                               ? loc.tr('detectedFieldBadge').replaceAll('{value}', item.detectedValue!)
                               : loc.tr('detectedInSpeechBadge'))
-                          : (item.isMandatory ? loc.tr('missingFieldBadge') : loc.tr('notMentionedYetBadge')),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+                          : (isMissingMandatory ? loc.tr('missingFieldBadge') : loc.tr('notMentionedYetBadge')),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                         color: isDone
                             ? theme.colorScheme.onPrimaryContainer
-                            : (item.isMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant),
-                      ),
+                            : (isMissingMandatory ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant)),
                     ),
                   ],
                 ),
@@ -1389,7 +1361,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
           const SizedBox(height: 4),
           Text(
             loc.tr(item.descKey),
-            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           if (item.sampleChips.isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -1399,7 +1371,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
               children: item.sampleChips.map((chip) {
                 return TashilAssistChip.outlined(
                   label: chip,
-                  icon: Icons.add_rounded,
+                  icon: Symbols.add_rounded,
                   height: 26.0,
                   borderRadius: 6.0,
                   onPressed: () => _appendSampleKeyword(chip),

@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/theme/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/monthly_payment_schedule_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PaymentScheduleScreen extends StatelessWidget {
   const PaymentScheduleScreen({super.key});
@@ -53,27 +52,23 @@ class PaymentScheduleScreen extends StatelessWidget {
                             color: theme.colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.calendar_month_rounded, color: theme.colorScheme.primary, size: 18),
+                          child: Icon(Symbols.calendar_month_rounded, color: theme.colorScheme.primary, size: 18),
                         ),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             loc.tr('monthlyPaymentLedgerTitle'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 13 : 16, color: theme.colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     actions: [
-                      const ThemePaletteSwitcher(isCompact: true),
-                      const SizedBox(width: 4),
-                      CountrySwitcher(isCompact: true, showLabel: !isMobile),
-                      const SizedBox(width: 4),
                       LanguageSwitcher(isCompact: true, showLabel: !isMobile),
                       const SizedBox(width: 4),
                       IconButton(
-                        icon: Icon(Icons.home_outlined, color: theme.colorScheme.onSurface),
+                        icon: Icon(Symbols.home_rounded, color: theme.colorScheme.onSurface),
                         tooltip: loc.tr('exploreUnits'),
                         onPressed: () => context.go('/owner'),
                       ),

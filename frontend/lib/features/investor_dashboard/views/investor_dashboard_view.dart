@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/chips/tashil_assist_chip.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/lists/tashil_reorderable_list.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
@@ -21,9 +23,13 @@ import 'package:tashil_real_estate/features/investor_dashboard/services/investor
 import 'package:tashil_real_estate/features/investor_dashboard/widgets/investment_simulator_dialog.dart';
 import '../widgets/investor_report_dialog.dart';
 import '../widgets/monthly_cash_flow_details_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class InvestorDashboardView extends StatefulWidget {
-  const InvestorDashboardView({super.key});
+  /// When set, the dashboard renders this portfolio instead of the live sample.
+  final InvestorPortfolioSummary? testSummary;
+
+  const InvestorDashboardView({super.key, this.testSummary});
 
   @override
   State<InvestorDashboardView> createState() => _InvestorDashboardViewState();
@@ -51,8 +57,12 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
 
         return ValueListenableBuilder<InvestorPortfolioSummary>(
           valueListenable: _service.currentSummaryNotifier as ValueNotifier<InvestorPortfolioSummary>,
-          builder: (context, summary, _) {
-            return SingleChildScrollView(
+          builder: (context, liveSummary, _) {
+            final summary = widget.testSummary ?? liveSummary;
+            return RefreshIndicator.adaptive(
+              onRefresh: () async {},
+              child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(isMobile ? 16 : 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,27 +94,15 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                         runSpacing: 10,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          TashilConnectedButtonGroup<String>(
-                            selectedValue: null,
-                            onSelectionChanged: (action) {
-                              if (action == 'simulator') {
-                                InvestmentSimulatorDialog.show(context);
-                              } else if (action == 'exportPdf') {
-                                InvestorReportDialog.show(context, summary);
-                              }
-                            },
-                            segments: [
-                              TashilConnectedButtonSegment<String>(
-                                value: 'simulator',
-                                label: loc.tr('investmentSimulatorTitle'),
-                                icon: Icons.calculate_outlined,
-                              ),
-                              TashilConnectedButtonSegment<String>(
-                                value: 'exportPdf',
-                                label: loc.tr('exportInvestorReportPdf'),
-                                icon: Icons.picture_as_pdf_outlined,
-                              ),
-                            ],
+                          TashilButton.tonal(
+                            label: loc.tr('investmentSimulatorTitle'),
+                            icon: Symbols.calculate_rounded,
+                            onPressed: () => InvestmentSimulatorDialog.show(context),
+                          ),
+                          TashilButton.tonal(
+                            label: loc.tr('exportInvestorReportPdf'),
+                            icon: Symbols.picture_as_pdf_rounded,
+                            onPressed: () => InvestorReportDialog.show(context, summary),
                           ),
                         ],
                       ),
@@ -113,10 +111,27 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                   const SizedBox(height: 24),
 
                   // 4 Live KPI Hero Cards
-                  _buildKpiHeroGrid(summary, currency, lang, loc, isMobile, colorScheme),
+                  if (summary.assets.isEmpty)
+                    _buildEmptyPortfolio(context, loc)
+                  else
+                    _buildKpiHeroGrid(summary, currency, lang, loc, isMobile, colorScheme),
                   const SizedBox(height: 24),
 
-                  // Official M3 Expressive Connected Button Group Sub-Tab Switcher
+                  // Tabs wrap on a phone so long Arabic labels stay readable.
+                  if (isMobile)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final segment in _investorTabs(loc))
+                          TashilAssistChip(
+                            icon: segment.icon ?? Symbols.circle,
+                            label: segment.label,
+                            onPressed: () => setState(() => _selectedTab = segment.value),
+                          ),
+                      ],
+                    )
+                  else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: TashilConnectedButtonGroup<int>(
@@ -126,43 +141,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                           _selectedTab = tabIndex;
                         });
                       },
-                      segments: [
-                        TashilConnectedButtonSegment<int>(
-                          value: 0,
-                          label: loc.tr('portfolioAssetsBreakdown'),
-                          icon: Icons.apartment_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 1,
-                          label: loc.tr('financialKpiChartsTab'),
-                          icon: Icons.analytics_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 2,
-                          label: loc.tr('dynamicYieldOptimizerTitle'),
-                          icon: Icons.bolt_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 3,
-                          label: loc.tr('fullInteractiveCurveTab'),
-                          icon: Icons.show_chart_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 4,
-                          label: loc.tr('recentPayouts'),
-                          icon: Icons.receipt_long_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 5,
-                          label: loc.tr('executiveReportTitle'),
-                          icon: Icons.auto_awesome_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 6,
-                          label: loc.tr('monthlyCashFlowHistory'),
-                          icon: Icons.waterfall_chart_rounded,
-                        ),
-                      ],
+                      segments: _investorTabs(loc),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -179,11 +158,52 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                   ),
                 ],
               ),
+              ),
             );
           },
         );
       },
     );
+  }
+
+  List<TashilConnectedButtonSegment<int>> _investorTabs(AppLocalizations loc) {
+    return [
+      TashilConnectedButtonSegment<int>(
+        value: 0,
+        label: loc.tr('portfolioAssetsBreakdown'),
+        icon: Symbols.apartment_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 1,
+        label: loc.tr('financialKpiChartsTab'),
+        icon: Symbols.analytics_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 2,
+        label: loc.tr('dynamicYieldOptimizerTitle'),
+        icon: Symbols.bolt_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 3,
+        label: loc.tr('fullInteractiveCurveTab'),
+        icon: Symbols.show_chart_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 4,
+        label: loc.tr('recentPayouts'),
+        icon: Symbols.receipt_long_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 5,
+        label: loc.tr('executiveReportTitle'),
+        icon: Symbols.auto_awesome_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 6,
+        label: loc.tr('monthlyCashFlowHistory'),
+        icon: Symbols.waterfall_chart_rounded,
+      ),
+    ];
   }
 
   Widget _buildCurrentTab(
@@ -217,6 +237,35 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
     }
   }
 
+  Widget _buildEmptyPortfolio(BuildContext context, AppLocalizations loc) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TashilCard.outlined(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Symbols.account_balance_rounded, color: colorScheme.primary, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            loc.tr('investorEmptyTitle'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            loc.tr('investorEmptyBody'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          TashilButton(
+            label: loc.tr('addFirstProperty'),
+            icon: Symbols.add_home_work_rounded,
+            onPressed: () => context.go('/fast-onboarding'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildKpiHeroGrid(
     InvestorPortfolioSummary summary,
     String currency,
@@ -231,8 +280,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           title: loc.tr('livePortfolioValuation'),
           value: '${CurrencyFormatter.formatAmount(summary.totalPortfolioValue, langCode: lang)} $currency',
           subtitle: '+${summary.portfolioCapitalGrowthRate.toStringAsFixed(1)}% ${loc.tr('capitalAppreciationRate')}',
-          icon: Icons.account_balance_rounded,
-          subtitleIcon: Icons.trending_up_rounded,
+          icon: Symbols.account_balance_rounded,
+          subtitleIcon: Symbols.trending_up_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -240,8 +289,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           title: loc.tr('netAnnualCashFlow'),
           value: '${CurrencyFormatter.formatAmount(summary.netAnnualCashFlow, langCode: lang)} $currency',
           subtitle: '${loc.tr('grossRent')}: ${CurrencyFormatter.formatAmount(summary.grossAnnualRentalIncome, langCode: lang)}',
-          icon: Icons.trending_up_rounded,
-          subtitleIcon: Icons.payments_outlined,
+          icon: Symbols.trending_up_rounded,
+          subtitleIcon: Symbols.payments_rounded,
           iconColor: colorScheme.secondary,
           iconBgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         ),
@@ -249,8 +298,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           title: loc.tr('netRoi'),
           value: '${summary.portfolioNetRoi.toStringAsFixed(2)}%',
           subtitle: '${loc.tr('grossYield')}: ${summary.portfolioGrossYield.toStringAsFixed(2)}%',
-          icon: Icons.pie_chart_rounded,
-          subtitleIcon: Icons.analytics_outlined,
+          icon: Symbols.pie_chart_rounded,
+          subtitleIcon: Symbols.analytics_rounded,
           iconColor: colorScheme.tertiary,
           iconBgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         ),
@@ -258,8 +307,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           title: loc.tr('portfolioOccupancy'),
           value: '${summary.occupancyRate.toStringAsFixed(0)}%',
           subtitle: '${summary.occupiedUnitsCount} ${loc.tr('leasedUnits')} • ${summary.vacantUnitsCount} ${loc.tr('statusVacant')}',
-          icon: Icons.domain_rounded,
-          subtitleIcon: Icons.apartment_rounded,
+          icon: Symbols.domain_rounded,
+          subtitleIcon: Symbols.apartment_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -294,30 +343,31 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
             children: [
               Text(
                 '${loc.tr('assetInventoryTitle')} (${assets.length})',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colorScheme.outlineVariant),
+              if (assets.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.outlineVariant),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Symbols.drag_indicator_rounded, size: 14, color: colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        loc.tr('reorderableListHint'),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.drag_indicator_rounded, size: 14, color: colorScheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      loc.tr('reorderableListHint'),
-                      style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
               Text(
                 loc.tr('liveZestimateValuationsActive'),
-                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -375,7 +425,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                       width: 70,
                                       height: 70,
                                       color: colorScheme.surfaceContainerHighest,
-                                      child: Icon(Icons.apartment, color: colorScheme.onSurfaceVariant),
+                                      child: Icon(Symbols.apartment_rounded, color: colorScheme.onSurfaceVariant),
                                     ),
                                   ),
                                 ),
@@ -386,10 +436,10 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                     children: [
                                       Text(
                                         name,
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                       ),
                                       const SizedBox(height: 2),
-                                      Text(location, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                      Text(location, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                                       const SizedBox(height: 4),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -399,11 +449,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                         ),
                                         child: Text(
                                           isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: isOccupied ? colorScheme.onPrimaryContainer : colorScheme.onTertiaryContainer,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                            color: isOccupied ? colorScheme.onPrimaryContainer : colorScheme.onTertiaryContainer),
                                         ),
                                       ),
                                     ],
@@ -440,7 +487,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                   width: 80,
                                   height: 80,
                                   color: colorScheme.surfaceContainerHighest,
-                                  child: Icon(Icons.apartment, color: colorScheme.onSurfaceVariant),
+                                  child: Icon(Symbols.apartment_rounded, color: colorScheme.onSurfaceVariant),
                                 ),
                               ),
                             ),
@@ -450,16 +497,16 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface)),
+                                  Text(name, style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                                      Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
                                           location,
-                                          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -470,7 +517,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                   if (isOccupied)
                                     Text(
                                       '${loc.tr('tenant')}: ${asset.tenantName} • ${loc.tr('leaseExpires')}: ${asset.leaseEndDate}',
-                                      style: TextStyle(fontSize: 11, color: colorScheme.onSurface, fontWeight: FontWeight.w500),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -482,15 +529,15 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(loc.tr('currentMarketValuation'), style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                  Text(loc.tr('currentMarketValuation'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                                   const SizedBox(height: 2),
                                   Text(
                                     '${CurrencyFormatter.formatAmount(asset.currentMarketValue, langCode: lang)} $currency',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                   ),
                                   Text(
                                     '+${asset.capitalGainPercentage.toStringAsFixed(1)}% ${loc.tr('capitalAppreciationRate')}',
-                                    style: TextStyle(fontSize: 10, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -500,15 +547,15 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(loc.tr('monthlyRent'), style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                  Text(loc.tr('monthlyRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                                   const SizedBox(height: 2),
                                   Text(
                                     '${CurrencyFormatter.formatAmount(asset.monthlyRent, langCode: lang)} $currency',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                   ),
                                   Text(
                                     '${loc.tr('grossYield')}: ${asset.grossYieldPercentage.toStringAsFixed(2)}%',
-                                    style: TextStyle(fontSize: 10, color: colorScheme.secondary, fontWeight: FontWeight.bold),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.secondary, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -521,11 +568,8 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               ),
                               child: Text(
                                 isOccupied ? loc.tr('statusOccupied') : loc.tr('statusVacant'),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: isOccupied ? colorScheme.onPrimaryContainer : colorScheme.onTertiaryContainer,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                  color: isOccupied ? colorScheme.onPrimaryContainer : colorScheme.onTertiaryContainer),
                               ),
                             ),
                           ],
@@ -555,11 +599,11 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           children: [
             Text(
               loc.tr('monthlyCashFlowHistory'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             Text(
               loc.tr('clickToViewMonthDetails'),
-              style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -627,7 +671,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
-                                    Icons.calendar_month_rounded,
+                                    Symbols.calendar_month_rounded,
                                     color: isExpanded ? colorScheme.onPrimary : colorScheme.primary,
                                     size: 20,
                                   ),
@@ -639,19 +683,13 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                     children: [
                                       Text(
                                         monthName,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: colorScheme.onSurface,
-                                        ),
+                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                          color: colorScheme.onSurface),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         '${loc.tr('inflowShort')}: ${CurrencyFormatter.formatAmount(flow.grossRentalInflow, langCode: lang)} $currency • ${loc.tr('outflowShort')}: ${CurrencyFormatter.formatAmount(totalExpenses, langCode: lang)} $currency',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
+                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -670,16 +708,13 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                 children: [
                                   Text(
                                     '+ ${CurrencyFormatter.formatAmount(flow.netCashFlow, langCode: lang)} $currency',
-                                    style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     loc.tr('netCashFlowLabel'),
-                                    style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -688,7 +723,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                 turns: isExpanded ? 0.5 : 0.0,
                                 duration: const Duration(milliseconds: 200),
                                 child: Icon(
-                                  Icons.keyboard_arrow_down_rounded,
+                                  Symbols.keyboard_arrow_down_rounded,
                                   color: isExpanded ? colorScheme.primary : colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
@@ -710,19 +745,19 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                           runSpacing: 8,
                           children: [
                             _buildMonthChip(
-                              icon: Icons.check_circle_rounded,
+                              icon: Symbols.check_circle_rounded,
                               label: '${activeAssets.length} ${loc.tr('rentedUnitsCountInMonth')}',
                               color: colorScheme.primary,
                               bgColor: colorScheme.primaryContainer,
                             ),
                             _buildMonthChip(
-                              icon: Icons.pie_chart_rounded,
+                              icon: Symbols.pie_chart_rounded,
                               label: '${loc.tr('portfolioOccupancy')}: ${isExpandedQuarter ? '100%' : '75%'}',
                               color: colorScheme.secondary,
                               bgColor: colorScheme.secondaryContainer,
                             ),
                             _buildMonthChip(
-                              icon: Icons.verified_rounded,
+                              icon: Symbols.verified_rounded,
                               label: loc.tr('settlementCompleted'),
                               color: colorScheme.tertiary,
                               bgColor: colorScheme.tertiaryContainer,
@@ -734,7 +769,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                         // Section Title: Units Rented
                         Text(
                           loc.tr('rentedUnitsCountInMonth'),
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.onSurface),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         ),
                         const SizedBox(height: 8),
                         ...activeAssets.map((asset) {
@@ -748,19 +783,19 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.apartment_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.apartment_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     '$assetName (${asset.tenantName ?? loc.tr('statusOccupied')})',
-                                    style: TextStyle(fontSize: 11.5, color: colorScheme.onSurface, fontWeight: FontWeight.w500),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Text(
                                   '+ ${CurrencyFormatter.formatAmount(asset.monthlyRent, langCode: lang)} $currency',
-                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: colorScheme.primary),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                                 ),
                               ],
                             ),
@@ -781,11 +816,11 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             children: [
                               Text(
                                 '${loc.tr('operatingAndManagementFees')}: - ${CurrencyFormatter.formatAmount(flow.operatingExpensesOutflow, langCode: lang)} $currency',
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                               Text(
                                 '${loc.tr('maintenanceFeesDeducted')}: - ${CurrencyFormatter.formatAmount(flow.maintenanceOutflow, langCode: lang)} $currency',
-                                style: TextStyle(fontSize: 11, color: colorScheme.error),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.error),
                               ),
                             ],
                           ),
@@ -816,12 +851,12 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             segments: [
                               TashilConnectedButtonSegment<String>(
                                 value: 'details',
-                                icon: Icons.open_in_new_rounded,
+                                icon: Symbols.open_in_new_rounded,
                                 label: loc.tr('monthCashFlowDetails'),
                               ),
                               TashilConnectedButtonSegment<String>(
                                 value: 'exportPdf',
-                                icon: Icons.picture_as_pdf_outlined,
+                                icon: Symbols.picture_as_pdf_rounded,
                                 label: loc.tr('exportMonthStatement'),
                               ),
                             ],
@@ -859,7 +894,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -917,12 +952,12 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                   color: colorScheme.surfaceContainerHigh,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.account_balance_wallet_outlined, size: 26, color: colorScheme.onSurfaceVariant),
+                child: Icon(Symbols.account_balance_wallet_rounded, size: 26, color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
               Text(
                 loc.tr('noRecentPayoutsTitle'),
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
@@ -930,7 +965,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: Text(
                   loc.tr('noRecentPayoutsDesc'),
-                  style: TextStyle(fontSize: 12.5, height: 1.5, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.5, color: colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -948,11 +983,11 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           children: [
             Text(
               loc.tr('recentPayouts'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             Text(
               loc.tr('clickToViewMonthDetails'),
-              style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -1014,7 +1049,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  Icons.account_balance_rounded,
+                                  Symbols.account_balance_rounded,
                                   color: isExpanded ? colorScheme.onPrimary : colorScheme.primary,
                                   size: 20,
                                 ),
@@ -1026,19 +1061,13 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                   children: [
                                     Text(
                                       title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13.5,
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '$date • $bankName • Ref: $ref',
-                                      style: TextStyle(
-                                        color: colorScheme.onSurfaceVariant,
-                                        fontSize: 11,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1057,16 +1086,13 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               children: [
                                 Text(
                                   '+ ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
-                                  style: TextStyle(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.primary,
+                                    fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   loc.tr('payoutCompleted'),
-                                  style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -1075,7 +1101,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                               turns: isExpanded ? 0.5 : 0.0,
                               duration: const Duration(milliseconds: 200),
                               child: Icon(
-                                Icons.keyboard_arrow_down_rounded,
+                                Symbols.keyboard_arrow_down_rounded,
                                 color: isExpanded ? colorScheme.primary : colorScheme.onSurfaceVariant,
                                 size: 22,
                               ),
@@ -1097,19 +1123,19 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                         runSpacing: 8,
                         children: [
                           _buildMonthChip(
-                            icon: Icons.verified_rounded,
+                            icon: Symbols.verified_rounded,
                             label: loc.tr('settlementCompleted'),
                             color: colorScheme.primary,
                             bgColor: colorScheme.primaryContainer,
                           ),
                           _buildMonthChip(
-                            icon: Icons.account_balance_wallet_rounded,
+                            icon: Symbols.account_balance_wallet_rounded,
                             label: loc.tr('bankTransferDeposit'),
                             color: colorScheme.secondary,
                             bgColor: colorScheme.secondaryContainer,
                           ),
                           _buildMonthChip(
-                            icon: Icons.account_balance_rounded,
+                            icon: Symbols.account_balance_rounded,
                             label: bankName,
                             color: colorScheme.tertiary,
                             bgColor: colorScheme.tertiaryContainer,
@@ -1131,23 +1157,23 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             // Bank Reference Number with Copy Action
                             Row(
                               children: [
-                                Icon(Icons.tag_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.tag_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('bankReferenceNumber')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     ref,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 TashilIconButton.standard(
-                                  icon: Icons.copy_rounded,
+                                  icon: Symbols.content_copy_rounded,
                                   tooltip: loc.tr('copyRefSuccess'),
                                   onPressed: () {
                                     Clipboard.setData(ClipboardData(text: ref));
@@ -1163,17 +1189,17 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             // Receiving Bank Account
                             Row(
                               children: [
-                                Icon(Icons.account_balance_outlined, size: 16, color: colorScheme.secondary),
+                                Icon(Symbols.account_balance_rounded, size: 16, color: colorScheme.secondary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('transferredToAccount')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     bankName,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -1182,17 +1208,17 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             // Linked Tax Invoice
                             Row(
                               children: [
-                                Icon(Icons.receipt_long_rounded, size: 16, color: colorScheme.tertiary),
+                                Icon(Symbols.receipt_long_rounded, size: 16, color: colorScheme.tertiary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('linkedTaxInvoice')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     invoiceNo,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -1201,17 +1227,17 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             // Linked Unit & Tenant
                             Row(
                               children: [
-                                Icon(Icons.apartment_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.apartment_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${loc.tr('linkedUnitAndTenant')}:',
-                                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     title,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1237,7 +1263,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             Expanded(
                               child: Text(
                                 '${loc.tr('grossRentalCollected')}: + ${CurrencyFormatter.formatAmount(grossAmount, langCode: lang)} $currency',
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1245,7 +1271,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             const SizedBox(width: 8),
                             Text(
                               '${loc.tr('managementFeeDeduction')}: - ${CurrencyFormatter.formatAmount(managementFee, langCode: lang)} $currency',
-                              style: TextStyle(fontSize: 11, color: colorScheme.error),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.error),
                             ),
                           ],
                         ),
@@ -1282,17 +1308,17 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                             TashilConnectedButtonSegment<String>(
                               value: 'downloadReceipt',
                               label: loc.tr('downloadTransferReceipt'),
-                              icon: Icons.download_rounded,
+                              icon: Symbols.download_rounded,
                             ),
                             TashilConnectedButtonSegment<String>(
                               value: 'shareNotice',
                               label: loc.tr('shareTransferNotice'),
-                              icon: Icons.share_rounded,
+                              icon: Symbols.share_rounded,
                             ),
                             TashilConnectedButtonSegment<String>(
                               value: 'copyRef',
                               label: loc.tr('copyRef'),
-                              icon: Icons.copy_rounded,
+                              icon: Symbols.content_copy_rounded,
                             ),
                           ],
                         ),
@@ -1312,9 +1338,9 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+        Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
         const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.onSurface)),
+        Text(value, style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
       ],
     );
   }

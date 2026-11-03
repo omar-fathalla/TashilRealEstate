@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/gemini_live_voice_broker_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class GeminiVoiceBrokerOrb extends StatefulWidget {
   final VoiceBrokerState state;
@@ -103,12 +104,12 @@ class _GeminiVoiceBrokerOrbState extends State<GeminiVoiceBrokerOrb>
                   child: Center(
                     child: Icon(
                       isListening
-                          ? Icons.mic_rounded
+                          ? Symbols.mic_rounded
                           : isThinking
-                              ? Icons.psychology_rounded
+                              ? Symbols.psychology_rounded
                               : isSpeaking
-                                  ? Icons.graphic_eq_rounded
-                                  : Icons.smart_toy_rounded,
+                                  ? Symbols.graphic_eq_rounded
+                                  : Symbols.smart_toy_rounded,
                       color: theme.colorScheme.onPrimary,
                       size: 40,
                     ),

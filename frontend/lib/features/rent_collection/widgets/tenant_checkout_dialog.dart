@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class TenantCheckoutDialog extends StatefulWidget {
   final RentInvoiceModel invoice;
@@ -79,8 +83,9 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: $e')),
+      TashilSnackBar.showError(
+        context: context,
+        message: AppLocalizations.of(context).tr('paymentFailedRetry'),
       );
     }
   }
@@ -94,7 +99,7 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
     final lang = LocaleController.languageCode;
     final theme = Theme.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
@@ -112,7 +117,8 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(
+                    child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -121,17 +127,20 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.payment_rounded,
+                          Symbols.payment_rounded,
                           color: theme.colorScheme.onPrimaryContainer,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Column(
+                      Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             loc.tr('automatedRentCheckoutTitle'),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface,
@@ -139,11 +148,13 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                           ),
                           Text(
                             '${loc.tr('invoiceNo')}: ${widget.invoice.invoiceNumber}',
-                            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
+                      ),
                     ],
+                  ),
                   ),
                   TashilIconButton.close(
                     onPressed: () => Navigator.of(context).pop(),
@@ -157,12 +168,9 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      theme.colorScheme.primary,
-                      theme.colorScheme.primary.withValues(alpha: 0.85),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    colors: TashilBannerColors.gradient(theme.colorScheme),
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -174,30 +182,21 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                       children: [
                         Text(
                           loc.tr('totalDueToPay'),
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme).withValues(alpha: 0.8)),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${CurrencyFormatter.formatAmount(widget.invoice.totalAmountDue, langCode: lang)} $currency',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme),
+                            fontWeight: FontWeight.bold),
                         ),
                         if (widget.invoice.latePenaltyAmount > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               '+ ${CurrencyFormatter.formatAmount(widget.invoice.latePenaltyAmount, langCode: lang)} $currency (${loc.tr('accumulatedLateFee')})',
-                              style: TextStyle(
-                                color: theme.colorScheme.errorContainer,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.errorContainer,
+                                fontWeight: FontWeight.bold),
                             ),
                           ),
                       ],
@@ -207,26 +206,17 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                       children: [
                         Text(
                           loc.tr('leasedUnit'),
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
-                            fontSize: 11,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme).withValues(alpha: 0.8)),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           widget.invoice.unitNumber,
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme),
+                            fontWeight: FontWeight.bold),
                         ),
                         Text(
                           widget.invoice.buildingName,
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
-                            fontSize: 11,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme).withValues(alpha: 0.8)),
                         ),
                       ],
                     ),
@@ -238,11 +228,8 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
               // Payment Method Selector
               Text(
                 loc.tr('selectPaymentMethod'),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface),
               ),
               const SizedBox(height: 10),
 
@@ -267,7 +254,7 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.sync_alt_rounded, color: theme.colorScheme.primary, size: 20),
+                    Icon(Symbols.sync_alt_rounded, color: theme.colorScheme.primary, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -275,16 +262,13 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                         children: [
                           Text(
                             loc.tr('instantSplitPayoutGuaranteeTitle'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimaryContainer),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${loc.tr('netTransferredToOwner')}: ${CurrencyFormatter.formatAmount(widget.invoice.netPayoutToOwner, langCode: lang)} $currency (${widget.invoice.owner.name})',
-                            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -298,8 +282,8 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
               TashilSwitchListTile(
                 value: _autoDebitEnabled,
                 onChanged: (val) => setState(() => _autoDebitEnabled = val),
-                title: Text(loc.tr('enableAutoDebitMonthly'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                subtitle: Text(loc.tr('enableAutoDebitSubtitle'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                title: Text(loc.tr('enableAutoDebitMonthly'), style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                subtitle: Text(loc.tr('enableAutoDebitSubtitle'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 20),
@@ -310,7 +294,7 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                 height: 48,
                 child: TashilButton(
                   onPressed: _isProcessing ? null : _handlePayment,
-                  icon: Icons.check_circle_rounded,
+                  icon: Symbols.check_circle_rounded,
                   label: '${loc.tr('confirmAndPay')} ${CurrencyFormatter.formatAmount(widget.invoice.totalAmountDue, langCode: lang)} $currency',
                 ),
               ),
@@ -327,12 +311,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        _buildPaymentOptionChip('google_pay', loc.tr('paymentMethodGooglePay'), Icons.account_balance_wallet_rounded),
+        _buildPaymentOptionChip('google_pay', loc.tr('paymentMethodGooglePay'), Symbols.account_balance_wallet_rounded),
         _buildPaymentOptionChip('apple_pay', loc.tr('paymentMethodApplePay'), Icons.apple_rounded),
-        _buildPaymentOptionChip('card', loc.tr('paymentMethodCard'), Icons.credit_card_rounded),
-        _buildPaymentOptionChip('instapay', loc.tr('paymentMethodInstaPay'), Icons.bolt_rounded),
-        _buildPaymentOptionChip('vodafone_cash', loc.tr('paymentMethodVodafoneCash'), Icons.phone_android_rounded),
-        _buildPaymentOptionChip('fawry', loc.tr('paymentMethodFawry'), Icons.storefront_rounded),
+        _buildPaymentOptionChip('card', loc.tr('paymentMethodCard'), Symbols.credit_card_rounded),
+        _buildPaymentOptionChip('instapay', loc.tr('paymentMethodInstaPay'), Symbols.bolt_rounded),
+        _buildPaymentOptionChip('vodafone_cash', loc.tr('paymentMethodVodafoneCash'), Symbols.phone_android_rounded),
+        _buildPaymentOptionChip('fawry', loc.tr('paymentMethodFawry'), Symbols.storefront_rounded),
       ],
     );
   }
@@ -344,10 +328,10 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
       runSpacing: 8,
       children: [
         _buildPaymentOptionChip('apple_pay', loc.tr('paymentMethodApplePay'), Icons.apple_rounded),
-        _buildPaymentOptionChip('google_pay', loc.tr('paymentMethodGooglePay'), Icons.account_balance_wallet_rounded),
-        _buildPaymentOptionChip('card', loc.tr('paymentMethodCard'), Icons.credit_card_rounded),
-        _buildPaymentOptionChip('direct_debit', loc.tr('paymentMethodDirectDebit'), Icons.account_balance_rounded),
-        _buildPaymentOptionChip('iban_wire', loc.tr('paymentMethodIbanWire'), Icons.send_rounded),
+        _buildPaymentOptionChip('google_pay', loc.tr('paymentMethodGooglePay'), Symbols.account_balance_wallet_rounded),
+        _buildPaymentOptionChip('card', loc.tr('paymentMethodCard'), Symbols.credit_card_rounded),
+        _buildPaymentOptionChip('direct_debit', loc.tr('paymentMethodDirectDebit'), Symbols.account_balance_rounded),
+        _buildPaymentOptionChip('iban_wire', loc.tr('paymentMethodIbanWire'), Symbols.send_rounded),
       ],
     );
   }
@@ -375,11 +359,8 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface),
             ),
           ],
         ),
@@ -406,15 +387,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                 keyboardType: TextInputType.number,
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.left,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
-                  color: theme.colorScheme.onSurface,
-                ),
+                  color: theme.colorScheme.onSurface),
                 decoration: InputDecoration(
                   labelText: loc.tr('cardNumberLabel'),
-                  prefixIcon: const Icon(Icons.credit_card_rounded, size: 18),
+                  prefixIcon: const Icon(Symbols.credit_card_rounded, size: 18),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerLowest,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -430,15 +408,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                       keyboardType: TextInputType.datetime,
                       textDirection: TextDirection.ltr,
                       textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
                         letterSpacing: 0.8,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                        color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: loc.tr('cardExpiryLabel'),
-                        prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                        prefixIcon: const Icon(Symbols.calendar_today_rounded, size: 16),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerLowest,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -454,15 +429,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                       textDirection: TextDirection.ltr,
                       textAlign: TextAlign.left,
                       obscureText: true,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
                         letterSpacing: 2.0,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                        color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         labelText: 'CVV',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, size: 16),
+                        prefixIcon: const Icon(Symbols.lock_outline_rounded, size: 16),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerLowest,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -493,15 +465,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
             keyboardType: TextInputType.phone,
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.left,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
               letterSpacing: 0.8,
-              color: theme.colorScheme.onSurface,
-            ),
+              color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
               labelText: loc.tr('mobileWalletNumberLabel'),
-              prefixIcon: const Icon(Icons.phone_android_rounded, size: 18),
+              prefixIcon: const Icon(Symbols.phone_android_rounded, size: 18),
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerLowest,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -527,15 +496,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
             keyboardType: TextInputType.emailAddress,
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.left,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
-              color: theme.colorScheme.onSurface,
-            ),
+              color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
               labelText: loc.tr('instapayVpaLabel'),
-              prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18),
+              prefixIcon: const Icon(Symbols.alternate_email_rounded, size: 18),
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerLowest,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -557,17 +523,14 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(loc.tr('fawryCodeInstruction'), style: TextStyle(fontSize: 12, color: theme.colorScheme.onTertiaryContainer)),
+            Text(loc.tr('fawryCodeInstruction'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onTertiaryContainer)),
             const SizedBox(height: 6),
             Text(
               'FWRY-9823-4412',
               textDirection: TextDirection.ltr,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                 letterSpacing: 2,
-                color: theme.colorScheme.primary,
-              ),
+                color: theme.colorScheme.primary),
             ),
           ],
         ),
@@ -594,12 +557,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.colorScheme.outlineVariant),
                   ),
-                  child: Icon(Icons.account_balance_wallet_rounded, color: theme.colorScheme.primary, size: 20),
+                  child: Icon(Symbols.account_balance_wallet_rounded, color: theme.colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   loc.tr('googlePayOneClickHint'),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                 ),
               ],
             ),
@@ -607,11 +570,11 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.fingerprint_rounded, size: 16, color: theme.colorScheme.primary),
+                Icon(Symbols.fingerprint_rounded, size: 16, color: theme.colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   loc.tr('googlePayBiometricSecurityBadge'),
-                  style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -637,7 +600,7 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
                 const SizedBox(width: 8),
                 Text(
                   loc.tr('applePayOneClickHint'),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                 ),
               ],
             ),
@@ -645,11 +608,11 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.face_rounded, size: 16, color: theme.colorScheme.primary),
+                Icon(Symbols.face_rounded, size: 16, color: theme.colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   loc.tr('applePayFaceIdSecurityBadge'),
-                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -669,12 +632,12 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(loc.tr('uaeddsDirectDebitHint'), style: TextStyle(fontSize: 12, color: theme.colorScheme.onPrimaryContainer)),
+            Text(loc.tr('uaeddsDirectDebitHint'), style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimaryContainer)),
             const SizedBox(height: 4),
             Text(
               'Account IBAN: ...${widget.invoice.owner.iban.substring(widget.invoice.owner.iban.length > 8 ? widget.invoice.owner.iban.length - 8 : 0)}',
               textDirection: TextDirection.ltr,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
             ),
           ],
         ),

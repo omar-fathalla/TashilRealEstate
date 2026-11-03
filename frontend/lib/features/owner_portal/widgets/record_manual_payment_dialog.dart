@@ -7,6 +7,8 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class RecordManualPaymentDialog extends StatefulWidget {
   final ManagedPropertyModel property;
@@ -39,7 +41,7 @@ class RecordManualPaymentDialog extends StatefulWidget {
 
 class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
   String _selectedMethod = 'cash';
-  final _notesCtrl = TextEditingController(text: 'تم الاستلام نقداً بموجب إيصال استلام رسمي');
+  final _notesCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy177'));
   bool _isSaving = false;
 
   @override
@@ -78,7 +80,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
         backgroundColor: theme.colorScheme.primary,
         content: Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: theme.colorScheme.onPrimary, size: 20),
+            Icon(Symbols.check_circle_rounded, color: theme.colorScheme.onPrimary, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -100,7 +102,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final currency = widget.property.countryCode == 'AE' ? loc.tr('currency_ae') : loc.tr('currency_eg');
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 20),
@@ -126,7 +128,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            Icons.receipt_long_rounded,
+                            Symbols.receipt_long_rounded,
                             color: theme.colorScheme.onPrimaryContainer,
                             size: 22,
                           ),
@@ -138,17 +140,14 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                             children: [
                               Text(
                                 loc.tr('recordManualPaymentTitle'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 '${widget.installment.getMonthName(lang)} - ${widget.property.unitNumber}',
-                                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -176,15 +175,12 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                   children: [
                     Text(
                       loc.tr('installmentAmountLabel'),
-                      style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     Text(
                       '${CurrencyFormatter.formatAmount(widget.installment.amount, langCode: lang)} $currency',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary),
                     ),
                   ],
                 ),
@@ -194,7 +190,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
               // Payment Method Picker
               Text(
                 loc.tr('receivedViaPaymentMethod'),
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
               ),
               const SizedBox(height: 10),
 
@@ -206,7 +202,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                       context: context,
                       key: 'cash',
                       label: loc.tr('paymentMethodCashHand'),
-                      icon: Icons.payments_rounded,
+                      icon: Symbols.payments_rounded,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -215,7 +211,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                       context: context,
                       key: 'bank_wire',
                       label: loc.tr('paymentMethodIbanWire'),
-                      icon: Icons.account_balance_rounded,
+                      icon: Symbols.account_balance_rounded,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -224,7 +220,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                       context: context,
                       key: 'instapay',
                       label: loc.tr('paymentMethodInstaPay'),
-                      icon: Icons.bolt_rounded,
+                      icon: Symbols.bolt_rounded,
                     ),
                   ),
                 ],
@@ -251,7 +247,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                 height: 48,
                 child: TashilButton(
                   onPressed: _isSaving ? null : _savePayment,
-                  icon: Icons.check_circle_rounded,
+                  icon: Symbols.check_circle_rounded,
                   label: loc.tr('confirmRecordInstallmentBtn'),
                 ),
               ),
@@ -301,11 +297,8 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface),
             ),
           ],
         ),

@@ -15,11 +15,15 @@ class AppCheckService {
     if (_isActivated) return;
 
     try {
+      const siteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
+      if (!kDebugMode && siteKey.isEmpty) {
+        debugPrint('App Check skipped: RECAPTCHA_SITE_KEY is not set.');
+        return;
+      }
       await FirebaseAppCheck.instance.activate(
-        // Web Provider: Debug in dev, ReCaptcha V3 in release
         providerWeb: kDebugMode
             ? WebDebugProvider()
-            : ReCaptchaV3Provider('6Ld_placeholder_site_key'),
+            : ReCaptchaV3Provider(siteKey),
         providerAndroid: kDebugMode
             ? const AndroidDebugProvider()
             : const AndroidPlayIntegrityProvider(),

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,7 @@ void main() {
         wrapWithApp(
           TashilSplitButton<String>(
             label: 'بحث بالمدينة والحي',
-            icon: Icons.location_on_outlined,
+            icon: Symbols.location_on_rounded,
             onPressed: () => primaryClicked = true,
             selectedValue: 'location',
             items: const [
@@ -57,19 +58,19 @@ void main() {
                 value: 'location',
                 label: 'بحث بالمدينة والحي',
                 subtitle: 'البحث السريع المباشر',
-                icon: Icons.location_on_outlined,
+                icon: Symbols.location_on_rounded,
               ),
               TashilSplitButtonItem(
                 value: 'ai',
                 label: 'بحث الذكاء الاصطناعي',
                 subtitle: 'البحث باللغة الطبيعية',
-                icon: Icons.auto_awesome_rounded,
+                icon: Symbols.auto_awesome_rounded,
               ),
               TashilSplitButtonItem(
                 value: 'visual',
                 label: 'بحث بالطراز والمعمار',
                 subtitle: 'معرض الطرز والمودبورد',
-                icon: Icons.photo_camera_outlined,
+                icon: Symbols.photo_camera_rounded,
               ),
             ],
             onItemSelected: (val) => selectedValue = val,
@@ -80,8 +81,8 @@ void main() {
 
       // Verify label and icon exist
       expect(find.text('بحث بالمدينة والحي'), findsOneWidget);
-      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.location_on_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.keyboard_arrow_down_rounded), findsWidgets);
 
       // Tap primary action button
       await tester.tap(find.text('بحث بالمدينة والحي'));
@@ -89,7 +90,7 @@ void main() {
       expect(primaryClicked, isTrue);
 
       // Tap chevron to open popup menu
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+      await tester.tap(find.byIcon(Symbols.keyboard_arrow_down_rounded));
       await tester.pumpAndSettle();
 
       // Verify popup items are visible
@@ -111,18 +112,18 @@ void main() {
                 final loc = AppLocalizations.of(ctx);
                 return TashilSplitButton<String>(
                   label: loc.tr('searchModeLocation'),
-                  icon: Icons.location_on_outlined,
+                  icon: Symbols.location_on_rounded,
                   onPressed: () {},
                   items: [
                     TashilSplitButtonItem(
                       value: 'location',
                       label: loc.tr('searchModeLocation'),
-                      icon: Icons.location_on_outlined,
+                      icon: Symbols.location_on_rounded,
                     ),
                     TashilSplitButtonItem(
                       value: 'ai',
                       label: loc.tr('searchModeAi'),
-                      icon: Icons.auto_awesome_rounded,
+                      icon: Symbols.auto_awesome_rounded,
                     ),
                   ],
                 );
@@ -134,7 +135,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(TashilSplitButton<String>), findsOneWidget);
-        expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+        expect(find.byIcon(Symbols.keyboard_arrow_down_rounded), findsWidgets);
       }
     });
 
@@ -143,7 +144,7 @@ void main() {
         wrapWithApp(
           TashilSplitButton<String>(
             label: 'تعديل',
-            icon: Icons.edit_rounded,
+            icon: Symbols.edit_rounded,
             onPressed: () {},
             items: const [
               TashilSplitButtonItem(value: 'opt1', label: 'الخيار الأول'),
@@ -159,7 +160,7 @@ void main() {
       expect(initialRotations.first.turns, equals(0.0));
 
       // Tap chevron to open menu
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+      await tester.tap(find.byIcon(Symbols.keyboard_arrow_down_rounded));
       await tester.pump(const Duration(milliseconds: 50));
 
       // After opening, chevron turns to 0.5 (180 deg pointing up)

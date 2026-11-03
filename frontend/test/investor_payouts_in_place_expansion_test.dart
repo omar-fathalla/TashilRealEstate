@@ -116,6 +116,7 @@ void main() {
       final loc = AppLocalizations(const Locale('en'));
       final payoutTabFinder = find.text(loc.tr('recentPayouts'));
       expect(payoutTabFinder, findsOneWidget);
+      await tester.ensureVisible(payoutTabFinder);
       await tester.tap(payoutTabFinder);
       await tester.pumpAndSettle();
 
@@ -128,12 +129,12 @@ void main() {
       // Verify English expanded details
       expect(find.byType(Dialog), findsNothing);
       expect(find.text('Commercial International Bank'), findsWidgets);
-      expect(find.text('Settled & Verified'), findsOneWidget);
-      expect(find.text('Direct Bank Deposit'), findsOneWidget);
-      expect(find.text('Bank Reference Number:'), findsOneWidget);
-      expect(find.text('Download Transfer Receipt'), findsOneWidget);
-      expect(find.text('Share Transfer Notice'), findsOneWidget);
-      expect(find.text('Copy Reference'), findsOneWidget);
+      expect(find.text('Settled & verified'), findsOneWidget);
+      expect(find.text('Direct bank deposit'), findsOneWidget);
+      expect(find.text('Bank reference number:'), findsOneWidget);
+      expect(find.text('Download transfer receipt'), findsOneWidget);
+      expect(find.text('Share transfer notice'), findsOneWidget);
+      expect(find.text('Copy reference'), findsOneWidget);
     });
 
     testWidgets('Payout card expansion works seamlessly in Hindi', (tester) async {

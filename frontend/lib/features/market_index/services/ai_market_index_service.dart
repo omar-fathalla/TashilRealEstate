@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/market_index/models/market_index_model.dart';
@@ -11,9 +10,7 @@ class AiMarketIndexService {
   factory AiMarketIndexService() => _instance;
   AiMarketIndexService._internal();
 
-  static String get _apiKey => AiConfig.geminiApiKey;
-  static String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey';
+  static const String _model = 'gemini-2.5-flash';
 
   final ValueNotifier<MarketIndexSummary> _egSummaryNotifier =
       ValueNotifier<MarketIndexSummary>(_initialEGMarketIndex);
@@ -58,10 +55,9 @@ Provide a concise, highly insightful, authoritative, 2-3 paragraph analysis.
 Do not mix languages.
 ''';
 
-        final response = await http.post(
-          Uri.parse(_endpoint),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        final response = await GeminiGateway.generate(
+          model: _model,
+          body: {
             'contents': [
               {
                 'parts': [
@@ -73,7 +69,7 @@ Do not mix languages.
               'temperature': 0.3,
               'maxOutputTokens': 600,
             }
-          }),
+          },
         ).timeout(const Duration(seconds: 12));
 
         if (response.statusCode == 200) {
@@ -453,7 +449,7 @@ Prime districts like Dubai Marina, Downtown, and Business Bay yield net rental r
     },
     tenantAdvice: {
       'ar': 'احرص على تجديد العقود وتسجيلها في منصة إيجاري الرسمية في المواعيد المقررة للاستفادة من حماية مؤشر الإيجارات.',
-      'en': 'Renew and register leases via the official Ejari portal promptly to lock in statutory RERA rent index protections.',
+      'en': 'Renew and register leases on the Ejari portal in time to keep the protection of the Rental Index.',
       'hi': 'आधिकारिक एज़ारी पोर्टल के माध्यम से पट्टा पंजीकृत करें ताकि वैधानिक सुरक्षा प्राप्त हो सके।',
     },
     keyDrivers: [
@@ -590,7 +586,7 @@ Prime districts like Dubai Marina, Downtown, and Business Bay yield net rental r
         },
         category: 'policy',
         impact: 'positive',
-        sourceName: 'مؤشر إيجاري الرسمي وريرا (RERA)',
+        sourceName: 'DLD Rental Index',
         timeAgo: {'ar': 'اليوم 07:30 ص', 'en': 'Today 07:30 AM', 'hi': 'आज 07:30 पूर्वाह्न'},
       ),
     ],

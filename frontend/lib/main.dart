@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:tashil_real_estate/core/routing/app_router.dart';
+import 'package:tashil_real_estate/core/routing/url_strategy.dart';
 import 'package:tashil_real_estate/core/theme/app_theme.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -15,6 +16,8 @@ import 'package:tashil_real_estate/core/services/remote_config_service.dart';
 import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
 import 'package:tashil_real_estate/core/services/performance_monitoring_service.dart';
 import 'package:tashil_real_estate/core/services/crash_reporting_service.dart';
+import 'package:tashil_real_estate/core/config/firebase_emulator.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 
 /// Global M3 ScrollBehavior for Tashil Real Estate.
 /// Enables smooth dragging with mouse, touch, and stylus across all platforms and web,
@@ -33,6 +36,7 @@ class TashilAppScrollBehavior extends MaterialScrollBehavior {
 }
 
 void main() async {
+  configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
 
   // Suppress known upstream Flutter Web engine assertions:
@@ -67,16 +71,28 @@ void main() async {
     return false;
   };
 
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.prepareBeforeInitializeApp();
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Enterprise Firebase Services (non-blocking so UI mounts instantly)
-  CrashReportingService().initialize();
-  unawaited(AppCheckService().initialize());
-  unawaited(RemoteConfigService().initialize());
-  unawaited(FcmNotificationService().initialize());
-  unawaited(PerformanceMonitoringService().initialize());
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.connect();
+  } else {
+    // Production services stay off when the build is pointed at emulators,
+    // so a screenshot run never talks to the live project.
+    CrashReportingService().initialize();
+    unawaited(AppCheckService().initialize());
+    unawaited(RemoteConfigService().initialize());
+    unawaited(FcmNotificationService().initialize());
+    unawaited(PerformanceMonitoringService().initialize());
+  }
+
+  ScreenshotHooks.applyFromUri();
+  await ScreenshotHooks.signInIfRequested();
 
   runApp(const TashilRealEstateApp());
 }
@@ -101,7 +117,7 @@ class TashilRealEstateApp extends StatelessWidget {
                   valueListenable: FontThemeController.instance.currentFont,
                   builder: (context, activeFont, _) {
                     return MaterialApp.router(
-                      title: 'Tashil Real Estate',
+                      title: 'Tashil Aqar',
                       debugShowCheckedModeBanner: false,
                       theme: AppTheme.getTheme(
                         locale: currentLocale,
@@ -117,6 +133,16 @@ class TashilRealEstateApp extends StatelessWidget {
                       ),
                       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
                       scrollBehavior: const TashilAppScrollBehavior(),
+                      builder: (context, child) {
+                        final scale = ScreenshotHooks.textScale;
+                        final wrapped = child ?? const SizedBox.shrink();
+                        if (scale == null) return wrapped;
+                        final media = MediaQuery.of(context);
+                        return MediaQuery(
+                          data: media.copyWith(textScaler: TextScaler.linear(scale)),
+                          child: wrapped,
+                        );
+                      },
                       routerConfig: routerConfig ?? appRouter,
                       locale: currentLocale,
                       supportedLocales: const [

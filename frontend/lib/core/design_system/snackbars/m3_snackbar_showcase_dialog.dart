@@ -5,6 +5,7 @@ import '../buttons/tashil_buttons.dart';
 import '../dialogs/tashil_dialogs.dart';
 import '../dividers/tashil_dividers.dart';
 import 'tashil_snackbars.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog allowing visual inspection and live testing of the
 /// Google Material Design 3 (M3) SnackBar Suite across all 4 tones, actions,
@@ -29,11 +30,11 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
     return TashilModalDialog(
       title: loc.tr('m3SnackbarShowcase'),
       subtitle: loc.tr('m3SnackbarSubtitle'),
-      icon: Icons.notifications_active_outlined,
+      icon: Symbols.notifications_active_rounded,
       maxWidth: 680,
       footer: TashilButton(
         label: loc.tr('close'),
-        icon: Icons.check_rounded,
+        icon: Symbols.check_rounded,
         variant: TashilButtonVariant.filled,
         onPressed: () => Navigator.of(context).pop(),
       ),
@@ -55,7 +56,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
             // Tone 1: Success (Copied Link / Listing Saved)
             _buildShowcaseRow(
               context: context,
-              icon: Icons.check_circle_rounded,
+              icon: Symbols.check_circle_rounded,
               iconColor: const Color(0xFF10B981),
               title: loc.tr('snackbarSuccessDemo'),
               description: loc.tr('snackbarRuleDynamicPalette'),
@@ -77,7 +78,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
             // Tone 2: Error (Connection failure with Retry & Close)
             _buildShowcaseRow(
               context: context,
-              icon: Icons.error_outline_rounded,
+              icon: Symbols.error_outline_rounded,
               iconColor: colorScheme.error,
               title: loc.tr('snackbarErrorDemo'),
               description: loc.tr('snackbarRuleMaxOneAction'),
@@ -100,7 +101,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
             // Tone 3: Warning (Expiring session)
             _buildShowcaseRow(
               context: context,
-              icon: Icons.warning_amber_rounded,
+              icon: Symbols.warning_amber_rounded,
               iconColor: const Color(0xFFF59E0B),
               title: loc.tr('snackbarWarningDemo'),
               description: loc.tr('snackbarRuleNoStacking'),
@@ -122,7 +123,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
             // Tone 4: Info (Property data updated)
             _buildShowcaseRow(
               context: context,
-              icon: Icons.info_outline_rounded,
+              icon: Symbols.info_rounded,
               iconColor: colorScheme.primary,
               title: loc.tr('snackbarInfoDemo'),
               description: loc.tr('snackbarRuleResponsiveWidth'),
@@ -300,7 +301,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
           const SizedBox(width: 8),
           TashilButton(
             label: loc.tr('preview'),
-            icon: Icons.play_arrow_rounded,
+            icon: Symbols.play_arrow_rounded,
             variant: TashilButtonVariant.tonal,
             onPressed: onTrigger,
           ),
@@ -331,7 +332,7 @@ class M3SnackbarShowcaseDialog extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Icon(
-            isDo ? Icons.check_rounded : Icons.close_rounded,
+            isDo ? Symbols.check_rounded : Symbols.close_rounded,
             size: 16,
             color: isDo ? const Color(0xFF10B981) : colorScheme.error,
           ),

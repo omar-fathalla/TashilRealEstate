@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/publish_listing_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -34,7 +35,7 @@ void main() {
     currencyCode: 'EGP',
     titles: {'ar': 'شقة فاخرة بالتجمع الخامس', 'en': 'Luxury Apartment', 'hi': 'लक्जरी अपार्टमेंट'},
     descriptions: {'ar': 'وصف تجريبي', 'en': 'Test desc', 'hi': 'विवरण'},
-    locations: {'ar': 'التجمع الخامس، القاهرة', 'en': 'New Cairo', 'hi': 'न्यू काहिरा'},
+    locations: {'ar': 'التجمع الخامس، القاهرة', 'en': 'New cairo', 'hi': 'न्यू काहिरा'},
     cityCode: 'new_cairo',
     propertyTypeCode: 'apartment',
     unitNumber: 'شقة 402',
@@ -83,8 +84,8 @@ void main() {
       expect(find.text('تأكيد'), findsOneWidget);
 
       // Verify Google icons in the button group
-      expect(find.byIcon(Icons.close_rounded), findsWidgets);
-      expect(find.byIcon(Icons.check_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
 
       // Verify M3 shaded close button in header
       expect(find.byType(TashilIconButton), findsWidgets);
@@ -100,7 +101,7 @@ void main() {
       expect(find.text(expectedDateStr), findsOneWidget);
 
       // Verify certified lease action
-      expect(find.byIcon(Icons.verified_user_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.verified_user_rounded), findsWidgets);
     });
 
     testWidgets('Renders TashilConnectedButtonGroup in Mode 1 for unpublish and rent out', (tester) async {
@@ -127,8 +128,8 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
 
       // Verify segments: unpublish button and rent button
-      expect(find.byIcon(Icons.visibility_off_rounded), findsWidgets);
-      expect(find.byIcon(Icons.vpn_key_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.visibility_off_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.vpn_key_rounded), findsWidgets);
     });
   });
 }

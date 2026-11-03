@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 
 /// An elegant Material Design 3 Palette & Dark Mode Switcher.
 /// Allows selecting any of the 5 official M3 seed colors and toggling Light/Dark modes.
@@ -60,10 +62,10 @@ class ThemePaletteSwitcher extends StatelessWidget {
                     iconSize: 18,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    tooltip: isDark ? 'الوضع النهاري (Light)' : 'الوضع الليلي (Dark)',
+                    tooltip: isDark ? 'الوضع النهاري (Light)' : AppLocalizations.trStatic('uiCopy152'),
                     icon: Icon(
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
-                      color: isDark ? Colors.amber[300] : colorScheme.onSurfaceVariant,
+                      isDark ? Symbols.light_mode_rounded : Symbols.dark_mode_rounded,
+                      color: isDark ? colorScheme.tertiary : colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () => controller.toggleDarkMode(),
                   ),
@@ -113,10 +115,10 @@ class ThemePaletteSwitcher extends StatelessWidget {
               ],
             ),
             child: isSelected
-                ? const Icon(
-                    Icons.check_rounded,
+                ? Icon(
+                    Symbols.check_rounded,
                     size: 12,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   )
                 : null,
           ),

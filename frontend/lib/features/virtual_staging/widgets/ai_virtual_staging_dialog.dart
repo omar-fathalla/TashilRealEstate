@@ -9,6 +9,8 @@ import '../../public_marketplace/models/property_item.dart';
 import '../models/virtual_staging_model.dart';
 import '../services/ai_virtual_staging_service.dart';
 import 'virtual_staging_comparison_slider.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiVirtualStagingDialog extends StatefulWidget {
   final PropertyItem? property;
@@ -107,7 +109,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -172,7 +174,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
             color: theme.colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(Icons.chair_rounded, color: theme.colorScheme.primary, size: 22),
+          child: Icon(Symbols.chair_rounded, color: theme.colorScheme.primary, size: 22),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -183,11 +185,8 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                 children: [
                   Text(
                     loc.tr('virtualStagingDialogTitle'),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -199,7 +198,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                     ),
                     child: Text(
                       'Google Imagen 3',
-                      style: TextStyle(color: theme.colorScheme.onSecondaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -207,14 +206,14 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
               const SizedBox(height: 2),
               Text(
                 loc.tr('virtualStagingDialogSubtitle'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
         ),
         TashilIconButton.standard(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icons.close_rounded,
+          icon: Symbols.close_rounded,
         ),
       ],
     );
@@ -223,11 +222,11 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
   Widget _buildRoomTypeSelector(AppLocalizations loc) {
     final theme = Theme.of(context);
     final types = [
-      (StagingRoomType.livingRoom, loc.tr('roomLivingRoom'), Icons.weekend_rounded),
-      (StagingRoomType.masterBedroom, loc.tr('roomMasterBedroom'), Icons.bed_rounded),
-      (StagingRoomType.diningRoom, loc.tr('roomDiningRoom'), Icons.table_restaurant_rounded),
-      (StagingRoomType.homeOffice, loc.tr('roomHomeOffice'), Icons.desk_rounded),
-      (StagingRoomType.balconyTerrace, loc.tr('roomBalconyTerrace'), Icons.balcony_rounded),
+      (StagingRoomType.livingRoom, loc.tr('roomLivingRoom'), Symbols.weekend_rounded),
+      (StagingRoomType.masterBedroom, loc.tr('roomMasterBedroom'), Symbols.bed_rounded),
+      (StagingRoomType.diningRoom, loc.tr('roomDiningRoom'), Symbols.table_restaurant_rounded),
+      (StagingRoomType.homeOffice, loc.tr('roomHomeOffice'), Symbols.desk_rounded),
+      (StagingRoomType.balconyTerrace, loc.tr('roomBalconyTerrace'), Symbols.balcony_rounded),
     ];
 
     return SingleChildScrollView(
@@ -268,11 +267,8 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                     const SizedBox(width: 6),
                     Text(
                       item.$2,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -304,12 +300,12 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
               const SizedBox(height: 16),
               Text(
                 loc.tr('generatingVirtualStageProgress'),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.primary),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
               ),
               const SizedBox(height: 4),
               Text(
                 loc.tr('imagen3InferencePreserveBounds'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -328,12 +324,12 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(Icons.info_outline_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+            Icon(Symbols.info_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 loc.tr('sliderDragHint'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ],
@@ -350,7 +346,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
         children: [
           Text(
             loc.tr('selectStagingStyle'),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 10),
 
@@ -382,7 +378,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                   padding: const EdgeInsets.all(10),
                   child: Row(
                     children: [
-                      Text(stylePreset.iconEmoji, style: const TextStyle(fontSize: 20)),
+                      Text(stylePreset.iconEmoji, style: Theme.of(context).textTheme.titleLarge!),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -390,19 +386,13 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                           children: [
                             Text(
                               stylePreset.getName(lang),
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               stylePreset.getDescription(lang),
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: isSelected ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8) : theme.colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isSelected ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8) : theme.colorScheme.onSurfaceVariant),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -410,7 +400,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                         ),
                       ),
                       if (isSelected)
-                        Icon(Icons.check_circle_rounded, size: 18, color: theme.colorScheme.primary),
+                        Icon(Symbols.check_circle_rounded, size: 18, color: theme.colorScheme.primary),
                     ],
                   ),
                 ),
@@ -423,7 +413,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
           if (_currentPair != null) ...[
             Text(
               loc.tr('stagedFurnitureElements'),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -440,11 +430,11 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_rounded, size: 12, color: theme.colorScheme.primary),
+                      Icon(Symbols.check_rounded, size: 12, color: theme.colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         elem,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -482,13 +472,13 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
                 label: _regenerationAttemptsLeft > 0
                     ? '${loc.tr('regenerateStagingBtn')} ($_regenerationAttemptsLeft/$maxRegenerations)'
                     : loc.tr('stagingQuotaExhausted'),
-                icon: Icons.refresh_rounded,
+                icon: Symbols.refresh_rounded,
                 enabled: _regenerationAttemptsLeft > 0 && !_isGenerating,
               ),
               TashilConnectedButtonSegment<String>(
                 value: 'save',
                 label: loc.tr('saveStagedPhotoBtn'),
-                icon: Icons.share_rounded,
+                icon: Symbols.share_rounded,
                 enabled: !_isGenerating && _currentPair != null,
               ),
             ],

@@ -4,6 +4,8 @@ import '../../../core/design_system/motion/tashil_motion.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../views/ai_engine_hub_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Modal dialog wrapper for AiEngineHubView with M3 shaded close button and responsive sizing.
 class AiEngineHubDialog extends StatelessWidget {
@@ -24,7 +26,7 @@ class AiEngineHubDialog extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final isMobile = ResponsiveLayout.isMobile(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 10 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -52,7 +54,7 @@ class AiEngineHubDialog extends StatelessWidget {
                           color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.smart_toy_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+                        child: Icon(Symbols.smart_toy_rounded, color: colorScheme.onPrimaryContainer, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -60,15 +62,12 @@ class AiEngineHubDialog extends StatelessWidget {
                         children: [
                           Text(
                             loc.tr('aiEngineHubTitle'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                           ),
                           Text(
                             loc.tr('superAdminWorkspaceTitle'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w600),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),

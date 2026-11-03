@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_button.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -10,6 +11,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TenantHomeView extends StatelessWidget {
   const TenantHomeView({super.key});
@@ -37,7 +39,10 @@ class TenantHomeView extends StatelessWidget {
             'hi': 'बेवर्ली हिल्स विला - शेख जायद',
           };
 
-    return SingleChildScrollView(
+    return RefreshIndicator.adaptive(
+      onRefresh: () async {},
+      child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -46,7 +51,7 @@ class TenantHomeView extends StatelessWidget {
             children: [
               CircleAvatar(
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer),
+                child: Icon(Symbols.person_rounded, color: colorScheme.onPrimaryContainer),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -63,12 +68,11 @@ class TenantHomeView extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
                     ),
                     Text(
                       loc.tr('tenant'),
-                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -83,7 +87,7 @@ class TenantHomeView extends StatelessWidget {
             padding: EdgeInsets.all(isMobile ? 18.0 : 28.0),
             child: Column(
               children: [
-                Icon(Icons.event_note_rounded, size: isMobile ? 36 : 44, color: colorScheme.onPrimaryContainer),
+                Icon(Symbols.event_note_rounded, size: isMobile ? 36 : 44, color: colorScheme.onPrimaryContainer),
                 const SizedBox(height: 12),
                 Text(
                   loc.tr('monthlyRent'),
@@ -102,11 +106,8 @@ class TenantHomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '2026-11-01',
-                  style: TextStyle(
-                    color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                    fontSize: 13,
-                  ),
+                  DateFormat.yMMMd(lang).format(DateTime(2026, 11, 1)),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8)),
                 ),
                 SizedBox(height: isMobile ? 16 : 20),
                 SizedBox(
@@ -118,7 +119,7 @@ class TenantHomeView extends StatelessWidget {
                         TenantCheckoutDialog.show(context, invoices.first);
                       }
                     },
-                    icon: Icons.credit_card_rounded,
+                    icon: Symbols.credit_card_rounded,
                     label: loc.tr('payNowOnline'),
                     height: 48,
                   ),
@@ -150,12 +151,12 @@ class TenantHomeView extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   loc.tr('leasePeriod'),
-                  '2026-01-01 -> 2027-12-31',
+                  '${loc.tr('leaseFrom')} ${DateFormat.yMMMd(lang).format(DateTime(2026, 1, 1))} ${loc.tr('leaseTo')} ${DateFormat.yMMMd(lang).format(DateTime(2027, 12, 31))}',
                 ),
                 TashilDivider.middleInset(),
                 _buildDetailRow(
                   context,
-                  loc.tr('statusActive'),
+                  loc.tr('statusLabel'),
                   loc.tr('statusActive'),
                   valueColor: colorScheme.primary,
                 ),
@@ -164,6 +165,7 @@ class TenantHomeView extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -175,19 +177,16 @@ class TenantHomeView extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: valueColor ?? colorScheme.onSurface,
-            ),
-            maxLines: 1,
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: valueColor ?? colorScheme.onSurface),
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ),

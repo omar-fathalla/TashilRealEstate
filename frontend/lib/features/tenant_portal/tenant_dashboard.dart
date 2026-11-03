@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
-import 'package:tashil_real_estate/core/localization/country_switcher.dart';
 import 'package:tashil_real_estate/core/localization/language_switcher.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/widgets/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
@@ -15,6 +13,7 @@ import 'package:tashil_real_estate/core/layout/m3_spacing.dart';
 import 'views/tenant_home_view.dart';
 import 'views/tenant_payments_view.dart';
 import 'views/tenant_support_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TenantDashboard extends StatefulWidget {
   const TenantDashboard({super.key});
@@ -73,32 +72,30 @@ class _TenantDashboardState extends State<TenantDashboard> {
                 color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.person_pin_rounded, color: colorScheme.onPrimary, size: 18),
+              child: Icon(Symbols.person_pin_rounded, color: colorScheme.onPrimary, size: 18),
             ),
             const SizedBox(width: 8),
             Text(
               loc.tr('tenant'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
           ],
         ),
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.travel_explore),
+          icon: const Icon(Symbols.travel_explore_rounded),
           tooltip: loc.tr('browseAsVisitor'),
           onPressed: () => context.go('/'),
         ),
         actions: [
-          const ThemePaletteSwitcher(isCompact: true),
-          const SizedBox(width: 4),
           IconButton(
-            icon: const Icon(Icons.tune_rounded),
+            icon: const Icon(Symbols.tune_rounded),
             tooltip: loc.tr('settings'),
             onPressed: () => AppSettingsDialog.show(context),
           ),
           const SizedBox(width: 4),
           IconButton(
-            icon: Icon(Icons.logout, color: colorScheme.error),
+            icon: Icon(Symbols.logout_rounded, color: colorScheme.onSurfaceVariant),
             tooltip: loc.tr('logout'),
             onPressed: () async {
               await FirebaseAuthService().signOut();
@@ -118,18 +115,18 @@ class _TenantDashboardState extends State<TenantDashboard> {
         },
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
+            icon: const Icon(Symbols.home_rounded),
+            selectedIcon: const Icon(Symbols.home_rounded),
             label: loc.tr('navOverview'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.payment_outlined),
-            selectedIcon: const Icon(Icons.payment),
+            icon: const Icon(Symbols.payment_rounded),
+            selectedIcon: const Icon(Symbols.payment_rounded),
             label: loc.tr('navFinancials'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.handyman_outlined),
-            selectedIcon: const Icon(Icons.handyman),
+            icon: const Icon(Symbols.handyman_rounded),
+            selectedIcon: const Icon(Symbols.handyman_rounded),
             label: loc.tr('navMaintenance'),
           ),
         ],
@@ -154,38 +151,38 @@ class _TenantDashboardState extends State<TenantDashboard> {
         menuTooltip: isExpanded ? loc.tr('collapseMenu') : loc.tr('expandMenu'),
         destinations: [
           TashilRailDestination(
-            icon: Icons.home_outlined,
-            selectedIcon: Icons.home_rounded,
+            icon: Symbols.home_rounded,
+            selectedIcon: Symbols.home_rounded,
             label: loc.tr('navOverview'),
             isSelected: _selectedIndex == 0,
             isExpanded: isExpanded,
             onTap: () => setState(() => _selectedIndex = 0),
           ),
           TashilRailDestination(
-            icon: Icons.payment_outlined,
-            selectedIcon: Icons.payment_rounded,
+            icon: Symbols.payment_rounded,
+            selectedIcon: Symbols.payment_rounded,
             label: loc.tr('navFinancials'),
             isSelected: _selectedIndex == 1,
             isExpanded: isExpanded,
             onTap: () => setState(() => _selectedIndex = 1),
           ),
           TashilRailDestination(
-            icon: Icons.handyman_outlined,
-            selectedIcon: Icons.handyman_rounded,
+            icon: Symbols.handyman_rounded,
+            selectedIcon: Symbols.handyman_rounded,
             label: loc.tr('navMaintenance'),
             isSelected: _selectedIndex == 2,
             isExpanded: isExpanded,
             onTap: () => setState(() => _selectedIndex = 2),
           ),
           TashilRailDestination(
-            icon: Icons.tune_outlined,
-            selectedIcon: Icons.tune_rounded,
+            icon: Symbols.tune_rounded,
+            selectedIcon: Symbols.tune_rounded,
             label: loc.tr('settings'),
             isSelected: false,
             isExpanded: isExpanded,
             trailing: isExpanded
                 ? Icon(
-                    Icons.chevron_right_rounded,
+                    Symbols.chevron_right_rounded,
                     size: 18.0,
                     color: colorScheme.outlineVariant,
                   )
@@ -227,7 +224,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.person_pin_rounded,
+                  Symbols.person_pin_rounded,
                   color: colorScheme.onPrimary,
                   size: 20,
                 ),
@@ -239,22 +236,16 @@ class _TenantDashboardState extends State<TenantDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15.5,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                      letterSpacing: -0.3),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     loc.tr('tenant'),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -266,27 +257,23 @@ class _TenantDashboardState extends State<TenantDashboard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.travel_explore),
+                icon: const Icon(Symbols.travel_explore_rounded),
                 tooltip: loc.tr('browseAsVisitor'),
                 onPressed: () => context.go('/'),
               ),
-              const SizedBox(width: 8),
-              const ThemePaletteSwitcher(isCompact: true),
               if (!isTablet) ...[
-                const SizedBox(width: 8),
-                const CountrySwitcher(isCompact: true, showLabel: false),
                 const SizedBox(width: 8),
                 const LanguageSwitcher(isCompact: true, showLabel: false),
               ],
               const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.tune_rounded),
+                icon: const Icon(Symbols.tune_rounded),
                 tooltip: loc.tr('settings'),
                 onPressed: () => AppSettingsDialog.show(context),
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: Icon(Icons.logout, color: colorScheme.error),
+                icon: Icon(Symbols.logout_rounded, color: colorScheme.error),
                 tooltip: loc.tr('logout'),
                 onPressed: () async {
                   await FirebaseAuthService().signOut();

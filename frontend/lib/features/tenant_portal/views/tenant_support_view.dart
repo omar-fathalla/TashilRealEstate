@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TenantSupportView extends StatelessWidget {
   const TenantSupportView({super.key});
@@ -18,7 +19,7 @@ class TenantSupportView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: TashilFloatingActionButton(
-        icon: Icons.add,
+        icon: Symbols.add_rounded,
         tooltip: loc.tr('maintenanceTickets'),
         onPressed: () {},
       ),
@@ -100,7 +101,7 @@ class TenantSupportView extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: colorScheme.onSurface),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -116,11 +117,8 @@ class TenantSupportView extends StatelessWidget {
                 ),
                 child: Text(
                   status,
-                  style: TextStyle(
-                    color: isResolved ? colorScheme.primary : colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: isResolved ? colorScheme.primary : colorScheme.secondary,
+                    fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -128,14 +126,14 @@ class TenantSupportView extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             description,
-            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.calendar_today, size: 14, color: colorScheme.onSurfaceVariant),
+              Icon(Symbols.calendar_today_rounded, size: 14, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
-              Text(date, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+              Text(date, style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
             ],
           ),
         ],

@@ -120,11 +120,8 @@ class UserAvatarUtils {
         backgroundColor: colorScheme.primary,
         child: Text(
           initials,
-          style: TextStyle(
-            color: colorScheme.onPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: radius * 0.72,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary,
+            fontWeight: FontWeight.bold),
         ),
       );
     }
