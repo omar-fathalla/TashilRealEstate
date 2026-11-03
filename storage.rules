@@ -1,9 +1,48 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerFile(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function acceptableUpload() {
+      return request.resource != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType is string
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('image/.*')
+        );
+    }
+
+    function listingOwner(propertyId) {
+      return firestore.get(/databases/(default)/documents/Properties/$(propertyId)).data.owner_id == request.auth.uid;
+    }
+
+    // Private identity documents, OCR scans, and voice notes.
+    match /users/{uid}/{path=**} {
+      allow read, delete: if isOwnerFile(uid);
+      allow create, update: if isOwnerFile(uid)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    // Public listing photos. Only the listing owner can change them.
+    match /public/listings/{propertyId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create, update: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+        && listingOwner(propertyId);
+      allow delete: if signedIn() && listingOwner(propertyId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
