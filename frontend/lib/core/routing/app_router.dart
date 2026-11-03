@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_scre
 import 'package:tashil_real_estate/features/owner_portal/payment_schedule_screen.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_login_screen.dart';
 import 'package:tashil_real_estate/features/auth/views/email_action_handler_screen.dart';
+import 'package:tashil_real_estate/features/brokers/broker_profile_screen.dart';
 import 'package:tashil_real_estate/core/routing/not_found_screen.dart';
 import 'package:tashil_real_estate/core/routing/role_gate.dart';
 import 'package:tashil_real_estate/core/routing/route_access.dart';
@@ -123,6 +124,12 @@ GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
     GoRoute(
       path: '/market-index',
       builder: (context, state) => const MarketIndexScreen(),
+    ),
+    GoRoute(
+      path: '/brokers/:brokerId',
+      builder: (context, state) => BrokerProfileScreen(
+        brokerId: state.pathParameters['brokerId'] ?? '',
+      ),
     ),
     GoRoute(
       path: '/fast-onboarding',

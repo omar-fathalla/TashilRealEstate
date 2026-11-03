@@ -1,3 +1,5 @@
+import 'package:tashil_real_estate/core/config/demo_data.dart';
+
 class PropertyItem {
   final String id;
   final String countryCode; // 'EG' or 'AE'
@@ -19,6 +21,8 @@ class PropertyItem {
   final String agencyPhone;
   final double rating;
   final String advertisingPermitNumber;
+  final bool isSample;
+  final String brokerId;
 
   const PropertyItem({
     required this.id,
@@ -41,6 +45,8 @@ class PropertyItem {
     this.agencyPhone = '+971 50 000 0000',
     this.rating = 4.8,
     this.advertisingPermitNumber = '',
+    this.isSample = false,
+    this.brokerId = '',
   });
 
   String getTitle(String lang) => titles[lang] ?? titles['en'] ?? titles['ar'] ?? '';
@@ -49,7 +55,42 @@ class PropertyItem {
   String getAgencyName(String lang) => agencyNames[lang] ?? agencyNames['en'] ?? agencyNames['ar'] ?? '';
   List<String> getAmenities(String lang) => amenitiesMap[lang] ?? amenitiesMap['en'] ?? amenitiesMap['ar'] ?? [];
 
-  static List<PropertyItem> get sampleProperties => [
+  /// Demo catalog. Empty unless the build was compiled with DEMO_DATA.
+  static List<PropertyItem> get marketplaceSamples =>
+      DemoData.enabled ? sampleProperties : const [];
+
+  static List<PropertyItem> get sampleProperties => _sampleDefinitions
+      .map((item) => item.asSampleListing())
+      .toList(growable: false);
+
+  PropertyItem asSampleListing() {
+    return PropertyItem(
+      id: id,
+      countryCode: countryCode,
+      currencyCode: currencyCode,
+      titles: titles,
+      descriptions: descriptions,
+      propertyTypeCode: propertyTypeCode,
+      locations: locations,
+      cityCode: cityCode,
+      pricePerMonth: pricePerMonth,
+      bedrooms: bedrooms,
+      bathrooms: bathrooms,
+      areaSqM: areaSqM,
+      imageUrls: imageUrls,
+      amenitiesMap: amenitiesMap,
+      isFurnished: isFurnished,
+      isFeatured: isFeatured,
+      agencyNames: agencyNames,
+      agencyPhone: agencyPhone,
+      rating: rating,
+      advertisingPermitNumber: '',
+      isSample: true,
+      brokerId: cityCode == 'dubai' ? 'broker-demo-marina' : brokerId,
+    );
+  }
+
+  static final List<PropertyItem> _sampleDefinitions = [
     // ==========================================
     // 🇪🇬 EGYPT PROPERTIES (مصر)
     // ==========================================
@@ -258,7 +299,6 @@ class PropertyItem {
         'hi': 'मरीना गेट, दुबई मरीना, दुबई',
       },
       cityCode: 'dubai',
-      advertisingPermitNumber: '7123456789',
       pricePerMonth: 14500,
       bedrooms: 2,
       bathrooms: 2,
@@ -304,7 +344,6 @@ class PropertyItem {
         'hi': 'डाउनटाउन दुबई, दुबई मॉल के पास',
       },
       cityCode: 'dubai',
-      advertisingPermitNumber: '7123456789',
       pricePerMonth: 28000,
       bedrooms: 3,
       bathrooms: 3,
@@ -349,7 +388,6 @@ class PropertyItem {
         'hi': 'फ्रोंड के, पाम जुमेराह, दुबई',
       },
       cityCode: 'dubai',
-      advertisingPermitNumber: '7123456789',
       pricePerMonth: 48000,
       bedrooms: 5,
       bathrooms: 6,
@@ -394,7 +432,6 @@ class PropertyItem {
         'hi': 'बिजनेस बे, दुबई',
       },
       cityCode: 'dubai',
-      advertisingPermitNumber: '7123456789',
       pricePerMonth: 6500,
       bedrooms: 1,
       bathrooms: 1,
@@ -486,6 +523,8 @@ class PropertyItem {
       'agencyPhone': agencyPhone,
       'rating': rating,
       'adPermitNumber': advertisingPermitNumber,
+      'isSample': isSample,
+      'brokerId': brokerId,
     };
   }
 
@@ -554,6 +593,8 @@ class PropertyItem {
       agencyPhone: map['agencyPhone']?.toString() ?? '+971 50 000 0000',
       rating: (map['rating'] is num) ? (map['rating'] as num).toDouble() : 4.8,
       advertisingPermitNumber: map['adPermitNumber']?.toString() ?? map['ad_permit_number']?.toString() ?? map['advertisingPermitNumber']?.toString() ?? '',
+      isSample: map['isSample'] == true || map['is_sample'] == true,
+      brokerId: map['brokerId']?.toString() ?? map['broker_id']?.toString() ?? '',
     );
   }
 }

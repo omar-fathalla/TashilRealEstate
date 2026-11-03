@@ -13,9 +13,8 @@ class AppTheme {
     Brightness brightness = Brightness.light,
     AppFontTheme? fontTheme,
   }) {
-    // 1. Google M3 Material Color Utilities: Generates HCT tonal palettes.
-    // Light surfaces are the neutral tones from the design review (section 37.7).
-    // TODO(mohamed): dark neutral surface tones are still unspecified there.
+    // Light surfaces stay the approved neutrals. Dark surfaces are the M3
+    // tonal roles from ColorScheme.fromSeed, not pure black and not hand-picked hex.
     var colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
@@ -246,7 +245,7 @@ class AppTheme {
       ),
 
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark ? colorScheme.surface : colorScheme.surfaceContainerLowest,
+        backgroundColor: isDark ? colorScheme.surfaceContainer : colorScheme.surfaceContainerLowest,
         selectedIconTheme: IconThemeData(color: colorScheme.onSecondaryContainer),
         unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
         selectedLabelTextStyle: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
@@ -256,7 +255,7 @@ class AppTheme {
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isDark ? colorScheme.surface : colorScheme.surfaceContainerLowest,
+        backgroundColor: isDark ? colorScheme.surfaceContainer : colorScheme.surfaceContainerLowest,
         indicatorColor: colorScheme.secondaryContainer,
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {

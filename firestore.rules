@@ -76,6 +76,12 @@ service cloud.firestore {
         (isAuthenticated() && resource.data.owner_id == request.auth.uid);
     }
 
+    // Public broker profiles. Anyone may read. Agency admins write their own roster.
+    match /Brokers/{brokerId} {
+      allow read: if true;
+      allow create, update, delete: if isSuperAdmin() || isAgencyAdmin();
+    }
+
     // 3. Agencies Collection
     match /Agencies/{agencyId} {
       allow read: if true;

@@ -171,7 +171,7 @@ class _PropertyCardState extends State<PropertyCard> {
               ],
             ),
 
-            if (widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
+            if (!widget.property.isSample && widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               AdvertisingPermitBadge(
                 permitNumber: widget.property.advertisingPermitNumber,
@@ -282,6 +282,25 @@ class _PropertyCardState extends State<PropertyCard> {
                       showArrows: widget.property.imageUrls.length > 1,
                       onTap: () => _openDetails(context),
                     ),
+                    if (widget.property.isSample)
+                      PositionedDirectional(
+                        bottom: 10,
+                        start: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            loc.tr('sampleListingBadge'),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onTertiaryContainer,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
                     // Property Category Tag ("شاليه" / "شقة" / "فيلا") at Top-Start
                     PositionedDirectional(
                       top: 10,

@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/drawer/tashil_navigation_drawer.dart';
 import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_navigation_rail.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:tashil_real_estate/features/brokers/broker_repository.dart';
 import 'views/overview_view.dart';
 import 'views/properties_view.dart';
 import 'views/crm_view.dart';
@@ -135,6 +136,16 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (BrokerRepository().all.isNotEmpty) ...[
+                TashilIconButton.tonal(
+                  icon: Symbols.badge_rounded,
+                  size: 48,
+                  iconSize: 22,
+                  tooltip: loc.tr('viewBrokerProfile'),
+                  onPressed: () => context.go('/brokers/${BrokerRepository().all.first.id}'),
+                ),
+                const SizedBox(width: 8),
+              ],
               const LanguageSwitcher(isCompact: true),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
@@ -559,6 +570,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           ],
         ),
         actions: [
+          if (BrokerRepository().all.isNotEmpty)
+            TashilIconButton.tonal(
+              icon: Symbols.badge_rounded,
+              size: 48,
+              iconSize: 22,
+              tooltip: loc.tr('viewBrokerProfile'),
+              onPressed: () => context.go('/brokers/${BrokerRepository().all.first.id}'),
+            ),
           TashilIconButton.tonal(
             icon: Symbols.tune_rounded,
             size: 38,

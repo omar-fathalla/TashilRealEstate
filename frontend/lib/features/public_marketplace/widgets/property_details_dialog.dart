@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/design_system/buttons/tashil_buttons.dart';
 import '../../../core/design_system/cards/tashil_cards.dart';
 import '../../../core/design_system/carousel/tashil_carousels.dart';
@@ -411,7 +412,31 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                               ),
                                             ],
                                           ),
-                                          if (widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
+                                          if (widget.property.brokerId.isNotEmpty) ...[
+                                            const SizedBox(height: 12),
+                                            TashilButton.tonal(
+                                              height: 48,
+                                              icon: Symbols.badge_rounded,
+                                              label: loc.tr('viewBrokerProfile'),
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                                context.go('/brokers/${widget.property.brokerId}');
+                                              },
+                                            ),
+                                          ],
+                                          if (widget.property.isSample)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 8),
+                                              child: Text(
+                                                loc.tr('sampleListingBadge'),
+                                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                      color: colorScheme.onTertiaryContainer,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                              ),
+                                            ),
+                                          if (!widget.property.isSample &&
+                                              widget.property.advertisingPermitNumber.trim().isNotEmpty) ...[
                                             const SizedBox(height: 12),
                                             AdvertisingPermitBadge(
                                               permitNumber: widget.property.advertisingPermitNumber,
