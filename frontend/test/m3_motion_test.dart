@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -453,7 +454,7 @@ void main() {
       expect(find.text('معرض الحركة والانتقالات M3'), findsOneWidget);
 
       // Trigger the motion animation
-      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+      await tester.tap(find.byIcon(Symbols.play_arrow_rounded));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
@@ -472,7 +473,7 @@ void main() {
       }
 
       // Trigger motion again
-      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+      await tester.tap(find.byIcon(Symbols.play_arrow_rounded));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
     });
@@ -490,7 +491,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('M3 Motion & Transitions Showcase'), findsOneWidget);
+      expect(find.text('M3 motion & transitions showcase'), findsOneWidget);
     });
 
     testWidgets('Renders properly in Hindi locale', (tester) async {

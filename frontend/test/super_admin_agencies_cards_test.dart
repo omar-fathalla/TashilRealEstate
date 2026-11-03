@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_dashboard.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -163,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap first shield icon button
-      final shieldBtnFinder = find.byIcon(Icons.shield_rounded).first;
+      final shieldBtnFinder = find.byIcon(Symbols.shield_rounded).first;
       await tester.tap(shieldBtnFinder);
       await tester.pumpAndSettle();
 

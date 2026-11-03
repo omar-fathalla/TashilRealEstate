@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +58,7 @@ void main() {
               final loc = AppLocalizations.of(ctx);
               return TashilButton.elevated(
                 label: loc.tr('aiValuationBannerPrompt'),
-                icon: Icons.auto_awesome_rounded,
+                icon: Symbols.auto_awesome_rounded,
                 height: 48.0,
                 borderRadius: BorderRadius.circular(24),
                 onPressed: () => SmartValuationDialog.show(ctx),
@@ -72,7 +73,7 @@ void main() {
       expect(find.text('هل تريد معرفة السعر العادل لإيجارك؟'), findsOneWidget);
 
       // Verify single icon rule: only auto_awesome_rounded exists
-      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.auto_awesome_rounded), findsWidgets);
       expect(find.text('اضغط هنا'), findsNothing);
 
       // Verify TashilButton variant is elevated
@@ -97,7 +98,7 @@ void main() {
               final loc = AppLocalizations.of(ctx);
               return TashilButton.elevated(
                 label: loc.tr('aiValuationBannerPrompt'),
-                icon: Icons.auto_awesome_rounded,
+                icon: Symbols.auto_awesome_rounded,
                 onPressed: () {},
               );
             },
@@ -117,7 +118,7 @@ void main() {
               final loc = AppLocalizations.of(ctx);
               return TashilButton.elevated(
                 label: loc.tr('aiValuationBannerPrompt'),
-                icon: Icons.auto_awesome_rounded,
+                icon: Symbols.auto_awesome_rounded,
                 onPressed: () {},
               );
             },
@@ -146,17 +147,17 @@ void main() {
                   TashilConnectedButtonSegment<String>(
                     value: 'all',
                     label: loc.tr('all'),
-                    icon: Icons.grid_view_rounded,
+                    icon: Symbols.grid_view_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'featured',
                     label: loc.tr('chipFeatured'),
-                    icon: Icons.star_rounded,
+                    icon: Symbols.star_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'furnished',
                     label: loc.tr('chipFurnished'),
-                    icon: Icons.chair_rounded,
+                    icon: Symbols.chair_rounded,
                   ),
                 ],
               );
@@ -172,9 +173,9 @@ void main() {
       expect(find.text('مفروشة فقط'), findsOneWidget);
 
       // Verify icons
-      expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.chair_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.grid_view_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.star_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.chair_rounded), findsWidgets);
 
       // Select Featured
       await tester.tap(find.text('عقارات مميزة'));

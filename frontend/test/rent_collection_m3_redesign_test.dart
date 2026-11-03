@@ -113,10 +113,10 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Rent Collection'), findsOneWidget);
-      expect(find.text('Create Invoice'), findsOneWidget);
+      expect(find.text('Rent collection'), findsOneWidget);
+      expect(find.text('Create invoice'), findsOneWidget);
       expect(find.text('Landlord'), findsWidgets);
-      expect(find.text('All Invoices'), findsOneWidget);
+      expect(find.text('All invoices'), findsOneWidget);
       expect(find.text('Paid'), findsWidgets);
       expect(find.text('Pay'), findsWidgets);
       expect(find.text('Remind'), findsWidgets);

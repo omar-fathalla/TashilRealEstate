@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,23 +50,23 @@ void main() {
           TashilDropdownMenu<String>(
             value: selected,
             labelText: 'المدينة',
-            prefixIcon: Icons.location_city_rounded,
+            prefixIcon: Symbols.location_city_rounded,
             items: const [
               TashilDropdownMenuItem(
                 value: 'all',
                 label: 'جميع المدن',
-                icon: Icons.domain_rounded,
+                icon: Symbols.domain_rounded,
               ),
               TashilDropdownMenuItem.divider(value: 'div_1'),
               TashilDropdownMenuItem(
                 value: 'new_cairo',
                 label: 'القاهرة الجديدة',
-                icon: Icons.location_city_rounded,
+                icon: Symbols.location_city_rounded,
               ),
               TashilDropdownMenuItem(
                 value: 'sheikh_zayed',
                 label: 'الشيخ زايد',
-                icon: Icons.holiday_village_rounded,
+                icon: Symbols.holiday_village_rounded,
               ),
             ],
             onChanged: (val) {
@@ -80,8 +81,8 @@ void main() {
       // Check label and selected value
       expect(find.text('المدينة'), findsOneWidget);
       expect(find.text('القاهرة الجديدة'), findsOneWidget);
-      expect(find.byIcon(Icons.location_city_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.location_city_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.keyboard_arrow_down_rounded), findsWidgets);
     });
 
     testWidgets('TashilDropdownMenu opens overlay with smooth animation on tap and displays checkmark for selected', (tester) async {
@@ -92,22 +93,22 @@ void main() {
           TashilDropdownMenu<String>(
             value: selected,
             labelText: 'المدينة',
-            prefixIcon: Icons.location_city_rounded,
+            prefixIcon: Symbols.location_city_rounded,
             items: const [
               TashilDropdownMenuItem(
                 value: 'all',
                 label: 'جميع المدن',
-                icon: Icons.domain_rounded,
+                icon: Symbols.domain_rounded,
               ),
               TashilDropdownMenuItem(
                 value: 'new_cairo',
                 label: 'القاهرة الجديدة',
-                icon: Icons.location_city_rounded,
+                icon: Symbols.location_city_rounded,
               ),
               TashilDropdownMenuItem(
                 value: 'sheikh_zayed',
                 label: 'الشيخ زايد',
-                icon: Icons.holiday_village_rounded,
+                icon: Symbols.holiday_village_rounded,
               ),
             ],
             onChanged: (val) {
@@ -129,7 +130,7 @@ void main() {
       expect(find.text('الشيخ زايد'), findsOneWidget);
 
       // Selected item should have a checkmark icon
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
 
       // Close menu by selecting an item
       await tester.tap(find.text('جميع المدن'));
@@ -148,22 +149,22 @@ void main() {
               TashilDropdownMenu<String>(
                 value: selected,
                 labelText: 'المدينة',
-                prefixIcon: Icons.location_city_rounded,
+                prefixIcon: Symbols.location_city_rounded,
                 items: const [
                   TashilDropdownMenuItem(
                     value: 'all',
                     label: 'جميع المدن',
-                    icon: Icons.domain_rounded,
+                    icon: Symbols.domain_rounded,
                   ),
                   TashilDropdownMenuItem(
                     value: 'new_cairo',
                     label: 'القاهرة الجديدة',
-                    icon: Icons.location_city_rounded,
+                    icon: Symbols.location_city_rounded,
                   ),
                   TashilDropdownMenuItem(
                     value: 'sheikh_zayed',
                     label: 'الشيخ زايد',
-                    icon: Icons.holiday_village_rounded,
+                    icon: Symbols.holiday_village_rounded,
                   ),
                 ],
                 onChanged: (val) {

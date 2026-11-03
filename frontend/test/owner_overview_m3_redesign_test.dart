@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/owner_portal/owner_dashboard.dart';
 import 'package:tashil_real_estate/features/owner_portal/views/owner_overview_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -45,13 +46,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Settings icon is present
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.tune_rounded), findsWidgets);
       // Verify Browse Guest icon is present
-      expect(find.byIcon(Icons.travel_explore_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.travel_explore_rounded), findsWidgets);
 
       // Verify theme palette circles, country flags, and language dropdown are NOT in the header
-      expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
-      expect(find.byIcon(Icons.language_rounded), findsNothing);
+      expect(find.byIcon(Symbols.dark_mode_rounded), findsNothing);
+      expect(find.byIcon(Symbols.language_rounded), findsNothing);
     });
 
     testWidgets('OwnerOverviewView renders 4 KPI Metric Cards with TashilCard and Google Icons', (tester) async {
@@ -66,10 +67,10 @@ void main() {
       expect(find.byType(TashilCard), findsWidgets);
 
       // Verify Google icons for the metrics
-      expect(find.byIcon(Icons.apartment_rounded), findsWidgets);
-      expect(find.byIcon(Icons.check_circle_outline_rounded), findsWidgets);
-      expect(find.byIcon(Icons.door_front_door_outlined), findsWidgets);
-      expect(find.byIcon(Icons.payments_outlined), findsWidgets);
+      expect(find.byIcon(Symbols.apartment_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.check_circle_outline_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.door_front_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.payments_rounded), findsWidgets);
     });
 
     testWidgets('OwnerOverviewView renders TashilConnectedButtonGroup for properties filter', (tester) async {
@@ -89,7 +90,7 @@ void main() {
       expect(find.text('شاغر'), findsWidgets);
 
       // Tap on 'شاغر' (vacant) filter segment
-      await tester.tap(find.byIcon(Icons.door_front_door_rounded).first);
+      await tester.tap(find.byIcon(Symbols.door_front_rounded).first);
       await tester.pumpAndSettle();
 
       // Verify list transitions and shows vacant chalet

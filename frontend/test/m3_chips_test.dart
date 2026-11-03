@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/property_media_gallery_uploader.dart';
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
 import 'package:tashil_real_estate/features/public_marketplace/widgets/property_details_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ void main() {
         wrapWithTheme(
           TashilAssistChip.outlined(
             label: 'صالة المعيشة',
-            icon: Icons.weekend_outlined,
+            icon: Symbols.weekend_rounded,
             onPressed: () => tapped = true,
           ),
         ),
@@ -42,7 +43,7 @@ void main() {
 
       // Verify label and icon existence
       expect(find.text('صالة المعيشة'), findsOneWidget);
-      expect(find.byIcon(Icons.weekend_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.weekend_rounded), findsWidgets);
 
       // Verify M3 height
       final container = tester.widget<Container>(find.byType(Container).first);
@@ -58,13 +59,13 @@ void main() {
         wrapWithTheme(
           const TashilAssistChip.elevated(
             label: 'مطبخ عصري',
-            icon: Icons.countertops_outlined,
+            icon: Symbols.countertops_rounded,
           ),
         ),
       );
 
       expect(find.text('مطبخ عصري'), findsOneWidget);
-      expect(find.byIcon(Icons.countertops_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.countertops_rounded), findsWidgets);
 
       final material = tester.widget<Material>(
         find.descendant(of: find.byType(TashilAssistChip), matching: find.byType(Material)).first,
@@ -81,7 +82,7 @@ void main() {
             return wrapWithTheme(
               TashilFilterChip(
                 label: 'تكييف مركزي',
-                icon: Icons.ac_unit_rounded,
+                icon: Symbols.ac_unit_rounded,
                 selected: isSelected,
                 onSelected: (val) => setState(() => isSelected = val),
               ),
@@ -92,8 +93,8 @@ void main() {
 
       // Initially unselected, checkmark not visible
       expect(find.text('تكييف مركزي'), findsOneWidget);
-      expect(find.byIcon(Icons.check_rounded), findsNothing);
-      expect(find.byIcon(Icons.ac_unit_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsNothing);
+      expect(find.byIcon(Symbols.ac_unit_rounded), findsWidgets);
 
       // Tap to select
       await tester.tap(find.text('تكييف مركزي'));
@@ -101,7 +102,7 @@ void main() {
 
       // Now selected, checkmark visible
       expect(isSelected, isTrue);
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
     });
 
     testWidgets('TashilInputChip fires onDeleted callback when close icon tapped', (tester) async {
@@ -111,16 +112,16 @@ void main() {
         wrapWithTheme(
           TashilInputChip(
             label: 'التجمع الخامس',
-            icon: Icons.tag_rounded,
+            icon: Symbols.tag_rounded,
             onDeleted: () => deleted = true,
           ),
         ),
       );
 
       expect(find.text('التجمع الخامس'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       expect(deleted, isTrue);
     });
 
@@ -131,14 +132,14 @@ void main() {
         wrapWithTheme(
           TashilSuggestionChip(
             label: 'اقتراح ذكي بالذكاء الاصطناعي',
-            icon: Icons.auto_awesome_rounded,
+            icon: Symbols.auto_awesome_rounded,
             onPressed: () => suggested = true,
           ),
         ),
       );
 
       expect(find.text('اقتراح ذكي بالذكاء الاصطناعي'), findsOneWidget);
-      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.auto_awesome_rounded), findsWidgets);
 
       await tester.tap(find.text('اقتراح ذكي بالذكاء الاصطناعي'));
       expect(suggested, isTrue);
@@ -171,15 +172,15 @@ void main() {
 
       // Verify presence of status badge chip and chic M3 upload button
       expect(find.byType(TashilAssistChip), findsOneWidget);
-      expect(find.widgetWithIcon(TashilButton, Icons.add_photo_alternate_rounded), findsOneWidget);
+      expect(find.widgetWithIcon(TashilButton, Symbols.add_photo_alternate_rounded), findsOneWidget);
       expect(find.text('رفع الصور'), findsOneWidget);
-      expect(find.byIcon(Icons.add_link_rounded), findsNothing);
+      expect(find.byIcon(Symbols.add_link_rounded), findsNothing);
 
       // Verify architectural presets are completely removed
       expect(find.text('نماذج معمارية جاهزة بنقرة واحدة'), findsNothing);
-      expect(find.byIcon(Icons.weekend_outlined), findsNothing);
-      expect(find.byIcon(Icons.bed_outlined), findsNothing);
-      expect(find.byIcon(Icons.countertops_outlined), findsNothing);
+      expect(find.byIcon(Symbols.weekend_rounded), findsNothing);
+      expect(find.byIcon(Symbols.bed_rounded), findsNothing);
+      expect(find.byIcon(Symbols.countertops_rounded), findsNothing);
     });
 
     testWidgets('PropertyDetailsDialog renders amenities using TashilAssistChip with contextual icons', (tester) async {
@@ -209,11 +210,11 @@ void main() {
       // Verify presence of TashilAssistChips for amenities with contextual icons
       expect(find.byType(TashilAssistChip), findsWidgets);
       expect(find.widgetWithText(TashilAssistChip, 'مفروش بالكامل'), findsOneWidget);
-      expect(find.widgetWithIcon(TashilAssistChip, Icons.chair_rounded), findsOneWidget);
+      expect(find.widgetWithIcon(TashilAssistChip, Symbols.chair_rounded), findsOneWidget);
       expect(find.widgetWithText(TashilAssistChip, 'تكييف مركزي'), findsOneWidget);
-      expect(find.widgetWithIcon(TashilAssistChip, Icons.ac_unit_rounded), findsOneWidget);
+      expect(find.widgetWithIcon(TashilAssistChip, Symbols.ac_unit_rounded), findsOneWidget);
       expect(find.widgetWithText(TashilAssistChip, 'أمن وحراسة 24/7'), findsOneWidget);
-      expect(find.widgetWithIcon(TashilAssistChip, Icons.security_rounded), findsOneWidget);
+      expect(find.widgetWithIcon(TashilAssistChip, Symbols.security_rounded), findsOneWidget);
 
       final firstChipBox = tester.getRect(find.widgetWithText(TashilAssistChip, 'مفروش بالكامل'));
       final secondChipBox = tester.getRect(find.widgetWithText(TashilAssistChip, 'تكييف مركزي'));

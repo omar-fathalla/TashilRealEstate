@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/sliders/tashil_sliders.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/widgets/investment_simulator_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -55,7 +56,7 @@ void main() {
       expect(find.text('purchasePrice'), findsNothing);
       expect(find.text('purchasePrice (ج.م)'), findsNothing);
       expect(find.text('years'), findsNothing);
-      expect(find.textContaining('Cap Rate'), findsNothing);
+      expect(find.textContaining('Cap rate'), findsNothing);
 
       // Verify pure Arabic translated labels
       expect(find.text('اسم العقار'), findsOneWidget);
@@ -69,7 +70,7 @@ void main() {
 
       // Verify M3 Shaded Close Button is present
       expect(find.byType(TashilIconButton), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Verify TashilSlider is used for both down payment and appreciation
       expect(find.byType(TashilSlider), findsNWidgets(2));
@@ -92,12 +93,12 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Property Name'), findsOneWidget);
-      expect(find.textContaining('Purchase Price'), findsOneWidget);
-      expect(find.textContaining('Cap Rate:'), findsOneWidget);
+      expect(find.text('Property name'), findsOneWidget);
+      expect(find.textContaining('Purchase price'), findsOneWidget);
+      expect(find.textContaining('Cap rate:'), findsOneWidget);
       expect(find.textContaining('years'), findsOneWidget);
-      expect(find.text('Investment Simulator'), findsOneWidget);
-      expect(find.text('Investment Unit Parameters'), findsOneWidget);
+      expect(find.text('Investment simulator'), findsOneWidget);
+      expect(find.text('Investment unit parameters'), findsOneWidget);
       expect(find.text('Close'), findsOneWidget);
     });
 
@@ -142,7 +143,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(InvestmentSimulatorDialog), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       await tester.pumpAndSettle();
       expect(find.byType(InvestmentSimulatorDialog), findsNothing);
 

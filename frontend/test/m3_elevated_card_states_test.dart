@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/features/public_marketplace/widgets/property_
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/features/virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -339,26 +340,26 @@ void main() {
       expect(find.byType(PropertyCard), findsOneWidget);
       expect(find.byType(TashilCard), findsOneWidget);
 
-      // 1. Price icon (Icons.payments_outlined)
-      expect(find.byIcon(Icons.payments_outlined), findsOneWidget);
+      // 1. Price icon (Symbols.payments_rounded)
+      expect(find.byIcon(Symbols.payments_rounded), findsWidgets);
 
-      // 2. Rating star icon (Icons.star_rounded)
-      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+      // 2. Rating star icon (Symbols.star_rounded)
+      expect(find.byIcon(Symbols.star_rounded), findsWidgets);
 
-      // 3. Property Type building icon (Icons.apartment_rounded)
-      expect(find.byIcon(Icons.apartment_rounded), findsOneWidget);
+      // 3. Property Type building icon (Symbols.apartment_rounded)
+      expect(find.byIcon(Symbols.apartment_rounded), findsWidgets);
 
-      // 4. Location icon (Icons.location_on_outlined)
-      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      // 4. Location icon (Symbols.location_on_rounded)
+      expect(find.byIcon(Symbols.location_on_rounded), findsWidgets);
 
       // 5. Specs icons: Bed, Bathtub, Square Foot, Weekend/Furnishing
-      expect(find.byIcon(Icons.bed_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.bathtub_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.square_foot_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.weekend_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.bed_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.bathtub_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.square_foot_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.weekend_rounded), findsWidgets);
 
-      // 6. Agency business icon (Icons.business_rounded)
-      expect(find.byIcon(Icons.business_rounded), findsOneWidget);
+      // 6. Agency business icon (Symbols.business_rounded)
+      expect(find.byIcon(Symbols.business_rounded), findsWidgets);
 
       // 7. Official M3 Connected Button Group in card footer (concise PropTech labels)
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
@@ -398,13 +399,13 @@ void main() {
       expect(find.text('المساعد الصوتي'), findsOneWidget);
 
       // 3. Verify Favorite Heart Icon button and toggle behavior
-      expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.favorite_border_rounded));
+      expect(find.byIcon(Symbols.favorite_border_rounded), findsWidgets);
+      await tester.tap(find.byIcon(Symbols.favorite_border_rounded));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.favorite_rounded), findsWidgets);
 
       // 4. Verify 3-dots More Options button
-      expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.more_vert_rounded), findsWidgets);
 
       // 5. Tap on 'التأثيث الافتراضي' -> Opens AiVirtualStagingDialog
       await tester.tap(find.text('التأثيث الافتراضي'));
@@ -459,7 +460,7 @@ void main() {
           const TashilCardText(
             headlineText: 'Luxury Apartment in Cairo',
             subheadText: 'New Cairo, 5th Settlement',
-            subheadLeading: Icon(Icons.location_on_outlined, size: 14),
+            subheadLeading: Icon(Symbols.location_on_rounded, size: 14),
             supportingText: 'Modern ultra super-lux finished apartment, fully furnished with premium amenities.',
           ),
         ),
@@ -470,7 +471,7 @@ void main() {
       expect(find.text('Luxury Apartment in Cairo'), findsOneWidget);
       expect(find.text('New Cairo, 5th Settlement'), findsOneWidget);
       expect(find.text('Modern ultra super-lux finished apartment, fully furnished with premium amenities.'), findsOneWidget);
-      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.location_on_rounded), findsWidgets);
 
       // Verify Typography: Headline has bold titleMedium
       final headlineFinder = find.text('Luxury Apartment in Cairo');
@@ -527,7 +528,7 @@ void main() {
             onLinkedTextTap: () => linkTapped = true,
             selectionControl: const Row(
               children: [
-                Icon(Icons.check_box, size: 16),
+                Icon(Symbols.check_box_rounded, size: 16),
                 SizedBox(width: 4),
                 Text('Select to compare'),
               ],
@@ -539,7 +540,7 @@ void main() {
 
       expect(find.text('Read more link'), findsOneWidget);
       expect(find.text('Select to compare'), findsOneWidget);
-      expect(find.byIcon(Icons.check_box), findsOneWidget);
+      expect(find.byIcon(Symbols.check_box_rounded), findsWidgets);
 
       // Tap linked text
       await tester.tap(find.text('Read more link'));
@@ -567,8 +568,8 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
 
       // 3. Icon buttons: Phone Call & Chat
-      expect(find.byIcon(Icons.phone_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.phone_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.chat_bubble_outline_rounded), findsWidgets);
     });
 
     testWidgets('M3HoverColorScheme derives darker tone and hover state layer from theme seed color (Terracotta & Green)', (tester) async {

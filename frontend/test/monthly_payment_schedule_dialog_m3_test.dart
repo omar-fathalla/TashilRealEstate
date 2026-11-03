@@ -72,7 +72,7 @@ void main() {
       'hi': 'पूल के साथ स्टैंड-अलोन विला',
     },
     descriptions: const {'ar': 'وصف فيلا', 'en': 'Villa desc', 'hi': 'विवरण'},
-    locations: const {'ar': 'الشيخ زايد، الجيزة', 'en': 'Sheikh Zayed', 'hi': 'शेख जायद'},
+    locations: const {'ar': 'الشيخ زايد، الجيزة', 'en': 'Sheikh zayed', 'hi': 'शेख जायद'},
     cityCode: 'sheikh_zayed',
     propertyTypeCode: 'villa',
     unitNumber: 'فيلا 12',

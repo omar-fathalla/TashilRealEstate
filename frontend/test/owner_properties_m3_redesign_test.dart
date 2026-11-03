@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/lists/tashil_lists.dart';
 import 'package:tashil_real_estate/features/owner_portal/views/owner_properties_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -49,14 +50,14 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<bool>), findsOneWidget);
 
       // Verify Google icons in quick actions
-      expect(find.byIcon(Icons.rocket_launch_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.description_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+      expect(find.byIcon(Symbols.rocket_launch_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.auto_awesome_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.description_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.shield_rounded), findsWidgets);
 
       // Verify Google icons in view switcher
-      expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.table_rows_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.grid_view_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.table_rows_rounded), findsWidgets);
     });
 
     testWidgets('Renders prominent primary action TashilButton for fast onboarding (رفع العقار)', (tester) async {
@@ -70,7 +71,7 @@ void main() {
       // Verify standalone primary action button for "رفع العقار"
       final uploadBtn = find.widgetWithText(TashilButton, 'رفع العقار');
       expect(uploadBtn, findsOneWidget);
-      expect(find.descendant(of: uploadBtn, matching: find.byIcon(Icons.rocket_launch_rounded)), findsOneWidget);
+      expect(find.descendant(of: uploadBtn, matching: find.byIcon(Symbols.rocket_launch_rounded)), findsOneWidget);
     });
 
     testWidgets('Table view renders M3 clean banner with drag hint and table header', (tester) async {
@@ -82,7 +83,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify banner drag hint icon
-      expect(find.byIcon(Icons.drag_indicator_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.drag_indicator_rounded), findsWidgets);
 
       // Verify M3 table card
       expect(find.byType(TashilCard), findsWidgets);
@@ -97,8 +98,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify action buttons inside table rows
-      expect(find.byIcon(Icons.edit_outlined), findsWidgets);
-      expect(find.byIcon(Icons.share_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.edit_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.share_rounded), findsWidgets);
     });
 
     testWidgets('Toggling view mode switches smoothly between table view and cards view', (tester) async {
@@ -177,8 +178,8 @@ void main() {
       expect(chaletText.style?.color, const Color(0xFFB45309)); // Amber 700
 
       // Verify status badges are present with high contrast icons
-      expect(find.byIcon(Icons.storefront_rounded), findsWidgets); // Published
-      expect(find.byIcon(Icons.vpn_key_rounded), findsWidgets); // Occupied
+      expect(find.byIcon(Symbols.storefront_rounded), findsWidgets); // Published
+      expect(find.byIcon(Symbols.vpn_key_rounded), findsWidgets); // Occupied
     });
 
     testWidgets('Table and Cards view render chic Property Type Chips and stylized Location Badges', (tester) async {
@@ -195,15 +196,15 @@ void main() {
       expect(find.text('شاليه مصيفي'), findsWidgets);
 
       // Verify M3 semantic icons for property types
-      expect(find.byIcon(Icons.apartment_rounded), findsWidgets);
-      expect(find.byIcon(Icons.villa_rounded), findsWidgets);
-      expect(find.byIcon(Icons.beach_access_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.apartment_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.villa_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.beach_access_rounded), findsWidgets);
 
       // 2. Verify stylized Location Badges with solid M3 pin
-      expect(find.byIcon(Icons.location_on_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.location_on_rounded), findsWidgets);
 
       // 3. Switch to Cards View and verify Property Type Chips floating on cards
-      final cardsViewBtn = find.byIcon(Icons.grid_view_rounded);
+      final cardsViewBtn = find.byIcon(Symbols.grid_view_rounded);
       expect(cardsViewBtn, findsOneWidget);
       await tester.tap(cardsViewBtn);
       await tester.pumpAndSettle();
@@ -211,7 +212,7 @@ void main() {
       // Verify Property Type Chips on Cards
       expect(find.textContaining('شقة سكنية'), findsWidgets);
       expect(find.textContaining('فيلا مستقلة'), findsWidgets);
-      expect(find.byIcon(Icons.location_on_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.location_on_rounded), findsWidgets);
     });
   });
 }

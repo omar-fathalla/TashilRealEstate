@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/services/gemini_ai_service.dart';
 import 'package:tashil_real_estate/features/smart_valuation/models/smart_valuation_model.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
 import 'package:tashil_real_estate/features/smart_valuation/widgets/district_location_picker_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp(Widget child, {Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -194,10 +195,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify GPS location icon button exists
-      expect(find.byIcon(Icons.my_location_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.my_location_rounded), findsWidgets);
 
       // Verify Map picker icon button exists
-      expect(find.byIcon(Icons.map_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.map_rounded), findsWidgets);
 
       // Verify popular areas chips row exists
       expect(find.text('المناطق الأكثر طلباً:'), findsOneWidget);

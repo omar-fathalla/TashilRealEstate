@@ -125,12 +125,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify English labels and UAE defaults
-      expect(find.text('Tenant Details'), findsOneWidget);
-      expect(find.text('District / Area'), findsOneWidget);
-      expect(find.text('Phone Number'), findsOneWidget);
-      expect(find.text('Email Address'), findsOneWidget);
-      expect(find.text('Grace Period'), findsOneWidget);
-      expect(find.text('Issue & Authenticate Invoice'), findsOneWidget);
+      expect(find.text('Tenant details'), findsOneWidget);
+      expect(find.text('District / area'), findsOneWidget);
+      expect(find.text('Phone number'), findsOneWidget);
+      expect(find.text('Email address'), findsOneWidget);
+      expect(find.text('Grace period'), findsOneWidget);
+      expect(find.text('Issue & authenticate invoice'), findsOneWidget);
 
       expect(find.text('Luxury Marina View 2BR'), findsOneWidget);
       expect(find.text('AE-2026-DXB-9042'), findsOneWidget);

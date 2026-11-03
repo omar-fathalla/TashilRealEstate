@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/property_share_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -63,7 +64,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 1. Verify Outlined Close Button
-      expect(find.byIcon(Icons.close_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
       final outlinedIconButtons = find.byWidgetPredicate(
         (w) => w is TashilIconButton && w.variant == TashilIconButtonVariant.outlined,
       );
@@ -74,9 +75,9 @@ void main() {
       expect(find.text('shareOptions'), findsNothing);
 
       // 3. Verify Google Material Design Icons for Social Channels
-      expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsOneWidget); // WhatsApp
-      expect(find.byIcon(Icons.public_rounded), findsOneWidget); // Facebook
-      expect(find.byIcon(Icons.forum_outlined), findsOneWidget); // Messenger
+      expect(find.byIcon(Symbols.chat_bubble_outline_rounded), findsWidgets); // WhatsApp
+      expect(find.byIcon(Symbols.public_rounded), findsWidgets); // Facebook
+      expect(find.byIcon(Symbols.forum_rounded), findsWidgets); // Messenger
 
       // 4. Verify TashilConnectedButtonGroup in footer with 'معاينة' and 'إلغاء'
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);
@@ -106,7 +107,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Share Options'), findsOneWidget);
+      expect(find.text('Share options'), findsOneWidget);
       expect(find.text('Preview'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);

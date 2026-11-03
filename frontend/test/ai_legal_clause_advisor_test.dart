@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_
 import 'package:tashil_real_estate/features/legal_ai_advisor/models/legal_advisor_model.dart';
 import 'package:tashil_real_estate/features/legal_ai_advisor/services/ai_legal_advisor_service.dart';
 import 'package:tashil_real_estate/features/legal_ai_advisor/widgets/ai_legal_clause_advisor_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp(Widget child, {Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -160,7 +161,7 @@ void main() {
       expect(find.text('المستشار القانوني العقاري الذكي'), findsOneWidget);
       expect(find.text('Google Search Grounded'), findsOneWidget);
       expect(find.text('Gemini 3.8 Flash Legal'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
       expect(find.byType(TextField), findsOneWidget);
     });
 

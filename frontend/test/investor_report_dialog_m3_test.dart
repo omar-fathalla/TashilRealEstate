@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/services/investor_analytics_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/widgets/investor_report_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -85,11 +86,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Investor statement and portfolio valuation'), findsOneWidget);
-      expect(find.text('Certified & Audited Statement'), findsOneWidget);
+      expect(find.text('Certified & audited statement'), findsOneWidget);
       expect(find.text('Signature'), findsOneWidget);
-      expect(find.text('OFFICIALLY VERIFIED'), findsOneWidget);
+      expect(find.text('Officially verified'), findsOneWidget);
       expect(find.textContaining('November 30, 2026'), findsOneWidget);
-      expect(find.textContaining('Financial Regulatory Authority & Real Estate Brokerage'), findsOneWidget);
+      expect(find.textContaining('Financial regulatory authority & real estate brokerage'), findsOneWidget);
     });
 
     testWidgets('Renders properly in Hindi with full tri-language parity', (tester) async {
@@ -135,7 +136,7 @@ void main() {
       expect(find.byType(InvestorReportDialog), findsOneWidget);
 
       // Dismiss with top shaded close button
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(Symbols.close_rounded));
       await tester.pumpAndSettle();
       expect(find.byType(InvestorReportDialog), findsNothing);
 

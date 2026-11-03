@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/features/agency_workspace/agency_dashboard.da
 import 'package:tashil_real_estate/features/super_admin/super_admin_dashboard.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -182,7 +183,7 @@ void main() {
 
       // Ensure AI Image Moderation title is NOT in the public navbar
       expect(find.text('فحص وتدقيق الصور بالذكاء الاصطناعي'), findsNothing);
-      expect(find.text('AI Property Image Moderation'), findsNothing);
+      expect(find.text('AI property image moderation'), findsNothing);
     });
 
     testWidgets('SuperAdminDashboard includes AI Image Moderation and opens dialog', (tester) async {
@@ -207,7 +208,7 @@ void main() {
       expect(find.byType(AiImageModeratorDialog), findsOneWidget);
 
       // Verify M3 shaded close button exists in dialog
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
 
       // Verify TashilConnectedButtonGroup<String> is used for filter tabs
       expect(find.byType(TashilConnectedButtonGroup<String>), findsOneWidget);

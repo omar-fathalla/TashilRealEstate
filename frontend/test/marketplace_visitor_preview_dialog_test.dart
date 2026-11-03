@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/marketplace_visitor_preview_dialog.dart';
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 Widget wrapWithApp({required Widget child, Locale locale = const Locale('ar')}) {
   return MaterialApp(
@@ -35,7 +36,7 @@ void main() {
     titles: {'ar': 'شقة فاخرة بالتجمع الخامس', 'en': 'Luxury Apartment', 'hi': 'लक्जरी अपार्टमेंट'},
     descriptions: {'ar': 'وصف تجريبي', 'en': 'Test desc', 'hi': 'विवरण'},
     propertyTypeCode: 'apartment',
-    locations: {'ar': 'التجمع الخامس، القاهرة', 'en': 'New Cairo', 'hi': 'न्यू काहिरा'},
+    locations: {'ar': 'التجمع الخامس، القاهرة', 'en': 'New cairo', 'hi': 'न्यू काहिरा'},
     cityCode: 'new_cairo',
     pricePerMonth: 22000,
     bedrooms: 3,
@@ -44,7 +45,7 @@ void main() {
     imageUrls: const ['https://example.com/image.jpg'],
     amenitiesMap: const {
       'ar': ['مفروش بالكامل'],
-      'en': ['Fully Furnished'],
+      'en': ['Fully furnished'],
       'hi': ['पूरी तरह सुसज्जित'],
     },
     isFurnished: true,
@@ -89,9 +90,9 @@ void main() {
       expect(find.text('الانتقال إلى السوق'), findsOneWidget);
 
       // Verify icons in the connected button group
-      expect(find.byIcon(Icons.close_rounded), findsWidgets);
-      expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.storefront_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.close_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.open_in_new_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.storefront_rounded), findsWidgets);
 
       // Verify M3 shaded close button in header
       expect(find.byType(TashilIconButton), findsWidgets);

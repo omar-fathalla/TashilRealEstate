@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/navigation_bar/tashil_navigation_bar.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   group('Material Design 3 (M3) TashilNavigationBar & Badges Tests', () {
@@ -16,31 +17,31 @@ void main() {
                 return TashilNavigationBar(
                   destinations: [
                     TashilNavigationDestination(
-                      icon: Icons.add_home_work_outlined,
-                      selectedIcon: Icons.add_home_work_rounded,
+                      icon: Symbols.add_home_work_rounded,
+                      selectedIcon: Symbols.add_home_work_rounded,
                       label: 'رفع العقار',
                       isSelected: selected == 0,
                       onTap: () => setState(() => selected = 0),
                     ),
                     TashilNavigationDestination(
-                      icon: Icons.auto_awesome_outlined,
-                      selectedIcon: Icons.auto_awesome_rounded,
+                      icon: Symbols.auto_awesome_rounded,
+                      selectedIcon: Symbols.auto_awesome_rounded,
                       label: 'التقييم',
                       badgeLabel: 'AI',
                       isSelected: selected == 1,
                       onTap: () => setState(() => selected = 1),
                     ),
                     TashilNavigationDestination(
-                      icon: Icons.analytics_outlined,
-                      selectedIcon: Icons.analytics_rounded,
+                      icon: Symbols.analytics_rounded,
+                      selectedIcon: Symbols.analytics_rounded,
                       label: 'عقار ماب',
                       hasBadgeDot: true,
                       isSelected: selected == 2,
                       onTap: () => setState(() => selected = 2),
                     ),
                     TashilNavigationDestination(
-                      icon: Icons.tune_outlined,
-                      selectedIcon: Icons.tune_rounded,
+                      icon: Symbols.tune_rounded,
+                      selectedIcon: Symbols.tune_rounded,
                       label: 'الإعدادات',
                       isSelected: selected == 3,
                       onTap: () => setState(() => selected = 3),
@@ -77,10 +78,10 @@ void main() {
               children: const [
                 TashilBadge.label(
                   label: 'AI',
-                  child: Icon(Icons.star),
+                  child: Icon(Symbols.star_rounded),
                 ),
                 TashilBadge.dot(
-                  child: Icon(Icons.notifications),
+                  child: Icon(Symbols.notifications_rounded),
                 ),
               ],
             ),

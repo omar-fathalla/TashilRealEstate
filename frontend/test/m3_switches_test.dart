@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +59,7 @@ void main() {
       expect(find.byType(TashilSwitch), findsOneWidget);
 
       // Verify unselected state: no checkmark icon visible initially
-      expect(find.byIcon(Icons.check_rounded), findsNothing);
+      expect(find.byIcon(Symbols.check_rounded), findsNothing);
 
       // Verify track size: 52 x 32 dp
       final trackSize = tester.getSize(find.byType(SizedBox).first);
@@ -73,7 +74,7 @@ void main() {
 
       expect(isSelected, isTrue);
       // Now checkmark icon is rendered
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
 
       // Tap to toggle OFF
       await tester.tap(find.byType(TashilSwitch));
@@ -82,7 +83,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(isSelected, isFalse);
-      expect(find.byIcon(Icons.check_rounded), findsNothing);
+      expect(find.byIcon(Symbols.check_rounded), findsNothing);
     });
 
     testWidgets('TashilSwitch handles RTL directionality correctly for Arabic', (tester) async {
@@ -110,7 +111,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(isSelected, isTrue);
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
     });
 
     testWidgets('TashilSwitchListTile toggles when tapping anywhere on row', (tester) async {
@@ -123,7 +124,7 @@ void main() {
               return TashilSwitchListTile(
                 title: const Text('خصومات السداد المقدم'),
                 subtitle: const Text('تفاصيل إضافية'),
-                secondary: const Icon(Icons.discount_rounded),
+                secondary: const Icon(Symbols.sell_rounded),
                 value: isSelected,
                 onChanged: (val) => setState(() => isSelected = val),
               );
@@ -136,7 +137,7 @@ void main() {
 
       expect(find.text('خصومات السداد المقدم'), findsOneWidget);
       expect(find.text('تفاصيل إضافية'), findsOneWidget);
-      expect(find.byIcon(Icons.discount_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.sell_rounded), findsWidgets);
       expect(find.byType(TashilSwitch), findsOneWidget);
 
       // Tap on title text to toggle
@@ -144,7 +145,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(isSelected, isTrue);
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.check_rounded), findsWidgets);
     });
 
     testWidgets('M3SwitchesShowcaseDialog renders and operates cleanly', (tester) async {
@@ -161,7 +162,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(M3SwitchesShowcaseDialog), findsOneWidget);
-      expect(find.text('مفاتيح التبديل الرسمية (M3 Switch)'), findsOneWidget);
+      expect(find.text('مفاتيح التبديل'), findsOneWidget);
       expect(find.text('Wi-Fi'), findsOneWidget);
       expect(find.text('Bluetooth'), findsOneWidget);
       expect(find.byType(TashilSwitch), findsWidgets);

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   group('Material Design 3 (M3) Dividers Suite Tests', () {
@@ -184,7 +185,7 @@ void main() {
           home: Scaffold(
             body: TashilDivider.withLabel(
               label: 'أو الاستمرار كزائر',
-              leadingIcon: const Icon(Icons.person_outline),
+              leadingIcon: const Icon(Symbols.person_rounded),
             ),
           ),
         ),
@@ -192,7 +193,7 @@ void main() {
 
       expect(find.byType(TashilLabelledDivider), findsOneWidget);
       expect(find.text('أو الاستمرار كزائر'), findsOneWidget);
-      expect(find.byIcon(Icons.person_outline), findsOneWidget);
+      expect(find.byIcon(Symbols.person_rounded), findsWidgets);
 
       // Verify that there are 2 Expanded divider lines flanking the label
       final expandedLines = find.descendant(

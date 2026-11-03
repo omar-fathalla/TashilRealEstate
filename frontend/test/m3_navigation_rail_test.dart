@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_navigation_rail.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,8 +47,8 @@ void main() {
             menuTooltip: 'طي القائمة',
             destinations: [
               TashilRailDestination(
-                icon: Icons.analytics_outlined,
-                selectedIcon: Icons.analytics_rounded,
+                icon: Symbols.analytics_rounded,
+                selectedIcon: Symbols.analytics_rounded,
                 label: 'المؤشرات',
                 isSelected: true,
                 isExpanded: true,
@@ -64,7 +65,7 @@ void main() {
       expect(find.text('Menu'), findsNothing);
 
       // Verify the toggle button is present with menu_open_rounded icon
-      expect(find.byIcon(Icons.menu_open_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.menu_open_rounded), findsWidgets);
     });
 
     testWidgets('TashilNavigationRail renders toggle button and concise labels correctly in collapsed mode', (tester) async {
@@ -78,16 +79,16 @@ void main() {
             menuTooltip: 'توسيع القائمة',
             destinations: [
               TashilRailDestination(
-                icon: Icons.analytics_outlined,
-                selectedIcon: Icons.analytics_rounded,
+                icon: Symbols.analytics_rounded,
+                selectedIcon: Symbols.analytics_rounded,
                 label: 'المؤشرات',
                 isSelected: true,
                 isExpanded: false,
                 onTap: () {},
               ),
               TashilRailDestination(
-                icon: Icons.business_outlined,
-                selectedIcon: Icons.business_rounded,
+                icon: Symbols.business_rounded,
+                selectedIcon: Symbols.business_rounded,
                 label: 'الوكالات',
                 badgeCount: '48',
                 isSelected: false,
@@ -95,16 +96,16 @@ void main() {
                 onTap: () {},
               ),
               TashilRailDestination(
-                icon: Icons.verified_user_outlined,
-                selectedIcon: Icons.verified_user_rounded,
+                icon: Symbols.verified_user_rounded,
+                selectedIcon: Symbols.verified_user_rounded,
                 label: 'الضمان',
                 isSelected: false,
                 isExpanded: false,
                 onTap: () {},
               ),
               TashilRailDestination(
-                icon: Icons.palette_outlined,
-                selectedIcon: Icons.palette_rounded,
+                icon: Symbols.palette_rounded,
+                selectedIcon: Symbols.palette_rounded,
                 label: 'المعايير',
                 isSelected: false,
                 isExpanded: false,
@@ -117,7 +118,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify collapsed menu icon
-      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.menu_rounded), findsWidgets);
 
       // Verify concise labels are present
       expect(find.text('المؤشرات'), findsOneWidget);

@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   Widget buildTestApp({Locale locale = const Locale('ar')}) {
@@ -135,11 +136,11 @@ void main() {
       // Test English
       await tester.pumpWidget(buildTestApp(locale: const Locale('en')));
       await tester.pumpAndSettle();
-      expect(find.text('Table View'), findsOneWidget);
-      expect(find.text('Cards View'), findsOneWidget);
-      expect(find.text('Unit & Invoice No.'), findsOneWidget);
-      expect(find.text('Payment Status'), findsOneWidget);
-      expect(find.text('Payment & Reminder'), findsOneWidget);
+      expect(find.text('Table view'), findsOneWidget);
+      expect(find.text('Cards view'), findsOneWidget);
+      expect(find.text('Unit & invoice No.'), findsOneWidget);
+      expect(find.text('Payment status'), findsOneWidget);
+      expect(find.text('Payment & reminder'), findsOneWidget);
       expect(find.text('Actions'), findsWidgets);
 
       // Test Hindi
@@ -162,7 +163,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Trash button is not in header by default
-      expect(find.byIcon(Icons.auto_delete_outlined), findsNothing);
+      expect(find.byIcon(Symbols.auto_delete_rounded), findsNothing);
       expect(find.text('إنشاء فاتورة'), findsOneWidget);
     });
 

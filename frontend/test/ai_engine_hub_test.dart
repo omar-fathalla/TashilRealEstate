@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/features/ai_engine_hub/services/ai_engine_con
 import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_view.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_dashboard.dart';
 import 'package:tashil_real_estate/features/architecture_hub/widgets/google_ai_architecture_hub_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -127,7 +128,7 @@ void main() {
       expect(find.text('محركات الذكاء الاصطناعي'), findsWidgets);
 
       // Verify Header button
-      expect(find.byIcon(Icons.smart_toy_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.smart_toy_rounded), findsWidgets);
     });
 
     testWidgets('AppSettingsDialog includes AI Engine section with open hub button', (tester) async {

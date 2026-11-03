@@ -109,10 +109,10 @@ void main() {
       expect(find.text('shareWhatsAppDigestBtn'), findsNothing);
 
       // Verify English translations
-      expect(find.text('Capitalization Rate (Cap Rate)'), findsOneWidget);
-      expect(find.text('Rent Collection Efficiency'), findsOneWidget);
+      expect(find.text('Capitalization rate (cap rate)'), findsOneWidget);
+      expect(find.text('Rent collection efficiency'), findsOneWidget);
       expect(find.textContaining('Tenant:'), findsWidgets);
-      expect(find.text('Share WhatsApp Digest'), findsOneWidget);
+      expect(find.text('Share WhatsApp digest'), findsOneWidget);
     });
 
     testWidgets('Renders correctly in Hindi without raw keys', (tester) async {

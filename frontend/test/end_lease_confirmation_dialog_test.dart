@@ -221,10 +221,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Confirm Lease Termination & Re-list Unit'), findsOneWidget);
-    expect(find.text('Full Financial Ledger Preserved (Zero Data Loss)'), findsOneWidget);
-    expect(find.text('Remaining Future Installments Closed'), findsOneWidget);
-    expect(find.text('Confirm Termination & Archive'), findsOneWidget);
+    expect(find.text('Confirm lease termination & re-list unit'), findsOneWidget);
+    expect(find.text('Full financial ledger preserved (zero data loss)'), findsOneWidget);
+    expect(find.text('Remaining future installments closed'), findsOneWidget);
+    expect(find.text('Confirm termination & archive'), findsOneWidget);
 
     // Test Hindi
     LocaleController.setLocale(const Locale('hi'));

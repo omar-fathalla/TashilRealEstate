@@ -100,9 +100,9 @@ void main() {
       await tester.pumpWidget(buildTestApp(locale: const Locale('en'), country: 'AE'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Official Rent Payment Receipt'), findsOneWidget);
-      expect(find.text('Payment Method: Debit or credit card'), findsOneWidget);
-      expect(find.text('Certified Receipt Verification QR Code'), findsOneWidget);
+      expect(find.text('Official rent payment receipt'), findsOneWidget);
+      expect(find.text('Payment method: Debit or credit card'), findsOneWidget);
+      expect(find.text('Certified receipt verification QR code'), findsOneWidget);
       expect(find.text('Export PDF'), findsOneWidget);
       expect(find.text('Done'), findsOneWidget);
 

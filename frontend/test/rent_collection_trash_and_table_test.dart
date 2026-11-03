@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/features/owner_portal/services/property_lifec
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   setUp(() {
@@ -345,13 +346,13 @@ void main() {
       // Test English
       await tester.pumpWidget(buildTestApp(locale: const Locale('en')));
       await tester.pumpAndSettle();
-      expect(find.text('Unit & Invoice No.'), findsOneWidget);
-      expect(find.text('Trash & Deleted Invoices (1)'), findsOneWidget);
+      expect(find.text('Unit & invoice No.'), findsOneWidget);
+      expect(find.text('Trash & deleted invoices (1)'), findsOneWidget);
 
-      await tester.tap(find.text('Trash & Deleted Invoices (1)'));
+      await tester.tap(find.text('Trash & deleted invoices (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('Trash & Deleted Invoices'), findsWidgets);
-      expect(find.text('Empty Trash'), findsOneWidget);
+      expect(find.text('Trash & deleted invoices'), findsWidgets);
+      expect(find.text('Empty trash'), findsOneWidget);
       expect(find.text('Restore'), findsOneWidget);
     });
 
@@ -378,7 +379,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('हटाए गए चालान'), findsWidgets);
       expect(find.text('कचरा खाली करें'), findsOneWidget);
-      expect(find.byIcon(Icons.restore_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.restore_rounded), findsWidgets);
     });
 
     testWidgets('Connected button groups render in Actions column and soft-delete persists across sync', (tester) async {
@@ -397,9 +398,9 @@ void main() {
       expect(find.text('تذكير'), findsWidgets);
 
       // Check action buttons in connected group
-      expect(find.byIcon(Icons.visibility_outlined), findsWidgets);
-      expect(find.byIcon(Icons.edit_outlined), findsWidgets);
-      expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.visibility_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.edit_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.delete_outline_rounded), findsWidgets);
 
       // Find first delete button and click it to open confirmation dialog
       final deleteBtn = find.byTooltip('نقل إلى المحذوفات');

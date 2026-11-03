@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/lists/tashil_lists.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +32,7 @@ void main() {
             children: [
               TashilListTile.oneLine(
                 headline: const Text('عنوان السطر الواحد'),
-                leading: const Icon(Icons.apartment_rounded),
+                leading: const Icon(Symbols.apartment_rounded),
                 trailing: const Text('23,000 ج.م'),
               ),
               TashilListTile.oneLine(
@@ -63,7 +64,7 @@ void main() {
               TashilListTile.twoLine(
                 headline: const Text('شقة فاخرة بالتجمع الخامس'),
                 supportingText: const Text('القاهرة الجديدة • برج الياسمين'),
-                leading: const Icon(Icons.home_work_rounded),
+                leading: const Icon(Symbols.home_work_rounded),
               ),
               TashilListTile.twoLine(
                 headline: const Text('فيلا مستقلة'),
@@ -95,7 +96,7 @@ void main() {
             overline: const Text('عقار متميز'),
             headline: const Text('شقة مطلة على النيل - جاردن سيتي'),
             supportingText: const Text('3 غرف نوم • 2 حمام • 210 متر مربع'),
-            leading: const Icon(Icons.water_rounded),
+            leading: const Icon(Symbols.water_rounded),
             trailing: const Text('21,000 ج.م'),
           ),
         ),

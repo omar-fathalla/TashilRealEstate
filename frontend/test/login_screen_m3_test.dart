@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_button_grou
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/features/auth/login_screen.dart';
 import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_screen.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the AppBar actions have only the Settings icon
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.tune_rounded), findsWidgets);
 
       // Verify country, language, and theme switchers are REMOVED from the AppBar
       expect(find.text('مصر'), findsNothing);
@@ -70,16 +71,16 @@ void main() {
       expect(find.byType(TashilConnectedButtonGroup<AuthMethod>), findsOneWidget);
 
       // Verify Role Segments with Google Icons (Owner, Agency, Tenant only - SuperAdmin is isolated to its dedicated portal)
-      expect(find.byIcon(Icons.person_rounded), findsWidgets);
-      expect(find.byIcon(Icons.business_rounded), findsWidgets);
-      expect(find.byIcon(Icons.home_rounded), findsWidgets);
-      expect(find.byIcon(Icons.shield_rounded), findsNothing);
+      expect(find.byIcon(Symbols.person_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.business_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.home_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.shield_rounded), findsNothing);
 
       // Verify Auth Method Segments
-      expect(find.byIcon(Icons.g_mobiledata_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.g_mobiledata_rounded), findsWidgets);
       expect(find.byIcon(Icons.apple_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.mail_outline_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.smartphone_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.mail_outline_rounded), findsWidgets);
+      expect(find.byIcon(Symbols.smartphone_rounded), findsWidgets);
     });
 
     testWidgets('Switching auth methods transitions smoothly to Google and Phone OTP forms', (tester) async {
@@ -91,14 +92,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switch to Google Auth
-      await tester.tap(find.byIcon(Icons.g_mobiledata_rounded));
+      await tester.tap(find.byIcon(Symbols.g_mobiledata_rounded));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.account_circle_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.account_circle_rounded), findsWidgets);
 
       // Switch to Phone OTP
-      await tester.tap(find.byIcon(Icons.smartphone_rounded));
+      await tester.tap(find.byIcon(Symbols.smartphone_rounded));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.send_rounded), findsWidgets);
     });
 
     testWidgets('Empty email submission triggers TashilSnackBar validation notification', (tester) async {
@@ -110,11 +111,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switch to Email Auth tab
-      await tester.tap(find.byIcon(Icons.mail_outline_rounded));
+      await tester.tap(find.byIcon(Symbols.mail_outline_rounded).first);
       await tester.pumpAndSettle();
 
       // Tap Sign In button with empty fields
-      await tester.tap(find.byIcon(Icons.login_rounded));
+      await tester.tap(find.byIcon(Symbols.login_rounded));
       await tester.pump(); // Start snackbar animation
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -133,8 +134,8 @@ void main() {
       await tester.pumpWidget(wrapWithApp(locale: const Locale('en'), child: const LoginScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
-      expect(find.text('Sign In'), findsWidgets);
+      expect(find.byIcon(Symbols.tune_rounded), findsWidgets);
+      expect(find.text('Sign in'), findsWidgets);
     });
 
     testWidgets('Phone OTP input row is strictly LTR even in Arabic RTL mode', (tester) async {
@@ -148,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switch to Phone OTP tab
-      await tester.tap(find.byIcon(Icons.smartphone_rounded));
+      await tester.tap(find.byIcon(Symbols.smartphone_rounded));
       await tester.pumpAndSettle();
 
       // Ensure translated label is present, and raw key is absent
@@ -176,14 +177,14 @@ void main() {
 
       // Ensure demo accounts section header and quick login credentials are completely absent
       expect(find.text('حسابات تجريبية سريعة للتجربة:'), findsNothing);
-      expect(find.text('Quick Demo Accounts:'), findsNothing);
+      expect(find.text('Quick demo accounts:'), findsNothing);
       expect(find.text('owner@test.com'), findsNothing);
       expect(find.text('agency@test.com'), findsNothing);
       expect(find.text('tenant@test.com'), findsNothing);
       expect(find.text('password123'), findsNothing);
 
       // Verify that the public visitor browsing link remains functional
-      expect(find.byIcon(Icons.travel_explore_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.travel_explore_rounded), findsWidgets);
     });
 
     testWidgets('Demo accounts suite is completely absent in English LTR mode', (tester) async {
@@ -197,7 +198,7 @@ void main() {
       await tester.pumpWidget(wrapWithApp(locale: const Locale('en'), child: const LoginScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Quick Demo Accounts:'), findsNothing);
+      expect(find.text('Quick demo accounts:'), findsNothing);
       expect(find.text('owner@test.com'), findsNothing);
       expect(find.text('agency@test.com'), findsNothing);
       expect(find.text('tenant@test.com'), findsNothing);

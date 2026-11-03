@@ -161,14 +161,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Market index'), findsOneWidget);
-      expect(find.text('Market Index & Demand Historical Trajectory'), findsOneWidget);
+      expect(find.text('Market index & demand historical trajectory'), findsOneWidget);
       expect(find.text('6 Months'), findsOneWidget);
       expect(find.text('12 Months'), findsOneWidget);
-      expect(find.text('Strong Growth Scenario'), findsOneWidget);
+      expect(find.text('Strong growth scenario'), findsOneWidget);
       expect(find.text('Market pulse'), findsOneWidget);
-      expect(find.text('Live — Updated Today at 09:00 AM'), findsOneWidget);
+      expect(find.text('Live — updated today at 09:00 am'), findsOneWidget);
       expect(find.text('Refresh'), findsOneWidget);
-      expect(find.text('Verified Market Data Sources'), findsOneWidget);
+      expect(find.text('Verified market data sources'), findsOneWidget);
     });
 
     testWidgets('Renders Live Market Pulse and triggers instant refresh', (tester) async {

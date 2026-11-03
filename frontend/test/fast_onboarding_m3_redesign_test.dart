@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/checkboxes/tashil_checkboxes.dart';
 import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/design_system/text_fields/tashil_text_fields.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   group('Material Design 3 (M3) Fast Onboarding Component Suite Tests', () {
@@ -21,17 +22,17 @@ void main() {
               children: [
                 TashilButton.filled(
                   onPressed: () => filledPressed = true,
-                  icon: Icons.publish_rounded,
+                  icon: Symbols.publish_rounded,
                   label: 'نشر العقار فوراً',
                 ),
                 TashilButton.tonal(
                   onPressed: () => tonalPressed = true,
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Symbols.auto_awesome_rounded,
                   label: 'توليد بالذكاء الاصطناعي',
                 ),
                 TashilButton.outlined(
                   onPressed: () => outlinedPressed = true,
-                  icon: Icons.map_rounded,
+                  icon: Symbols.map_rounded,
                   label: 'عرض على خرائط Google',
                 ),
               ],
@@ -93,7 +94,7 @@ void main() {
               builder: (context, setState) {
                 return TashilCheckboxListTile(
                   title: const Text('موقف سيارات خاص'),
-                  secondary: const Icon(Icons.local_parking_rounded),
+                  secondary: const Icon(Symbols.local_parking_rounded),
                   value: isChecked,
                   onChanged: (val) => setState(() => isChecked = val),
                 );
@@ -131,17 +132,17 @@ void main() {
                   children: [
                     TashilFilterChip(
                       label: 'شقة سكنية',
-                      icon: Icons.apartment_rounded,
+                      icon: Symbols.apartment_rounded,
                       selected: filterSelected,
                       onSelected: (val) => setState(() => filterSelected = val),
                     ),
                     TashilSuggestionChip(
                       label: 'فاخر وتنفيذي',
-                      icon: Icons.diamond_outlined,
+                      icon: Symbols.diamond_rounded,
                       onPressed: () => suggestionPressed = true,
                     ),
                     TashilAssistChip(
-                      icon: Icons.my_location_rounded,
+                      icon: Symbols.my_location_rounded,
                       label: 'تحديد موقعي GPS',
                       onPressed: () => assistPressed = true,
                     ),
@@ -181,14 +182,14 @@ void main() {
               controller: controller,
               labelText: 'المدينة *',
               hintText: 'مثال: القاهرة، دبي',
-              prefixIcon: Icons.location_city_rounded,
+              prefixIcon: Symbols.location_city_rounded,
             ),
           ),
         ),
       );
 
       expect(find.text('المدينة *'), findsOneWidget);
-      expect(find.byIcon(Icons.location_city_rounded), findsOneWidget);
+      expect(find.byIcon(Symbols.location_city_rounded), findsWidgets);
 
       await tester.enterText(find.byType(TextFormField), 'القاهرة الجديدة');
       await tester.pumpAndSettle();
