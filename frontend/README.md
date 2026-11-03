@@ -20,4 +20,4 @@ npm run seed:emulator
 
 ## `backend/seed.js`
 
-That script can write Auth and Firestore for a named project. It refuses to run unless you pass `--project <firebase-project-id>` and set `TASHIL_SEED_CONFIRM=I_UNDERSTAND_THIS_WRITES_DATA`. Use `npm run seed:emulator` for local data. Do not point `seed.js` at the production project.
+`backend/seed.js` refuses to start unless `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST` are loopback addresses. It cannot be pointed at production. Use `npm run seed:emulator` for the demo accounts. Production seeding is not a deployed function.
