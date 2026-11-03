@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
 import 'package:tashil_real_estate/features/image_moderation/services/ai_image_moderation_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiImageModeratorDialog extends StatefulWidget {
   const AiImageModeratorDialog({super.key});
@@ -71,7 +72,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final theme = Theme.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 20 : 28)),
       backgroundColor: theme.colorScheme.surface,
       elevation: 3.0,

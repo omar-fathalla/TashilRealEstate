@@ -8,7 +8,6 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
-import 'package:tashil_real_estate/core/utils/uae_emirate.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
@@ -23,6 +22,7 @@ import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt
 import 'package:tashil_real_estate/features/rent_collection/widgets/tax_invoice_viewer_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Redesigned Material Design 3 Rent Collection & Automated Payouts View.
 ///
@@ -72,28 +72,9 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
   void _openHookedLegalNotice(String emirate) {
     if (!mounted) return;
-    RentInvoiceModel? match;
-    for (final invoice in _service.invoicesNotifier.value) {
-      if (invoice.countryCode != 'AE' || invoice.isDeleted) continue;
-      final resolved = resolveUaeEmirate(
-        cityCode: invoice.cityCode,
-        district: invoice.district,
-      );
-      final key = switch (resolved) {
-        UaeEmirate.dubai => 'dubai',
-        UaeEmirate.abuDhabi => 'abu_dhabi',
-        UaeEmirate.sharjah => 'sharjah',
-        UaeEmirate.ajman => 'ajman',
-        _ => '',
-      };
-      if (key == emirate) {
-        match = invoice;
-        break;
-      }
-    }
     LegalWarningNoticeDialog.show(
       context,
-      match ?? ScreenshotHooks.demoLegalInvoice(emirate),
+      ScreenshotHooks.demoLegalInvoice(emirate),
     );
   }
 
@@ -188,7 +169,10 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                           final screenWidth = constraints.maxWidth;
                           final isCompact = screenWidth < 768;
 
-                          return SingleChildScrollView(
+                          return RefreshIndicator.adaptive(
+                            onRefresh: () async => _syncInvoices(),
+                            child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.symmetric(
                               horizontal: isCompact ? 16 : 28,
                               vertical: isCompact ? 20 : 28,
@@ -274,6 +258,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                                         ),
                                     ],
                                   ),
+                            ),
                           );
                         },
                       ),
@@ -2290,7 +2275,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     showDialog(
       context: context,
       builder: (ctx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surfaceContainerLowest,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -2844,7 +2829,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
-            return Dialog(
+            return TashilDialogFrame(
               backgroundColor: colorScheme.surfaceContainerLowest,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
               insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

@@ -53,10 +53,10 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: colorScheme.error.withValues(alpha: 0.12),
+                        color: colorScheme.tertiary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Symbols.warning_amber_rounded, color: colorScheme.error, size: 20),
+                      child: Icon(Symbols.warning_amber_rounded, color: colorScheme.tertiary, size: 20),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -81,13 +81,13 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                  color: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
+                  border: Border.all(color: colorScheme.tertiary.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   '${loc.tr('totalOverdueArrears')}: ${CurrencyFormatter.formatAmount(totalOverdue, langCode: lang)} $currency',
-                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.error),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.tertiary),
                 ),
               ),
             ],
@@ -105,7 +105,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
               final rangeLabel = AiTranslationService.getLocalizedText(b.localizedRange, lang);
               final progress = totalOverdue > 0 ? (b.amount / totalOverdue) : 0.0;
               final isHighRisk = index == 2 && b.amount > 0;
-              final bucketColor = index == 0 ? colorScheme.tertiary : colorScheme.error;
+              final bucketColor = colorScheme.tertiary;
 
               return Container(
                 padding: const EdgeInsets.all(12),
@@ -113,7 +113,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                   color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isHighRisk ? colorScheme.error : colorScheme.outlineVariant,
+                    color: isHighRisk ? colorScheme.tertiary : colorScheme.outlineVariant,
                   ),
                 ),
                 child: Column(

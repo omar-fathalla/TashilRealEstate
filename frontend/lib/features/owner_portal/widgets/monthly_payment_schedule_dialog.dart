@@ -13,6 +13,7 @@ import 'package:tashil_real_estate/features/owner_portal/widgets/end_lease_confi
 import 'package:tashil_real_estate/features/owner_portal/widgets/publish_listing_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class MonthlyPaymentScheduleDialog extends StatefulWidget {
   final ManagedPropertyModel property;
@@ -53,7 +54,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
               orElse: () => widget.property,
             );
 
-            return Dialog(
+            return TashilDialogFrame(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
               backgroundColor: theme.colorScheme.surface,
               insetPadding: EdgeInsets.all(isMobile ? 12 : 24),

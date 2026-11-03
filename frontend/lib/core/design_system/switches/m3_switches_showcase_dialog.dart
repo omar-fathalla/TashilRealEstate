@@ -5,6 +5,7 @@ import '../buttons/tashil_buttons.dart';
 import '../dividers/tashil_dividers.dart';
 import 'tashil_switch.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Switches Suite.
 ///
@@ -44,7 +45,7 @@ class _M3SwitchesShowcaseDialogState extends State<M3SwitchesShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

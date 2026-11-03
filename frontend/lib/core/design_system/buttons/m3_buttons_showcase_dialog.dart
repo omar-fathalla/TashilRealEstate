@@ -10,6 +10,7 @@ import 'tashil_button_group.dart';
 import 'tashil_fab.dart';
 import 'tashil_fab_menu.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying all 10 official Google Material Design 3
 /// button types in a side-by-side grid, numbered 1 to 10 matching the official M3 reference.
@@ -53,7 +54,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

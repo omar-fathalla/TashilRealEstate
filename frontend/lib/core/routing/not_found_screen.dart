@@ -21,11 +21,7 @@ class NotFoundScreen extends StatelessWidget {
           appBar: AppBar(
             leading: IconButton(
               tooltip: loc.tr('back'),
-              icon: Icon(
-                Directionality.of(context) == TextDirection.rtl
-                    ? Symbols.arrow_forward_rounded
-                    : Symbols.arrow_back_rounded,
-              ),
+              icon: const Icon(Symbols.arrow_back_rounded),
               onPressed: () => context.canPop() ? context.pop() : context.go('/'),
             ),
           ),

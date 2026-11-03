@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'tashil_dropdown_menu.dart';
 import 'tashil_menu_item.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Dropdown Menus:
 /// Conforms to https://m3.material.io/components/menus/guidelines and specs
@@ -42,7 +43,7 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

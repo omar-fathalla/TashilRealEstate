@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_button.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -38,7 +39,10 @@ class TenantHomeView extends StatelessWidget {
             'hi': 'बेवर्ली हिल्स विला - शेख जायद',
           };
 
-    return SingleChildScrollView(
+    return RefreshIndicator.adaptive(
+      onRefresh: () async {},
+      child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,7 +152,7 @@ class TenantHomeView extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   loc.tr('leasePeriod'),
-                  '\u2066${loc.tr('leaseFrom')} 1 Jan 2026 ${loc.tr('leaseTo')} 31 Dec 2027\u2069',
+                  '${loc.tr('leaseFrom')} ${DateFormat.yMMMd(lang).format(DateTime(2026, 1, 1))} ${loc.tr('leaseTo')} ${DateFormat.yMMMd(lang).format(DateTime(2027, 12, 31))}',
                 ),
                 TashilDivider.middleInset(),
                 _buildDetailRow(
@@ -162,6 +166,7 @@ class TenantHomeView extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 

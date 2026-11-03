@@ -14,6 +14,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../models/document_ocr_result_model.dart';
 import '../services/ai_document_ocr_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiDocumentOcrModal extends StatefulWidget {
   final DocumentOcrType initialDocType;
@@ -123,7 +124,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(16),
           child: Stack(
@@ -256,7 +257,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),

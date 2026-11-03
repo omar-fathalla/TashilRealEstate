@@ -10,7 +10,7 @@ import 'package:material_symbols_icons/symbols.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Arabic mobile header keeps the brand on the right and a forward back arrow', (tester) async {
+  testWidgets('Arabic mobile header keeps the brand on the right and a mirrored back arrow', (tester) async {
     LocaleController.setLocale(const Locale('ar'));
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -20,7 +20,8 @@ void main() {
 
     expect(find.text('تسهيل عقار'), findsOneWidget);
     expect(find.text('Tashil Aqar'), findsNothing);
-    expect(find.byIcon(Symbols.arrow_forward_rounded), findsOneWidget);
+    expect(find.byIcon(Symbols.arrow_back_rounded), findsOneWidget);
+    expect(find.byIcon(Symbols.arrow_forward_rounded), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

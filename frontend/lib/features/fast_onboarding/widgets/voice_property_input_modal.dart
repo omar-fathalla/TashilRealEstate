@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 enum VoiceInputStep {
   listening,
@@ -419,7 +420,7 @@ class _VoicePropertyInputModalState extends State<VoicePropertyInputModal> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth >= 800;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 24,

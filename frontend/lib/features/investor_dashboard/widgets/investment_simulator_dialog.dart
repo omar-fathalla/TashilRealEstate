@@ -13,6 +13,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/services/investor_analytics_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 (M3) Investment Simulator Dialog for Tashil Real Estate.
 /// Conforms to:
@@ -120,7 +121,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
         final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
         final lang = currentLocale.languageCode;
 
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           elevation: 3.0,
           shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.25),

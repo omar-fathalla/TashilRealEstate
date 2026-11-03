@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'tashil_navigation_rail.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive Showcase Dialog for Google Material Design 3 Navigation Rail & Nested Canvas.
 class M3RailShowcaseDialog extends StatefulWidget {
@@ -39,7 +40,7 @@ class _M3RailShowcaseDialogState extends State<M3RailShowcaseDialog> {
         ? colorScheme.surfaceContainerLow
         : Color.alphaBlend(colorScheme.primary.withAlpha(10), colorScheme.surfaceContainerLow);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)),

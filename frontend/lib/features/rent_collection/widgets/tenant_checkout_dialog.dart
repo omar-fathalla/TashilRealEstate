@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class TenantCheckoutDialog extends StatefulWidget {
   final RentInvoiceModel invoice;
@@ -98,7 +99,7 @@ class _TenantCheckoutDialogState extends State<TenantCheckoutDialog> {
     final lang = LocaleController.languageCode;
     final theme = Theme.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),

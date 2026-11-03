@@ -367,8 +367,9 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               : result.fullNameEn;
           _lessorIdCtrl.text = result.idNumber;
           _lessorAddressCtrl.text = result.address;
-          if (result.phoneNumber != null)
+          if (result.phoneNumber != null) {
             _lessorPhoneCtrl.text = result.phoneNumber!;
+          }
           if (result.email != null) _lessorEmailCtrl.text = result.email!;
         } else if (targetParty == 'tenant') {
           _tenantNameCtrl.text = result.fullNameAr.isNotEmpty
@@ -376,33 +377,43 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               : result.fullNameEn;
           _tenantIdCtrl.text = result.idNumber;
           _tenantAddressCtrl.text = result.address;
-          if (result.phoneNumber != null)
+          if (result.phoneNumber != null) {
             _tenantPhoneCtrl.text = result.phoneNumber!;
+          }
           if (result.email != null) _tenantEmailCtrl.text = result.email!;
         } else if (targetParty == 'property') {
           _selectedPropertyId = '_custom_property_';
-          if (result.propertyTitle != null)
+          if (result.propertyTitle != null) {
             _propTitleCtrl.text = result.propertyTitle!;
-          if (result.unitNumber != null)
+          }
+          if (result.unitNumber != null) {
             _unitNumberCtrl.text = result.unitNumber!;
-          if (result.buildingName != null)
+          }
+          if (result.buildingName != null) {
             _buildingNameCtrl.text = result.buildingName!;
+          }
           if (result.district != null) _districtCtrl.text = result.district!;
           if (result.city != null) _cityCtrl.text = result.city!;
-          if (result.areaSqm != null)
+          if (result.areaSqm != null) {
             _areaCtrl.text = '${result.areaSqm!.toInt()}';
+          }
           if (result.floor != null) _floorCtrl.text = result.floor!;
-          if (result.makaniNumber != null)
+          if (result.makaniNumber != null) {
             _makaniCtrl.text = result.makaniNumber!;
+          }
           if (result.dewaNumber != null) _dewaCtrl.text = result.dewaNumber!;
-          if (result.titleDeedNumber != null)
+          if (result.titleDeedNumber != null) {
             _titleDeedCtrl.text = result.titleDeedNumber!;
-          if (result.annualRent != null)
+          }
+          if (result.annualRent != null) {
             _rentAmountCtrl.text = '${result.annualRent!.toInt()}';
-          if (result.securityDeposit != null)
+          }
+          if (result.securityDeposit != null) {
             _depositCtrl.text = '${result.securityDeposit!.toInt()}';
-          if (result.chequesCount != null)
+          }
+          if (result.chequesCount != null) {
             _numberOfCheques = result.chequesCount!;
+          }
         }
       });
 
@@ -1762,8 +1773,9 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                                 firstDate: _startDate,
                                 lastDate: DateTime(2035),
                               );
-                              if (picked != null)
+                              if (picked != null) {
                                 setState(() => _endDate = picked);
+                              }
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Container(

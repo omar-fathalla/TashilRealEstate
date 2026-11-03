@@ -13,6 +13,7 @@ import '../../ai_engine_hub/services/ai_engine_config_controller.dart';
 import '../models/legal_advisor_model.dart';
 import '../services/ai_legal_advisor_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiLegalClauseAdvisorDialog extends StatefulWidget {
   final String? initialClauseText;
@@ -104,7 +105,7 @@ class _AiLegalClauseAdvisorDialogState
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

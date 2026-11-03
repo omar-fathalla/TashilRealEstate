@@ -5,6 +5,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../views/ai_engine_hub_view.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Modal dialog wrapper for AiEngineHubView with M3 shaded close button and responsive sizing.
 class AiEngineHubDialog extends StatelessWidget {
@@ -25,7 +26,7 @@ class AiEngineHubDialog extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final isMobile = ResponsiveLayout.isMobile(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 10 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

@@ -14,6 +14,7 @@ import '../models/dynamic_pricing_model.dart';
 import '../services/dynamic_pricing_optimizer_service.dart';
 import 'dynamic_yield_optimizer_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class DynamicPricingTabView extends StatefulWidget {
   final VoidCallback? onOpenFullYieldCurve;
@@ -84,7 +85,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
     TashilTransitions.showM3Dialog(
       context: context,
       builder: (dialogContext) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surfaceContainerLowest,
           elevation: 6.0,
           shadowColor: colorScheme.shadow.withValues(alpha: 0.25),

@@ -12,6 +12,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../models/executive_report_model.dart';
 import '../services/ai_executive_reporting_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class ExecutiveFinancialReportDialog extends StatefulWidget {
   final String? initialPeriod;
@@ -79,7 +80,7 @@ class _ExecutiveFinancialReportDialogState
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

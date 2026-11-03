@@ -17,6 +17,7 @@ import '../../ai_engine_hub/models/ai_model_definition.dart';
 import '../../ai_engine_hub/services/ai_engine_config_controller.dart';
 import '../../ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class GoogleAiArchitectureHubDialog extends StatelessWidget {
   const GoogleAiArchitectureHubDialog({super.key});
@@ -36,7 +37,7 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

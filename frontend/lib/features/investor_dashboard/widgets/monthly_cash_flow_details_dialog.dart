@@ -9,6 +9,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/investor_portfolio_model.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class MonthlyCashFlowDetailsDialog extends StatelessWidget {
   final MonthlyCashFlowItem flow;
@@ -60,7 +61,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
 
     final totalExpenses = flow.operatingExpensesOutflow + flow.maintenanceOutflow;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerLowest,
       elevation: 6.0,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),

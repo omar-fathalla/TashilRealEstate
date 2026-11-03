@@ -28,6 +28,7 @@ import 'package:tashil_real_estate/features/ai_engine_hub/views/ai_engine_hub_vi
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   final int initialIndex;
@@ -358,14 +359,6 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => setState(() => _selectedIndex = 2),
         ),
         TashilRailDestination(
-          icon: Symbols.palette_rounded,
-          selectedIcon: Symbols.palette_rounded,
-          label: loc.tr('standardsCompact'),
-          isSelected: _selectedIndex == 3,
-          isExpanded: isExpanded,
-          onTap: () => setState(() => _selectedIndex = 3),
-        ),
-        TashilRailDestination(
           icon: Symbols.payments_rounded,
           selectedIcon: Symbols.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
@@ -484,7 +477,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           surfaceTintColor: colorScheme.surfaceTint,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -850,6 +843,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             tooltip: loc.tr('settings'),
             onPressed: () => AppSettingsDialog.show(context),
           ),
+          if (!ResponsiveLayout.isMobile(context)) ...[
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
@@ -870,13 +864,32 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ),
           ),
           const SizedBox(width: 8),
+          ],
         ],
       ),
       endDrawer: null,
       body: views[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex < 4 ? _selectedIndex : 0,
+        selectedIndex: switch (_selectedIndex) {
+          0 => 0,
+          1 => 1,
+          2 => 2,
+          _ => 3,
+        },
         onDestinationSelected: (index) {
+          if (index == 3) {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              showDragHandle: true,
+              builder: (sheetContext) => SizedBox(
+                height: MediaQuery.sizeOf(sheetContext).height * 0.8,
+                child: _buildMobileDrawer(sheetContext, loc, colorScheme),
+              ),
+            );
+            return;
+          }
           setState(() {
             _selectedIndex = index;
           });
@@ -898,9 +911,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             label: loc.tr('escrowCompact'),
           ),
           NavigationDestination(
-            icon: const Icon(Symbols.palette_rounded),
-            selectedIcon: const Icon(Symbols.palette_rounded),
-            label: loc.tr('m3Compact'),
+            icon: const Icon(Symbols.menu_rounded),
+            selectedIcon: const Icon(Symbols.menu_rounded),
+            label: loc.tr('navMore'),
           ),
         ],
       ),

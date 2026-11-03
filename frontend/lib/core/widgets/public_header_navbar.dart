@@ -158,9 +158,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
                   if (isSubPage) ...[
                     IconButton(
                       icon: Icon(
-                        Directionality.of(context) == TextDirection.rtl
-                            ? Symbols.arrow_forward_rounded
-                            : Symbols.arrow_back_rounded,
+                        Symbols.arrow_back_rounded,
                         color: colorScheme.onSurface,
                       ),
                       tooltip: loc.tr('back'),
@@ -202,8 +200,10 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
               ),
             ),
             ),
-            const SizedBox(width: 8),
-            _buildMobileCircularLoginButton(context, loc, colorScheme),
+            if (currentRoute != '/') ...[
+              const SizedBox(width: 8),
+              _buildMobileCircularLoginButton(context, loc, colorScheme),
+            ],
           ],
         ),
       );
@@ -249,9 +249,7 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
               if (isSubPage) ...[
                 IconButton(
                   icon: Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Symbols.arrow_forward_rounded
-                        : Symbols.arrow_back_rounded,
+                    Symbols.arrow_back_rounded,
                     color: colorScheme.onSurface,
                   ),
                   tooltip: loc.tr('back'),

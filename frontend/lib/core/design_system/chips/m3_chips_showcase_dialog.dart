@@ -8,6 +8,7 @@ import 'tashil_filter_chip.dart';
 import 'tashil_input_chip.dart';
 import 'tashil_suggestion_chip.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the 4 official Material Design 3 Chip types:
 /// 1. Assist Chips (Type 1 - Outlined, Elevated, Tonal)
@@ -47,7 +48,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

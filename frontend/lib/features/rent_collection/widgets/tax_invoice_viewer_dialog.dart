@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class TaxInvoiceViewerDialog extends StatelessWidget {
   final RentInvoiceModel invoice;
@@ -44,7 +45,7 @@ class TaxInvoiceViewerDialog extends StatelessWidget {
         '?ref=${invoice.id}&token=$token&total=${invoice.totalAmountDue}'
         '&country=${invoice.countryCode}&date=${invoice.dueDate.toIso8601String().split('T').first}';
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,

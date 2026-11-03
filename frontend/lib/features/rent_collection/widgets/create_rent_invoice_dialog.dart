@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/features/owner_portal/services/property_lifec
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class _RegisteredUnitOption {
   final String id;
@@ -409,7 +410,7 @@ class _CreateRentInvoiceDialogState extends State<CreateRentInvoiceDialog> {
     final isUAE = CountryController.isUAE;
     final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,

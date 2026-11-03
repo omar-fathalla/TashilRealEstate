@@ -21,6 +21,7 @@ import 'package:tashil_real_estate/features/financial_kpi_dashboard/views/financ
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AgencyDashboard extends StatefulWidget {
   const AgencyDashboard({super.key});
@@ -311,7 +312,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           surfaceTintColor: colorScheme.surfaceTint,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -585,6 +586,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             tooltip: loc.tr('settings'),
             onPressed: () => AppSettingsDialog.show(context),
           ),
+          if (!ResponsiveLayout.isMobile(context)) ...[
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
@@ -605,6 +607,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             ),
           ),
           const SizedBox(width: 8),
+          ],
         ],
       ),
       endDrawer: null,

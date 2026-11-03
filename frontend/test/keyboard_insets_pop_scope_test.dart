@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/app_theme.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/features/super_admin/super_admin_login_screen.dart';
 
 void main() {
@@ -118,5 +119,46 @@ void main() {
     await tester.ensureVisible(signIn);
     await tester.pump();
     expect(tester.getRect(signIn).bottom, lessThanOrEqualTo(844));
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await tester.pump();
+    await tester.ensureVisible(signIn);
+    await tester.pump();
+    expect(tester.getRect(signIn).bottom, lessThanOrEqualTo(844 - 300));
+  });
+
+  testWidgets('a long form applies the keyboard inset once', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = FakeViewPadding.zero;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(app(Builder(
+      builder: (context) => Scaffold(
+        body: TextButton(
+          onPressed: () {
+            TashilTransitions.showAdaptiveSheet<void>(
+              context: context,
+              longForm: true,
+              builder: (ctx) => const Align(
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(key: Key('form-body'), width: 48, height: 48),
+              ),
+            );
+          },
+          child: const Text('open-form'),
+        ),
+      ),
+    )));
+    await tester.pump();
+    await tester.tap(find.text('open-form'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+
+    final bottom = tester.getRect(find.byKey(const Key('form-body'))).bottom;
+    expect(bottom, greaterThan(400));
+    expect(bottom, lessThanOrEqualTo(844 - 280));
   });
 }

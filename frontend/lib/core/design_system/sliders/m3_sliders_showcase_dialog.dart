@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'tashil_slider.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Sliders Suite.
 /// Conforms to:
@@ -48,7 +49,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

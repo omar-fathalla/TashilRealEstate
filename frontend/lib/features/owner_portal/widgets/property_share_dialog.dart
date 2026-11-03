@@ -13,6 +13,7 @@ import 'package:tashil_real_estate/features/owner_portal/widgets/marketplace_vis
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
 import 'package:tashil_real_estate/features/public_marketplace/repositories/property_repository.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 Universal Property Share & Link Generation Dialog.
 ///
@@ -143,7 +144,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
     final title = widget.titleGetter(lang);
     final location = widget.locationGetter(lang);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

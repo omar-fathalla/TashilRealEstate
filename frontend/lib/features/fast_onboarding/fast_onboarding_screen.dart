@@ -1122,24 +1122,20 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TashilAssistChip(
-                        icon: Symbols.my_location_rounded,
-                        label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
-                        onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TashilAssistChip(
-                        icon: Symbols.map_rounded,
-                        label: loc.tr('viewOnGoogleMapsBtn'),
-                        onPressed: _handleOpenInGoogleMaps,
-                      ),
-                    ),
-                  ],
+                TashilButton.outlined(
+                  label: _isLocatingGps ? loc.tr('locatingGpsProgress') : loc.tr('useCurrentLocationGpsBtn'),
+                  icon: Symbols.my_location_rounded,
+                  height: 48,
+                  width: double.infinity,
+                  onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
+                ),
+                const SizedBox(height: 8),
+                TashilButton.outlined(
+                  label: loc.tr('viewOnGoogleMapsBtn'),
+                  icon: Symbols.map_rounded,
+                  height: 48,
+                  width: double.infinity,
+                  onPressed: _handleOpenInGoogleMaps,
                 ),
                 const SizedBox(height: 10),
                 TashilTextField.outlined(

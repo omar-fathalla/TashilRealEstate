@@ -207,7 +207,7 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
     final outerRadius = borderRadius ?? BorderRadius.circular(touchHeight / 2);
 
     return Container(
-      height: touchHeight,
+      constraints: BoxConstraints(minHeight: touchHeight),
       padding: const EdgeInsets.all(3.5),
       decoration: BoxDecoration(
         color: isTonal
@@ -387,7 +387,7 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeInOutCubic,
-        height: widget.height,
+        constraints: BoxConstraints(minHeight: widget.height),
         decoration: BoxDecoration(
           color: currentBg,
           borderRadius: innerRadius,

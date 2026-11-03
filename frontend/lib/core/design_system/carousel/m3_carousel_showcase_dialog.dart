@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/carousel/tashil_carousels.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 Carousel Showcase Dialog.
 ///
@@ -57,7 +58,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
 
     final heroImages = _sampleUnits.map((e) => e['image']!).toList();
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),

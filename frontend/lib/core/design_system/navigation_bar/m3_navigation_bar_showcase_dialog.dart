@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'tashil_navigation_bar.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive Showcase Dialog for Material Design 3 Navigation Bar & Badges.
 class M3NavigationBarShowcaseDialog extends StatefulWidget {
@@ -27,7 +28,7 @@ class _M3NavigationBarShowcaseDialogState
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
       child: Container(

@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Item model for M3 Selection Dialog options.
 class TashilSelectionOption<T> {
@@ -115,7 +116,7 @@ class TashilSelectionDialog<T> extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerHigh,
       elevation: elevation,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),

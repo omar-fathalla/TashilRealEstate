@@ -11,6 +11,7 @@ import '../models/vision_maintenance_model.dart';
 import '../services/ai_vision_maintenance_service.dart';
 import '../../owner_portal/services/property_lifecycle_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiVisionMaintenanceDialog extends StatefulWidget {
   final String? initialPhotoUrl;
@@ -80,7 +81,7 @@ class _AiVisionMaintenanceDialogState extends State<AiVisionMaintenanceDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

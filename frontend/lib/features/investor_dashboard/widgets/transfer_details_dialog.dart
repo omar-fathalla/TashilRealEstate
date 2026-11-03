@@ -9,6 +9,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class TransferDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> payout;
@@ -78,7 +79,7 @@ class TransferDetailsDialog extends StatelessWidget {
     final ref = payout['ref'] as String? ?? 'REF-000000';
     final bankName = _getLocalizedBankName(ref, lang);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surfaceContainerLowest,
       elevation: 6.0,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),

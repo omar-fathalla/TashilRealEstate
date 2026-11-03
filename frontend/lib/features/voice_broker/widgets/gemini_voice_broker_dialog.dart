@@ -11,6 +11,7 @@ import '../models/voice_broker_message.dart';
 import '../services/gemini_live_voice_broker_service.dart';
 import 'gemini_voice_broker_orb.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class GeminiVoiceBrokerDialog extends StatefulWidget {
   final PropertyItem property;
@@ -176,7 +177,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),

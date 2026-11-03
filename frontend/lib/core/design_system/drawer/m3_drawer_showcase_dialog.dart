@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'tashil_navigation_drawer.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive Showcase and Verification Dialog for Google Material Design 3 Navigation Drawer.
 ///
@@ -36,7 +37,7 @@ class _M3DrawerShowcaseDialogState extends State<M3DrawerShowcaseDialog> {
     final colorScheme = theme.colorScheme;
     final loc = AppLocalizations.of(context);
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)),

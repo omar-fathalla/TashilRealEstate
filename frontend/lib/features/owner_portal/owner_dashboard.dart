@@ -37,6 +37,7 @@ import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -452,7 +453,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     TashilTransitions.showM3Dialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           surfaceTintColor: colorScheme.surfaceTint,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -707,7 +708,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       TashilTransitions.showM3Dialog(
         context: context,
         builder: (ctx) {
-          return Dialog(
+          return TashilDialogFrame(
             backgroundColor: colorScheme.surface,
             elevation: 3,
             shape: RoundedRectangleBorder(
@@ -1278,7 +1279,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final colorScheme = Theme.of(ctx).colorScheme;
-          return Dialog(
+          return TashilDialogFrame(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Container(
@@ -1608,6 +1609,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             tooltip: loc.tr('settings'),
             onPressed: () => AppSettingsDialog.show(context),
           ),
+          if (!ResponsiveLayout.isMobile(context)) ...[
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
@@ -1628,6 +1630,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             ),
           ),
           const SizedBox(width: 8),
+          ],
         ],
       ),
       body: ValueListenableBuilder<TashilPageTransitionType>(
@@ -1924,7 +1927,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     TashilTransitions.showM3Dialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           surfaceTintColor: colorScheme.surfaceTint,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

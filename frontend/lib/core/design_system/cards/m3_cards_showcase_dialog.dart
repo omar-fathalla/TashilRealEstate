@@ -8,6 +8,7 @@ import '../buttons/tashil_buttons.dart';
 import '../dividers/tashil_dividers.dart';
 import '../chips/tashil_chips.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying:
 /// 1. The 3 official Google Material Design 3 card types (Elevated, Filled, Outlined).
@@ -86,7 +87,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class RecordManualPaymentDialog extends StatefulWidget {
   final ManagedPropertyModel property;
@@ -101,7 +102,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final currency = widget.property.countryCode == 'AE' ? loc.tr('currency_ae') : loc.tr('currency_eg');
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 20),

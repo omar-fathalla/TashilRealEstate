@@ -534,8 +534,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
 
           // 2. Filters: a sheet on a phone, an inline bar on a wider window.
           if (isMobile)
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+              ),
               onPressed: () {
                 showModalBottomSheet<void>(
                   context: context,

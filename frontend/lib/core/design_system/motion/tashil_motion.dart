@@ -477,10 +477,7 @@ class TashilTransitions {
           builder: (routeContext) => Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(routeContext).bottom),
-                child: builder(routeContext),
-              ),
+              child: builder(routeContext),
             ),
           ),
         ),

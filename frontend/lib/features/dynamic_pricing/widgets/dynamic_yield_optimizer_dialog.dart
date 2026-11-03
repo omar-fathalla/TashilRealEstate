@@ -14,6 +14,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../models/dynamic_pricing_model.dart';
 import '../services/dynamic_pricing_optimizer_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class DynamicYieldOptimizerDialog extends StatefulWidget {
   final String countryCode;
@@ -95,7 +96,7 @@ class _DynamicYieldOptimizerDialogState
     final currency = isAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       elevation: 6,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),

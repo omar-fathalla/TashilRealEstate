@@ -70,7 +70,10 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
             ? ((occupiedUnits / totalUnits) * 100).toInt()
             : (hasAuth ? 0 : 80);
 
-        return SingleChildScrollView(
+        return RefreshIndicator.adaptive(
+          onRefresh: () async {},
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.all(isMobile ? 16 : 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,6 +424,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
               // Recent Payouts Table
               _buildRecentPayoutsCard(context, loc, isUAE, lang, currency, colorScheme, properties),
             ],
+          ),
           ),
         );
       },

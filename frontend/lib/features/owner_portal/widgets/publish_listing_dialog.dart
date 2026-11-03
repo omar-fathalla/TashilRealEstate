@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/features/owner_portal/models/managed_property
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Modal dialog for managing property marketplace publication status and fast tenant recording.
 /// Fully adheres to Material Design 3 guidelines:
@@ -180,7 +181,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, _, __) {
-        return Dialog(
+        return TashilDialogFrame(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           backgroundColor: colorScheme.surface,
           insetPadding: EdgeInsets.symmetric(

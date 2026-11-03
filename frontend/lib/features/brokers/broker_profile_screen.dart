@@ -26,11 +26,7 @@ class BrokerProfileScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(
-            Directionality.of(context) == TextDirection.rtl
-                ? Symbols.arrow_forward_rounded
-                : Symbols.arrow_back_rounded,
-          ),
+          icon: const Icon(Symbols.arrow_back_rounded),
           tooltip: loc.tr('back'),
           style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),

@@ -22,6 +22,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
     required this.isMobile,
   });
 
+  String _yoyRate(List<MonthlyCashFlowPoint> history) {
+    if (history.length < 2 || history.first.netProfit == 0) return '0';
+    final rate = (history.last.netProfit - history.first.netProfit) / history.first.netProfit.abs() * 100;
+    return rate.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -80,7 +86,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 runSpacing: 6,
                 children: [
                   _buildLegendItem(context, loc.tr('grossIncomeLegend'), colorScheme.primary, colorScheme),
-                  _buildLegendItem(context, loc.tr('expensesLegend'), colorScheme.error, colorScheme),
+                  _buildLegendItem(context, loc.tr('expensesLegend'), colorScheme.tertiary, colorScheme),
                   _buildLegendItem(context, loc.tr('netProfitLegend'), colorScheme.secondary, colorScheme),
                 ],
               ),
@@ -143,7 +149,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                               height: max(expenseHeightRatio, 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [colorScheme.error, colorScheme.error.withValues(alpha: 0.7)],
+                                  colors: [colorScheme.tertiary, colorScheme.tertiary.withValues(alpha: 0.7)],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
@@ -201,7 +207,9 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  loc.tr('yoyProfitGrowthRate'),
+                  loc.tr('yoyProfitGrowthRate', {
+                    'rate': _yoyRate(history),
+                  }),
                   style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),

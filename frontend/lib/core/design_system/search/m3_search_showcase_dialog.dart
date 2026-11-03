@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'tashil_search_bar.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 (M3) Search Suite.
 /// Conforms to:
@@ -65,7 +66,7 @@ class _M3SearchShowcaseDialogState extends State<M3SearchShowcaseDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/models/investor_portfolio_model.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class InvestorReportDialog extends StatelessWidget {
   final InvestorPortfolioSummary summary;
@@ -44,7 +45,7 @@ class InvestorReportDialog extends StatelessWidget {
     }
     final refNumber = isUAE ? 'INV-AE-2026-8819' : 'INV-EG-2026-9941';
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       elevation: 6.0,
       shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.25),

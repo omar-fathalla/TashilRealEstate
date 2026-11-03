@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_model.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class SignaturePadDialog extends StatefulWidget {
   final String signerName;
@@ -112,7 +113,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, child) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(

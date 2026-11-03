@@ -5,6 +5,8 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+final ValueNotifier<Set<String>> _dismissedActivities = ValueNotifier<Set<String>>(<String>{});
+
 class OverviewView extends StatelessWidget {
   const OverviewView({super.key});
 
@@ -23,7 +25,10 @@ class OverviewView extends StatelessWidget {
           final crossAxisCount = isMobile ? 2 : (isTablet ? 2 : 4);
           final padding = isMobile ? 16.0 : (isTablet ? 24.0 : 32.0);
 
-          return SingleChildScrollView(
+          return RefreshIndicator.adaptive(
+            onRefresh: () async {},
+            child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(padding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,14 +38,11 @@ class OverviewView extends StatelessWidget {
                 SizedBox(height: isMobile ? 20 : 28),
 
                 // Responsive KPI Grid
-                GridView.count(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: isMobile ? 1.35 : (isTablet ? 2.0 : 1.6),
-                  children: [
+                LayoutBuilder(
+                  builder: (context, gridConstraints) {
+                    final columns = crossAxisCount;
+                    final cardWidth = (gridConstraints.maxWidth - (16 * (columns - 1))) / columns;
+                    final cards = [
                     _buildKpiCard(
                       context,
                       title: loc.tr('monthlyRevenue'),
@@ -77,7 +79,13 @@ class OverviewView extends StatelessWidget {
                       icon: Symbols.handyman_rounded,
                       accentColor: colorScheme.tertiary,
                     ),
-                  ],
+                    ];
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: cards.map((card) => SizedBox(width: cardWidth, child: card)).toList(),
+                    );
+                  },
                 ),
 
                 SizedBox(height: isMobile ? 28 : 36),
@@ -85,6 +93,7 @@ class OverviewView extends StatelessWidget {
                 // Recent Activities Card Section
                 _buildRecentActivities(context, loc, colorScheme, isMobile),
               ],
+            ),
             ),
           );
         },
@@ -177,7 +186,6 @@ class OverviewView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -186,18 +194,6 @@ class OverviewView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: accentColor, size: 20),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  badgeText,
-                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: badgeColor,
-                    fontWeight: FontWeight.w600),
-                ),
               ),
             ],
           ),
@@ -211,7 +207,7 @@ class OverviewView extends StatelessWidget {
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
@@ -221,7 +217,17 @@ class OverviewView extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
                 ),
-                maxLines: 1,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                badgeText,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                  color: badgeColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -250,7 +256,7 @@ class OverviewView extends StatelessWidget {
         'title': loc.tr('activity2Title'),
         'time': loc.tr('activity2Time'),
         'icon': Symbols.handyman_rounded,
-        'color': colorScheme.error,
+        'color': colorScheme.tertiary,
       },
       {
         'title': loc.tr('activity3Title'),
@@ -301,16 +307,33 @@ class OverviewView extends StatelessWidget {
           const SizedBox(height: 12),
           const TashilDivider.fullWidth(),
           const SizedBox(height: 8),
-          ListView.separated(
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: _dismissedActivities,
+            builder: (context, dismissed, _) {
+              final visible = activities.where((item) => !dismissed.contains(item['title'])).toList();
+              return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: activities.length,
+            itemCount: visible.length,
             separatorBuilder: (context, index) => const TashilDivider.inset(startIndent: 56),
             itemBuilder: (context, index) {
-              final item = activities[index];
+              final item = visible[index];
               final iconColor = item['color'] as Color;
+              final title = item['title'] as String;
 
-              return Material(
+              return Dismissible(
+                key: ValueKey<String>(title),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) {
+                  _dismissedActivities.value = {..._dismissedActivities.value, title};
+                },
+                background: Container(
+                  alignment: AlignmentDirectional.centerEnd,
+                  padding: const EdgeInsetsDirectional.only(end: 16),
+                  color: colorScheme.secondaryContainer,
+                  child: Icon(Symbols.delete_rounded, color: colorScheme.onSecondaryContainer),
+                ),
+                child: Material(
                 type: MaterialType.transparency,
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -345,7 +368,10 @@ class OverviewView extends StatelessWidget {
                   ),
                   onTap: () {},
                 ),
+              ),
               );
+            },
+          );
             },
           ),
         ],

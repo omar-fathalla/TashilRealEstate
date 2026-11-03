@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/market_index/services/ai_market_index_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiMarketAnalystChatDialog extends StatefulWidget {
   const AiMarketAnalystChatDialog({super.key});
@@ -93,7 +94,7 @@ class _AiMarketAnalystChatDialogState extends State<AiMarketAnalystChatDialog> {
 
     final sampleQuestions = isUAE ? sampleQuestionsAE : sampleQuestionsEG;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 36,

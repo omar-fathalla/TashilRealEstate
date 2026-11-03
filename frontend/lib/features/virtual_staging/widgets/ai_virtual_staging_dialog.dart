@@ -10,6 +10,7 @@ import '../models/virtual_staging_model.dart';
 import '../services/ai_virtual_staging_service.dart';
 import 'virtual_staging_comparison_slider.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class AiVirtualStagingDialog extends StatefulWidget {
   final PropertyItem? property;
@@ -108,7 +109,7 @@ class _AiVirtualStagingDialogState extends State<AiVirtualStagingDialog> {
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

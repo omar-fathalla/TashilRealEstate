@@ -16,6 +16,7 @@ import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
 import '../models/property_item.dart';
 import 'advertising_permit_badge.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class PropertyDetailsDialog extends StatefulWidget {
   final PropertyItem property;
@@ -194,7 +195,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
             ? 200.0
             : (isCompactHeight ? 240.0 : 280.0);
 
-        return Dialog(
+        return TashilDialogFrame(
           elevation: 6.0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(isMobile ? 20.0 : 28.0),

@@ -21,6 +21,7 @@ import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/features/document_ocr/models/document_ocr_result_model.dart';
 import 'package:tashil_real_estate/features/document_ocr/widgets/ai_document_ocr_modal.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Material Design 3 Dialog for viewing and editing personal profile info.
 /// Fully equipped with:
@@ -211,12 +212,16 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     if (_emailController.text.trim().isNotEmpty) points++;
     if ('${_firstNameController.text} ${_surnameController.text}'
         .trim()
-        .isNotEmpty) points++;
+        .isNotEmpty) {
+      points++;
+    }
     if (_phoneController.text.trim().isNotEmpty) points++;
     if (_nationalIdController.text.trim().isNotEmpty) points++;
     if (_addressController.text.trim().isNotEmpty) points++;
     if (_bankNameController.text.trim().isNotEmpty ||
-        _bankAccountNumberController.text.trim().isNotEmpty) points++;
+        _bankAccountNumberController.text.trim().isNotEmpty) {
+      points++;
+    }
     return points / total;
   }
 
@@ -439,7 +444,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final colorScheme = Theme.of(ctx).colorScheme;
-          return Dialog(
+          return TashilDialogFrame(
             backgroundColor: Colors.transparent,
             insetPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 24),

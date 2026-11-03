@@ -27,6 +27,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class FastPropertyOnboardingDialog extends StatefulWidget {
   final FastPropertyDraft? initialDraft;
@@ -588,7 +589,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
         final isMobile = ResponsiveLayout.isMobile(context);
         final theme = Theme.of(context);
 
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           elevation: 3.0,
           shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.25),

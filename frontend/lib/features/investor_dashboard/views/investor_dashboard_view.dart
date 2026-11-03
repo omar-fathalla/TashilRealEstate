@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
+import 'package:tashil_real_estate/core/design_system/chips/tashil_assist_chip.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/lists/tashil_reorderable_list.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
@@ -53,7 +55,10 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
         return ValueListenableBuilder<InvestorPortfolioSummary>(
           valueListenable: _service.currentSummaryNotifier as ValueNotifier<InvestorPortfolioSummary>,
           builder: (context, summary, _) {
-            return SingleChildScrollView(
+            return RefreshIndicator.adaptive(
+              onRefresh: () async {},
+              child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(isMobile ? 16 : 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,10 +119,27 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                   const SizedBox(height: 24),
 
                   // 4 Live KPI Hero Cards
-                  _buildKpiHeroGrid(summary, currency, lang, loc, isMobile, colorScheme),
+                  if (summary.assets.isEmpty)
+                    _buildEmptyPortfolio(context, loc)
+                  else
+                    _buildKpiHeroGrid(summary, currency, lang, loc, isMobile, colorScheme),
                   const SizedBox(height: 24),
 
-                  // Official M3 Expressive Connected Button Group Sub-Tab Switcher
+                  // Tabs wrap on a phone so long Arabic labels stay readable.
+                  if (isMobile)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final segment in _investorTabs(loc))
+                          TashilAssistChip(
+                            icon: segment.icon ?? Symbols.circle,
+                            label: segment.label,
+                            onPressed: () => setState(() => _selectedTab = segment.value),
+                          ),
+                      ],
+                    )
+                  else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: TashilConnectedButtonGroup<int>(
@@ -127,43 +149,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                           _selectedTab = tabIndex;
                         });
                       },
-                      segments: [
-                        TashilConnectedButtonSegment<int>(
-                          value: 0,
-                          label: loc.tr('portfolioAssetsBreakdown'),
-                          icon: Symbols.apartment_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 1,
-                          label: loc.tr('financialKpiChartsTab'),
-                          icon: Symbols.analytics_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 2,
-                          label: loc.tr('dynamicYieldOptimizerTitle'),
-                          icon: Symbols.bolt_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 3,
-                          label: loc.tr('fullInteractiveCurveTab'),
-                          icon: Symbols.show_chart_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 4,
-                          label: loc.tr('recentPayouts'),
-                          icon: Symbols.receipt_long_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 5,
-                          label: loc.tr('executiveReportTitle'),
-                          icon: Symbols.auto_awesome_rounded,
-                        ),
-                        TashilConnectedButtonSegment<int>(
-                          value: 6,
-                          label: loc.tr('monthlyCashFlowHistory'),
-                          icon: Symbols.waterfall_chart_rounded,
-                        ),
-                      ],
+                      segments: _investorTabs(loc),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -180,11 +166,52 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                   ),
                 ],
               ),
+              ),
             );
           },
         );
       },
     );
+  }
+
+  List<TashilConnectedButtonSegment<int>> _investorTabs(AppLocalizations loc) {
+    return [
+      TashilConnectedButtonSegment<int>(
+        value: 0,
+        label: loc.tr('portfolioAssetsBreakdown'),
+        icon: Symbols.apartment_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 1,
+        label: loc.tr('financialKpiChartsTab'),
+        icon: Symbols.analytics_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 2,
+        label: loc.tr('dynamicYieldOptimizerTitle'),
+        icon: Symbols.bolt_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 3,
+        label: loc.tr('fullInteractiveCurveTab'),
+        icon: Symbols.show_chart_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 4,
+        label: loc.tr('recentPayouts'),
+        icon: Symbols.receipt_long_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 5,
+        label: loc.tr('executiveReportTitle'),
+        icon: Symbols.auto_awesome_rounded,
+      ),
+      TashilConnectedButtonSegment<int>(
+        value: 6,
+        label: loc.tr('monthlyCashFlowHistory'),
+        icon: Symbols.waterfall_chart_rounded,
+      ),
+    ];
   }
 
   Widget _buildCurrentTab(
@@ -216,6 +243,35 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
     } else {
       return _buildCashFlowTab(summary, currency, lang, loc, isMobile, colorScheme);
     }
+  }
+
+  Widget _buildEmptyPortfolio(BuildContext context, AppLocalizations loc) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TashilCard.outlined(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Symbols.account_balance_rounded, color: colorScheme.primary, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            loc.tr('investorEmptyTitle'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            loc.tr('investorEmptyBody'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          TashilButton(
+            label: loc.tr('addFirstProperty'),
+            icon: Symbols.add_home_work_rounded,
+            onPressed: () => context.go('/fast-onboarding'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildKpiHeroGrid(

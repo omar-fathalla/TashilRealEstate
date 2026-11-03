@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Official Material Design 3 Confirmation Dialog for Lease Termination and Market Re-listing.
 ///
@@ -97,7 +98,7 @@ class _EndLeaseConfirmationDialogState extends State<EndLeaseConfirmationDialog>
         final paidCount = widget.property.paidMonthsCount;
         final totalPaid = widget.property.totalCollectedRevenue;
 
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surfaceContainerLowest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),

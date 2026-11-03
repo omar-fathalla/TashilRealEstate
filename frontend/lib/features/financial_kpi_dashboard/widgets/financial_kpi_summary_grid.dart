@@ -62,15 +62,22 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
         value: '${CurrencyFormatter.formatAmount(summary.totalOverdueArrears, langCode: lang)} $currency',
         subtitle: loc.tr('escalationNoticeActiveNotice'),
         icon: Symbols.warning_amber_rounded,
-        color: colorScheme.error,
-        bgColor: colorScheme.errorContainer.withValues(alpha: 0.5),
+        color: colorScheme.tertiary,
+        bgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
     ];
 
     if (isMobile) {
-      return Column(
-        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c)).toList(),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - 12) / 2;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: cards.map((card) => SizedBox(width: cardWidth, child: card)).toList(),
+          );
+        },
       );
     }
 

@@ -10,6 +10,7 @@ import '../../public_marketplace/widgets/property_details_dialog.dart';
 import '../models/semantic_search_result_model.dart';
 import '../services/ai_semantic_vector_search_service.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class VisualSearchModal extends StatefulWidget {
   final String countryCode;
@@ -87,7 +88,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
     final isMobile = ResponsiveLayout.isMobile(context);
     final lang = LocaleController.languageCode;
 
-    return Dialog(
+    return TashilDialogFrame(
       backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),

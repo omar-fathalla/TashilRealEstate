@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 class RentReceiptDialog extends StatelessWidget {
   final RentInvoiceModel invoice;
@@ -46,7 +47,7 @@ class RentReceiptDialog extends StatelessWidget {
         ? invoice.owner.iban.substring(invoice.owner.iban.length - 6)
         : invoice.owner.iban;
 
-    return Dialog(
+    return TashilDialogFrame(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.symmetric(

@@ -9,6 +9,7 @@ import '../../public_marketplace/models/property_item.dart';
 import '../../public_marketplace/widgets/property_card.dart';
 import '../../public_marketplace/widgets/property_details_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialog_frame.dart';
 
 /// Modal dialog that presents an exact, live simulation of how the property
 /// card appears to visitors in the Tashil Public Marketplace.
@@ -44,7 +45,7 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
       builder: (context, _, __) {
-        return Dialog(
+        return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           insetPadding: EdgeInsets.symmetric(
             horizontal: isMobile ? 12 : 36,
