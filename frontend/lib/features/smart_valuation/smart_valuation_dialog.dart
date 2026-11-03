@@ -15,6 +15,7 @@ import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/core/services/gemini_ai_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/smart_valuation/models/smart_valuation_model.dart';
@@ -1192,15 +1193,15 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           ),
 
           // 1. Main Result Hero Banner
-          Container(
+          Builder(
+            builder: (context) {
+          final onBanner = TashilBannerColors.foreground(colorScheme);
+          return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  colorScheme.primary,
-                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.75), colorScheme.onSurface),
-                ],
+                colors: TashilBannerColors.gradient(colorScheme),
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
               ),
@@ -1221,23 +1222,23 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                   children: [
                     Text(
                       loc.tr('suggestedFairRent'),
-                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary.withValues(alpha: 0.70), fontWeight: FontWeight.w500),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner.withValues(alpha: 0.70), fontWeight: FontWeight.w500),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: colorScheme.onPrimary.withValues(alpha: 0.16),
+                        color: onBanner.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.3)),
+                        border: Border.all(color: onBanner.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Symbols.verified_rounded, color: colorScheme.onPrimary, size: 14),
+                          Icon(Symbols.verified_rounded, color: onBanner, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '${res.confidenceScore}% ${loc.tr('confidenceScore')}',
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1247,10 +1248,10 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                 const SizedBox(height: 12),
                 Text(
                   '${CurrencyFormatter.formatAmount(res.estimatedRent, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                  style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                TashilDivider(color: colorScheme.onPrimary.withValues(alpha: 0.24), height: 1),
+                TashilDivider(color: onBanner.withValues(alpha: 0.24), height: 1),
                 const SizedBox(height: 16),
 
                 // Range (Min - Max - Per Sqm)
@@ -1260,32 +1261,32 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(loc.tr('marketMinRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
+                        Text(loc.tr('marketMinRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.7))),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.minRent, langCode: lang)} $currency',
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     Column(
                       children: [
-                        Text(loc.tr('pricePerSqmTitle'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
+                        Text(loc.tr('pricePerSqmTitle'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.7))),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.pricePerSqm, langCode: lang)} $currency/م²',
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(loc.tr('marketMaxRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
+                        Text(loc.tr('marketMaxRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.7))),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.maxRent, langCode: lang)} $currency',
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -1293,6 +1294,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                 ),
               ],
             ),
+          );
+            },
           ),
           const SizedBox(height: 20),
 

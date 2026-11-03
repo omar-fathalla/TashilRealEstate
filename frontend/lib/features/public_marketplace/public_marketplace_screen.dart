@@ -11,6 +11,7 @@ import '../semantic_search/models/semantic_search_result_model.dart';
 import '../semantic_search/services/ai_semantic_vector_search_service.dart';
 import '../semantic_search/widgets/visual_search_modal.dart';
 import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'models/property_item.dart';
 import 'repositories/property_repository.dart';
 import 'widgets/property_card.dart';
@@ -325,6 +326,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     final isUAE = currentCountry == 'AE';
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final onBanner = TashilBannerColors.foreground(colorScheme);
 
     return Container(
       width: double.infinity,
@@ -334,10 +336,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), colorScheme.onSurface),
-          ],
+          colors: TashilBannerColors.gradient(colorScheme),
           begin: AlignmentDirectional.topEnd,
           end: AlignmentDirectional.bottomStart,
         ),
@@ -353,18 +352,18 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: colorScheme.onPrimary.withValues(alpha: 0.12),
+                  color: onBanner.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.2)),
+                  border: Border.all(color: onBanner.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Symbols.verified_rounded, color: colorScheme.secondaryContainer, size: 16),
+                    Icon(Symbols.verified_rounded, color: onBanner, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       loc.tr('verifiedBadge'),
-                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -375,18 +374,18 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: colorScheme.onPrimary.withValues(alpha: 0.18),
+                    color: onBanner.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.35)),
+                    border: Border.all(color: onBanner.withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Symbols.rocket_launch_rounded, color: colorScheme.tertiary, size: 16),
+                      Icon(Symbols.rocket_launch_rounded, color: onBanner, size: 16),
                       const SizedBox(width: 8),
                       Text(
                         loc.tr('listPropertyBtn'),
-                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -399,14 +398,14 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
             isUAE ? loc.tr('heroTitle_ae') : loc.tr('heroTitle_eg'),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineLarge!.copyWith(fontWeight: FontWeight.bold,
-              color: colorScheme.onPrimary,
+              color: onBanner,
               height: 1.2),
           ),
           const SizedBox(height: 12),
           Text(
             isUAE ? loc.tr('heroSubtitle_ae') : loc.tr('heroSubtitle_eg'),
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.outlineVariant,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: TashilBannerColors.muted(colorScheme),
               height: 1.5),
           ),
           const SizedBox(height: 28),
@@ -981,16 +980,14 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     if (isMobile) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              colorScheme.primary,
-              Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), colorScheme.onSurface),
-            ],
+            colors: TashilBannerColors.gradient(colorScheme),
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -999,12 +996,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
           children: [
             Text(
               loc.tr('promoTitle'),
-              style: Theme.of(context).textTheme.titleLarge!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               loc.tr('promoSubtitle'),
-              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.outlineVariant, height: 1.4),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.muted(colorScheme), height: 1.4),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -1030,10 +1027,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), colorScheme.onSurface),
-          ],
+          colors: TashilBannerColors.gradient(colorScheme),
         ),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -1045,12 +1039,12 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               children: [
                 Text(
                   loc.tr('promoTitle'),
-                  style: Theme.of(context).textTheme.titleLarge!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   loc.tr('promoSubtitle'),
-                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.outlineVariant, height: 1.4),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.muted(colorScheme), height: 1.4),
                 ),
               ],
             ),

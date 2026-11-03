@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
+import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/layout/m3_layout.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -155,7 +156,13 @@ class _Identity extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final language in broker.languages)
-                  Chip(label: Text(language)),
+                  TashilAssistChip.outlined(
+                    label: language,
+                    height: 48,
+                    foregroundColor: scheme.onSurfaceVariant,
+                    backgroundColor: scheme.surfaceContainerLow,
+                    borderColor: scheme.outlineVariant,
+                  ),
               ],
             ),
             const SizedBox(height: 16),

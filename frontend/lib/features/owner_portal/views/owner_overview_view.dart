@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
@@ -36,6 +37,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
     final loc = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     final isMobile = ResponsiveLayout.isMobile(context);
     final isUAE = CountryController.isUAE;
     final currency = isUAE ? loc.tr('currency_ae') : loc.tr('currency_eg');
@@ -141,10 +143,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      Color.lerp(colorScheme.primary, Colors.black, 0.22) ?? colorScheme.primary,
-                    ],
+                    colors: TashilBannerColors.gradient(colorScheme),
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                   ),
@@ -166,28 +165,28 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: colorScheme.onPrimary.withValues(alpha: 0.16),
+                            color: onBanner.withValues(alpha: 0.16),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Symbols.auto_awesome_rounded, color: colorScheme.onPrimary, size: 20),
+                          child: Icon(Symbols.auto_awesome_rounded, color: onBanner, size: 20),
                         ),
                         const SizedBox(width: 10),
                         Text(
                           loc.tr('aiValuationBannerTitle'),
                           style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimary),
+                            color: onBanner),
                         ),
                         const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: colorScheme.onPrimary.withValues(alpha: 0.18),
+                            color: onBanner.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.3)),
+                            border: Border.all(color: onBanner.withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             'Gemini Flash',
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary,
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner,
                               fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -218,7 +217,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                             onPressed: () => context.go('/market-index'),
                             icon: Symbols.analytics_rounded,
                             label: CountryController.isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                            customColor: colorScheme.onPrimary,
+                            customColor: onBanner,
                             height: 40,
                           ),
                         ],
@@ -245,7 +244,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                             onPressed: () => context.go('/market-index'),
                             icon: Symbols.analytics_rounded,
                             label: CountryController.isUAE ? loc.tr('dxbMarketIndexTitle') : loc.tr('aqarmapIndexTitle'),
-                            customColor: colorScheme.onPrimary,
+                            customColor: onBanner,
                             height: 38,
                           ),
                         ],
@@ -256,18 +255,18 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                       decoration: BoxDecoration(
-                        color: colorScheme.onPrimary.withValues(alpha: 0.10),
+                        color: onBanner.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.16)),
+                        border: Border.all(color: onBanner.withValues(alpha: 0.16)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Symbols.info_rounded, size: 16, color: colorScheme.onPrimary),
+                          Icon(Symbols.info_rounded, size: 16, color: onBanner),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               loc.tr('aiValuationBannerDesc'),
-                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary.withValues(alpha: 0.90),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner.withValues(alpha: 0.90),
                                 height: 1.4),
                             ),
                           ),

@@ -4,6 +4,7 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/advertising_permit.dart';
 import 'package:tashil_real_estate/core/utils/digit_utils.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
@@ -672,18 +673,18 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.85)],
+                              colors: TashilBannerColors.gradient(theme.colorScheme),
                             ),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
                             children: [
-                              Icon(Symbols.mic_rounded, color: theme.colorScheme.onPrimary, size: 24),
+                              Icon(Symbols.mic_rounded, color: TashilBannerColors.foreground(theme.colorScheme), size: 24),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   loc.tr('voiceAutofillHeroDesc'),
-                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme)),
                                 ),
                               ),
                               TashilButton.tonal(

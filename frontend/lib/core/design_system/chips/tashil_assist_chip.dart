@@ -200,6 +200,21 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
           : BorderSide.none,
     );
 
+    final label = Text(
+      widget.label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: effectiveFg,
+        fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+        letterSpacing: 0.1,
+        height: 1.25,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+    final labelSlot = constraints.maxWidth.isFinite ? Flexible(child: label) : label;
     Widget chipContent = Material(
       color: effectiveBg,
       shape: shape,
@@ -247,17 +262,7 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
                 const SizedBox(width: 6),
               ],
 
-              // Label Text (M3 labelLarge typography)
-              Flexible(
-                child: Text(
-                  widget.label,
-                  style: theme.textTheme.labelLarge?.copyWith(color: effectiveFg,
-                    fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                    letterSpacing: 0.1),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              labelSlot,
 
               // Trailing Widget
               if (widget.trailing != null) ...[
@@ -278,5 +283,7 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
     }
 
     return chipContent;
+      },
+    );
   }
 }

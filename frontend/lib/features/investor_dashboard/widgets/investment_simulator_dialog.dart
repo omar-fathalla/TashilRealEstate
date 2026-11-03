@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/services/investor_analytics_service.dart';
@@ -569,15 +570,14 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
           const SizedBox(height: 16),
 
           // 5-Year Cumulative Profit Breakdown Box
-          Container(
+          Builder(builder: (context) {
+            final onBanner = TashilBannerColors.foreground(theme.colorScheme);
+            return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  Color.lerp(theme.colorScheme.primary, Colors.black, 0.18) ?? theme.colorScheme.primary,
-                ],
+                colors: TashilBannerColors.gradient(theme.colorScheme),
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -595,7 +595,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
               children: [
                 Text(
                   loc.tr('fiveYearCumulativeReturn'),
-                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner.withValues(alpha: 0.85),
                     fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 6),
@@ -604,7 +604,7 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                   alignment: AlignmentDirectional.centerStart,
                   child: Text(
                     '+ ${CurrencyFormatter.formatAmount(_currentResult.totalEstimated5YearProfit, langCode: lang)} $currency',
-                    style: Theme.of(context).textTheme.titleLarge!.copyWith(color: theme.colorScheme.onPrimary,
+                    style: Theme.of(context).textTheme.titleLarge!.copyWith(color: onBanner,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5),
                   ),
@@ -612,12 +612,13 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
                 const SizedBox(height: 8),
                 Text(
                   loc.tr('fiveYearSimulationNote'),
-                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.75),
                     height: 1.35),
                 ),
               ],
             ),
-          ),
+          );
+          }),
         ],
       ),
     );

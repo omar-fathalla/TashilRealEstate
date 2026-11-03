@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
@@ -167,10 +168,7 @@ class RentReceiptDialog extends StatelessWidget {
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.primary.withValues(alpha: 0.88),
-                            ],
+                            colors: TashilBannerColors.gradient(theme.colorScheme),
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -187,13 +185,13 @@ class RentReceiptDialog extends StatelessWidget {
                           children: [
                             Text(
                               loc.tr('totalAmountPaid'),
-                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme).withValues(alpha: 0.85),
                                 fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               '${CurrencyFormatter.formatAmount(invoice.totalAmountDue, langCode: lang)} $currency',
-                              style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: theme.colorScheme.onPrimary,
+                              style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme),
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: -0.5),
                             ),
@@ -201,7 +199,7 @@ class RentReceiptDialog extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.onPrimary.withValues(alpha: 0.18),
+                                color: TashilBannerColors.foreground(theme.colorScheme).withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -210,12 +208,12 @@ class RentReceiptDialog extends StatelessWidget {
                                   Icon(
                                     Symbols.payment_rounded,
                                     size: 14,
-                                    color: theme.colorScheme.onPrimary,
+                                    color: TashilBannerColors.foreground(theme.colorScheme),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     '${loc.tr('paymentMethod')}: ${_getPaymentMethodLabel(loc, invoice.paymentMethod ?? 'card')}',
-                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary,
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: TashilBannerColors.foreground(theme.colorScheme),
                                       fontWeight: FontWeight.w600),
                                   ),
                                 ],

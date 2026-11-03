@@ -533,7 +533,7 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                           colors: isSelected
                               ? [
                                   colorScheme.primary,
-                                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), colorScheme.onSurface),
+                                  colorScheme.primary.withValues(alpha: 0.72),
                                 ]
                               : [
                                   colorScheme.primary.withValues(alpha: 0.7),

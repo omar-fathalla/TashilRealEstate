@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/market_index/models/market_index_model.dart';
@@ -140,14 +141,12 @@ class _MarketIndexViewState extends State<MarketIndexView> {
     bool isMobile,
     ColorScheme colorScheme,
   ) {
+    final onBanner = TashilBannerColors.foreground(colorScheme);
     return Container(
       padding: EdgeInsets.all(isMobile ? 18 : 26),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.7), colorScheme.onSurface),
-          ],
+          colors: TashilBannerColors.gradient(colorScheme),
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -177,30 +176,30 @@ class _MarketIndexViewState extends State<MarketIndexView> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colorScheme.onPrimary.withValues(alpha: 0.15),
+                      color: onBanner.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       summary.indexName,
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: colorScheme.onPrimary.withValues(alpha: 0.2),
+                      color: onBanner.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '+${summary.indexChangeMoM}% ${lang == 'ar' ? 'شهرياً' : lang == 'hi' ? 'मासिक' : 'MoM'}',
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               Text(
                 '${loc.tr('lastUpdated')}: ${summary.lastUpdatedTimestamp}',
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary.withValues(alpha: 0.7)),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.7)),
               ),
             ],
           ),
@@ -213,14 +212,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             children: [
               Text(
                 '${summary.indexPoints}',
-                style: Theme.of(context).textTheme.headlineLarge!.copyWith(color: colorScheme.onPrimary,
+                style: Theme.of(context).textTheme.headlineLarge!.copyWith(color: onBanner,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -1),
               ),
               const SizedBox(width: 8),
               Text(
                 loc.tr('points'),
-                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.onPrimary.withValues(alpha: 0.70), fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: onBanner.withValues(alpha: 0.70), fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -286,16 +285,17 @@ class _MarketIndexViewState extends State<MarketIndexView> {
   }
 
   Widget _buildHeroMetricTile(String label, String value, IconData icon) {
+    final onBanner = TashilBannerColors.foreground(Theme.of(context).colorScheme);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
+        color: onBanner.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15)),
+        border: Border.all(color: onBanner.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+          Icon(icon, color: onBanner, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -304,14 +304,14 @@ class _MarketIndexViewState extends State<MarketIndexView> {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.70)),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: onBanner.withValues(alpha: 0.70)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: onBanner, fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

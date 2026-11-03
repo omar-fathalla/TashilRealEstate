@@ -7,7 +7,9 @@ import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/routing/route_access.dart';
+import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/theme/app_theme.dart';
+import 'package:tashil_real_estate/core/theme/tashil_banner_colors.dart';
 import 'package:tashil_real_estate/features/brokers/broker_profile_screen.dart';
 import 'package:tashil_real_estate/features/brokers/broker_repository.dart';
 import 'package:tashil_real_estate/features/brokers/models/broker_profile.dart';
@@ -31,6 +33,16 @@ void main() {
       expect(item.isSample, isTrue);
       expect(item.advertisingPermitNumber, isEmpty);
     }
+  });
+
+  test('dark hero bands use container roles', () {
+    final scheme = AppTheme.getTheme(brightness: Brightness.dark).colorScheme;
+    final colors = TashilBannerColors.gradient(scheme);
+    expect(colors, [scheme.surfaceContainer, scheme.primaryContainer]);
+    expect(TashilBannerColors.foreground(scheme), scheme.onPrimaryContainer);
+    final light = AppTheme.getTheme(brightness: Brightness.light).colorScheme;
+    expect(TashilBannerColors.gradient(light).first, light.primary);
+    expect(TashilBannerColors.foreground(light), light.onPrimary);
   });
 
   test('logged-out visitors may open a broker profile', () {
@@ -98,6 +110,14 @@ void main() {
     expect(find.text('Office registration number (ORN): ORN-1044'), findsOneWidget);
     expect(find.text('Call'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
+    final chips = tester.widgetList<TashilAssistChip>(find.byType(TashilAssistChip));
+    expect(chips.length, 3);
+    for (final chip in chips) {
+      expect(chip.height, 48);
+      expect(chip.enabled, isTrue);
+    }
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('العربية'), findsOneWidget);
 
     tester.view.physicalSize = const Size(1440, 900);
     await tester.pumpWidget(_app(const BrokerProfileScreen(brokerId: 'broker-demo-marina')));
