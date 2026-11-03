@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/features/owner_portal/services/property_lifec
 import 'package:tashil_real_estate/features/owner_portal/widgets/end_lease_confirmation_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/publish_listing_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class MonthlyPaymentScheduleDialog extends StatefulWidget {
   final ManagedPropertyModel property;
@@ -77,7 +78,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
-                                    Icons.calendar_month_rounded,
+                                    Symbols.calendar_month_rounded,
                                     color: theme.colorScheme.onPrimaryContainer,
                                     size: 22,
                                   ),
@@ -89,15 +90,12 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                                     children: [
                                       Text(
                                         loc.tr('monthlyPaymentLedgerTitle'),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
+                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.onSurface),
                                       ),
                                       Text(
                                         '${currentProp.getTitle(lang)} (${currentProp.unitNumber})',
-                                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -111,7 +109,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               TashilIconButton.tonal(
-                                icon: Icons.edit_calendar_rounded,
+                                icon: Symbols.edit_calendar_rounded,
                                 tooltip: loc.tr('editLeaseTermsBtn'),
                                 onPressed: () {
                                   Navigator.of(context).pop();
@@ -146,18 +144,15 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(loc.tr('currentTenantName'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                                  Text(loc.tr('currentTenantName'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                   const SizedBox(height: 2),
                                   Text(
                                     currentProp.tenantName ?? loc.tr('noActiveTenant'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
                                   ),
                                   if (currentProp.tenantPhone != null)
-                                    Text(currentProp.tenantPhone!, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                                    Text(currentProp.tenantPhone!, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                 ],
                               ),
                             ),
@@ -167,19 +162,16 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(loc.tr('collectedTotal'), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                                  Text(loc.tr('collectedTotal'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                   const SizedBox(height: 2),
                                   Text(
                                     '${CurrencyFormatter.formatAmount(currentProp.totalCollectedRevenue, langCode: lang)} $currency',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: theme.colorScheme.primary,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary),
                                   ),
                                   Text(
                                     '${currentProp.paidMonthsCount} ${loc.tr('monthsPaidOutOfTotal')} ${currentProp.installments.isNotEmpty ? currentProp.installments.length : 12} ${loc.tr('month')}',
-                                    style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -192,11 +184,8 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                       // --- DYNAMIC INSTALLMENT LIST ---
                       Text(
                         '${loc.tr('installmentScheduleForDuration')} (${currentProp.installments.isNotEmpty ? currentProp.installments.length : 12} ${loc.tr('month')})',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 8),
 
@@ -205,7 +194,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                             ? Center(
                                 child: Text(
                                   loc.tr('noInstallmentScheduleAvailable'),
-                                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               )
                             : ListView.separated(
@@ -253,12 +242,12 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               TashilConnectedButtonSegment(
                                 value: 'republish',
                                 label: loc.tr('endLeaseAndRepublishBtn'),
-                                icon: Icons.storefront_rounded,
+                                icon: Symbols.storefront_rounded,
                               ),
                               TashilConnectedButtonSegment(
                                 value: 'close',
                                 label: loc.tr('closeModalBtn'),
-                                icon: Icons.close_rounded,
+                                icon: Symbols.close_rounded,
                               ),
                             ],
                           ),
@@ -303,42 +292,42 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                 ? loc.tr('paymentMethodGooglePay')
                 : loc.tr('paymentMethodOnline');
         statusText = '${loc.tr('paidOnlineBadge')} ($methodLabel)';
-        statusIcon = Icons.check_circle_rounded;
+        statusIcon = Symbols.check_circle_rounded;
         break;
       case InstallmentPaymentStatus.paidCash:
         badgeBg = isDark ? const Color(0xFF132B3A) : const Color(0xFFE8F0FE);
         badgeFg = isDark ? const Color(0xFF8AB4F8) : const Color(0xFF1A73E8);
         badgeBorder = isDark ? const Color(0xFF4285F4).withValues(alpha: 0.5) : const Color(0xFFAECBFA);
         statusText = loc.tr('paidCashHandBadge');
-        statusIcon = Icons.payments_rounded;
+        statusIcon = Symbols.payments_rounded;
         break;
       case InstallmentPaymentStatus.paidBankWire:
         badgeBg = isDark ? const Color(0xFF2C2211) : const Color(0xFFFEF7E0);
         badgeFg = isDark ? const Color(0xFFFDD663) : const Color(0xFFB06000);
         badgeBorder = isDark ? const Color(0xFFFBBC04).withValues(alpha: 0.5) : const Color(0xFFFEEFC3);
         statusText = loc.tr('paidBankWireBadge');
-        statusIcon = Icons.account_balance_rounded;
+        statusIcon = Symbols.account_balance_rounded;
         break;
       case InstallmentPaymentStatus.overdue:
         badgeBg = isDark ? const Color(0xFF371714) : const Color(0xFFFCE8E6);
         badgeFg = isDark ? const Color(0xFFF28B82) : const Color(0xFFC5221F);
         badgeBorder = isDark ? const Color(0xFFEA4335).withValues(alpha: 0.5) : const Color(0xFFF6AEA9);
         statusText = loc.tr('statusOverdue');
-        statusIcon = Icons.warning_amber_rounded;
+        statusIcon = Symbols.warning_amber_rounded;
         break;
       case InstallmentPaymentStatus.due:
         badgeBg = isDark ? const Color(0xFF302008) : const Color(0xFFFFF0D4);
         badgeFg = isDark ? const Color(0xFFFFB74D) : const Color(0xFFE65100);
         badgeBorder = isDark ? const Color(0xFFFF9800).withValues(alpha: 0.5) : const Color(0xFFFFCC80);
         statusText = loc.tr('statusDueNow');
-        statusIcon = Icons.schedule_rounded;
+        statusIcon = Symbols.schedule_rounded;
         break;
       case InstallmentPaymentStatus.upcoming:
         badgeBg = isDark ? const Color(0xFF282A2D) : const Color(0xFFF1F3F4);
         badgeFg = isDark ? const Color(0xFFBDC1C6) : const Color(0xFF5F6368);
         badgeBorder = isDark ? const Color(0xFF5F6368) : const Color(0xFFDADCE0);
         statusText = loc.tr('statusUpcoming');
-        statusIcon = Icons.hourglass_empty_rounded;
+        statusIcon = Symbols.hourglass_empty_rounded;
         break;
     }
 
@@ -371,11 +360,8 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               ),
                               child: Text(
                                 installment.monthNumber,
-                                style: TextStyle(
-                                  color: theme.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -384,15 +370,12 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               children: [
                                 Text(
                                   installment.getMonthName(lang),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 Text(
                                   '${loc.tr('dueOnDate')}: ${installment.dueDate.year}/${installment.dueDate.month}/${installment.dueDate.day}',
-                                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -412,7 +395,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               const SizedBox(width: 4),
                               Text(
                                 statusText,
-                                style: TextStyle(color: badgeFg, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: badgeFg, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -425,11 +408,8 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                       children: [
                         Text(
                           '${CurrencyFormatter.formatAmount(installment.amount, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface),
                         ),
                         if (installment.isPaid)
                           TashilButton.text(
@@ -439,7 +419,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                                 message: '${loc.tr('receiptIssuedLabel')}: ${installment.receiptNumber ?? "REC-2026"} (${installment.transactionRef ?? "DIRECT"})',
                               );
                             },
-                            icon: Icons.receipt_rounded,
+                            icon: Symbols.receipt_rounded,
                             label: loc.tr('receiptIssuedLabel'),
                           )
                         else
@@ -472,11 +452,8 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                             ),
                             child: Text(
                               installment.monthNumber,
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -487,17 +464,14 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               children: [
                                 Text(
                                   installment.getMonthName(lang),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
                                   '${loc.tr('dueOnDate')}: ${installment.dueDate.year}/${installment.dueDate.month}/${installment.dueDate.day}',
-                                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -514,11 +488,8 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                       flex: 2,
                       child: Text(
                         '${CurrencyFormatter.formatAmount(installment.amount, langCode: lang)} $currency',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -545,7 +516,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               Flexible(
                                 child: Text(
                                   statusText,
-                                  style: TextStyle(color: badgeFg, fontSize: 11, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: badgeFg, fontWeight: FontWeight.bold),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -565,7 +536,7 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                         child: installment.isPaid
                             ? TashilIconButton.tonal(
                                 tooltip: loc.tr('viewReceiptTooltip'),
-                                icon: Icons.receipt_rounded,
+                                icon: Symbols.receipt_rounded,
                                 onPressed: () {
                                   TashilSnackBar.showInfo(
                                     context: context,

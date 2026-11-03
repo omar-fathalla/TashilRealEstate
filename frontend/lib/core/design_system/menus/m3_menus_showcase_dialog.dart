@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'tashil_dropdown_menu.dart';
 import 'tashil_menu_item.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Dropdown Menus:
 /// Conforms to https://m3.material.io/components/menus/guidelines and specs
@@ -54,9 +55,9 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                 children: [
                   // Header
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      Expanded(
+                        child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
@@ -65,17 +66,20 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              Icons.arrow_drop_down_circle_outlined,
+                              Symbols.arrow_drop_down_circle_rounded,
                               color: colorScheme.onPrimaryContainer,
                               size: 22,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Column(
+                          Expanded(
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Google Material Design 3 Menus',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: colorScheme.onSurface,
@@ -83,17 +87,18 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                               ),
                               Text(
                                 'https://m3.material.io/components/menus/specs',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontSize: 11,
-                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
+                          ),
                         ],
                       ),
+                      ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Symbols.close_rounded),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -118,16 +123,13 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.speed_rounded, color: colorScheme.primary, size: 20),
+                                Icon(Symbols.speed_rounded, color: colorScheme.primary, size: 20),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     '250ms Top-to-Bottom Unfolding Motion • 180° Rotating Caret • 48dp Item Touch Target • Selected Pill Highlight with Checkmark',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -147,37 +149,37 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                           TashilDropdownMenu<String>(
                             value: _selectedCity,
                             labelText: loc.tr('city'),
-                            prefixIcon: Icons.location_city_rounded,
+                            prefixIcon: Symbols.location_city_rounded,
                             items: [
                               TashilDropdownMenuItem(
                                 value: 'all',
                                 label: loc.tr('city_all'),
-                                icon: Icons.domain_rounded,
+                                icon: Symbols.domain_rounded,
                                 supportingText: 'ALL',
                               ),
                               const TashilDropdownMenuItem.divider(value: 'div_1'),
                               TashilDropdownMenuItem(
                                 value: 'new_cairo',
                                 label: loc.tr('city_new_cairo'),
-                                icon: Icons.location_city_rounded,
+                                icon: Symbols.location_city_rounded,
                                 supportingText: 'EG',
                               ),
                               TashilDropdownMenuItem(
                                 value: 'sheikh_zayed',
                                 label: loc.tr('city_sheikh_zayed'),
-                                icon: Icons.holiday_village_rounded,
+                                icon: Symbols.holiday_village_rounded,
                                 supportingText: 'EG',
                               ),
                               TashilDropdownMenuItem(
                                 value: 'alexandria',
                                 label: loc.tr('city_alexandria'),
-                                icon: Icons.beach_access_rounded,
+                                icon: Symbols.beach_access_rounded,
                                 supportingText: 'EG',
                               ),
                               TashilDropdownMenuItem(
                                 value: 'north_coast',
                                 label: loc.tr('city_north_coast'),
-                                icon: Icons.waves_rounded,
+                                icon: Symbols.waves_rounded,
                                 supportingText: 'EG',
                               ),
                             ],
@@ -199,38 +201,38 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                           TashilDropdownMenu<String>(
                             value: _selectedType,
                             labelText: loc.tr('propertyType'),
-                            prefixIcon: Icons.home_work_outlined,
+                            prefixIcon: Symbols.home_work_rounded,
                             items: [
                               TashilDropdownMenuItem(
                                 value: 'all',
                                 label: loc.tr('type_all'),
-                                icon: Icons.home_work_outlined,
+                                icon: Symbols.home_work_rounded,
                               ),
                               const TashilDropdownMenuItem.divider(value: 'div_2'),
                               TashilDropdownMenuItem(
                                 value: 'apartment',
                                 label: loc.tr('type_apartment'),
-                                icon: Icons.apartment_rounded,
+                                icon: Symbols.apartment_rounded,
                               ),
                               TashilDropdownMenuItem(
                                 value: 'villa',
                                 label: loc.tr('type_villa'),
-                                icon: Icons.villa_outlined,
+                                icon: Symbols.villa_rounded,
                               ),
                               TashilDropdownMenuItem(
                                 value: 'studio',
                                 label: loc.tr('type_studio'),
-                                icon: Icons.single_bed_outlined,
+                                icon: Symbols.single_bed_rounded,
                               ),
                               TashilDropdownMenuItem(
                                 value: 'duplex',
                                 label: loc.tr('type_duplex'),
-                                icon: Icons.layers_outlined,
+                                icon: Symbols.layers_rounded,
                               ),
                               TashilDropdownMenuItem(
                                 value: 'chalet',
                                 label: loc.tr('type_chalet'),
-                                icon: Icons.beach_access_outlined,
+                                icon: Symbols.beach_access_rounded,
                               ),
                             ],
                             onChanged: (val) {
@@ -248,7 +250,7 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
+                                Icon(Symbols.check_circle_rounded, color: colorScheme.primary, size: 20),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -276,7 +278,7 @@ class _M3MenusShowcaseDialogState extends State<M3MenusShowcaseDialog> {
                     alignment: AlignmentDirectional.centerEnd,
                     child: TashilButton(
                       label: loc.tr('closeModalBtn'),
-                      icon: Icons.check_rounded,
+                      icon: Symbols.check_rounded,
                       onPressed: () => Navigator.of(context).pop(),
                       height: 40,
                     ),

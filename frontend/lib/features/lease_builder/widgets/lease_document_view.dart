@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_model.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/signature_pad_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class LeaseDocumentView extends StatefulWidget {
   final LeaseContractModel contract;
@@ -97,7 +98,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                       border: Border.all(color: theme.colorScheme.outlineVariant, width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
+                          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -116,39 +117,39 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                         const SizedBox(height: 24),
 
                         // Section 1: Parties Information
-                        _buildSectionTitle(loc.tr('contractPartiesSection'), Icons.groups_rounded),
+                        _buildSectionTitle(loc.tr('contractPartiesSection'), Symbols.groups_rounded),
                         const SizedBox(height: 12),
                         _buildPartiesGrid(loc, isUAE, isMobile),
                         const SizedBox(height: 24),
 
                         // Section 2: Leased Property Specifications
-                        _buildSectionTitle(loc.tr('leasedPropertySection'), Icons.apartment_rounded),
+                        _buildSectionTitle(loc.tr('leasedPropertySection'), Symbols.apartment_rounded),
                         const SizedBox(height: 12),
                         _buildPropertyDetails(loc, isUAE, isMobile),
                         const SizedBox(height: 24),
 
                         // Section 3: Financial & Payment Terms
-                        _buildSectionTitle(loc.tr('financialTermsSection'), Icons.account_balance_wallet_rounded),
+                        _buildSectionTitle(loc.tr('financialTermsSection'), Symbols.account_balance_wallet_rounded),
                         const SizedBox(height: 12),
                         _buildFinancialTermsTable(loc, isUAE, lang),
                         const SizedBox(height: 24),
 
                         // Section 4: Cheques Schedule (If UAE / Post-dated cheques)
                         if (_contract.financialTerms.cheques.isNotEmpty) ...[
-                          _buildSectionTitle(loc.tr('chequesScheduleSection'), Icons.payments_rounded),
+                          _buildSectionTitle(loc.tr('chequesScheduleSection'), Symbols.payments_rounded),
                           const SizedBox(height: 12),
                           _buildChequesList(loc, lang),
                           const SizedBox(height: 24),
                         ],
 
                         // Section 5: Legal Articles & Conditions
-                        _buildSectionTitle(loc.tr('legalArticlesSection'), Icons.gavel_rounded),
+                        _buildSectionTitle(loc.tr('legalArticlesSection'), Symbols.gavel_rounded),
                         const SizedBox(height: 12),
                         _buildClausesList(lang),
                         const SizedBox(height: 32),
 
                         // Section 6: Digital Signatures & Certificates
-                        _buildSectionTitle(loc.tr('eSignaturesSection'), Icons.verified_rounded),
+                        _buildSectionTitle(loc.tr('eSignaturesSection'), Symbols.verified_rounded),
                         const SizedBox(height: 16),
                         _buildSignaturesBlock(context, loc, isMobile, lang),
                       ],
@@ -193,18 +194,15 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _contract.isFullySigned ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
+                      _contract.isFullySigned ? Symbols.check_circle_rounded : Symbols.pending_actions_rounded,
                       color: _contract.isFullySigned ? theme.colorScheme.tertiary : theme.colorScheme.secondary,
                       size: 14,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       _contract.isFullySigned ? loc.tr('contractActiveSigned') : loc.tr('pendingSignatures'),
-                      style: TextStyle(
-                        color: _contract.isFullySigned ? theme.colorScheme.tertiary : theme.colorScheme.secondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: _contract.isFullySigned ? theme.colorScheme.tertiary : theme.colorScheme.secondary,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -214,7 +212,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                 textDirection: TextDirection.ltr,
                 child: Text(
                   _contract.contractNumber,
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -237,19 +235,19 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
               TashilConnectedButtonSegment<String>(
                 value: 'exportPdf',
                 label: loc.tr('exportPdf'),
-                icon: Icons.picture_as_pdf_rounded,
+                icon: Symbols.picture_as_pdf_rounded,
               ),
               if (_contract.tenantSignature == null)
                 TashilConnectedButtonSegment<String>(
                   value: 'signTenant',
                   label: loc.tr('signAsTenant'),
-                  icon: Icons.draw_rounded,
+                  icon: Symbols.draw_rounded,
                 ),
               if (_contract.lessorSignature == null)
                 TashilConnectedButtonSegment<String>(
                   value: 'signLessor',
                   label: loc.tr('signAsLessor'),
-                  icon: Icons.draw_rounded,
+                  icon: Symbols.draw_rounded,
                 ),
             ],
           ),
@@ -267,21 +265,28 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Left Emblem / Logo
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isUAE ? loc.tr('uaeGovHeader') : loc.tr('egGovHeader'),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant),
                 ),
                 Text(
                   isUAE ? loc.tr('dubaiLandDept') : loc.tr('egyptMinistryJustice'),
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                 ),
               ],
             ),
+            ),
             // Verified Digital Document Stamp
-            Container(
+            Flexible(
+              child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
@@ -291,23 +296,30 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.qr_code_2_rounded, size: 20, color: theme.colorScheme.primary),
+                  Icon(Symbols.qr_code_2_rounded, size: 20, color: theme.colorScheme.primary),
                   const SizedBox(width: 8),
-                  Column(
+                  Flexible(
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         loc.tr('verifiedDigitalLease'),
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                       ),
                       Text(
                         'ID: ${_contract.id}',
-                        style: TextStyle(fontSize: 9, color: theme.colorScheme.onPrimaryContainer),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer),
                       ),
                     ],
                   ),
+                  ),
                 ],
               ),
+            ),
             ),
           ],
         ),
@@ -315,18 +327,15 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
         Text(
           isUAE ? loc.tr('uaeTenancyContractTitle') : loc.tr('egTenancyContractTitle'),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
-            letterSpacing: -0.3,
-          ),
+            letterSpacing: -0.3),
         ),
         const SizedBox(height: 4),
         Text(
           isUAE ? loc.tr('uaeLawReference') : loc.tr('egLawReference'),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -372,11 +381,11 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+        Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: 2),
         Directionality(
           textDirection: isLtr ? TextDirection.ltr : Directionality.of(context),
-          child: Text(displayValue, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+          child: Text(displayValue, style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
         ),
       ],
     );
@@ -390,7 +399,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+          style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
       ],
     );
@@ -455,7 +464,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      isLessor ? Icons.business_center_rounded : Icons.person_rounded,
+                      isLessor ? Symbols.business_center_rounded : Symbols.person_rounded,
                       size: 20,
                       color: roleColor,
                     ),
@@ -466,20 +475,14 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                     children: [
                       Text(
                         roleTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: roleColor,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: roleColor),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         party.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -495,15 +498,12 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified_user_rounded, size: 14, color: theme.colorScheme.primary),
+                    Icon(Symbols.verified_user_rounded, size: 14, color: theme.colorScheme.primary),
                     const SizedBox(width: 5),
                     Text(
                       loc.tr('identityVerified'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary),
                     ),
                   ],
                 ),
@@ -528,7 +528,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                       children: [
                         Expanded(
                           child: _buildPartyInfoItem(
-                            icon: Icons.badge_outlined,
+                            icon: Symbols.badge_rounded,
                             label: isUAE ? loc.tr('emiratesId') : loc.tr('nationalId'),
                             value: party.nationalIdOrEmiratesId,
                             isLtr: true,
@@ -537,7 +537,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildPartyInfoItem(
-                            icon: Icons.flag_outlined,
+                            icon: Symbols.flag_rounded,
                             label: loc.tr('nationality'),
                             value: party.nationality,
                           ),
@@ -549,7 +549,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                       children: [
                         Expanded(
                           child: _buildPartyInfoItem(
-                            icon: Icons.phone_outlined,
+                            icon: Symbols.phone_rounded,
                             label: loc.tr('phone'),
                             value: party.phone,
                             isLtr: true,
@@ -558,7 +558,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildPartyInfoItem(
-                            icon: Icons.email_outlined,
+                            icon: Symbols.email_rounded,
                             label: loc.tr('email'),
                             value: party.email,
                             isLtr: true,
@@ -568,27 +568,27 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                     ),
                   ] else ...[
                     _buildPartyInfoItem(
-                      icon: Icons.badge_outlined,
+                      icon: Symbols.badge_rounded,
                       label: isUAE ? loc.tr('emiratesId') : loc.tr('nationalId'),
                       value: party.nationalIdOrEmiratesId,
                       isLtr: true,
                     ),
                     const SizedBox(height: 8),
                     _buildPartyInfoItem(
-                      icon: Icons.flag_outlined,
+                      icon: Symbols.flag_rounded,
                       label: loc.tr('nationality'),
                       value: party.nationality,
                     ),
                     const SizedBox(height: 8),
                     _buildPartyInfoItem(
-                      icon: Icons.phone_outlined,
+                      icon: Symbols.phone_rounded,
                       label: loc.tr('phone'),
                       value: party.phone,
                       isLtr: true,
                     ),
                     const SizedBox(height: 8),
                     _buildPartyInfoItem(
-                      icon: Icons.email_outlined,
+                      icon: Symbols.email_rounded,
                       label: loc.tr('email'),
                       value: party.email,
                       isLtr: true,
@@ -597,7 +597,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                   if (party.passportNumber != null && party.passportNumber!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _buildPartyInfoItem(
-                      icon: Icons.menu_book_outlined,
+                      icon: Symbols.menu_book_rounded,
                       label: loc.tr('passportNo'),
                       value: party.passportNumber!,
                       isLtr: true,
@@ -605,7 +605,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                   ],
                   const SizedBox(height: 8),
                   _buildPartyInfoItem(
-                    icon: Icons.location_on_outlined,
+                    icon: Symbols.location_on_rounded,
                     label: loc.tr('address'),
                     value: party.address,
                   ),
@@ -633,21 +633,15 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: TextStyle(
-            fontSize: 12,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         Flexible(
           child: Directionality(
             textDirection: isLtr ? TextDirection.ltr : Directionality.of(context),
             child: Text(
               displayValue,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isLtr ? FontWeight.w600 : FontWeight.w500,
-                color: theme.colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isLtr ? FontWeight.w600 : FontWeight.w500,
+                color: theme.colorScheme.onSurface),
               softWrap: true,
             ),
           ),
@@ -669,7 +663,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(p.propertyTitle, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface)),
+          Text(p.propertyTitle, style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 24,
@@ -697,10 +691,10 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+        Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         Directionality(
           textDirection: isLtr ? TextDirection.ltr : Directionality.of(context),
-          child: Text(displayValue, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+          child: Text(displayValue, style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
         ),
       ],
     );
@@ -778,26 +772,26 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
             leading: CircleAvatar(
               radius: 14,
               backgroundColor: isCleared ? theme.colorScheme.tertiaryContainer : theme.colorScheme.primaryContainer,
-              child: Text('${index + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isCleared ? theme.colorScheme.tertiary : theme.colorScheme.primary)),
+              child: Text('${index + 1}', style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: isCleared ? theme.colorScheme.tertiary : theme.colorScheme.primary)),
             ),
             title: Row(
               children: [
                 Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text(c.chequeNumber, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface)),
+                  child: Text(c.chequeNumber, style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                 ),
                 const SizedBox(width: 8),
-                Text('(${c.bankName})', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                Text('(${c.bankName})', style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
             subtitle: Row(
               children: [
-                Text('${loc.tr('dueDate')}: ', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                Text('${loc.tr('dueDate')}: ', style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 Directionality(
                   textDirection: TextDirection.ltr,
                   child: Text(
                     '${c.dueDate.year}/${c.dueDate.month.toString().padLeft(2, '0')}/${c.dueDate.day.toString().padLeft(2, '0')}',
-                    style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -806,7 +800,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
               textDirection: TextDirection.ltr,
               child: Text(
                 '${CurrencyFormatter.formatAmount(c.amount, langCode: lang)} $currency',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
               ),
             ),
           );
@@ -838,7 +832,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                   Expanded(
                     child: Text(
                       clause.getLocalizedTitle(lang),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                   ),
                   if (clause.lawReference != null)
@@ -850,7 +844,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                       ),
                       child: Text(
                         clause.lawReference!,
-                        style: TextStyle(fontSize: 10, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
                 ],
@@ -858,7 +852,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
               const SizedBox(height: 6),
               Text(
                 clause.getLocalizedBody(lang),
-                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
               ),
             ],
           ),
@@ -928,14 +922,14 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isLessor ? Icons.business_center_rounded : Icons.person_rounded,
+                      isLessor ? Symbols.business_center_rounded : Symbols.person_rounded,
                       size: 16,
                       color: roleColor,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       roleLabel,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: roleColor),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: roleColor),
                     ),
                   ],
                 ),
@@ -949,15 +943,12 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.verified_rounded, size: 13, color: theme.colorScheme.onPrimaryContainer),
+                        Icon(Symbols.verified_rounded, size: 13, color: theme.colorScheme.onPrimaryContainer),
                         const SizedBox(width: 4),
                         Text(
                           loc.tr('digitallySigned'),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimaryContainer),
                         ),
                       ],
                     ),
@@ -973,15 +964,12 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.pending_actions_rounded, size: 13, color: theme.colorScheme.onSurfaceVariant),
+                        Icon(Symbols.pending_actions_rounded, size: 13, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           loc.tr('pendingSignatures'),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -992,11 +980,8 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
           const SizedBox(height: 10),
           Text(
             partyName,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 12),
 
@@ -1024,18 +1009,15 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
                     : Center(
                         child: Text(
                           '✍️ ${signature.signerName}',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontSize: 16,
+                          style: Theme.of(context).textTheme.titleMedium!.copyWith(fontStyle: FontStyle.italic,
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
+                            color: theme.colorScheme.primary),
                         ),
                       ))
                 : Center(
                     child: TashilButton.filled(
                       onPressed: () => _signAs(role),
-                      icon: Icons.draw_rounded,
+                      icon: Symbols.draw_rounded,
                       label: loc.tr('clickToSign'),
                     ),
                   ),
@@ -1046,14 +1028,14 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
           if (signature != null) ...[
             Row(
               children: [
-                Icon(Icons.schedule_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                Icon(Symbols.schedule_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Directionality(
                     textDirection: TextDirection.ltr,
                     child: Text(
                       '\u200E${loc.tr('signedOn')}: ${signature.signedAt.year}/${signature.signedAt.month.toString().padLeft(2, '0')}/${signature.signedAt.day.toString().padLeft(2, '0')} ${signature.signedAt.hour.toString().padLeft(2, '0')}:${signature.signedAt.minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1064,18 +1046,15 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.fingerprint_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                Icon(Symbols.fingerprint_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Directionality(
                     textDirection: TextDirection.ltr,
                     child: Text(
                       '\u200E${loc.tr('hash')}: ${signature.verificationHash}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                        fontFamily: 'monospace',
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        fontFamily: 'monospace'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1086,12 +1065,12 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
           ] else ...[
             Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                Icon(Symbols.info_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     '${loc.tr('verificationStatus')}: ${loc.tr('awaitingVerification')}',
-                    style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1101,15 +1080,12 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.lock_clock_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                Icon(Symbols.lock_clock_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     '${loc.tr('digitalValidation')}: ${loc.tr('readyForSigning')}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

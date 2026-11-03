@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warning_notice_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class ArrearsAgingAnalysisCard extends StatelessWidget {
   final List<ArrearsAgingBucket> buckets;
@@ -55,7 +56,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                         color: colorScheme.error.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
+                      child: Icon(Symbols.warning_amber_rounded, color: colorScheme.error, size: 20),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -64,12 +65,12 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                         children: [
                           Text(
                             loc.tr('arrearsAgingAnalysisChartTitle'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             loc.tr('arrearsAgingAnalysisSubtitle'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -86,7 +87,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                 ),
                 child: Text(
                   '${loc.tr('totalOverdueArrears')}: ${CurrencyFormatter.formatAmount(totalOverdue, langCode: lang)} $currency',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: colorScheme.error),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.error),
                 ),
               ),
             ],
@@ -128,14 +129,14 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              index == 0 ? Icons.timer_outlined : index == 1 ? Icons.warning_rounded : Icons.gavel_rounded,
+                              index == 0 ? Symbols.timer_rounded : index == 1 ? Symbols.warning_rounded : Symbols.gavel_rounded,
                               size: 16,
                               color: bucketColor,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               rangeLabel,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.onSurface),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                             ),
                             const SizedBox(width: 8),
                             Container(
@@ -147,18 +148,15 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                               ),
                               child: Text(
                                 '${b.invoiceCount} ${loc.tr('invoicesWord')}',
-                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
                               ),
                             ),
                           ],
                         ),
                         Text(
                           '${CurrencyFormatter.formatAmount(b.amount, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: bucketColor,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: bucketColor),
                         ),
                       ],
                     ),
@@ -195,7 +193,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                       );
                       LegalWarningNoticeDialog.show(context, overdue);
                     },
-                    icon: Icons.gavel_rounded,
+                    icon: Symbols.gavel_rounded,
                     label: loc.tr('issueStatutoryNoticeForOverdueArrears'),
                     customColor: colorScheme.error,
                   ),

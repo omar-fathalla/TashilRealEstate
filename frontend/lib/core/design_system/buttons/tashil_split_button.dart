@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Item model for TashilSplitButton dropdown options.
 class TashilSplitButtonItem<T> {
@@ -128,7 +129,7 @@ class _TashilSplitButtonState<T> extends State<TashilSplitButton<T>> {
         borderColor = null;
         shadows = [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: colorScheme.shadow.withValues(alpha: 0.12),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -146,7 +147,7 @@ class _TashilSplitButtonState<T> extends State<TashilSplitButton<T>> {
         borderColor = colorScheme.outlineVariant.withValues(alpha: 0.2);
         shadows = [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: colorScheme.shadow.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -275,7 +276,7 @@ class _TashilSplitButtonState<T> extends State<TashilSplitButton<T>> {
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOutCubic,
                     child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
+                      Symbols.keyboard_arrow_down_rounded,
                       size: 22,
                       color: fg,
                     ),
@@ -332,10 +333,7 @@ class _TashilSplitButtonState<T> extends State<TashilSplitButton<T>> {
                                       const SizedBox(height: 2),
                                       Text(
                                         item.subtitle!,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
-                                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                        ),
+                                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -345,7 +343,7 @@ class _TashilSplitButtonState<T> extends State<TashilSplitButton<T>> {
                               ),
                               if (isSelected)
                                 Icon(
-                                  Icons.check_rounded,
+                                  Symbols.check_rounded,
                                   size: 18,
                                   color: colorScheme.primary,
                                 ),

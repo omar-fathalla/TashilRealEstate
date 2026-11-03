@@ -8,6 +8,7 @@ import '../../../core/services/ai_translation_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/investor_portfolio_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class MonthlyCashFlowDetailsDialog extends StatelessWidget {
   final MonthlyCashFlowItem flow;
@@ -89,7 +90,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                           color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.calendar_month_rounded, color: colorScheme.onPrimaryContainer, size: 22),
+                        child: Icon(Symbols.calendar_month_rounded, color: colorScheme.onPrimaryContainer, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -104,7 +105,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                           ),
                           Text(
                             flow.monthKey,
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -130,6 +131,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildMetricTile(
+                        context: context,
                         label: loc.tr('inflows'),
                         amount: '+ ${CurrencyFormatter.formatAmount(flow.grossRentalInflow, langCode: lang)} $currency',
                         color: colorScheme.primary,
@@ -138,6 +140,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                     Container(width: 1, height: 36, color: colorScheme.outlineVariant),
                     Expanded(
                       child: _buildMetricTile(
+                        context: context,
                         label: loc.tr('expenses'),
                         amount: '- ${CurrencyFormatter.formatAmount(totalExpenses, langCode: lang)} $currency',
                         color: colorScheme.error,
@@ -146,6 +149,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                     Container(width: 1, height: 36, color: colorScheme.outlineVariant),
                     Expanded(
                       child: _buildMetricTile(
+                        context: context,
                         label: loc.tr('netCashFlowLabel'),
                         amount: '+ ${CurrencyFormatter.formatAmount(flow.netCashFlow, langCode: lang)} $currency',
                         color: colorScheme.secondary,
@@ -163,19 +167,22 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _buildChip(
-                    icon: Icons.check_circle_rounded,
+                    context: context,
+                    icon: Symbols.check_circle_rounded,
                     label: '${activeAssets.length} ${loc.tr('rentedUnitsCountInMonth')}',
                     color: colorScheme.primary,
                     bgColor: colorScheme.primaryContainer,
                   ),
                   _buildChip(
-                    icon: Icons.pie_chart_rounded,
+                    context: context,
+                    icon: Symbols.pie_chart_rounded,
                     label: '${loc.tr('portfolioOccupancy')}: ${isExpandedQuarter ? '100%' : '75%'}',
                     color: colorScheme.secondary,
                     bgColor: colorScheme.secondaryContainer,
                   ),
                   _buildChip(
-                    icon: Icons.verified_rounded,
+                    context: context,
+                    icon: Symbols.verified_rounded,
                     label: loc.tr('settlementCompleted'),
                     color: colorScheme.tertiary,
                     bgColor: colorScheme.tertiaryContainer,
@@ -187,7 +194,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
               // Section: Rented Units Breakdown
               Text(
                 loc.tr('rentedUnitsCountInMonth'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               ...activeAssets.map((asset) {
@@ -211,7 +218,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                           color: colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.apartment_rounded, color: colorScheme.primary, size: 18),
+                        child: Icon(Symbols.apartment_rounded, color: colorScheme.primary, size: 18),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -220,23 +227,20 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                           children: [
                             Text(
                               assetName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${loc.tr('tenant')}: ${asset.tenantName ?? loc.tr('statusOccupied')} • $assetLocation',
-                              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
                       ),
                       Text(
                         '+ ${CurrencyFormatter.formatAmount(rent, langCode: lang)} $currency',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                          fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -247,7 +251,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
               // Section: Expenses Breakdown
               Text(
                 loc.tr('expenses'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               Container(
@@ -260,6 +264,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildDeductionRow(
+                      context: context,
                       label: loc.tr('operatingAndManagementFees'),
                       amount: flow.operatingExpensesOutflow,
                       currency: currency,
@@ -268,6 +273,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                     ),
                     const Divider(height: 14),
                     _buildDeductionRow(
+                      context: context,
                       label: loc.tr('maintenanceFeesDeducted'),
                       amount: flow.maintenanceOutflow,
                       currency: currency,
@@ -296,7 +302,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
                         message: '${loc.tr('exportMonthStatement')} ($monthName)',
                       );
                     },
-                    icon: Icons.picture_as_pdf_outlined,
+                    icon: Symbols.picture_as_pdf_rounded,
                     label: loc.tr('exportMonthStatement'),
                   ),
                 ],
@@ -309,6 +315,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildMetricTile({
+    required BuildContext context,
     required String label,
     required String amount,
     required Color color,
@@ -319,15 +326,12 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10.5, color: Colors.grey)),
+          Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 4),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: color,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: color),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -337,6 +341,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildChip({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required Color color,
@@ -356,7 +361,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -364,6 +369,7 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildDeductionRow({
+    required BuildContext context,
     required String label,
     required double amount,
     required String currency,
@@ -373,10 +379,10 @@ class MonthlyCashFlowDetailsDialog extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+        Text(label, style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant)),
         Text(
           '- ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.error),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.error),
         ),
       ],
     );

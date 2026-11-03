@@ -111,12 +111,9 @@ class _TashilRailDestinationState extends State<TashilRailDestination> {
                     alignment: Alignment.center,
                     child: Text(
                       widget.badgeCount ?? '',
-                      style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(
-                        fontSize: 10.0,
-                        fontWeight: FontWeight.bold,
+                      style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(fontWeight: FontWeight.bold,
                         color: colorScheme.onError,
-                        height: 1.1,
-                      ),
+                        height: 1.1),
                     ),
                   ),
           ),
@@ -193,12 +190,9 @@ class _TashilRailDestinationState extends State<TashilRailDestination> {
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: (theme.textTheme.labelMedium ?? const TextStyle()).copyWith(
-                        fontSize: 12.0,
-                        fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
+                      style: (theme.textTheme.labelMedium ?? const TextStyle()).copyWith(fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
                         color: widget.isSelected ? colorScheme.onSurface : (_isHovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant),
-                        letterSpacing: 0.1,
-                      ),
+                        letterSpacing: 0.1),
                     ),
                   ),
                 ],
@@ -274,12 +268,9 @@ class _TashilRailDestinationState extends State<TashilRailDestination> {
                         widget.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-                          fontSize: 14.0,
-                          fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
+                        style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
                           color: contentColor,
-                          letterSpacing: 0.1,
-                        ),
+                          letterSpacing: 0.1),
                       ),
                     ),
                     if (widget.badgeCount != null) ...[
@@ -294,11 +285,8 @@ class _TashilRailDestinationState extends State<TashilRailDestination> {
                         ),
                         child: Text(
                           widget.badgeCount!,
-                          style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(
-                            fontSize: 12.0,
-                            fontWeight: FontWeight.bold,
-                            color: contentColor,
-                          ),
+                          style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(fontWeight: FontWeight.bold,
+                            color: contentColor),
                         ),
                       ),
                     ] else if (widget.hasBadgeDot) ...[

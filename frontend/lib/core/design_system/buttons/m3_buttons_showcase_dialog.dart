@@ -9,6 +9,7 @@ import 'tashil_split_button.dart';
 import 'tashil_button_group.dart';
 import 'tashil_fab.dart';
 import 'tashil_fab_menu.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying all 10 official Google Material Design 3
 /// button types in a side-by-side grid, numbered 1 to 10 matching the official M3 reference.
@@ -53,7 +54,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: ConstrainedBox(
@@ -77,7 +78,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                           color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.touch_app_rounded, color: colorScheme.primary, size: 22),
+                        child: Icon(Symbols.touch_app_rounded, color: colorScheme.primary, size: 22),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -101,7 +102,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                         ),
                       ),
                       IconButton.outlined(
-                        icon: const Icon(Icons.close_rounded, size: 20),
+                        icon: const Icon(Symbols.close_rounded, size: 20),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -125,7 +126,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               number: 1,
                               title: loc.tr('m3BtnType1'),
                               child: TashilButton(
-                                icon: Icons.edit_outlined,
+                                icon: Symbols.edit_rounded,
                                 label: loc.tr('m3BtnDefaultAction'),
                                 onPressed: () => _notifyAction('Button (1) Clicked'),
                               ),
@@ -156,7 +157,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               number: 3,
                               title: loc.tr('m3BtnType3'),
                               child: TashilIconButton.tonal(
-                                icon: Icons.settings_rounded,
+                                icon: Symbols.settings_rounded,
                                 onPressed: () => _notifyAction('Icon Button (3) Clicked'),
                               ),
                             ),
@@ -168,16 +169,16 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                                 children: [
                                   TashilToggleIconButton(
                                     isSelected: !_toggleIconBtn4Selected,
-                                    icon: Icons.settings_outlined,
-                                    selectedIcon: Icons.settings_rounded,
+                                    icon: Symbols.settings_rounded,
+                                    selectedIcon: Symbols.settings_rounded,
                                     onSelectedChanged: (val) =>
                                         setState(() => _toggleIconBtn4Selected = !val),
                                   ),
                                   const SizedBox(width: 8),
                                   TashilToggleIconButton(
                                     isSelected: _toggleIconBtn4Selected,
-                                    icon: Icons.settings_outlined,
-                                    selectedIcon: Icons.settings_rounded,
+                                    icon: Symbols.settings_rounded,
+                                    selectedIcon: Symbols.settings_rounded,
                                     selectedBackgroundColor: colorScheme.secondaryContainer,
                                     selectedIconColor: colorScheme.onSecondaryContainer,
                                     onSelectedChanged: (val) =>
@@ -203,7 +204,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               number: 5,
                               title: loc.tr('m3BtnType5'),
                               child: TashilSplitButton<String>(
-                                icon: Icons.edit_outlined,
+                                icon: Symbols.edit_rounded,
                                 label: loc.tr('m3BtnSplitPrimaryAction'),
                                 onPressed: () => _notifyAction('Split Button Primary Clicked'),
                                 onItemSelected: (val) =>
@@ -212,17 +213,17 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                                   TashilSplitButtonItem(
                                     value: 'draft',
                                     label: loc.tr('m3BtnSplitOption1'),
-                                    icon: Icons.save_outlined,
+                                    icon: Symbols.save_rounded,
                                   ),
                                   TashilSplitButtonItem(
                                     value: 'export',
                                     label: loc.tr('m3BtnSplitOption2'),
-                                    icon: Icons.picture_as_pdf_outlined,
+                                    icon: Symbols.picture_as_pdf_rounded,
                                   ),
                                   TashilSplitButtonItem(
                                     value: 'share',
                                     label: loc.tr('m3BtnSplitOption3'),
-                                    icon: Icons.share_outlined,
+                                    icon: Symbols.share_rounded,
                                   ),
                                 ],
                               ),
@@ -233,7 +234,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               child: TashilStandardButtonGroup(
                                 children: [
                                   TashilIconButton.tonal(
-                                    icon: Icons.edit_outlined,
+                                    icon: Symbols.edit_rounded,
                                     onPressed: () => _notifyAction('Group Icon 1 Clicked'),
                                   ),
                                   TashilButton(
@@ -241,7 +242,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                                     onPressed: () => _notifyAction('Group Button Clicked'),
                                   ),
                                   TashilIconButton.tonal(
-                                    icon: Icons.edit_outlined,
+                                    icon: Symbols.edit_rounded,
                                     onPressed: () => _notifyAction('Group Icon 2 Clicked'),
                                   ),
                                 ],
@@ -258,17 +259,17 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                                   TashilConnectedButtonSegment(
                                     value: 'first',
                                     label: loc.tr('m3BtnFirstAction'),
-                                    icon: Icons.star_rounded,
+                                    icon: Symbols.star_rounded,
                                   ),
                                   TashilConnectedButtonSegment(
                                     value: 'second',
                                     label: loc.tr('m3BtnSecondAction'),
-                                    icon: Icons.star_border_rounded,
+                                    icon: Symbols.star_border_rounded,
                                   ),
                                   TashilConnectedButtonSegment(
                                     value: 'third',
                                     label: loc.tr('m3BtnThirdAction'),
-                                    icon: Icons.star_border_rounded,
+                                    icon: Symbols.star_border_rounded,
                                   ),
                                 ],
                               ),
@@ -291,7 +292,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               number: 8,
                               title: loc.tr('m3BtnType8'),
                               child: TashilFloatingActionButton(
-                                icon: Icons.edit_outlined,
+                                icon: Symbols.edit_rounded,
                                 onPressed: () => _notifyAction('FAB (8) Clicked'),
                               ),
                             ),
@@ -299,7 +300,7 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                               number: 9,
                               title: loc.tr('m3BtnType9'),
                               child: TashilExtendedFloatingActionButton(
-                                icon: Icons.edit_outlined,
+                                icon: Symbols.edit_rounded,
                                 label: loc.tr('m3BtnDefaultAction'),
                                 onPressed: () => _notifyAction('Extended FAB (9) Clicked'),
                               ),
@@ -316,17 +317,17 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                                     items: [
                                       TashilFabMenuItem(
                                         label: loc.tr('m3BtnFirstAction'),
-                                        icon: Icons.star_rounded,
+                                        icon: Symbols.star_rounded,
                                         onPressed: () => _notifyAction('Menu 1: First Clicked'),
                                       ),
                                       TashilFabMenuItem(
                                         label: loc.tr('m3BtnSecondAction'),
-                                        icon: Icons.star_rounded,
+                                        icon: Symbols.star_rounded,
                                         onPressed: () => _notifyAction('Menu 2: Second Clicked'),
                                       ),
                                       TashilFabMenuItem(
                                         label: loc.tr('m3BtnThirdAction'),
-                                        icon: Icons.star_rounded,
+                                        icon: Symbols.star_rounded,
                                         onPressed: () => _notifyAction('Menu 3: Third Clicked'),
                                       ),
                                     ],
@@ -379,21 +380,15 @@ class _M3ButtonsShowcaseDialogState extends State<M3ButtonsShowcaseDialog> {
                 ),
                 child: Text(
                   '$number',
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),

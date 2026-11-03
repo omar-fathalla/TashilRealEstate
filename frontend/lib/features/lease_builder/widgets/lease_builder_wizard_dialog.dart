@@ -22,6 +22,7 @@ import 'package:tashil_real_estate/features/legal_ai_advisor/widgets/ai_legal_cl
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class LeaseBuilderWizardDialog extends StatefulWidget {
   final LeaseContractModel? initialContract;
@@ -72,20 +73,20 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
   final _lessorEmailCtrl = TextEditingController();
   final _lessorAddressCtrl = TextEditingController();
 
-  final _tenantNameCtrl = TextEditingController(text: 'كريم عادل الشناوي');
+  final _tenantNameCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy264'));
   final _tenantIdCtrl = TextEditingController(text: '29508120104567');
   final _tenantPhoneCtrl = TextEditingController(text: '+201145678901');
   final _tenantEmailCtrl = TextEditingController(text: 'karim.shenawy@gmail.com');
-  final _tenantAddressCtrl = TextEditingController(text: 'مدينة نصر، القاهرة');
+  final _tenantAddressCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy282'));
 
   // Step 2: Property Controllers
-  final _propTitleCtrl = TextEditingController(text: 'شقة فاخرة مطابقة للمواصفات');
+  final _propTitleCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy232'));
   final _unitNumberCtrl = TextEditingController(text: '502');
-  final _buildingNameCtrl = TextEditingController(text: 'برج الأندلس');
-  final _districtCtrl = TextEditingController(text: 'التجمع الخامس');
-  final _cityCtrl = TextEditingController(text: 'القاهرة');
+  final _buildingNameCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy159'));
+  final _districtCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy123'));
+  final _cityCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy138'));
   final _areaCtrl = TextEditingController(text: '150');
-  final _floorCtrl = TextEditingController(text: 'الخامس');
+  final _floorCtrl = TextEditingController(text: AppLocalizations.trStatic('uiCopy127'));
   final _makaniCtrl = TextEditingController(text: '31422 78901');
   final _dewaCtrl = TextEditingController(text: '20984711');
   final _titleDeedCtrl = TextEditingController(text: 'TD-2026-004128');
@@ -156,23 +157,23 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
   void _initDefaultsForCountry(String country) {
     final profile = UserProfileService().profileNotifier.value;
     if (country == 'AE') {
-      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : 'عبدالله راشد النعيمي';
+      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : AppLocalizations.trStatic('uiCopy239');
       _lessorIdCtrl.text = profile.nationalId.isNotEmpty ? profile.nationalId : '784-1985-1234567-1';
       _lessorPhoneCtrl.text = profile.phone.isNotEmpty ? profile.phone : '+971501234567';
       _lessorEmailCtrl.text = profile.email.isNotEmpty ? profile.email : 'abdullah.nuaimi@tashil.ae';
-      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : 'نخلة جميرا، دبي';
+      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : AppLocalizations.trStatic('uiCopy317');
 
       _tenantNameCtrl.text = 'Sarah Jennifer Parker';
       _tenantIdCtrl.text = '784-1992-9876543-2';
       _tenantPhoneCtrl.text = '+971559876543';
       _tenantEmailCtrl.text = 'sarah.parker@techcorp.ae';
-      _tenantAddressCtrl.text = 'دبي مارينا، دبي';
+      _tenantAddressCtrl.text = AppLocalizations.trStatic('uiCopy205');
 
-      _propTitleCtrl.text = 'شقة راقية بإطلالة على مارينا دبي';
+      _propTitleCtrl.text = AppLocalizations.trStatic('uiCopy226');
       _unitNumberCtrl.text = '1402';
       _buildingNameCtrl.text = 'Marina Gate 1';
-      _districtCtrl.text = 'دبي مارينا';
-      _cityCtrl.text = 'دبي';
+      _districtCtrl.text = AppLocalizations.trStatic('uiCopy204');
+      _cityCtrl.text = AppLocalizations.trStatic('uiCopy203');
       _areaCtrl.text = '130';
       _floorCtrl.text = '14';
 
@@ -182,25 +183,25 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       _depositCtrl.text = '12000';
       _annualIncreasePct = 0.0;
     } else {
-      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : 'محمد فتح الله';
+      _lessorNameCtrl.text = profile.hasFullName ? profile.fullName : AppLocalizations.trStatic('uiCopy280');
       _lessorIdCtrl.text = profile.nationalId.isNotEmpty ? profile.nationalId : '29304150102432';
       _lessorPhoneCtrl.text = profile.phone.isNotEmpty ? profile.phone : '+201002345678';
       _lessorEmailCtrl.text = profile.email.isNotEmpty ? profile.email : 'mohamed.fathalla@gmail.com';
-      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : 'عمارة 42، الحي الأول، التجمع الخامس، القاهرة';
+      _lessorAddressCtrl.text = profile.address.isNotEmpty ? profile.address : AppLocalizations.trStatic('uiCopy246');
 
-      _tenantNameCtrl.text = 'كريم عادل الشناوي';
+      _tenantNameCtrl.text = AppLocalizations.trStatic('uiCopy264');
       _tenantIdCtrl.text = '29508120104567';
       _tenantPhoneCtrl.text = '+201145678901';
       _tenantEmailCtrl.text = 'karim.shenawy@gmail.com';
-      _tenantAddressCtrl.text = 'مدينة نصر، القاهرة';
+      _tenantAddressCtrl.text = AppLocalizations.trStatic('uiCopy282');
 
-      _propTitleCtrl.text = 'شقة فاخرة مطابقة للمواصفات';
+      _propTitleCtrl.text = AppLocalizations.trStatic('uiCopy232');
       _unitNumberCtrl.text = '502';
-      _buildingNameCtrl.text = 'برج الأندلس';
-      _districtCtrl.text = 'التجمع الخامس';
-      _cityCtrl.text = 'القاهرة';
+      _buildingNameCtrl.text = AppLocalizations.trStatic('uiCopy159');
+      _districtCtrl.text = AppLocalizations.trStatic('uiCopy123');
+      _cityCtrl.text = AppLocalizations.trStatic('uiCopy138');
       _areaCtrl.text = '150';
-      _floorCtrl.text = 'الخامس';
+      _floorCtrl.text = AppLocalizations.trStatic('uiCopy127');
 
       _rentAmountCtrl.text = '25000';
       _paymentFrequency = 'monthly';
@@ -335,7 +336,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       lessor: ContractParty(
         name: _lessorNameCtrl.text.trim(),
         nationalIdOrEmiratesId: _lessorIdCtrl.text.trim(),
-        nationality: isEdit ? widget.initialContract!.lessor.nationality : (isAE ? 'إماراتي' : 'مصري'),
+        nationality: isEdit ? widget.initialContract!.lessor.nationality : (isAE ? 'إماراتي' : AppLocalizations.trStatic('uiCopy292')),
         phone: _lessorPhoneCtrl.text.trim(),
         email: _lessorEmailCtrl.text.trim(),
         address: _lessorAddressCtrl.text.trim(),
@@ -344,7 +345,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       tenant: ContractParty(
         name: _tenantNameCtrl.text.trim(),
         nationalIdOrEmiratesId: _tenantIdCtrl.text.trim(),
-        nationality: isEdit ? widget.initialContract!.tenant.nationality : (isAE ? 'بريطاني' : 'مصري'),
+        nationality: isEdit ? widget.initialContract!.tenant.nationality : (isAE ? 'بريطاني' : AppLocalizations.trStatic('uiCopy292')),
         phone: _tenantPhoneCtrl.text.trim(),
         email: _tenantEmailCtrl.text.trim(),
         address: _tenantAddressCtrl.text.trim(),
@@ -415,12 +416,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                             color: theme.colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.description_rounded, color: theme.colorScheme.primary, size: 20),
+                          child: Icon(Symbols.description_rounded, color: theme.colorScheme.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Text(
                           widget.initialContract != null ? loc.tr('editContractBtn') : loc.tr('digitalLeaseBuilder'),
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.colorScheme.onSurface),
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                         ),
                       ],
                     ),
@@ -429,7 +430,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 12),
                   child: Chip(
-                    avatar: Icon(Icons.flag_rounded, size: 18, color: theme.colorScheme.primary),
+                    avatar: Icon(Symbols.flag_rounded, size: 18, color: theme.colorScheme.primary),
                     label: Text(loc.tr(_countryCode == 'AE' ? 'country_ae' : 'country_eg')),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -457,17 +458,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                             color: theme.colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.description_rounded, color: theme.colorScheme.primary, size: 18),
+                          child: Icon(Symbols.description_rounded, color: theme.colorScheme.primary, size: 18),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             loc.tr('digitalLeaseBuilder'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.5,
-                              color: theme.colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface),
                           ),
                         ),
                       ],
@@ -573,18 +571,15 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                             ),
                             alignment: Alignment.center,
                             child: isDone
-                                ? Icon(Icons.check_rounded, size: 14, color: theme.colorScheme.onPrimary)
+                                ? Icon(Symbols.check_rounded, size: 14, color: theme.colorScheme.onPrimary)
                                 : Directionality(
                                     textDirection: TextDirection.ltr,
                                     child: Text(
                                       '${index + 1}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                         color: isActive
                                             ? theme.colorScheme.primary
-                                            : theme.colorScheme.onSurfaceVariant,
-                                      ),
+                                            : theme.colorScheme.onSurfaceVariant),
                                     ),
                                   ),
                           ),
@@ -595,15 +590,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                                 steps[index],
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                                   color: isActive
                                       ? theme.colorScheme.onPrimary
                                       : (isDone
                                           ? theme.colorScheme.onSurface
-                                          : theme.colorScheme.onSurfaceVariant),
-                                ),
+                                          : theme.colorScheme.onSurfaceVariant)),
                               ),
                             ),
                           ],
@@ -660,7 +652,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildStepBanner(
                 loc.tr('step1Title'),
                 isAE ? loc.tr('step1Subtitle_ae') : loc.tr('step1Subtitle_eg'),
-                Icons.groups_rounded,
+                Symbols.groups_rounded,
               ),
               const SizedBox(height: 24),
 
@@ -671,12 +663,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   children: [
                     Text(
                       loc.tr('lessorFirstParty'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                     ),
                     const SizedBox(height: 8),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('lessor'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanLessorIdBtn'),
                     ),
                   ],
@@ -688,20 +680,20 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     Expanded(
                       child: Text(
                         loc.tr('lessorFirstParty'),
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                     const SizedBox(width: 12),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('lessor'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanLessorIdBtn'),
                     ),
                   ],
                 ),
               ],
               const SizedBox(height: 12),
-              _buildTextField(_lessorNameCtrl, loc.tr('lessorFullName'), Icons.person_rounded),
+              _buildTextField(_lessorNameCtrl, loc.tr('lessorFullName'), Symbols.person_rounded),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -709,7 +701,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _lessorIdCtrl,
                       isAE ? loc.tr('emiratesId') : loc.tr('nationalId'),
-                      Icons.badge_rounded,
+                      Symbols.badge_rounded,
                       isCode: true,
                     ),
                   ),
@@ -718,7 +710,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _lessorPhoneCtrl,
                       loc.tr('phone'),
-                      Icons.phone_rounded,
+                      Symbols.phone_rounded,
                       isPhone: true,
                       hintText: isAE ? '+971 50 000 0000' : '+20 100 000 0000',
                     ),
@@ -732,7 +724,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _lessorEmailCtrl,
                       loc.tr('email'),
-                      Icons.email_rounded,
+                      Symbols.email_rounded,
                       isEmail: true,
                     ),
                   ),
@@ -741,7 +733,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _lessorAddressCtrl,
                       loc.tr('address'),
-                      Icons.home_rounded,
+                      Symbols.home_rounded,
                     ),
                   ),
                 ],
@@ -755,12 +747,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   children: [
                     Text(
                       loc.tr('tenantSecondParty'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.secondary),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.secondary),
                     ),
                     const SizedBox(height: 8),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('tenant'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanTenantIdBtn'),
                     ),
                   ],
@@ -772,20 +764,20 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     Expanded(
                       child: Text(
                         loc.tr('tenantSecondParty'),
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.secondary),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.secondary),
                       ),
                     ),
                     const SizedBox(width: 12),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('tenant'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanTenantIdBtn'),
                     ),
                   ],
                 ),
               ],
               const SizedBox(height: 12),
-              _buildTextField(_tenantNameCtrl, loc.tr('tenantFullName'), Icons.person_outline_rounded),
+              _buildTextField(_tenantNameCtrl, loc.tr('tenantFullName'), Symbols.person_outline_rounded),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -793,7 +785,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _tenantIdCtrl,
                       isAE ? loc.tr('emiratesId') : loc.tr('nationalId'),
-                      Icons.badge_rounded,
+                      Symbols.badge_rounded,
                       isCode: true,
                     ),
                   ),
@@ -802,7 +794,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _tenantPhoneCtrl,
                       loc.tr('phone'),
-                      Icons.phone_rounded,
+                      Symbols.phone_rounded,
                       isPhone: true,
                       hintText: isAE ? '+971 50 000 0000' : '+20 100 000 0000',
                     ),
@@ -816,7 +808,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _tenantEmailCtrl,
                       loc.tr('email'),
-                      Icons.email_rounded,
+                      Symbols.email_rounded,
                       isEmail: true,
                     ),
                   ),
@@ -825,7 +817,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _tenantAddressCtrl,
                       loc.tr('address'),
-                      Icons.home_rounded,
+                      Symbols.home_rounded,
                     ),
                   ),
                 ],
@@ -853,7 +845,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildStepBanner(
                 loc.tr('step2Title'),
                 isAE ? loc.tr('step2Subtitle_ae') : loc.tr('step2Subtitle_eg'),
-                Icons.apartment_rounded,
+                Symbols.apartment_rounded,
               ),
               const SizedBox(height: 16),
 
@@ -863,12 +855,12 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   children: [
                     Text(
                       isAE ? loc.tr('unitAndTitleDeed_ae') : loc.tr('unitAndOwnershipDoc_eg'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('property'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanTitleDeedBtn'),
                     ),
                   ],
@@ -880,13 +872,13 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     Expanded(
                       child: Text(
                         isAE ? loc.tr('unitAndTitleDeed_ae') : loc.tr('unitAndOwnershipDoc_eg'),
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                     ),
                     const SizedBox(width: 12),
                     TashilButton.tonal(
                       onPressed: () => _openOcrExtractor('property'),
-                      icon: Icons.document_scanner_rounded,
+                      icon: Symbols.document_scanner_rounded,
                       label: loc.tr('scanTitleDeedBtn'),
                     ),
                   ],
@@ -898,7 +890,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildPropertySelectorDropdown(context, loc, theme),
               const SizedBox(height: 16),
 
-              _buildTextField(_propTitleCtrl, loc.tr('propertyTitleField'), Icons.home_work_rounded),
+              _buildTextField(_propTitleCtrl, loc.tr('propertyTitleField'), Symbols.home_work_rounded),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -906,7 +898,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _unitNumberCtrl,
                       loc.tr('unitNumber'),
-                      Icons.door_front_door_rounded,
+                      Symbols.door_front_rounded,
                       isCode: true,
                     ),
                   ),
@@ -915,7 +907,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _buildingNameCtrl,
                       loc.tr('buildingName'),
-                      Icons.business_rounded,
+                      Symbols.business_rounded,
                     ),
                   ),
                 ],
@@ -927,7 +919,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _districtCtrl,
                       loc.tr('districtCity'),
-                      Icons.map_rounded,
+                      Symbols.map_rounded,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -935,7 +927,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _cityCtrl,
                       loc.tr('city'),
-                      Icons.location_city_rounded,
+                      Symbols.location_city_rounded,
                     ),
                   ),
                 ],
@@ -947,7 +939,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _areaCtrl,
                       loc.tr('areaSqm'),
-                      Icons.square_foot_rounded,
+                      Symbols.square_foot_rounded,
                       isNumber: true,
                     ),
                   ),
@@ -956,7 +948,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _floorCtrl,
                       loc.tr('floorNumber'),
-                      Icons.stairs_rounded,
+                      Symbols.stairs_rounded,
                     ),
                   ),
                 ],
@@ -971,7 +963,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                       child: _buildTextField(
                         _makaniCtrl,
                         loc.tr('makaniNumber'),
-                        Icons.pin_drop_rounded,
+                        Symbols.pin_drop_rounded,
                         isCode: true,
                       ),
                     ),
@@ -980,7 +972,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                       child: _buildTextField(
                         _dewaCtrl,
                         loc.tr('dewaPremiseNo'),
-                        Icons.electric_bolt_rounded,
+                        Symbols.electric_bolt_rounded,
                         isCode: true,
                       ),
                     ),
@@ -991,7 +983,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildTextField(
                 _titleDeedCtrl,
                 isAE ? loc.tr('titleDeedNumber') : loc.tr('ownershipDocNumber'),
-                Icons.receipt_long_rounded,
+                Symbols.receipt_long_rounded,
                 isCode: true,
               ),
             ],
@@ -1091,7 +1083,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
           value: p.id,
           label: p.getTitle(lang),
           supportingText: subtitle,
-          icon: Icons.apartment_rounded,
+          icon: Symbols.apartment_rounded,
         ),
       );
     }
@@ -1105,7 +1097,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
         value: '_custom_property_',
         label: loc.tr('enterCustomProperty'),
         supportingText: loc.tr('enterCustomPropertySubtitle'),
-        icon: Icons.edit_note_rounded,
+        icon: Symbols.edit_note_rounded,
       ),
     );
 
@@ -1122,7 +1114,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
           value: effectiveValue,
           labelText: loc.tr('selectPropertyFromPortfolio'),
           hintText: loc.tr('selectPropertyHint'),
-          prefixIcon: Icons.real_estate_agent_rounded,
+          prefixIcon: Symbols.real_estate_agent_rounded,
           items: items,
           onChanged: (val) {
             if (val == null || val == '__divider__') return;
@@ -1146,16 +1138,13 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
+                Icon(Symbols.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     loc.tr('propertyAutoFilledBanner'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onPrimaryContainer),
                   ),
                 ),
               ],
@@ -1183,7 +1172,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildStepBanner(
                 loc.tr('step3Title'),
                 isAE ? loc.tr('step3Subtitle_ae') : loc.tr('step3Subtitle_eg'),
-                Icons.account_balance_wallet_rounded,
+                Symbols.account_balance_wallet_rounded,
               ),
               const SizedBox(height: 24),
 
@@ -1194,7 +1183,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _rentAmountCtrl,
                       '${loc.tr('totalRentValue')} ($currency)',
-                      Icons.payments_rounded,
+                      Symbols.payments_rounded,
                       isNumber: true,
                     ),
                   ),
@@ -1203,7 +1192,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     child: _buildTextField(
                       _depositCtrl,
                       '${loc.tr('securityDepositAmount')} ($currency)',
-                      Icons.shield_rounded,
+                      Symbols.shield_rounded,
                       isNumber: true,
                     ),
                   ),
@@ -1217,7 +1206,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                 children: [
                   Text(
                     loc.tr('paymentFrequency'),
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -1238,22 +1227,22 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         TashilConnectedButtonSegment(
                           value: 'monthly',
                           label: loc.tr('freq_monthly'),
-                          icon: Icons.calendar_month_rounded,
+                          icon: Symbols.calendar_month_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'quarterly',
                           label: loc.tr('freq_quarterly'),
-                          icon: Icons.date_range_rounded,
+                          icon: Symbols.date_range_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'semi_annual',
                           label: loc.tr('freq_semi_annual'),
-                          icon: Icons.event_repeat_rounded,
+                          icon: Symbols.event_repeat_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'annual',
                           label: loc.tr('freq_annual'),
-                          icon: Icons.event_available_rounded,
+                          icon: Symbols.event_available_rounded,
                         ),
                       ],
                     ),
@@ -1268,7 +1257,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                 children: [
                   Text(
                     loc.tr('numberOfPdcCheques'),
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -1281,27 +1270,27 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         TashilConnectedButtonSegment(
                           value: 1,
                           label: '1',
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 2,
                           label: '2',
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 4,
                           label: '4',
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 6,
                           label: '6',
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 12,
                           label: '12',
-                          icon: Icons.receipt_long_rounded,
+                          icon: Symbols.receipt_long_rounded,
                         ),
                       ],
                     ),
@@ -1317,7 +1306,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   children: [
                     Text(
                       loc.tr('leaseStartDate'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -1345,14 +1334,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today_rounded, size: 16, color: theme.colorScheme.primary),
+                            Icon(Symbols.calendar_today_rounded, size: 16, color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Directionality(
                                 textDirection: TextDirection.ltr,
                                 child: Text(
                                   '${_startDate.year}/${_startDate.month.toString().padLeft(2, '0')}/${_startDate.day.toString().padLeft(2, '0')}',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1364,7 +1353,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     const SizedBox(height: 12),
                     Text(
                       loc.tr('leaseEndDate'),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -1387,14 +1376,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.event_available_rounded, size: 16, color: theme.colorScheme.primary),
+                            Icon(Symbols.event_available_rounded, size: 16, color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Directionality(
                                 textDirection: TextDirection.ltr,
                                 child: Text(
                                   '${_endDate.year}/${_endDate.month.toString().padLeft(2, '0')}/${_endDate.day.toString().padLeft(2, '0')}',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1414,7 +1403,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         children: [
                           Text(
                             loc.tr('leaseStartDate'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                           ),
                           const SizedBox(height: 8),
                           InkWell(
@@ -1442,14 +1431,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today_rounded, size: 16, color: theme.colorScheme.primary),
+                                  Icon(Symbols.calendar_today_rounded, size: 16, color: theme.colorScheme.primary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Directionality(
                                       textDirection: TextDirection.ltr,
                                       child: Text(
                                         '${_startDate.year}/${_startDate.month.toString().padLeft(2, '0')}/${_startDate.day.toString().padLeft(2, '0')}',
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -1468,7 +1457,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         children: [
                           Text(
                             loc.tr('leaseEndDate'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                           ),
                           const SizedBox(height: 8),
                           InkWell(
@@ -1491,14 +1480,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.event_available_rounded, size: 16, color: theme.colorScheme.primary),
+                                  Icon(Symbols.event_available_rounded, size: 16, color: theme.colorScheme.primary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Directionality(
                                       textDirection: TextDirection.ltr,
                                       child: Text(
                                         '${_endDate.year}/${_endDate.month.toString().padLeft(2, '0')}/${_endDate.day.toString().padLeft(2, '0')}',
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -1524,7 +1513,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                     children: [
                       Text(
                         loc.tr('annualEscalationRate'),
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1536,7 +1525,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                           textDirection: TextDirection.ltr,
                           child: Text(
                             '${_annualIncreasePct.toInt()}%',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 13),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                           ),
                         ),
                       ),
@@ -1556,7 +1545,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   const SizedBox(height: 4),
                   Text(
                     isAE ? loc.tr('reraEscalationHint') : loc.tr('egEscalationHint'),
-                    style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1584,7 +1573,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
               _buildStepBanner(
                 loc.tr('step4Title'),
                 isAE ? loc.tr('step4Subtitle_ae') : loc.tr('step4Subtitle_eg'),
-                Icons.gavel_rounded,
+                Symbols.gavel_rounded,
               ),
               const SizedBox(height: 20),
 
@@ -1619,11 +1608,8 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                           Expanded(
                             child: Text(
                               clause.getLocalizedTitle(lang),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: clause.isEnabled ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: clause.isEnabled ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant),
                             ),
                           ),
                           if (clause.isMandatory) ...[
@@ -1635,7 +1621,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                               ),
                               child: Text(
                                 loc.tr('mandatoryClause'),
-                                style: TextStyle(color: theme.colorScheme.error, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -1645,13 +1631,10 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           clause.getLocalizedBody(lang),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: clause.isEnabled
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: clause.isEnabled
                                 ? theme.colorScheme.onSurfaceVariant
                                 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                            height: 1.4,
-                          ),
+                            height: 1.4),
                         ),
                       ),
                     ),
@@ -1681,17 +1664,14 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                                   color: theme.colorScheme.primaryContainer,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Icon(Icons.auto_awesome, color: theme.colorScheme.primary, size: 18),
+                                child: Icon(Symbols.auto_awesome_rounded, color: theme.colorScheme.primary, size: 18),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   loc.tr('legalAiAdvisorTitle'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                               ),
                             ],
@@ -1701,11 +1681,8 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                           // Line 2: Descriptive Subtitle
                           Text(
                             loc.tr('legalAiAdvisorSubtitle'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurfaceVariant,
-                              height: 1.4,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant,
+                              height: 1.4),
                           ),
                           const SizedBox(height: 14),
 
@@ -1714,7 +1691,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                             width: double.infinity,
                             child: TashilButton(
                               onPressed: () => _openAiClauseAdvisor(context, loc),
-                              icon: Icons.auto_awesome_rounded,
+                              icon: Symbols.auto_awesome_rounded,
                               label: loc.tr('auditClauseWithAiBtn'),
                             ),
                           ),
@@ -1728,7 +1705,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                               color: theme.colorScheme.primaryContainer,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.auto_awesome, color: theme.colorScheme.primary, size: 20),
+                            child: Icon(Symbols.auto_awesome_rounded, color: theme.colorScheme.primary, size: 20),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -1737,19 +1714,19 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                               children: [
                                 Text(
                                   loc.tr('legalAiAdvisorTitle'),
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   loc.tr('legalAiAdvisorSubtitle'),
-                                  style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
                           ),
                           TashilButton(
                             onPressed: () => _openAiClauseAdvisor(context, loc),
-                            icon: Icons.auto_awesome_rounded,
+                            icon: Symbols.auto_awesome_rounded,
                             label: loc.tr('auditClauseWithAiBtn'),
                           ),
                         ],
@@ -1863,7 +1840,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
       children: [
         Text(
           label,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -1875,12 +1852,9 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   : (isEmail ? TextInputType.emailAddress : TextInputType.text)),
           textDirection: isLtr ? TextDirection.ltr : null,
           textAlign: isLtr ? TextAlign.left : TextAlign.start,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: isLtr ? FontWeight.w600 : FontWeight.normal,
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isLtr ? FontWeight.w600 : FontWeight.normal,
             color: theme.colorScheme.onSurface,
-            letterSpacing: isCode ? 0.6 : (isPhone ? 0.4 : 0.0),
-          ),
+            letterSpacing: isCode ? 0.6 : (isPhone ? 0.4 : 0.0)),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 18, color: theme.colorScheme.primary),
             hintText: hintText,
@@ -1917,7 +1891,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
             color: theme.colorScheme.surfaceContainerLowest,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, -3),
               ),
@@ -1930,7 +1904,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                   flex: isMobile ? 1 : 0,
                   child: TashilButton.outlined(
                     onPressed: () => setState(() => _currentStep--),
-                    icon: Icons.arrow_back_rounded,
+                    icon: Symbols.arrow_back_rounded,
                     label: loc.tr('previousStep'),
                   ),
                 )
@@ -1942,7 +1916,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                 child: _currentStep < 4
                     ? TashilButton(
                         onPressed: () => setState(() => _currentStep++),
-                        icon: Icons.arrow_forward_rounded,
+                        icon: Symbols.arrow_forward_rounded,
                         label: loc.tr('nextStep'),
                       )
                     : TashilButton(
@@ -1968,7 +1942,7 @@ class _LeaseBuilderWizardDialogState extends State<LeaseBuilderWizardDialog> {
                           if (!mounted) return;
                           Navigator.of(context).pop(contract);
                         },
-                        icon: Icons.check_circle_rounded,
+                        icon: Symbols.check_circle_rounded,
                         label: widget.initialContract != null
                             ? loc.tr('saveChangesAction')
                             : loc.tr('finishAndSaveLease'),

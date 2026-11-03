@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../buttons/tashil_split_button.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Google Material Design 3 (M3) Search Bar Component.
 /// Conforms to:
@@ -173,7 +174,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.14),
+                          color: colorScheme.shadow.withValues(alpha: 0.14),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -200,7 +201,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                               dense: true,
                               horizontalTitleGap: 8,
                               leading: Icon(
-                                Icons.history_rounded,
+                                Symbols.history_rounded,
                                 size: 18,
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -212,7 +213,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                                 ),
                               ),
                               trailing: Icon(
-                                Icons.north_west_rounded,
+                                Symbols.north_west_rounded,
                                 size: 16,
                                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                               ),
@@ -297,7 +298,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
 
     final shadows = [
       BoxShadow(
-        color: Colors.black.withValues(alpha: _isFocused ? 0.12 : (_isHovered ? 0.08 : 0.04)),
+        color: colorScheme.shadow.withValues(alpha: _isFocused ? 0.12 : (_isHovered ? 0.08 : 0.04)),
         blurRadius: _isFocused ? 16 : (_isHovered ? 10 : 4),
         offset: Offset(0, _isFocused ? 6 : 2),
       ),
@@ -329,7 +330,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
               turns: _isFocused ? 0.05 : 0.0,
               duration: const Duration(milliseconds: 200),
               child: Icon(
-                widget.leadingIcon ?? (isActiveAi ? Icons.auto_awesome_rounded : Icons.search_rounded),
+                widget.leadingIcon ?? (isActiveAi ? Symbols.auto_awesome_rounded : Symbols.search_rounded),
                 size: 24,
                 color: isActiveAi
                     ? colorScheme.primary
@@ -349,18 +350,12 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                 widget.onSubmitted?.call(val);
               },
               textInputAction: TextInputAction.search,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: widget.hintText ?? 'ابحث بالمنطقة أو اسم العقار...',
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.normal,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
+                hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.normal,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                 isDense: true,
                 filled: false,
                 fillColor: Colors.transparent,
@@ -377,7 +372,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
           // Trailing Action 1: Clear button (X)
           if (_hasText)
             IconButton(
-              icon: const Icon(Icons.close_rounded, size: 20),
+              icon: const Icon(Symbols.close_rounded, size: 20),
               tooltip: 'مسح',
               color: colorScheme.onSurfaceVariant,
               onPressed: () {
@@ -402,7 +397,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.photo_camera_outlined,
+                    Symbols.photo_camera_rounded,
                     size: 20,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -427,7 +422,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.auto_awesome_rounded,
+                      Symbols.auto_awesome_rounded,
                       size: 18,
                       color: isActiveAi ? colorScheme.onPrimary : colorScheme.onPrimaryContainer,
                     ),
@@ -459,7 +454,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
           boxShadow: _isSplitMenuOpen
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
+                    color: colorScheme.shadow.withValues(alpha: 0.12),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -501,7 +496,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
                 child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
+                  Symbols.keyboard_arrow_down_rounded,
                   size: 24,
                   color: _isSplitMenuOpen
                       ? colorScheme.primary
@@ -561,10 +556,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                                   const SizedBox(height: 2),
                                   Text(
                                     item.subtitle!,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontSize: 11,
-                                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                    ),
+                                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -574,7 +566,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                           ),
                           if (isSelected)
                             Icon(
-                              Icons.check_rounded,
+                              Symbols.check_rounded,
                               size: 18,
                               color: colorScheme.primary,
                             ),

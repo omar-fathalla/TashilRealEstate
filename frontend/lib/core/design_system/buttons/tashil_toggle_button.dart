@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Type 2: Official Material Design 3 Toggle Button component.
 ///
@@ -35,7 +36,7 @@ class TashilToggleButton extends StatelessWidget {
     final radius = borderRadius ?? BorderRadius.circular(20);
 
     final activeIcon = isSelected
-        ? (selectedIcon ?? (showCheckmark ? Icons.check : icon))
+        ? (selectedIcon ?? (showCheckmark ? Symbols.check_rounded : icon))
         : icon;
 
     return AnimatedContainer(

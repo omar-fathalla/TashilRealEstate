@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TenantCheckoutScreen extends StatelessWidget {
   const TenantCheckoutScreen({super.key});
@@ -47,13 +48,13 @@ class TenantCheckoutScreen extends StatelessWidget {
                         color: colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.flash_on_rounded, color: colorScheme.onPrimary, size: 18),
+                      child: Icon(Symbols.flash_on_rounded, color: colorScheme.onPrimary, size: 18),
                     ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         loc.tr('automatedRentCheckoutTitle'),
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 13 : 16, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -63,7 +64,7 @@ class TenantCheckoutScreen extends StatelessWidget {
                   LanguageSwitcher(isCompact: true, showLabel: !isMobile),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: Icon(Icons.home_outlined, color: colorScheme.onSurface),
+                    icon: Icon(Symbols.home_rounded, color: colorScheme.onSurface),
                     tooltip: loc.tr('exploreUnits'),
                     onPressed: () => context.go('/'),
                   ),

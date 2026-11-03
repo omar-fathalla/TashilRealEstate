@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class OverviewView extends StatelessWidget {
   const OverviewView({super.key});
@@ -46,7 +47,7 @@ class OverviewView extends StatelessWidget {
                       value: '450,000 ${CountryController.getCurrency(LocaleController.languageCode)}',
                       badgeText: loc.tr('growthRate'),
                       badgeColor: colorScheme.tertiary,
-                      icon: Icons.account_balance_wallet_outlined,
+                      icon: Symbols.account_balance_wallet_rounded,
                       accentColor: colorScheme.tertiary,
                     ),
                     _buildKpiCard(
@@ -55,7 +56,7 @@ class OverviewView extends StatelessWidget {
                       value: '85',
                       badgeText: loc.tr('occupancyRate'),
                       badgeColor: colorScheme.secondary,
-                      icon: Icons.assignment_outlined,
+                      icon: Symbols.assignment_rounded,
                       accentColor: colorScheme.secondary,
                     ),
                     _buildKpiCard(
@@ -64,7 +65,7 @@ class OverviewView extends StatelessWidget {
                       value: '120',
                       badgeText: loc.tr('collectionRate'),
                       badgeColor: colorScheme.primary,
-                      icon: Icons.apartment_outlined,
+                      icon: Symbols.apartment_rounded,
                       accentColor: colorScheme.primary,
                     ),
                     _buildKpiCard(
@@ -73,7 +74,7 @@ class OverviewView extends StatelessWidget {
                       value: '3',
                       badgeText: loc.tr('urgentTickets'),
                       badgeColor: colorScheme.error,
-                      icon: Icons.handyman_outlined,
+                      icon: Symbols.handyman_rounded,
                       accentColor: colorScheme.error,
                     ),
                   ],
@@ -145,7 +146,7 @@ class OverviewView extends StatelessWidget {
               SnackBar(content: Text(loc.tr('addNewProperty'))),
             );
           },
-          icon: const Icon(Icons.add, size: 18),
+          icon: const Icon(Symbols.add_rounded, size: 18),
           label: Text(loc.tr('addNewProperty')),
         ),
       ],
@@ -194,11 +195,8 @@ class OverviewView extends StatelessWidget {
                 ),
                 child: Text(
                   badgeText,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: badgeColor,
+                    fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -245,31 +243,31 @@ class OverviewView extends StatelessWidget {
       {
         'title': loc.tr('activity1Title'),
         'time': loc.tr('activity1Time'),
-        'icon': Icons.verified_outlined,
+        'icon': Symbols.verified_rounded,
         'color': colorScheme.primary,
       },
       {
         'title': loc.tr('activity2Title'),
         'time': loc.tr('activity2Time'),
-        'icon': Icons.handyman_outlined,
+        'icon': Symbols.handyman_rounded,
         'color': colorScheme.error,
       },
       {
         'title': loc.tr('activity3Title'),
         'time': loc.tr('activity3Time'),
-        'icon': Icons.payments_outlined,
+        'icon': Symbols.payments_rounded,
         'color': colorScheme.secondary,
       },
       {
         'title': loc.tr('activity4Title'),
         'time': loc.tr('activity4Time'),
-        'icon': Icons.add_home_work_outlined,
+        'icon': Symbols.add_home_work_rounded,
         'color': colorScheme.secondary,
       },
       {
         'title': loc.tr('activity5Title'),
         'time': loc.tr('activity5Time'),
-        'icon': Icons.autorenew_outlined,
+        'icon': Symbols.autorenew_rounded,
         'color': colorScheme.tertiary,
       },
     ];
@@ -341,7 +339,7 @@ class OverviewView extends StatelessWidget {
                     ),
                   ),
                   trailing: Icon(
-                    Icons.arrow_forward_ios,
+                    Symbols.arrow_forward_ios_rounded,
                     size: 14,
                     color: colorScheme.outline,
                   ),

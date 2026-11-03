@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Dedicated Executive Super Admin Login Portal for Tashil Real Estate.
 /// Completely isolated from public customer & tenant login flows.
@@ -129,7 +130,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         builder: (context, setDialogState) {
           final theme = Theme.of(context);
           return TashilAlertDialog(
-            iconData: Icons.lock_reset_rounded,
+            iconData: Symbols.lock_reset_rounded,
             title: loc.tr('resetPasswordTitle'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -148,7 +149,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   textDirection: TextDirection.ltr,
                   decoration: InputDecoration(
                     labelText: loc.tr('adminEmailOrId'),
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: const Icon(Symbols.email_rounded),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -163,7 +164,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
               ),
               TashilButton.filled(
                 label: loc.tr('sendResetLinkBtn'),
-                icon: Icons.send_rounded,
+                icon: Symbols.send_rounded,
                 isLoading: isSending,
                 onPressed: isSending
                     ? null
@@ -219,7 +220,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           padding: const EdgeInsetsDirectional.only(start: 12),
           child: Center(
             child: TashilIconButton.tonal(
-              icon: Icons.arrow_back_rounded,
+              icon: Symbols.arrow_back_rounded,
               tooltip: loc.tr('returnToMarketplace'),
               onPressed: () => context.go('/'),
             ),
@@ -241,7 +242,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.verified_user_rounded,
+                  Symbols.verified_user_rounded,
                   size: 16,
                   color: colorScheme.primary,
                 ),
@@ -260,7 +261,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
             child: TashilIconButton.standard(
-              icon: Icons.tune_rounded,
+              icon: Symbols.tune_rounded,
               tooltip: loc.tr('systemSettings'),
               onPressed: () => AppSettingsDialog.show(context),
             ),
@@ -301,10 +302,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.admin_panel_settings_rounded,
+                      child: Icon(
+                        Symbols.admin_panel_settings_rounded,
                         size: 38,
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -344,7 +345,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
-                          Icons.security_rounded,
+                          Symbols.security_rounded,
                           size: 18,
                           color: colorScheme.primary,
                         ),
@@ -371,7 +372,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                     textDirection: TextDirection.ltr,
                     decoration: InputDecoration(
                       labelText: loc.tr('adminEmailOrId'),
-                      prefixIcon: const Icon(Icons.badge_outlined),
+                      prefixIcon: const Icon(Symbols.badge_rounded),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -386,10 +387,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                     textDirection: TextDirection.ltr,
                     decoration: InputDecoration(
                       labelText: loc.tr('adminPassword'),
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      prefixIcon: const Icon(Symbols.lock_outline_rounded),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          _obscurePassword ? Symbols.visibility_rounded : Symbols.visibility_off_rounded,
                         ),
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
@@ -425,7 +426,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                     textDirection: TextDirection.ltr,
                     decoration: InputDecoration(
                       labelText: loc.tr('adminSecurityKey'),
-                      prefixIcon: const Icon(Icons.pin_outlined),
+                      prefixIcon: const Icon(Symbols.pin_rounded),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -436,7 +437,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   // 5. Primary Sign In Action
                   TashilButton.filled(
                     label: loc.tr('superAdminSignInBtn'),
-                    icon: Icons.login_rounded,
+                    icon: Symbols.login_rounded,
                     height: 48,
                     isLoading: _isLoading,
                     onPressed: _isLoading ? null : () => _handleAdminLogin(loc),
@@ -446,7 +447,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   // 6. Return to Marketplace
                   Center(
                     child: TextButton.icon(
-                      icon: const Icon(Icons.storefront_outlined, size: 16),
+                      icon: const Icon(Symbols.storefront_rounded, size: 16),
                       label: Text(
                         loc.tr('returnToMarketplace'),
                         style: theme.textTheme.labelMedium?.copyWith(

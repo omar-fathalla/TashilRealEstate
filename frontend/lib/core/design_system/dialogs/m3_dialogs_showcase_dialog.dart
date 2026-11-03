@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'tashil_alert_dialog.dart';
 import 'tashil_modal_dialog.dart';
 import 'tashil_selection_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog demonstrating the official Material Design 3 Dialogs Suite:
 /// 1. Basic / Alert Dialogs ([TashilAlertDialog])
@@ -39,9 +40,9 @@ class _M3DialogsShowcaseDialogState extends State<M3DialogsShowcaseDialog> {
       valueListenable: LocaleController.currentLocale,
       builder: (context, locale, _) {
         return TashilModalDialog(
-          title: 'منظومة نوافذ الحوار M3 (Dialogs Suite)',
-          subtitle: 'المواصفات القياسية الرسمية لماتريال ديزاين 3 مع زوايا 28dp وظلال Level 3',
-          icon: Icons.window_rounded,
+          title: AppLocalizations.trStatic('uiCopy313'),
+          subtitle: AppLocalizations.trStatic('uiCopy145'),
+          icon: Symbols.window_rounded,
           maxWidth: 720,
           maxHeight: 750,
           footer: Row(
@@ -59,57 +60,57 @@ class _M3DialogsShowcaseDialogState extends State<M3DialogsShowcaseDialog> {
               children: [
                 // 1. Basic Alert Dialog Demo
                 _buildDemoCard(
-                  title: '1. نافذة التنبيه والإشعار الأساسية (Basic Alert Dialog)',
-                  description: 'أيقونة علوية 24dp، عنوان headlineSmall، رسالة إيضاحية وزر تأكيد M3',
-                  actionLabel: 'فتح نافذة التنبيه',
-                  icon: Icons.notifications_active_outlined,
+                  title: AppLocalizations.trStatic('uiCopy009'),
+                  description: AppLocalizations.trStatic('uiCopy089'),
+                  actionLabel: AppLocalizations.trStatic('uiCopy252'),
+                  icon: Symbols.notifications_active_rounded,
                   theme: theme,
                   onPressed: () async {
                     await TashilAlertDialog.show(
                       context: context,
-                      iconData: Icons.info_outline_rounded,
-                      title: 'تأكيد حفظ البيانات',
-                      contentText: 'تم حفظ كافة تعديلات الإعلان بنجاح في قاعدة البيانات وتحديث العرض للمستأجرين.',
+                      iconData: Symbols.info_rounded,
+                      title: AppLocalizations.trStatic('uiCopy164'),
+                      contentText: AppLocalizations.trStatic('uiCopy180'),
                       actions: [
                         TashilButton(
-                          label: 'حسناً، فهمت',
+                          label: AppLocalizations.trStatic('uiCopy196'),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
                     );
-                    setState(() => _lastDialogResult = 'تم إغلاق نافذة التنبيه');
+                    setState(() => _lastDialogResult = AppLocalizations.trStatic('uiCopy175'));
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // 2. Confirmation Dialog Demo
                 _buildDemoCard(
-                  title: '2. نافذة اتخاذ القرار والتأكيد (Confirmation Dialog)',
-                  description: 'زران متناسقان مع دعم الحالات الإلغائية والحاسمة (Destructive) ومحاذاة RTL/LTR',
-                  actionLabel: 'فتح نافذة التأكيد',
-                  icon: Icons.help_outline_rounded,
+                  title: AppLocalizations.trStatic('uiCopy017'),
+                  description: AppLocalizations.trStatic('uiCopy213'),
+                  actionLabel: AppLocalizations.trStatic('uiCopy251'),
+                  icon: Symbols.help_outline_rounded,
                   theme: theme,
                   onPressed: () async {
                     final confirmed = await TashilAlertDialog.showConfirmation(
                       context: context,
-                      title: 'هل تريد حذف الصورة المحددة؟',
-                      message: 'سيتم إزالة الصورة نهائياً من معرض صور الوحدة العقارية ولن تظهر في الإعلان العام.',
-                      confirmLabel: 'نعم، احذف',
-                      cancelLabel: 'إلغاء التراجع',
-                      icon: Icons.delete_outline_rounded,
+                      title: AppLocalizations.trStatic('uiCopy324'),
+                      message: AppLocalizations.trStatic('uiCopy217'),
+                      confirmLabel: AppLocalizations.trStatic('uiCopy321'),
+                      cancelLabel: AppLocalizations.trStatic('uiCopy099'),
+                      icon: Symbols.delete_outline_rounded,
                       isDestructive: true,
                     );
-                    setState(() => _lastDialogResult = confirmed ? 'تم تأكيد الحذف بنجاح' : 'تم إلغاء الإجراء');
+                    setState(() => _lastDialogResult = confirmed ? 'تم تأكيد الحذف بنجاح' : AppLocalizations.trStatic('uiCopy176'));
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // 3. Selection / Currency Picker Dialog Demo
                 _buildDemoCard(
-                  title: '3. نافذة اختيار العملة والخيارات (M3 Selection Dialog)',
-                  description: 'استبدال القوائم الرمادية الحادة بنافذة اختيار M3 بزوايا 28dp وأعلام وعلامات تأكيد',
+                  title: AppLocalizations.trStatic('uiCopy024'),
+                  description: AppLocalizations.trStatic('uiCopy108'),
                   actionLabel: 'فتح محدد العملة (الحالية: $_selectedCurrency)',
-                  icon: Icons.payments_outlined,
+                  icon: Symbols.payments_rounded,
                   theme: theme,
                   onPressed: () async {
                     final res = await TashilSelectionDialog.showCurrencyPicker(
@@ -136,15 +137,12 @@ class _M3DialogsShowcaseDialogState extends State<M3DialogsShowcaseDialog> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 18),
+                        Icon(Symbols.check_circle_rounded, color: theme.colorScheme.primary, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           _lastDialogResult!,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimaryContainer),
                         ),
                       ],
                     ),
@@ -185,7 +183,7 @@ class _M3DialogsShowcaseDialogState extends State<M3DialogsShowcaseDialog> {
           const SizedBox(height: 4),
           Text(
             description,
-            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           TashilButton.tonal(

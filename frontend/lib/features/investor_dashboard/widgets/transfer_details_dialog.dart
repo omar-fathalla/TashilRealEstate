@@ -8,6 +8,7 @@ import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TransferDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> payout;
@@ -107,7 +108,7 @@ class TransferDetailsDialog extends StatelessWidget {
                           color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.account_balance_rounded, color: colorScheme.onPrimaryContainer, size: 22),
+                        child: Icon(Symbols.account_balance_rounded, color: colorScheme.onPrimaryContainer, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -124,11 +125,11 @@ class TransferDetailsDialog extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified_rounded, size: 13, color: colorScheme.primary),
+                              Icon(Symbols.verified_rounded, size: 13, color: colorScheme.primary),
                               const SizedBox(width: 4),
                               Text(
                                 loc.tr('settlementCompleted'),
-                                style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -153,27 +154,24 @@ class TransferDetailsDialog extends StatelessWidget {
                     children: [
                       Text(
                         loc.tr('payoutCompleted'),
-                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         '+ ${CurrencyFormatter.formatAmount(amount, langCode: lang)} $currency',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
-                          letterSpacing: -0.5,
-                        ),
+                          letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.event_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                          Icon(Symbols.event_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text(
                             date,
-                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -185,12 +183,13 @@ class TransferDetailsDialog extends StatelessWidget {
 
               // 3. Detail List Items
               _buildInfoRow(
-                icon: Icons.tag_rounded,
+                context: context,
+                icon: Symbols.tag_rounded,
                 label: loc.tr('bankReferenceNumber'),
                 value: ref,
                 colorScheme: colorScheme,
                 trailing: TashilIconButton.standard(
-                  icon: Icons.copy_rounded,
+                  icon: Symbols.content_copy_rounded,
                   tooltip: loc.tr('copyRefSuccess'),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: ref));
@@ -203,21 +202,24 @@ class TransferDetailsDialog extends StatelessWidget {
               ),
               const TashilDivider.middleInset(height: 16),
               _buildInfoRow(
-                icon: Icons.account_balance_outlined,
+                context: context,
+                icon: Symbols.account_balance_rounded,
                 label: loc.tr('transferredToAccount'),
                 value: bankName,
                 colorScheme: colorScheme,
               ),
               const TashilDivider.middleInset(height: 16),
               _buildInfoRow(
-                icon: Icons.apartment_rounded,
+                context: context,
+                icon: Symbols.apartment_rounded,
                 label: loc.tr('linkedUnitAndTenant'),
                 value: title,
                 colorScheme: colorScheme,
               ),
               const TashilDivider.middleInset(height: 16),
               _buildInfoRow(
-                icon: Icons.receipt_long_rounded,
+                context: context,
+                icon: Symbols.receipt_long_rounded,
                 label: loc.tr('linkedTaxInvoice'),
                 value: 'INV-${ref.replaceAll(RegExp(r'[^0-9]'), '')}',
                 colorScheme: colorScheme,
@@ -241,7 +243,7 @@ class TransferDetailsDialog extends StatelessWidget {
                         message: loc.tr('downloadTransferReceipt'),
                       );
                     },
-                    icon: Icons.download_rounded,
+                    icon: Symbols.download_rounded,
                     label: loc.tr('downloadTransferReceipt'),
                   ),
                 ],
@@ -254,6 +256,7 @@ class TransferDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildInfoRow({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String value,
@@ -270,16 +273,13 @@ class TransferDetailsDialog extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface),
               ),
             ],
           ),

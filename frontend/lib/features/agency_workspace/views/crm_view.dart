@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class CrmView extends StatelessWidget {
   const CrmView({super.key});
@@ -72,7 +73,7 @@ class CrmView extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -80,7 +81,7 @@ class CrmView extends StatelessWidget {
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('$itemCount', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+                  child: Text('$itemCount', style: Theme.of(context).textTheme.labelMedium!.copyWith(color: color, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -100,21 +101,21 @@ class CrmView extends StatelessWidget {
                     children: [
                       Text(
                         '${loc.tr('leadClientName')} #${index + 1}',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         loc.tr('interestedInRentalUnit'),
-                        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 12, color: colorScheme.onSurfaceVariant),
+                          Icon(Symbols.access_time_rounded, size: 12, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text(
                             loc.tr('twoDaysAgo'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),

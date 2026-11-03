@@ -9,6 +9,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'tashil_progress_types.dart';
 import 'tashil_linear_progress.dart';
 import 'tashil_circular_progress.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Expressive Progress Indicators Suite.
 /// Conforms to:
@@ -121,14 +122,14 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
         return TashilModalDialog(
           title: loc.tr('m3ProgressIndicatorTitle'),
           subtitle: loc.tr('m3ProgressExpressiveSubtitle'),
-          icon: Icons.linear_scale_rounded,
+          icon: Symbols.linear_scale_rounded,
           maxWidth: 720,
           footer: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TashilButton(
                 label: loc.tr('confirm'),
-                icon: Icons.check_circle_rounded,
+                icon: Symbols.check_circle_rounded,
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -146,7 +147,7 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.tune_rounded, color: colorScheme.primary, size: 20),
+                            Icon(Symbols.tune_rounded, color: colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -185,12 +186,12 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
                               TashilConnectedButtonSegment(
                                 value: TashilProgressShape.wavy,
                                 label: loc.tr('wavyShape'),
-                                icon: Icons.waves_rounded,
+                                icon: Symbols.waves_rounded,
                               ),
                               TashilConnectedButtonSegment(
                                 value: TashilProgressShape.flat,
                                 label: loc.tr('flatShape'),
-                                icon: Icons.horizontal_rule_rounded,
+                                icon: Symbols.horizontal_rule_rounded,
                               ),
                             ],
                           ),
@@ -275,7 +276,7 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.all_inclusive_rounded, color: colorScheme.primary, size: 20),
+                            Icon(Symbols.all_inclusive_rounded, color: colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               loc.tr('indeterminateMode'),
@@ -346,7 +347,7 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.cloud_sync_rounded, color: colorScheme.primary, size: 20),
+                            Icon(Symbols.cloud_sync_rounded, color: colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               loc.tr('simulateFileDownload'),
@@ -391,12 +392,12 @@ class _M3ProgressShowcaseDialogState extends State<M3ProgressShowcaseDialog> {
                           children: [
                             TashilButton.outlined(
                               label: loc.tr('simulateProgressMediaUpload'),
-                              icon: Icons.upload_file_rounded,
+                              icon: Symbols.upload_file_rounded,
                               onPressed: _isUploading ? null : () => _startUploadSimulation(loc),
                             ),
                             TashilButton(
                               label: loc.tr('simulateFileDownload'),
-                              icon: Icons.download_rounded,
+                              icon: Symbols.download_rounded,
                               onPressed: _isDownloading ? null : () => _startDownloadSimulation(loc),
                             ),
                           ],

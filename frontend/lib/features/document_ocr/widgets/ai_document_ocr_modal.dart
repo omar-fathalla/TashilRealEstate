@@ -13,6 +13,7 @@ import '../../../core/utils/image_utils.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/document_ocr_result_model.dart';
 import '../services/ai_document_ocr_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class AiDocumentOcrModal extends StatefulWidget {
   final DocumentOcrType initialDocType;
@@ -131,7 +132,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 width: 920,
                 height: 720,
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.94),
+                  color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.94),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
                 ),
@@ -163,18 +164,18 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white24),
+                    border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.24)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.zoom_in_rounded, color: Colors.white70, size: 16),
+                      Icon(Symbols.zoom_in_rounded, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.70), size: 16),
                       const SizedBox(width: 8),
                       Text(
                         loc.tr('zoomCard'),
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: Theme.of(context).colorScheme.onPrimary),
                       ),
                     ],
                   ),
@@ -287,11 +288,8 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                     if (_isProfileMode) ...[
                       Text(
                         loc.tr('identityDocumentType'),
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       _buildProfileDropdown(loc),
@@ -299,11 +297,8 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                     ] else ...[
                       Text(
                         loc.tr('selectDocToScan'),
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       _buildTemplateSelector(lang),
@@ -356,7 +351,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               shape: BoxShape.circle,
               border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
             ),
-            child: Icon(Icons.document_scanner_rounded, color: theme.colorScheme.primary, size: 20),
+            child: Icon(Symbols.document_scanner_rounded, color: theme.colorScheme.primary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -365,19 +360,13 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               children: [
                 Text(
                   loc.tr('aiDocumentOcrTitle'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   loc.tr('aiDocumentOcrSubtitle'),
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -433,16 +422,13 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                   children: [
                     Text(
                       t['badge'] as String,
-                      style: const TextStyle(fontSize: 12),
+                      style: Theme.of(context).textTheme.labelMedium!,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       title as String,
-                      style: TextStyle(
-                        color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurfaceVariant,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
                     ),
                   ],
                 ),
@@ -461,18 +447,18 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
 
     return TashilDropdownMenu<String>(
       value: selectedId,
-      prefixIcon: Icons.badge_outlined,
+      prefixIcon: Symbols.badge_rounded,
       height: 48,
       items: [
         TashilDropdownMenuItem<String>(
           value: 'eg_national_id_lessor',
           label: loc.tr('egyptianNationalIdShort'),
-          icon: Icons.badge_outlined,
+          icon: Symbols.badge_rounded,
         ),
         TashilDropdownMenuItem<String>(
           value: 'uae_emirates_id_lessor',
           label: loc.tr('uaeEmiratesIdShort'),
-          icon: Icons.badge_outlined,
+          icon: Symbols.badge_rounded,
         ),
       ],
       onChanged: _isProcessing
@@ -512,12 +498,12 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 TashilConnectedButtonSegment<String>(
                   value: 'camera',
                   label: loc.tr('takePhoto'),
-                  icon: Icons.photo_camera_rounded,
+                  icon: Symbols.photo_camera_rounded,
                 ),
                 TashilConnectedButtonSegment<String>(
                   value: 'upload',
                   label: loc.tr('uploadPhoto'),
-                  icon: Icons.upload_file_rounded,
+                  icon: Symbols.upload_file_rounded,
                 ),
               ],
             ),
@@ -528,7 +514,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               alignment: AlignmentDirectional.centerEnd,
               child: TashilButton.tonal(
                 height: 36,
-                icon: Icons.refresh_rounded,
+                icon: Symbols.refresh_rounded,
                 label: loc.tr('resetToSampleDoc'),
                 onPressed: _isProcessing
                     ? null
@@ -558,7 +544,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
             mainAxisSize: MainAxisSize.min,
             children: [
               TashilIconButton.tonal(
-                icon: Icons.rotate_left_rounded,
+                icon: Symbols.rotate_left_rounded,
                 tooltip: loc.tr('rotateLeft'),
                 size: 36,
                 iconSize: 18,
@@ -566,7 +552,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.rotate_right_rounded,
+                icon: Symbols.rotate_right_rounded,
                 tooltip: loc.tr('rotateRight'),
                 size: 36,
                 iconSize: 18,
@@ -574,7 +560,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.zoom_in_rounded,
+                icon: Symbols.zoom_in_rounded,
                 tooltip: loc.tr('zoomCard'),
                 size: 36,
                 iconSize: 18,
@@ -585,7 +571,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
           if (_rotationQuarterTurns != 0)
             TashilButton.text(
               height: 32,
-              icon: Icons.replay_rounded,
+              icon: Symbols.replay_rounded,
               label: '${_rotationQuarterTurns * 90}°',
               onPressed: _resetRotation,
             ),
@@ -657,7 +643,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 if (_isProcessing)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.3),
                     ),
                   ),
                 if (_isProcessing)
@@ -699,11 +685,11 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary, size: 12),
+                        Icon(Symbols.camera_alt_rounded, color: theme.colorScheme.primary, size: 12),
                         const SizedBox(width: 4),
                         Text(
                           'Document AI Vision',
-                          style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -720,10 +706,10 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
               children: [
                 Icon(
                   _isProcessing
-                      ? Icons.sync_rounded
+                      ? Symbols.sync_rounded
                       : (_extractedResult?.securityStatus == 'UNREADABLE_IMAGE'
-                          ? Icons.warning_amber_rounded
-                          : Icons.verified_user_rounded),
+                          ? Symbols.warning_amber_rounded
+                          : Symbols.verified_user_rounded),
                   color: _isProcessing
                       ? theme.colorScheme.primary
                       : (_extractedResult?.securityStatus == 'UNREADABLE_IMAGE'
@@ -735,19 +721,16 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 Expanded(
                   child: Text(
                     _isProcessing
-                        ? 'جاري فحص العلامات المائية والهولوجرام...'
+                        ? AppLocalizations.trStatic('uiCopy186')
                         : (_extractedResult?.securityStatus == 'UNREADABLE_IMAGE'
                             ? loc.tr('unclearImageTitle')
-                            : 'معتمد ومطابق للمعايير الأمنية (100% Tamper-Free)'),
-                    style: TextStyle(
-                      color: _isProcessing
+                            : AppLocalizations.trStatic('uiCopy298')),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: _isProcessing
                           ? theme.colorScheme.onSurfaceVariant
                           : (_extractedResult?.securityStatus == 'UNREADABLE_IMAGE'
                               ? theme.colorScheme.error
                               : theme.colorScheme.onSurface),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                      fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -780,7 +763,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
             const SizedBox(height: 16),
             Text(
               loc.tr('extractingDocumentData'),
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],
@@ -807,7 +790,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error, size: 24),
+                Icon(Symbols.warning_amber_rounded, color: theme.colorScheme.error, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -815,19 +798,13 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                     children: [
                       Text(
                         loc.tr('unclearImageTitle'),
-                        style: TextStyle(
-                          color: theme.colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         loc.tr('unclearImageDesc'),
-                        style: TextStyle(
-                          color: theme.colorScheme.onErrorContainer.withValues(alpha: 0.9),
-                          fontSize: 11,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onErrorContainer.withValues(alpha: 0.9)),
                       ),
                     ],
                   ),
@@ -847,7 +824,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
             ),
             child: Row(
               children: [
-                Icon(Icons.verified_rounded, color: theme.colorScheme.primary, size: 22),
+                Icon(Symbols.verified_rounded, color: theme.colorScheme.primary, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -855,16 +832,13 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                     children: [
                       Text(
                         loc.tr('securityAuditPassed'),
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${loc.tr('confidenceAccuracy')}: ${(res.confidenceScore * 100).toStringAsFixed(1)}% | Document AI High-Fidelity',
-                        style: TextStyle(color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8), fontSize: 11),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8)),
                       ),
                     ],
                   ),
@@ -878,31 +852,31 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
         // Extracted Fields List
         Text(
           loc.tr('extractedDataReview'),
-          style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
 
-        _buildFieldRow('الاسم الكامل (عربي)', res.fullNameAr, Icons.person_outline_rounded),
-        _buildFieldRow('الاسم الكامل (إنجليزي)', res.fullNameEn, Icons.badge_outlined),
-        _buildFieldRow('رقم الهوية / الرقم القومي', res.idNumber, Icons.credit_card_rounded, isHighlight: true),
-        _buildFieldRow('تاريخ الميلاد', res.dateOfBirth, Icons.calendar_today_outlined),
-        _buildFieldRow('تاريخ الانتهاء', res.expiryDate, Icons.event_available_outlined),
-        _buildFieldRow('العنوان والحي', res.address, Icons.home_outlined),
-        _buildFieldRow('المحافظة / الإمارة', res.governorateOrEmirate, Icons.location_city_outlined),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy121'), res.fullNameAr, Symbols.person_outline_rounded),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy120'), res.fullNameEn, Symbols.badge_rounded),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy211'), res.idNumber, Symbols.credit_card_rounded, isHighlight: true),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy167'), res.dateOfBirth, Symbols.calendar_today_rounded),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy166'), res.expiryDate, Symbols.event_available_rounded),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy137'), res.address, Symbols.home_rounded),
+        _buildFieldRow(AppLocalizations.trStatic('uiCopy142'), res.governorateOrEmirate, Symbols.location_city_rounded),
 
         if (res.titleDeedNumber != null) ...[
           const TashilDivider.middleInset(height: 20),
-          _buildFieldRow('رقم صك الملكية', res.titleDeedNumber!, Icons.description_outlined, isHighlight: true),
-          if (res.buildingName != null) _buildFieldRow('اسم المبنى', res.buildingName!, Icons.apartment_rounded),
-          if (res.unitNumber != null) _buildFieldRow('رقم الوحدة', res.unitNumber!, Icons.meeting_room_outlined),
-          if (res.areaSqm != null) _buildFieldRow('المساحة', '${res.areaSqm!.toInt()} متر مربع', Icons.square_foot_rounded),
-          if (res.makaniNumber != null) _buildFieldRow('رقم مكاني', res.makaniNumber!, Icons.tag_rounded),
+          _buildFieldRow(AppLocalizations.trStatic('uiCopy212'), res.titleDeedNumber!, Symbols.description_rounded, isHighlight: true),
+          if (res.buildingName != null) _buildFieldRow('اسم المبنى', res.buildingName!, Symbols.apartment_rounded),
+          if (res.unitNumber != null) _buildFieldRow('رقم الوحدة', res.unitNumber!, Symbols.meeting_room_rounded),
+          if (res.areaSqm != null) _buildFieldRow('المساحة', '${res.areaSqm!.toInt()} متر مربع', Symbols.square_foot_rounded),
+          if (res.makaniNumber != null) _buildFieldRow('رقم مكاني', res.makaniNumber!, Symbols.tag_rounded),
         ],
 
         if (res.annualRent != null) ...[
           const TashilDivider.middleInset(height: 20),
-          _buildFieldRow('القيمة الإيجارية السنوية', '${res.annualRent!.toInt()} ${res.countryCode == 'AE' ? 'درهم' : 'جنيه'}', Icons.attach_money_rounded, isHighlight: true),
-          if (res.chequesCount != null) _buildFieldRow('عدد الدفعات والشيكات', '${res.chequesCount} دفعات', Icons.payments_outlined),
+          _buildFieldRow('القيمة الإيجارية السنوية', '${res.annualRent!.toInt()} ${res.countryCode == 'AE' ? 'درهم' : 'جنيه'}', Symbols.attach_money_rounded, isHighlight: true),
+          if (res.chequesCount != null) _buildFieldRow('عدد الدفعات والشيكات', '${res.chequesCount} دفعات', Symbols.payments_rounded),
         ],
       ],
     );
@@ -931,17 +905,14 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
             const SizedBox(width: 8),
             Text(
               '$label:',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 value,
-                style: TextStyle(
-                  color: isHighlight ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                  fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: isHighlight ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                  fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500),
                 textAlign: TextAlign.end,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -974,7 +945,7 @@ class _AiDocumentOcrModalState extends State<AiDocumentOcrModal> with SingleTick
                 : () {
                     Navigator.of(context).pop(_extractedResult);
                   },
-            icon: _isProfileMode ? Icons.task_alt_rounded : Icons.flash_on_rounded,
+            icon: _isProfileMode ? Symbols.task_alt_rounded : Symbols.flash_on_rounded,
             label: _isProfileMode ? loc.tr('applyExtractedData') : loc.tr('autoFillIntoLease'),
           ),
         ],

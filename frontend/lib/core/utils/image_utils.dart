@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../design_system/loading/tashil_loading_indicator.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class ImageUtils {
   static String resolveUrl(String url) {
@@ -126,12 +127,12 @@ class ImageUtils {
       color: theme.colorScheme.surfaceContainerHigh,
       child: Center(
         child: isCompact
-            ? Icon(Icons.apartment_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant)
+            ? Icon(Symbols.apartment_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant)
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.apartment_rounded, size: 32, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
+                  Icon(Symbols.apartment_rounded, size: 32, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
                 ],
               ),
       ),

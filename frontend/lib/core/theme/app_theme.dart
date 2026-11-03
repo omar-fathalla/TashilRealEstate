@@ -261,11 +261,15 @@ class AppTheme {
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return textTheme.labelMedium?.copyWith(color: colorScheme.onSurface) ??
-                TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 12);
+            return textTheme.labelMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            );
           }
-          return textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant) ??
-              TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500, fontSize: 12);
+          return textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          );
         }),
       ),
 

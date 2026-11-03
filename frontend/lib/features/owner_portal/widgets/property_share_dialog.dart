@@ -12,6 +12,7 @@ import 'package:tashil_real_estate/features/owner_portal/models/managed_property
 import 'package:tashil_real_estate/features/owner_portal/widgets/marketplace_visitor_preview_dialog.dart';
 import 'package:tashil_real_estate/features/public_marketplace/models/property_item.dart';
 import 'package:tashil_real_estate/features/public_marketplace/repositories/property_repository.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 Universal Property Share & Link Generation Dialog.
 ///
@@ -166,7 +167,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
-                      Icons.share_rounded,
+                      Symbols.share_rounded,
                       color: colorScheme.onPrimaryContainer,
                       size: 24,
                     ),
@@ -186,10 +187,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                         const SizedBox(height: 3),
                         Text(
                           loc.tr('sharePropertySubtitle'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -222,7 +220,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                           width: 58,
                           height: 58,
                           color: colorScheme.surfaceContainerHigh,
-                          child: Icon(Icons.apartment_rounded, color: colorScheme.primary),
+                          child: Icon(Symbols.apartment_rounded, color: colorScheme.primary),
                         ),
                       ),
                     ),
@@ -233,25 +231,22 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             location,
-                            style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 3),
                           Text(
                             '${CurrencyFormatter.formatAmount(widget.pricePerMonth, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                            style: TextStyle(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                              fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -264,7 +259,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
               // Direct Link Generation Container
               Text(
                 loc.tr('directUnitLink'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Container(
@@ -276,16 +271,13 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.link_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                    Icon(Symbols.link_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _propertyUrl,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontFamily: 'monospace',
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontFamily: 'monospace',
+                          color: colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -293,7 +285,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                     const SizedBox(width: 8),
                     TashilButton(
                       onPressed: () => _copyToClipboard(loc),
-                      icon: _isCopied ? Icons.check_rounded : Icons.copy_rounded,
+                      icon: _isCopied ? Symbols.check_rounded : Symbols.content_copy_rounded,
                       label: _isCopied ? loc.tr('confirm') : loc.tr('copyLink'),
                       height: 36,
                     ),
@@ -305,7 +297,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
               // Social Sharing Channels
               Text(
                 loc.tr('shareOptions'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Row(
@@ -314,7 +306,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                   Expanded(
                     child: _M3SocialChannelTile(
                       label: loc.tr('shareWhatsApp'),
-                      icon: Icons.chat_bubble_outline_rounded,
+                      icon: Symbols.chat_bubble_outline_rounded,
                       onTap: () => _shareOnWhatsApp(loc, lang),
                     ),
                   ),
@@ -323,7 +315,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                   Expanded(
                     child: _M3SocialChannelTile(
                       label: loc.tr('shareFacebook'),
-                      icon: Icons.public_rounded,
+                      icon: Symbols.public_rounded,
                       onTap: _shareOnFacebook,
                     ),
                   ),
@@ -332,7 +324,7 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                   Expanded(
                     child: _M3SocialChannelTile(
                       label: loc.tr('shareMessenger'),
-                      icon: Icons.forum_outlined,
+                      icon: Symbols.forum_rounded,
                       onTap: _shareOnMessenger,
                     ),
                   ),
@@ -362,12 +354,12 @@ class _PropertyShareDialogState extends State<PropertyShareDialog> {
                   TashilConnectedButtonSegment<String>(
                     value: 'preview',
                     label: loc.tr('preview'),
-                    icon: Icons.visibility_outlined,
+                    icon: Symbols.visibility_rounded,
                   ),
                   TashilConnectedButtonSegment<String>(
                     value: 'cancel',
                     label: loc.tr('cancel'),
-                    icon: Icons.close_rounded,
+                    icon: Symbols.close_rounded,
                   ),
                 ],
               ),
@@ -407,7 +399,7 @@ class _M3AnimatedCloseButtonState extends State<_M3AnimatedCloseButton> {
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
           child: TashilIconButton.outlined(
-            icon: Icons.close_rounded,
+            icon: Symbols.close_rounded,
             size: 36,
             iconSize: 18,
             onPressed: widget.onPressed,
@@ -498,11 +490,8 @@ class _M3SocialChannelTileState extends State<_M3SocialChannelTile> {
                   const SizedBox(height: 6),
                   Text(
                     widget.label,
-                    style: TextStyle(
-                      color: fgColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: fgColor,
+                      fontWeight: FontWeight.bold),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

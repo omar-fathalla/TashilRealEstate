@@ -145,12 +145,9 @@ class _TashilDrawerDestinationState extends State<TashilDrawerDestination> {
                         widget.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-                          fontSize: 14.0,
-                          fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
+                        style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(fontWeight: (widget.isSelected || _isHovered) ? FontWeight.bold : FontWeight.w500,
                           color: contentColor,
-                          letterSpacing: 0.1,
-                        ),
+                          letterSpacing: 0.1),
                       ),
                       if (widget.supportingText != null) ...[
                         const SizedBox(height: 2.0),
@@ -158,12 +155,9 @@ class _TashilDrawerDestinationState extends State<TashilDrawerDestination> {
                           widget.supportingText!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
-                            fontSize: 11.0,
-                            color: widget.isSelected
+                          style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(color: widget.isSelected
                                 ? activeContent.withAlpha(200)
-                                : colorScheme.onSurfaceVariant.withAlpha(180),
-                          ),
+                                : colorScheme.onSurfaceVariant.withAlpha(180)),
                         ),
                       ],
                     ],
@@ -183,11 +177,8 @@ class _TashilDrawerDestinationState extends State<TashilDrawerDestination> {
                     ),
                     child: Text(
                       widget.badgeCount!,
-                      style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.bold,
-                        color: contentColor,
-                      ),
+                      style: (theme.textTheme.labelSmall ?? const TextStyle()).copyWith(fontWeight: FontWeight.bold,
+                        color: contentColor),
                     ),
                   ),
                 ] else if (widget.trailing != null) ...[

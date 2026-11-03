@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/audio/audio_feedback_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Google Material Design 3 (M3) Checkbox Component.
 ///
@@ -118,7 +119,7 @@ class _TashilCheckboxState extends State<TashilCheckbox> {
               ),
               child: isActive
                   ? Icon(
-                      isIndeterminate ? Icons.remove_rounded : Icons.check_rounded,
+                      isIndeterminate ? Symbols.remove_rounded : Symbols.check_rounded,
                       size: 14.0,
                       color: colorScheme.surface,
                     )
@@ -205,7 +206,7 @@ class _TashilCheckboxState extends State<TashilCheckbox> {
                         duration: const Duration(milliseconds: 180),
                         curve: Curves.easeOutBack,
                         child: Icon(
-                          isIndeterminate ? Icons.remove_rounded : Icons.check_rounded,
+                          isIndeterminate ? Symbols.remove_rounded : Symbols.check_rounded,
                           size: 14.0,
                           color: onPrimaryColor,
                         ),

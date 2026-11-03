@@ -7,6 +7,7 @@ import 'tashil_card.dart';
 import '../buttons/tashil_buttons.dart';
 import '../dividers/tashil_dividers.dart';
 import '../chips/tashil_chips.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying:
 /// 1. The 3 official Google Material Design 3 card types (Elevated, Filled, Outlined).
@@ -49,17 +50,17 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
       TashilCardMenuItem(
         value: 'edit',
         label: loc.tr('m3CardActionEdit'),
-        icon: Icons.edit_outlined,
+        icon: Symbols.edit_rounded,
       ),
       TashilCardMenuItem(
         value: 'share',
         label: loc.tr('m3CardActionShare'),
-        icon: Icons.share_outlined,
+        icon: Symbols.share_rounded,
       ),
       TashilCardMenuItem(
         value: 'delete',
         label: loc.tr('m3CardActionDelete'),
-        icon: Icons.delete_outline_rounded,
+        icon: Symbols.delete_outline_rounded,
       ),
     ];
 
@@ -111,7 +112,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.dashboard_customize_rounded, color: colorScheme.primary, size: 22),
+                        child: Icon(Symbols.dashboard_customize_rounded, color: colorScheme.primary, size: 22),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -138,7 +139,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                       const ThemePaletteSwitcher(isCompact: true),
                       const SizedBox(width: 12),
                       IconButton.outlined(
-                        icon: const Icon(Icons.close_rounded, size: 20),
+                        icon: const Icon(Symbols.close_rounded, size: 20),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -159,27 +160,27 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           TashilConnectedButtonSegment(
                             value: 'outlined_states',
                             label: loc.tr('m3OutlinedCardStatesTab'),
-                            icon: Icons.crop_square_rounded,
+                            icon: Symbols.crop_square_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'elevated_states',
                             label: loc.tr('m3CardStatesTab'),
-                            icon: Icons.layers_outlined,
+                            icon: Symbols.layers_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'types',
                             label: loc.tr('m3CardsTypesTab'),
-                            icon: Icons.view_agenda_outlined,
+                            icon: Symbols.view_agenda_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'text_hierarchy',
                             label: loc.tr('m3CardTextHierarchyTab'),
-                            icon: Icons.text_fields_rounded,
+                            icon: Symbols.text_fields_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'interactive_controls',
                             label: loc.tr('m3InteractiveControlsTab'),
-                            icon: Icons.touch_app_rounded,
+                            icon: Symbols.touch_app_rounded,
                           ),
                         ],
                       ),
@@ -310,13 +311,10 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
       alignment: AlignmentDirectional.bottomStart,
       child: Text(
         label,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
           color: disabled
               ? colorScheme.onSurface.withValues(alpha: 0.38)
-              : colorScheme.onSurface,
-        ),
+              : colorScheme.onSurface),
       ),
     );
 
@@ -430,13 +428,10 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
       alignment: AlignmentDirectional.bottomStart,
       child: Text(
         label,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
           color: disabled
               ? colorScheme.onSurface.withValues(alpha: 0.38)
-              : colorScheme.onSurface,
-        ),
+              : colorScheme.onSurface),
       ),
     );
 
@@ -568,11 +563,8 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
           ),
           child: Text(
             '$number',
-            style: TextStyle(
-              color: colorScheme.onPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary,
+              fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(height: 12),
@@ -580,19 +572,13 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
         const SizedBox(height: 10),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface),
         ),
         const SizedBox(height: 2),
         Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 11,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -623,21 +609,15 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
           ),
           child: Text(
             '$number',
-            style: TextStyle(
-              color: colorScheme.onPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: colorScheme.onPrimary,
+              fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface),
         ),
       ],
     );
@@ -674,7 +654,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.format_size_rounded, color: colorScheme.primary, size: 24),
+                child: Icon(Symbols.format_size_rounded, color: colorScheme.primary, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -714,7 +694,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             _buildTextHierarchyCardContainer(
               context,
               number: 1,
-              title: 'Cortado iced',
+              title: AppLocalizations.trStatic('uiCopy038'),
               description: '${loc.tr('m3HeadlineLabel')} + ${loc.tr('m3SupportingTextLabel')}',
               card: TashilCard.outlined(
                 width: 250,
@@ -728,7 +708,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Cortado iced',
+                            AppLocalizations.trStatic('uiCopy038'),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.onSurface,
@@ -752,11 +732,8 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       child: Text(
                         'Expand',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                          fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -800,7 +777,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           Row(
                             children: List.generate(
                               5,
-                              (index) => const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                              (index) => Icon(Symbols.star_rounded, color: colorScheme.tertiary, size: 16),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -828,7 +805,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.chat_bubble_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
+                              Icon(Symbols.chat_bubble_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                               const SizedBox(width: 6),
                               Text(
                                 '74 comments',
@@ -838,7 +815,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                               ),
                             ],
                           ),
-                          Icon(Icons.share_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+                          Icon(Symbols.share_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                         ],
                       ),
                     ),
@@ -851,7 +828,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             _buildTextHierarchyCardContainer(
               context,
               number: 3,
-              title: 'Clay pot fair on Saturday?',
+              title: AppLocalizations.trStatic('uiCopy033'),
               description: 'Subhead first (Byline) + Headline + Supporting text',
               card: TashilCard.outlined(
                 width: 270,
@@ -868,16 +845,13 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           backgroundColor: colorScheme.primaryContainer,
                           child: Text(
                             'DM',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimaryContainer),
                           ),
                         ),
-                        subheadText: 'Daniel Maas • Yesterday',
-                        trailing: Icon(Icons.star_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-                        headlineText: 'Clay pot fair on Saturday?',
+                        subheadText: AppLocalizations.trStatic('uiCopy039'),
+                        trailing: Icon(Symbols.star_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                        headlineText: AppLocalizations.trStatic('uiCopy033'),
                         supportingText: 'I think it\'s time for us to finally try that new noodle shop downtown that doesn\'t use menus. Anyone else?',
                         spacing: 6.0,
                       ),
@@ -887,14 +861,14 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       child: Row(
                         children: [
-                          Icon(Icons.thumb_up_alt_outlined, size: 16, color: colorScheme.primary),
+                          Icon(Symbols.thumb_up_alt_rounded, size: 16, color: colorScheme.primary),
                           const SizedBox(width: 6),
                           Text(
                             'Like',
-                            style: TextStyle(color: colorScheme.primary, fontSize: 12, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
-                          Icon(Icons.reply_rounded, size: 18, color: colorScheme.onSurfaceVariant),
+                          Icon(Symbols.reply_rounded, size: 18, color: colorScheme.onSurfaceVariant),
                         ],
                       ),
                     ),
@@ -907,7 +881,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             _buildTextHierarchyCardContainer(
               context,
               number: 4,
-              title: 'Tashil Property Card',
+              title: AppLocalizations.trStatic('uiCopy078'),
               description: 'TashilCardText (PropTech Real Estate Standard)',
               card: TashilCard.outlined(
                 width: 280,
@@ -925,18 +899,15 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '28,000 ج.م / شهر',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                  fontSize: 15,
-                                ),
+                                AppLocalizations.trStatic('uiCopy019'),
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary),
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 15),
+                                  Icon(Symbols.star_rounded, color: colorScheme.tertiary, size: 15),
                                   const SizedBox(width: 2),
-                                  Text('4.9', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                                  Text('4.9', style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                                 ],
                               ),
                             ],
@@ -945,10 +916,10 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
 
                           // TashilCardText Component
                           TashilCardText(
-                            headlineText: 'شقة فاخرة بإطلالة على التسعين',
-                            subheadText: 'التجمع الخامس، القاهرة الجديدة',
-                            subheadLeading: Icon(Icons.location_on_outlined, size: 14, color: colorScheme.secondary),
-                            supportingText: 'شقة مودرن بتشطيب ألترا سوبر لوكس، مفروشة بالكامل وجاهزة للسكن الفوري قريبة من الخدمات.',
+                            headlineText: AppLocalizations.trStatic('uiCopy229'),
+                            subheadText: AppLocalizations.trStatic('uiCopy124'),
+                            subheadLeading: Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.secondary),
+                            supportingText: AppLocalizations.trStatic('uiCopy236'),
                             headlineMaxLines: 1,
                             supportingTextMaxLines: 2,
                             spacing: 4.0,
@@ -970,9 +941,9 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildMiniSpec(Icons.bed_outlined, '3 غرف'),
-                          _buildMiniSpec(Icons.bathtub_outlined, '2 حمام'),
-                          _buildMiniSpec(Icons.square_foot_outlined, '185 م²'),
+                          _buildMiniSpec(Symbols.bed_rounded, AppLocalizations.trStatic('uiCopy020')),
+                          _buildMiniSpec(Symbols.bathtub_rounded, AppLocalizations.trStatic('uiCopy011')),
+                          _buildMiniSpec(Symbols.square_foot_rounded, AppLocalizations.trStatic('uiCopy010')),
                         ],
                       ),
                     ),
@@ -988,16 +959,16 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                         isFullWidth: true,
                         selectedValue: 'booking',
                         showCheckmark: false,
-                        segments: const [
+                        segments: [
                           TashilConnectedButtonSegment(
                             value: 'booking',
-                            label: 'حجز',
-                            icon: Icons.calendar_month_outlined,
+                            label: AppLocalizations.trStatic('uiCopy192'),
+                            icon: Symbols.calendar_month_rounded,
                           ),
                           TashilConnectedButtonSegment(
                             value: 'details',
-                            label: 'تفاصيل',
-                            icon: Icons.visibility_outlined,
+                            label: AppLocalizations.trStatic('uiCopy172'),
+                            icon: Symbols.visibility_rounded,
                           ),
                         ],
                         onSelectionChanged: (val) {},
@@ -1017,9 +988,9 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: Colors.grey[600]),
+        Icon(icon, size: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 3),
-        Text(label, style: TextStyle(fontSize: 10.5, color: Colors.grey[700])),
+        Text(label, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Theme.of(context).colorScheme.onSurface)),
       ],
     );
   }
@@ -1050,20 +1021,14 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             children: [
               Text(
                 '#$number',
-                style: TextStyle(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 6),
               Text(
                 title,
-                style: TextStyle(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -1071,10 +1036,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
         const SizedBox(height: 4),
         Text(
           description,
-          style: TextStyle(
-            fontSize: 11,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -1112,7 +1074,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.touch_app_rounded, color: colorScheme.primary, size: 24),
+                child: Icon(Symbols.touch_app_rounded, color: colorScheme.primary, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1147,10 +1109,10 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
-            _buildControlFeatureChip(context, Icons.smart_button_rounded, loc.tr('m3ButtonsCardLabel'), loc.tr('m3ButtonsCardDesc')),
-            _buildControlFeatureChip(context, Icons.favorite_border_rounded, loc.tr('m3IconButtonsCardLabel'), loc.tr('m3IconButtonsCardDesc')),
-            _buildControlFeatureChip(context, Icons.check_box_outlined, loc.tr('m3SelectionControlsCardLabel'), loc.tr('m3SelectionControlsCardDesc')),
-            _buildControlFeatureChip(context, Icons.link_rounded, loc.tr('m3LinkedTextCardLabel'), loc.tr('m3LinkedTextCardDesc')),
+            _buildControlFeatureChip(context, Symbols.smart_button_rounded, loc.tr('m3ButtonsCardLabel'), loc.tr('m3ButtonsCardDesc')),
+            _buildControlFeatureChip(context, Symbols.favorite_border_rounded, loc.tr('m3IconButtonsCardLabel'), loc.tr('m3IconButtonsCardDesc')),
+            _buildControlFeatureChip(context, Symbols.check_box_rounded, loc.tr('m3SelectionControlsCardLabel'), loc.tr('m3SelectionControlsCardDesc')),
+            _buildControlFeatureChip(context, Symbols.link_rounded, loc.tr('m3LinkedTextCardLabel'), loc.tr('m3LinkedTextCardDesc')),
           ],
         ),
         const SizedBox(height: 24),
@@ -1166,7 +1128,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             _buildTextHierarchyCardContainer(
               context,
               number: 1,
-              title: 'M3 Canonical Reference',
+              title: AppLocalizations.trStatic('uiCopy063'),
               description: 'Buttons + Icon buttons + Linked text',
               card: TashilCard.outlined(
                 width: 320,
@@ -1182,19 +1144,19 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           CircleAvatar(
                             radius: 18,
                             backgroundColor: colorScheme.primaryContainer,
-                            child: Icon(Icons.person, size: 20, color: colorScheme.onPrimaryContainer),
+                            child: Icon(Symbols.person_rounded, size: 20, color: colorScheme.onPrimaryContainer),
                           ),
                           const Spacer(),
                           TashilButton.outlined(
                             label: 'Preferido',
-                            icon: Icons.favorite_border,
+                            icon: Symbols.favorite_border_rounded,
                             height: 32,
                             onPressed: () => _notifyAction(context, 'Preferido tapped'),
                           ),
                           const SizedBox(width: 8),
                           TashilButton.outlined(
                             label: 'Ayudar',
-                            icon: Icons.calendar_today_outlined,
+                            icon: Symbols.calendar_today_rounded,
                             height: 32,
                             onPressed: () => _notifyAction(context, 'Ayudar tapped'),
                           ),
@@ -1215,7 +1177,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                             ),
                           ),
                           child: Center(
-                            child: Icon(Icons.nature_people_rounded, size: 48, color: colorScheme.primary),
+                            child: Icon(Symbols.nature_people_rounded, size: 48, color: colorScheme.primary),
                           ),
                         ),
                       ),
@@ -1225,8 +1187,8 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: TashilCardText(
-                        supportingText: 'Caminante, son tus huellas el camino y nada más; se hace camino al andar.',
-                        linkedText: 'Visite el enlace aquí.',
+                        supportingText: AppLocalizations.trStatic('uiCopy032'),
+                        linkedText: AppLocalizations.trStatic('uiCopy083'),
                         onLinkedTextTap: () => _notifyAction(context, 'Link clicked: Visite el enlace aquí'),
                         supportingTextMaxLines: 3,
                       ),
@@ -1252,15 +1214,15 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           ),
                           const Spacer(),
                           TashilIconButton.outlined(
-                            icon: Icons.phone_outlined,
+                            icon: Symbols.phone_rounded,
                             size: 34,
                             iconSize: 16,
-                            tooltip: 'Phone Call',
+                            tooltip: AppLocalizations.trStatic('uiCopy071'),
                             onPressed: () => _notifyAction(context, 'Call icon tapped'),
                           ),
                           const SizedBox(width: 6),
                           TashilIconButton.outlined(
-                            icon: Icons.chat_bubble_outline_rounded,
+                            icon: Symbols.chat_bubble_outline_rounded,
                             size: 34,
                             iconSize: 16,
                             tooltip: 'Chat',
@@ -1278,7 +1240,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
             _buildTextHierarchyCardContainer(
               context,
               number: 2,
-              title: 'Tashil PropTech Standard',
+              title: AppLocalizations.trStatic('uiCopy077'),
               description: 'Buttons + Icon buttons + Selection Chips + Linked text',
               card: TashilCard.outlined(
                 width: 320,
@@ -1296,18 +1258,15 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '28,000 ج.م / شهر',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                  fontSize: 16,
-                                ),
+                                AppLocalizations.trStatic('uiCopy019'),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary),
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                  Icon(Symbols.star_rounded, color: colorScheme.tertiary, size: 16),
                                   const SizedBox(width: 2),
-                                  Text('4.9', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                                  Text('4.9', style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                                 ],
                               ),
                             ],
@@ -1316,10 +1275,10 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
 
                           // TashilCardText with Headline, Subhead, Supporting text, and Linked text
                           TashilCardText(
-                            headlineText: 'شقة فاخرة بشارع التسعين',
-                            subheadText: 'التجمع الخامس، القاهرة الجديدة',
-                            subheadLeading: Icon(Icons.location_on_outlined, size: 14, color: colorScheme.secondary),
-                            supportingText: 'شقة مودرن بتشطيب ألترا سوبر لوكس مفروشة بالكامل.',
+                            headlineText: AppLocalizations.trStatic('uiCopy231'),
+                            subheadText: AppLocalizations.trStatic('uiCopy124'),
+                            subheadLeading: Icon(Symbols.location_on_rounded, size: 14, color: colorScheme.secondary),
+                            supportingText: AppLocalizations.trStatic('uiCopy235'),
                             linkedText: loc.tr('cardReadMoreLink'),
                             onLinkedTextTap: () => _notifyAction(context, 'Linked text tapped: ${loc.tr('cardReadMoreLink')}'),
                             headlineMaxLines: 1,
@@ -1334,20 +1293,20 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                             runSpacing: 4,
                             children: [
                               TashilAssistChip(
-                                label: 'مفروش',
-                                icon: Icons.weekend_outlined,
+                                label: AppLocalizations.trStatic('uiCopy300'),
+                                icon: Symbols.weekend_rounded,
                                 height: 26,
                                 onPressed: () => _notifyAction(context, 'Furnished chip'),
                               ),
                               TashilAssistChip(
-                                label: 'تكييف',
-                                icon: Icons.ac_unit_outlined,
+                                label: AppLocalizations.trStatic('uiCopy173'),
+                                icon: Symbols.ac_unit_rounded,
                                 height: 26,
                                 onPressed: () => _notifyAction(context, 'AC chip'),
                               ),
                               TashilAssistChip(
-                                label: 'مصعد',
-                                icon: Icons.elevator_outlined,
+                                label: AppLocalizations.trStatic('uiCopy293'),
+                                icon: Symbols.elevator_rounded,
                                 height: 26,
                                 onPressed: () => _notifyAction(context, 'Elevator chip'),
                               ),
@@ -1374,12 +1333,12 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                                 TashilConnectedButtonSegment(
                                   value: 'booking',
                                   label: loc.tr('bookViewingShort'),
-                                  icon: Icons.calendar_month_outlined,
+                                  icon: Symbols.calendar_month_rounded,
                                 ),
                                 TashilConnectedButtonSegment(
                                   value: 'details',
                                   label: loc.tr('detailsShort'),
-                                  icon: Icons.visibility_outlined,
+                                  icon: Symbols.visibility_rounded,
                                 ),
                               ],
                               onSelectionChanged: (val) => _notifyAction(context, 'Action: $val'),
@@ -1387,7 +1346,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           ),
                           const SizedBox(width: 8),
                           TashilIconButton.outlined(
-                            icon: Icons.phone_outlined,
+                            icon: Symbols.phone_rounded,
                             size: 34,
                             iconSize: 16,
                             tooltip: loc.tr('callAgency'),
@@ -1395,7 +1354,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
                           ),
                           const SizedBox(width: 6),
                           TashilIconButton.outlined(
-                            icon: Icons.chat_bubble_outline_rounded,
+                            icon: Symbols.chat_bubble_outline_rounded,
                             size: 34,
                             iconSize: 16,
                             tooltip: loc.tr('chatAgency'),
@@ -1433,11 +1392,8 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
           Flexible(
             child: Text(
               title,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

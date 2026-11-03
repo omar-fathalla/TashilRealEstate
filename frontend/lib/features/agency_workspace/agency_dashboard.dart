@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/rent_collection/views/rent_collectio
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/views/financial_kpi_dashboard_view.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class AgencyDashboard extends StatefulWidget {
   const AgencyDashboard({super.key});
@@ -104,7 +105,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.domain_rounded,
+                  Symbols.domain_rounded,
                   color: colorScheme.onPrimary,
                   size: 20,
                 ),
@@ -116,20 +117,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15.5,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                      letterSpacing: -0.3),
                   ),
                   Text(
                     loc.tr('agencyWorkspace'),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -143,7 +138,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
               const LanguageSwitcher(isCompact: true),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.tune_rounded,
+                icon: Symbols.tune_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('settings'),
@@ -151,7 +146,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.travel_explore_rounded,
+                icon: Symbols.travel_explore_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('browseAsVisitor'),
@@ -184,16 +179,16 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       menuTooltip: isExpanded ? loc.tr('collapseMenu') : loc.tr('expandMenu'),
       destinations: [
         TashilRailDestination(
-          icon: Icons.dashboard_outlined,
-          selectedIcon: Icons.dashboard_rounded,
+          icon: Symbols.dashboard_rounded,
+          selectedIcon: Symbols.dashboard_rounded,
           label: loc.tr('dashboard'),
           isSelected: _selectedIndex == 0,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 0),
         ),
         TashilRailDestination(
-          icon: Icons.apartment_outlined,
-          selectedIcon: Icons.apartment_rounded,
+          icon: Symbols.apartment_rounded,
+          selectedIcon: Symbols.apartment_rounded,
           label: loc.tr('properties'),
           badgeCount: '120',
           isSelected: _selectedIndex == 1,
@@ -201,16 +196,16 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           onTap: () => setState(() => _selectedIndex = 1),
         ),
         TashilRailDestination(
-          icon: Icons.people_outline_rounded,
-          selectedIcon: Icons.people_rounded,
+          icon: Symbols.people_outline_rounded,
+          selectedIcon: Symbols.people_rounded,
           label: loc.tr('crm'),
           isSelected: _selectedIndex == 2,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 2),
         ),
         TashilRailDestination(
-          icon: Icons.description_outlined,
-          selectedIcon: Icons.description_rounded,
+          icon: Symbols.description_rounded,
+          selectedIcon: Symbols.description_rounded,
           label: loc.tr('leases'),
           badgeCount: '85',
           isSelected: _selectedIndex == 3,
@@ -218,8 +213,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           onTap: () => setState(() => _selectedIndex = 3),
         ),
         TashilRailDestination(
-          icon: Icons.payments_outlined,
-          selectedIcon: Icons.payments_rounded,
+          icon: Symbols.payments_rounded,
+          selectedIcon: Symbols.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
           badgeCount: '3',
           isSelected: _selectedIndex == 4,
@@ -227,30 +222,30 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           onTap: () => setState(() => _selectedIndex = 4),
         ),
         TashilRailDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
+          icon: Symbols.analytics_rounded,
+          selectedIcon: Symbols.analytics_rounded,
           label: loc.tr('financials'),
           isSelected: _selectedIndex == 5,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 5),
         ),
         TashilRailDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
+          icon: Symbols.show_chart_rounded,
+          selectedIcon: Symbols.show_chart_rounded,
           label: loc.tr('investorDashboardTitle'),
           isSelected: _selectedIndex == 6,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 6),
         ),
         TashilRailDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
+          selectedIcon: Symbols.tune_rounded,
           label: loc.tr('settings'),
           isSelected: false,
           isExpanded: isExpanded,
           trailing: isExpanded
               ? Icon(
-                  Icons.chevron_right_rounded,
+                  Symbols.chevron_right_rounded,
                   size: 18.0,
                   color: colorScheme.outlineVariant,
                 )
@@ -286,11 +281,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                     backgroundColor: colorScheme.primaryContainer,
                     child: Text(
                       'AG',
-                      style: TextStyle(
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer),
                     ),
                   ),
                 ),
@@ -327,11 +319,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                         backgroundColor: colorScheme.primary,
                         child: Text(
                           'AG',
-                          style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium!.copyWith(color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -344,17 +333,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                                 Flexible(
                                   child: Text(
                                     loc.tr('agencyWorkspace'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.5,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Icon(
-                                  Icons.verified_rounded,
+                                  Symbols.verified_rounded,
                                   size: 16,
                                   color: colorScheme.primary,
                                 ),
@@ -362,17 +348,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                             ),
                             Text(
                               loc.tr('roleAgency'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
                       TashilIconButton.standard(
-                        icon: Icons.close_rounded,
+                        icon: Symbols.close_rounded,
                         size: 34,
                         iconSize: 18,
                         onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -418,7 +401,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
 
                   // Menu Actions
                   _buildProfileMenuItem(
-                    icon: Icons.dashboard_outlined,
+                    icon: Symbols.dashboard_rounded,
                     title: loc.tr('dashboard'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -427,7 +410,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                     },
                   ),
                   _buildProfileMenuItem(
-                    icon: Icons.tune_rounded,
+                    icon: Symbols.tune_rounded,
                     title: loc.tr('settings'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -436,7 +419,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                     },
                   ),
                   _buildProfileMenuItem(
-                    icon: Icons.travel_explore_rounded,
+                    icon: Symbols.travel_explore_rounded,
                     title: loc.tr('browseAsVisitor'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -445,7 +428,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                     },
                   ),
                   _buildProfileMenuItem(
-                    icon: Icons.security_rounded,
+                    icon: Symbols.security_rounded,
                     title: loc.tr('accountSecurity'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -462,7 +445,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                   const TashilDivider.middleInset(),
                   const SizedBox(height: 6),
                   _buildProfileMenuItem(
-                    icon: Icons.logout_rounded,
+                    icon: Symbols.logout_rounded,
                     title: loc.tr('logout'),
                     colorScheme: colorScheme,
                     isDestructive: true,
@@ -491,18 +474,12 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+            color: colorScheme.primary),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10.5,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -530,15 +507,12 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: isDestructive ? FontWeight.bold : FontWeight.w500,
-                  color: itemColor,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isDestructive ? FontWeight.bold : FontWeight.w500,
+                  color: itemColor),
               ),
             ),
             Icon(
-              Icons.chevron_right_rounded,
+              Symbols.chevron_right_rounded,
               size: 16,
               color: isDestructive
                   ? colorScheme.error.withAlpha(120)
@@ -571,17 +545,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                 color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.domain_rounded, color: colorScheme.onPrimary, size: 18),
+              child: Icon(Symbols.domain_rounded, color: colorScheme.onPrimary, size: 18),
             ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 loc.tr('appName'),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -589,7 +560,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         ),
         actions: [
           TashilIconButton.tonal(
-            icon: Icons.tune_rounded,
+            icon: Symbols.tune_rounded,
             size: 38,
             iconSize: 18,
             tooltip: loc.tr('settings'),
@@ -598,7 +569,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
-              icon: Icons.menu_rounded,
+              icon: Symbols.menu_rounded,
               size: 38,
               iconSize: 20,
               tooltip: loc.tr('menu'),
@@ -619,28 +590,28 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         },
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard_rounded),
+            icon: const Icon(Symbols.dashboard_rounded),
+            selectedIcon: const Icon(Symbols.dashboard_rounded),
             label: loc.tr('dashboard'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.apartment_outlined),
-            selectedIcon: const Icon(Icons.apartment_rounded),
+            icon: const Icon(Symbols.apartment_rounded),
+            selectedIcon: const Icon(Symbols.apartment_rounded),
             label: loc.tr('properties'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.people_outline),
-            selectedIcon: const Icon(Icons.people_rounded),
+            icon: const Icon(Symbols.people_rounded),
+            selectedIcon: const Icon(Symbols.people_rounded),
             label: loc.tr('crm'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.description_outlined),
-            selectedIcon: const Icon(Icons.description_rounded),
+            icon: const Icon(Symbols.description_rounded),
+            selectedIcon: const Icon(Symbols.description_rounded),
             label: loc.tr('leases'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics_rounded),
+            icon: const Icon(Symbols.analytics_rounded),
+            selectedIcon: const Icon(Symbols.analytics_rounded),
             label: loc.tr('financials'),
           ),
         ],
@@ -667,7 +638,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                 color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.domain_rounded, color: colorScheme.onPrimary, size: 20),
+              child: Icon(Symbols.domain_rounded, color: colorScheme.onPrimary, size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -676,25 +647,19 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   Text(
                     loc.tr('agencyWorkspace'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
             TashilIconButton.standard(
-              icon: Icons.close_rounded,
+              icon: Symbols.close_rounded,
               size: 36,
               iconSize: 20,
               onPressed: () => Navigator.pop(context),
@@ -704,8 +669,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       ),
       destinations: [
         TashilDrawerDestination(
-          icon: Icons.dashboard_outlined,
-          selectedIcon: Icons.dashboard_rounded,
+          icon: Symbols.dashboard_rounded,
+          selectedIcon: Symbols.dashboard_rounded,
           label: loc.tr('dashboard'),
           isSelected: _selectedIndex == 0,
           onTap: () {
@@ -714,8 +679,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.apartment_outlined,
-          selectedIcon: Icons.apartment_rounded,
+          icon: Symbols.apartment_rounded,
+          selectedIcon: Symbols.apartment_rounded,
           label: loc.tr('properties'),
           badgeCount: '120',
           isSelected: _selectedIndex == 1,
@@ -725,8 +690,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.people_outline_rounded,
-          selectedIcon: Icons.people_rounded,
+          icon: Symbols.people_outline_rounded,
+          selectedIcon: Symbols.people_rounded,
           label: loc.tr('crm'),
           isSelected: _selectedIndex == 2,
           onTap: () {
@@ -735,8 +700,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.description_outlined,
-          selectedIcon: Icons.description_rounded,
+          icon: Symbols.description_rounded,
+          selectedIcon: Symbols.description_rounded,
           label: loc.tr('leases'),
           badgeCount: '85',
           isSelected: _selectedIndex == 3,
@@ -746,8 +711,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.payments_outlined,
-          selectedIcon: Icons.payments_rounded,
+          icon: Symbols.payments_rounded,
+          selectedIcon: Symbols.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
           badgeCount: '3',
           isSelected: _selectedIndex == 4,
@@ -757,8 +722,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
+          icon: Symbols.analytics_rounded,
+          selectedIcon: Symbols.analytics_rounded,
           label: loc.tr('financials'),
           isSelected: _selectedIndex == 5,
           onTap: () {
@@ -767,8 +732,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
+          icon: Symbols.show_chart_rounded,
+          selectedIcon: Symbols.show_chart_rounded,
           label: loc.tr('investorDashboardTitle'),
           isSelected: _selectedIndex == 6,
           onTap: () {
@@ -778,8 +743,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         ),
         const TashilDivider.middleInset(height: 16.0),
         TashilDrawerDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
+          selectedIcon: Symbols.tune_rounded,
           label: loc.tr('settings'),
           isSelected: false,
           onTap: () {
@@ -788,8 +753,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.travel_explore_outlined,
-          selectedIcon: Icons.travel_explore_rounded,
+          icon: Symbols.travel_explore_rounded,
+          selectedIcon: Symbols.travel_explore_rounded,
           label: loc.tr('browseAsVisitor'),
           isSelected: false,
           onTap: () {
@@ -798,8 +763,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.logout_outlined,
-          selectedIcon: Icons.logout_rounded,
+          icon: Symbols.logout_rounded,
+          selectedIcon: Symbols.logout_rounded,
           label: loc.tr('logout'),
           isSelected: false,
           onTap: () async {

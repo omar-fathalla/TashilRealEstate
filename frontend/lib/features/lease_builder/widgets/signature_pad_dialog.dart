@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class SignaturePadDialog extends StatefulWidget {
   final String signerName;
@@ -131,7 +132,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                           color: theme.colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.draw_rounded, color: theme.colorScheme.primary, size: 24),
+                        child: Icon(Symbols.draw_rounded, color: theme.colorScheme.primary, size: 24),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -140,15 +141,12 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                           children: [
                             Text(
                               loc.tr('digitalSignaturePad'),
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface),
                             ),
                             Text(
                               '${loc.tr('contractRef')}: ${widget.contractNumber}',
-                              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -170,7 +168,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                     ),
                     child: Row(
                       children: [
-                        Icon(isLessor ? Icons.business_center_rounded : Icons.person_rounded, size: 20, color: theme.colorScheme.primary),
+                        Icon(isLessor ? Symbols.business_center_rounded : Symbols.person_rounded, size: 20, color: theme.colorScheme.primary),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -178,11 +176,11 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                             children: [
                               Text(
                                 '${widget.signerName} ($roleLabel)',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                               ),
                               Text(
                                 '${loc.tr('idNumber')}: ${widget.nationalIdOrEmiratesId}',
-                                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -196,11 +194,11 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified_user_rounded, color: theme.colorScheme.tertiary, size: 14),
+                              Icon(Symbols.verified_user_rounded, color: theme.colorScheme.tertiary, size: 14),
                               const SizedBox(width: 4),
                               Text(
                                 loc.tr('identityVerified'),
-                                style: TextStyle(color: theme.colorScheme.tertiary, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.tertiary, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -222,7 +220,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
+                          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -245,7 +243,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                           bottom: 20,
                           child: Text(
                             loc.tr('signHereHint'),
-                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 12, fontStyle: FontStyle.italic),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontStyle: FontStyle.italic),
                           ),
                         ),
 
@@ -271,7 +269,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                             end: 8,
                             child: TextButton.icon(
                               onPressed: _clearSignature,
-                              icon: Icon(Icons.refresh_rounded, size: 16, color: theme.colorScheme.error),
+                              icon: Icon(Symbols.refresh_rounded, size: 16, color: theme.colorScheme.error),
                               label: Text(loc.tr('clearSignature'), style: TextStyle(color: theme.colorScheme.error)),
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
@@ -300,7 +298,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                       Expanded(
                         child: Text(
                           loc.tr('eSignatureLegalAcknowledge'),
-                          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant, height: 1.3),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.3),
                         ),
                       ),
                     ],
@@ -326,12 +324,12 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                       TashilConnectedButtonSegment<String>(
                         value: 'cancel',
                         label: loc.tr('cancel'),
-                        icon: Icons.close_rounded,
+                        icon: Symbols.close_rounded,
                       ),
                       TashilConnectedButtonSegment<String>(
                         value: 'confirm',
                         label: loc.tr('confirmSignature'),
-                        icon: Icons.verified_rounded,
+                        icon: Symbols.verified_rounded,
                         enabled: _hasSignature && _acceptedTerms,
                       ),
                     ],

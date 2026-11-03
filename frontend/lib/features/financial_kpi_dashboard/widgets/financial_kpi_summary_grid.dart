@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class FinancialKpiSummaryGrid extends StatelessWidget {
   final FinancialKpiSummary summary;
@@ -26,37 +27,41 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
 
     final cards = [
       _buildCard(
+        context: context,
         title: loc.tr('netCollectedProfitsKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalCollectedNet, langCode: lang)} $currency',
         subtitle: '${loc.tr('netMarginRatio')}: ${summary.netProfitMargin.toStringAsFixed(1)}%',
-        icon: Icons.account_balance_wallet_rounded,
+        icon: Symbols.account_balance_wallet_rounded,
         color: colorScheme.secondary,
         bgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('grossInvoicedTotalKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalGrossInvoiced, langCode: lang)} $currency',
         subtitle: '${loc.tr('grossRentalYield')}: ${summary.grossRentalYield.toStringAsFixed(1)}%',
-        icon: Icons.receipt_long_rounded,
+        icon: Symbols.receipt_long_rounded,
         color: colorScheme.primary,
         bgColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('collectionEfficiencyRateKpi'),
         value: '${summary.collectionEfficiencyRate.toStringAsFixed(1)}%',
         subtitle: loc.tr('onTimeCollectionHighPerformance'),
-        icon: Icons.speed_rounded,
+        icon: Symbols.speed_rounded,
         color: colorScheme.tertiary,
         bgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
       ),
       _buildCard(
+        context: context,
         title: loc.tr('totalOverdueArrearsKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalOverdueArrears, langCode: lang)} $currency',
         subtitle: loc.tr('escalationNoticeActiveNotice'),
-        icon: Icons.warning_amber_rounded,
+        icon: Symbols.warning_amber_rounded,
         color: colorScheme.error,
         bgColor: colorScheme.errorContainer.withValues(alpha: 0.5),
         colorScheme: colorScheme,
@@ -90,6 +95,7 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
   }
 
   Widget _buildCard({
+    required BuildContext context,
     required String title,
     required String value,
     required String subtitle,
@@ -113,12 +119,9 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.3,
-                  ),
+                    height: 1.3),
                 ),
               ),
               const SizedBox(width: 8),
@@ -138,12 +141,9 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
-                  letterSpacing: -0.2,
-                ),
+                  letterSpacing: -0.2),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -163,11 +163,8 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
                   Flexible(
                     child: Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                        color: color),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

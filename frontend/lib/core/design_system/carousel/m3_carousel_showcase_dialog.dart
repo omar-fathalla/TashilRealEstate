@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/carousel/tashil_carousels.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 Carousel Showcase Dialog.
 ///
@@ -77,7 +78,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
-                      Icons.view_carousel_rounded,
+                      Symbols.view_carousel_rounded,
                       color: colorScheme.onPrimaryContainer,
                       size: 24,
                     ),
@@ -104,7 +105,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                     ),
                   ),
                   TashilIconButton.standard(
-                    icon: Icons.close_rounded,
+                    icon: Symbols.close_rounded,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -128,7 +129,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.touch_app_outlined, size: 20, color: colorScheme.primary),
+                        Icon(Symbols.touch_app_rounded, size: 20, color: colorScheme.primary),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -150,7 +151,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                     context,
                     title: loc.tr('m3CarouselHeroTitle'),
                     subtitle: loc.tr('m3CarouselHeroSubtitle'),
-                    icon: Icons.fullscreen_rounded,
+                    icon: Symbols.fullscreen_rounded,
                   ),
                   const SizedBox(height: 14),
 
@@ -181,7 +182,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                     context,
                     title: loc.tr('m3CarouselMultiBrowseTitle'),
                     subtitle: loc.tr('m3CarouselMultiBrowseSubtitle'),
-                    icon: Icons.view_column_rounded,
+                    icon: Symbols.view_column_rounded,
                   ),
                   const SizedBox(height: 14),
 
@@ -207,7 +208,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Container(
                                       color: colorScheme.surfaceContainerHigh,
-                                      child: const Icon(Icons.broken_image, size: 30),
+                                      child: const Icon(Symbols.broken_image_rounded, size: 30),
                                     ),
                                   ),
                                   // Gradient scrim for text legibility
@@ -222,7 +223,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                                           begin: Alignment.bottomCenter,
                                           end: Alignment.topCenter,
                                           colors: [
-                                            Colors.black.withValues(alpha: 0.8),
+                                            colorScheme.shadow.withValues(alpha: 0.8),
                                             Colors.transparent,
                                           ],
                                         ),
@@ -237,9 +238,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                                       label,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary,
                                         fontWeight: FontWeight.bold,
                                         shadows: [
                                           Shadow(
@@ -247,8 +246,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                                             blurRadius: 3,
                                             color: Colors.black87,
                                           ),
-                                        ],
-                                      ),
+                                        ]),
                                     ),
                                   ),
                                 ],
@@ -272,7 +270,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                 children: [
                   TashilButton(
                     label: loc.tr('confirm'),
-                    icon: Icons.check_circle_outline_rounded,
+                    icon: Symbols.check_circle_outline_rounded,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

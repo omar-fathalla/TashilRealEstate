@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 (M3) Input Chip component for Tashil Real Estate.
 ///
@@ -6,7 +7,7 @@ import 'package:flutter/material.dart';
 /// - Container height: 32dp
 /// - Corner radius: 8dp (M3 shape.corner.small)
 /// - Optional leading icon or avatar: 18dp
-/// - Trailing remove/delete icon button: 18dp (Icons.close_rounded)
+/// - Trailing remove/delete icon button: 18dp (Symbols.close_rounded)
 /// - Represents discrete user entries, filters, or selected tags
 /// - Native RTL/LTR directionality support
 ///
@@ -93,11 +94,8 @@ class _TashilInputChipState extends State<TashilInputChip> {
               // Label Text
               Text(
                 widget.label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: fg,
-                  fontSize: 13.0,
-                  fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
+                style: theme.textTheme.labelLarge?.copyWith(color: fg,
+                  fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -114,7 +112,7 @@ class _TashilInputChipState extends State<TashilInputChip> {
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: Icon(
-                        Icons.close_rounded,
+                        Symbols.close_rounded,
                         size: 16.0,
                         color: fg.withValues(alpha: 0.7),
                       ),

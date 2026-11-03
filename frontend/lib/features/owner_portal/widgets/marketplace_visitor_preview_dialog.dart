@@ -8,6 +8,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../../public_marketplace/models/property_item.dart';
 import '../../public_marketplace/widgets/property_card.dart';
 import '../../public_marketplace/widgets/property_details_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Modal dialog that presents an exact, live simulation of how the property
 /// card appears to visitors in the Tashil Public Marketplace.
@@ -72,7 +73,7 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                Icons.storefront_rounded,
+                                Symbols.storefront_rounded,
                                 color: theme.colorScheme.onPrimaryContainer,
                                 size: 20,
                               ),
@@ -84,20 +85,14 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
                                 children: [
                                   Text(
                                     loc.tr('previewModalTitle'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     loc.tr('previewModalSubtitle'),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -125,16 +120,13 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.touch_app_rounded, color: theme.colorScheme.primary, size: 18),
+                        Icon(Symbols.touch_app_rounded, color: theme.colorScheme.primary, size: 18),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             loc.tr('previewInteractiveHint'),
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: theme.colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
@@ -190,17 +182,17 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
                         TashilConnectedButtonSegment(
                           value: 'cancel',
                           label: loc.tr('cancelBtn'),
-                          icon: Icons.close_rounded,
+                          icon: Symbols.close_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'details',
                           label: loc.tr('openFullDetailsBtn'),
-                          icon: Icons.open_in_new_rounded,
+                          icon: Symbols.open_in_new_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'marketplace',
                           label: loc.tr('goToMarketplaceBtn'),
-                          icon: Icons.storefront_rounded,
+                          icon: Symbols.storefront_rounded,
                         ),
                       ],
                     ),

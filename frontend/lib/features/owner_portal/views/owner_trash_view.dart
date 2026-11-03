@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_
 import 'package:tashil_real_estate/features/lease_builder/services/legal_clauses_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Unified Material Design 3 (M3) Trash & Recycle Bin View for Owner Portal.
 ///
@@ -147,7 +148,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                Icons.delete_sweep_rounded,
+                Symbols.delete_sweep_rounded,
                 color: colorScheme.error,
                 size: 24,
               ),
@@ -158,20 +159,14 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               children: [
                 Text(
                   loc.tr('trashAndDeleted'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isCompact ? 20 : 24,
+                  style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.bold,
                     color: colorScheme.onSurface,
-                    letterSpacing: -0.3,
-                  ),
+                    letterSpacing: -0.3),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '$totalDeleted ${loc.tr('allTrashItems')}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -180,7 +175,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
         if (totalDeleted > 0)
           TashilButton(
             variant: TashilButtonVariant.outlined,
-            icon: Icons.delete_sweep_rounded,
+            icon: Symbols.delete_sweep_rounded,
             label: loc.tr('emptyTrashAction'),
             customColor: colorScheme.error,
             onPressed: () => _confirmEmptyAllTrash(loc, currentCountry, colorScheme),
@@ -203,16 +198,13 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, color: colorScheme.primary, size: 20),
+          Icon(Symbols.info_rounded, color: colorScheme.primary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               loc.tr('unifiedTrashBannerDesc'),
-              style: TextStyle(
-                fontSize: 12.5,
-                color: colorScheme.onSurface,
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface,
+                height: 1.4),
             ),
           ),
         ],
@@ -240,17 +232,17 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
         TashilConnectedButtonSegment(
           value: 'all',
           label: '${loc.tr('allTrashItems')} ($totalCount)',
-          icon: Icons.grid_view_rounded,
+          icon: Symbols.grid_view_rounded,
         ),
         TashilConnectedButtonSegment(
           value: 'invoices',
           label: '${loc.tr('trashInvoicesSegment')} ($invoicesCount)',
-          icon: Icons.receipt_long_rounded,
+          icon: Symbols.receipt_long_rounded,
         ),
         TashilConnectedButtonSegment(
           value: 'contracts',
           label: '${loc.tr('trashContractsSegment')} ($contractsCount)',
-          icon: Icons.description_rounded,
+          icon: Symbols.description_rounded,
         ),
       ],
     );
@@ -288,7 +280,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.delete_outline_rounded,
+                  Symbols.delete_outline_rounded,
                   size: 48,
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -296,7 +288,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               const SizedBox(height: 16),
               Text(
                 loc.tr('emptyTrashHubTitle'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Padding(
@@ -304,7 +296,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                 child: Text(
                   loc.tr('emptyTrashHubDesc'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -376,7 +368,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              Icons.description_rounded,
+              Symbols.description_rounded,
               color: colorScheme.primary,
               size: 24,
             ),
@@ -398,11 +390,8 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                       ),
                       child: Text(
                         loc.tr('itemTypeContract'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -411,7 +400,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                         contract.property.propertyTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -426,37 +415,34 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tag_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.tag_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           contract.contractNumber,
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.person_outline_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.person_outline_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           contract.tenant.name,
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.payments_outlined, size: 13, color: colorScheme.primary),
+                        Icon(Symbols.payments_rounded, size: 13, color: colorScheme.primary),
                         const SizedBox(width: 4),
                         Text(
                           '${CurrencyFormatter.formatPriceWithCurrency(amount: contract.financialTerms.monthlyRentEquivalent, currencyCode: currency, langCode: lang)} / ${loc.tr('month')}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -475,7 +461,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                 TashilIconButton.tonal(
                   size: 36,
                   iconSize: 18,
-                  icon: Icons.restore_from_trash_rounded,
+                  icon: Symbols.restore_from_trash_rounded,
                   tooltip: loc.tr('restoreShort'),
                   onPressed: () {
                     LegalClausesService().restoreContract(contract.id);
@@ -491,7 +477,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               else
                 TashilButton.tonal(
                   height: 36,
-                  icon: Icons.restore_from_trash_rounded,
+                  icon: Symbols.restore_from_trash_rounded,
                   label: loc.tr('restoreShort'),
                   onPressed: () {
                     LegalClausesService().restoreContract(contract.id);
@@ -508,7 +494,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               TashilIconButton.outlined(
                 size: 36,
                 iconSize: 18,
-                icon: Icons.delete_forever_rounded,
+                icon: Symbols.delete_forever_rounded,
                 onPressed: () => _confirmPermanentlyDeleteContract(loc, contract, colorScheme),
               ),
             ],
@@ -544,7 +530,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              Icons.receipt_long_rounded,
+              Symbols.receipt_long_rounded,
               color: colorScheme.secondary,
               size: 24,
             ),
@@ -566,11 +552,8 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                       ),
                       child: Text(
                         loc.tr('itemTypeInvoice'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.secondary,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.secondary),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -579,7 +562,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                         invoice.unitTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -594,29 +577,29 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tag_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.tag_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           invoice.invoiceNumber,
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.person_outline_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.person_outline_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           invoice.tenant.name,
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.payments_outlined, size: 13, color: colorScheme.primary),
+                        Icon(Symbols.payments_rounded, size: 13, color: colorScheme.primary),
                         const SizedBox(width: 4),
                         Text(
                           CurrencyFormatter.formatPriceWithCurrency(
@@ -624,11 +607,8 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                             currencyCode: currency,
                             langCode: lang,
                           ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -647,7 +627,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
                 TashilIconButton.tonal(
                   size: 36,
                   iconSize: 18,
-                  icon: Icons.restore_from_trash_rounded,
+                  icon: Symbols.restore_from_trash_rounded,
                   tooltip: loc.tr('restoreShort'),
                   onPressed: () {
                     RentCollectionService().restoreInvoice(invoice.id);
@@ -663,7 +643,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               else
                 TashilButton.tonal(
                   height: 36,
-                  icon: Icons.restore_from_trash_rounded,
+                  icon: Symbols.restore_from_trash_rounded,
                   label: loc.tr('restoreShort'),
                   onPressed: () {
                     RentCollectionService().restoreInvoice(invoice.id);
@@ -680,7 +660,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
               TashilIconButton.outlined(
                 size: 36,
                 iconSize: 18,
-                icon: Icons.delete_forever_rounded,
+                icon: Symbols.delete_forever_rounded,
                 onPressed: () => _confirmPermanentlyDeleteInvoice(loc, invoice, colorScheme),
               ),
             ],
@@ -701,15 +681,12 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.timer_outlined, size: 12, color: colorScheme.onErrorContainer),
+          Icon(Symbols.timer_rounded, size: 12, color: colorScheme.onErrorContainer),
           const SizedBox(width: 4),
           Text(
             '${loc.tr('remainingDaysForAutoDelete')} $daysLeft ${loc.tr('daysCountdown')}',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onErrorContainer,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onErrorContainer),
           ),
         ],
       ),
@@ -729,7 +706,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
   ) async {
     final confirmed = await TashilAlertDialog.showConfirmation(
       context: context,
-      icon: Icons.delete_forever_rounded,
+      icon: Symbols.delete_forever_rounded,
       title: loc.tr('confirmDeletePermanentlyTitle'),
       message: loc.tr('confirmDeleteContractPermanentlyDesc'),
       confirmLabel: loc.tr('deletePermanentlyAction'),
@@ -754,7 +731,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
   ) async {
     final confirmed = await TashilAlertDialog.showConfirmation(
       context: context,
-      icon: Icons.delete_forever_rounded,
+      icon: Symbols.delete_forever_rounded,
       title: loc.tr('confirmDeletePermanentlyTitle'),
       message: loc.tr('confirmDeletePermanentlyDesc'),
       confirmLabel: loc.tr('deletePermanentlyAction'),
@@ -779,7 +756,7 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
   ) async {
     final confirmed = await TashilAlertDialog.showConfirmation(
       context: context,
-      icon: Icons.delete_sweep_rounded,
+      icon: Symbols.delete_sweep_rounded,
       title: loc.tr('confirmEmptyAllTrashTitle'),
       message: loc.tr('confirmEmptyAllTrashDesc'),
       confirmLabel: loc.tr('emptyTrashAction'),

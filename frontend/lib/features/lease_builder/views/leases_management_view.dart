@@ -15,6 +15,7 @@ import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_document_view.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/signature_pad_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Material Design 3 (M3) Leases & Contracts Management View.
 /// Conforms to:
@@ -98,7 +99,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
 
     final confirmed = await TashilAlertDialog.showConfirmation(
       context: context,
-      icon: Icons.delete_outline_rounded,
+      icon: Symbols.delete_outline_rounded,
       title: loc.tr('confirmDeleteContractTitle'),
       message: loc.tr('confirmDeleteContractDesc'),
       confirmLabel: loc.tr('deleteContractBtn'),
@@ -139,11 +140,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           automaticallyImplyLeading: false,
           title: Text(
             contract.contractNumber,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface),
           ),
           backgroundColor: theme.colorScheme.surface,
           actions: [
@@ -354,28 +352,22 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
       children: [
         Text(
           loc.tr('leasesManagementTitle'),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isCompact ? 20 : 24,
+          style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.bold,
             color: colorScheme.onSurface,
-            letterSpacing: -0.5,
-          ),
+            letterSpacing: -0.5),
         ),
         const SizedBox(height: 4),
         Text(
           isUAE ? loc.tr('leasesSubtitle_ae') : loc.tr('leasesSubtitle_eg'),
-          style: TextStyle(
-            fontSize: 13,
-            color: colorScheme.onSurfaceVariant,
-            height: 1.35,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+            height: 1.35),
         ),
       ],
     );
 
     final actionButton = TashilButton(
       onPressed: _openLeaseBuilder,
-      icon: Icons.add_rounded,
+      icon: Symbols.add_rounded,
       label: loc.tr('createNewLease'),
     );
 
@@ -418,8 +410,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           title: loc.tr('totalLeasesCount'),
           value: '$total',
           subtitle: loc.tr('totalLeasesSubtitle'),
-          icon: Icons.description_rounded,
-          subtitleIcon: Icons.folder_shared_outlined,
+          icon: Symbols.description_rounded,
+          subtitleIcon: Symbols.folder_shared_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -427,8 +419,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           title: loc.tr('activeLeasesCount'),
           value: '$active',
           subtitle: loc.tr('activeLeasesSubtitle'),
-          icon: Icons.check_circle_rounded,
-          subtitleIcon: Icons.verified_rounded,
+          icon: Symbols.check_circle_rounded,
+          subtitleIcon: Symbols.verified_rounded,
           iconColor: colorScheme.tertiary,
           iconBgColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
         ),
@@ -436,8 +428,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           title: loc.tr('pendingSignaturesCount'),
           value: '$pending',
           subtitle: loc.tr('pendingSignaturesSubtitle'),
-          icon: Icons.draw_rounded,
-          subtitleIcon: Icons.pending_actions_rounded,
+          icon: Symbols.draw_rounded,
+          subtitleIcon: Symbols.pending_actions_rounded,
           iconColor: colorScheme.secondary,
           iconBgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
         ),
@@ -445,8 +437,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           title: loc.tr('monthlyRentalYield'),
           value: '${CurrencyFormatter.formatAmount(monthlyYield, langCode: lang)} $currency',
           subtitle: loc.tr('monthlyYieldSubtitle'),
-          icon: Icons.account_balance_wallet_rounded,
-          subtitleIcon: Icons.trending_up_rounded,
+          icon: Symbols.account_balance_wallet_rounded,
+          subtitleIcon: Symbols.trending_up_rounded,
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
@@ -477,7 +469,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
       child: Row(
         children: [
           Icon(
-            Icons.search_rounded,
+            Symbols.search_rounded,
             size: 20,
             color: colorScheme.onSurfaceVariant,
           ),
@@ -486,16 +478,10 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: (_) => setState(() {}),
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: loc.tr('searchLeasesPlaceholder'),
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
+                hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
                 isDense: true,
                 filled: false,
                 fillColor: Colors.transparent,
@@ -529,19 +515,19 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
         TashilConnectedButtonSegment(
           value: 'all',
           label: loc.tr('filterAllLeases'),
-          icon: Icons.all_inbox_rounded,
+          icon: Symbols.all_inbox_rounded,
           badge: '$allCount',
         ),
         TashilConnectedButtonSegment(
           value: 'active',
           label: loc.tr('filterActiveLeases'),
-          icon: Icons.check_circle_rounded,
+          icon: Symbols.check_circle_rounded,
           badge: '$activeCount',
         ),
         TashilConnectedButtonSegment(
           value: 'pending_signatures',
           label: loc.tr('filterPendingSignatures'),
-          icon: Icons.pending_actions_rounded,
+          icon: Symbols.pending_actions_rounded,
           badge: '$pendingCount',
         ),
       ],
@@ -589,18 +575,18 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
 
     Color statusBg = colorScheme.surfaceContainer;
     Color statusText = colorScheme.onSurfaceVariant;
-    IconData statusIcon = Icons.edit_note_rounded;
+    IconData statusIcon = Symbols.edit_note_rounded;
     String statusLabel = loc.tr('statusDraft');
 
     if (isActive) {
       statusBg = colorScheme.tertiaryContainer;
       statusText = colorScheme.onTertiaryContainer;
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = Symbols.check_circle_rounded;
       statusLabel = loc.tr('statusActive');
     } else if (hasPendingSign) {
       statusBg = colorScheme.secondaryContainer;
       statusText = colorScheme.onSecondaryContainer;
-      statusIcon = Icons.pending_actions_rounded;
+      statusIcon = Symbols.pending_actions_rounded;
       statusLabel = loc.tr('statusPendingSign');
     }
 
@@ -624,7 +610,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  Icons.description_rounded,
+                  Symbols.description_rounded,
                   color: colorScheme.primary,
                   size: 18,
                 ),
@@ -639,11 +625,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                       contract.contractNumber,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     if (contract.registeredRegistryId != null) ...[
                       const SizedBox(height: 2),
@@ -653,10 +636,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                             : '${isUAE ? loc.tr('ejariNo') : loc.tr('realEstateRegistryNo')}: ${contract.registeredRegistryId}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ],
@@ -676,11 +656,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                     const SizedBox(width: 5),
                     Text(
                       statusLabel,
-                      style: TextStyle(
-                        color: statusText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusText,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -739,18 +716,15 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.verified_rounded,
+                        Symbols.verified_rounded,
                         size: 14,
                         color: colorScheme.tertiary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         loc.tr('verifiedOwner'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.tertiary,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.tertiary),
                       ),
                     ],
                   ),
@@ -788,22 +762,22 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                     TashilConnectedButtonSegment(
                       value: 'sign',
                       label: loc.tr('quickSign'),
-                      icon: Icons.draw_rounded,
+                      icon: Symbols.draw_rounded,
                     ),
                   TashilConnectedButtonSegment(
                     value: 'view',
                     label: loc.tr('viewOfficialContract'),
-                    icon: Icons.visibility_rounded,
+                    icon: Symbols.visibility_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'edit',
                     label: loc.tr('editContractBtn'),
-                    icon: Icons.edit_outlined,
+                    icon: Symbols.edit_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'delete',
                     label: loc.tr('deleteContractBtn'),
-                    icon: Icons.delete_outline_rounded,
+                    icon: Symbols.delete_outline_rounded,
                   ),
                 ],
               ),
@@ -824,28 +798,28 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
     required ColorScheme colorScheme,
   }) {
     final unitItem = _buildDetailCell(
-      icon: Icons.apartment_rounded,
+      icon: Symbols.apartment_rounded,
       label: loc.tr('unit'),
       value: '${contract.property.unitNumber} - ${contract.property.buildingName}',
       colorScheme: colorScheme,
     );
 
     final tenantItem = _buildDetailCell(
-      icon: Icons.person_outline_rounded,
+      icon: Symbols.person_outline_rounded,
       label: loc.tr('tenant'),
       value: contract.tenant.name,
       colorScheme: colorScheme,
     );
 
     final lessorItem = _buildDetailCell(
-      icon: Icons.business_center_outlined,
+      icon: Symbols.business_center_rounded,
       label: loc.tr('lessor'),
       value: contract.lessor.name,
       colorScheme: colorScheme,
     );
 
     final rentItem = _buildDetailCell(
-      icon: Icons.payments_outlined,
+      icon: Symbols.payments_rounded,
       label: loc.tr('monthlyRent'),
       value: '${CurrencyFormatter.formatAmount(contract.financialTerms.monthlyRentEquivalent, langCode: lang)} $currency',
       colorScheme: colorScheme,
@@ -853,7 +827,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
     );
 
     final periodItem = _buildDetailCell(
-      icon: Icons.calendar_month_outlined,
+      icon: Symbols.calendar_month_rounded,
       label: loc.tr('leasePeriod'),
       value: '${contract.startDate.year}/${contract.startDate.month} - ${contract.endDate.year}/${contract.endDate.month} (${contract.durationInMonths} ${loc.tr('months')})',
       colorScheme: colorScheme,
@@ -967,22 +941,16 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.bold,
-                  color: isHighlighted ? colorScheme.primary : colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: isHighlighted ? colorScheme.primary : colorScheme.onSurface),
               ),
             ],
           ),
@@ -998,7 +966,7 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
   }) {
     final bg = isSigned ? colorScheme.tertiaryContainer : colorScheme.surfaceContainer;
     final fg = isSigned ? colorScheme.onTertiaryContainer : colorScheme.onSurfaceVariant;
-    final icon = isSigned ? Icons.check_circle_rounded : Icons.pending_outlined;
+    final icon = isSigned ? Symbols.check_circle_rounded : Symbols.pending_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1013,11 +981,8 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.bold,
-              color: fg,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+              color: fg),
           ),
         ],
       ),
@@ -1036,23 +1001,23 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                 color: colorScheme.surfaceContainerHigh,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.description_outlined, size: 48, color: colorScheme.onSurfaceVariant),
+              child: Icon(Symbols.description_rounded, size: 48, color: colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             Text(
               loc.tr('noLeasesFound'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             const SizedBox(height: 6),
             Text(
               loc.tr('noLeasesSubtitle'),
-              style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             TashilButton(
               onPressed: _openLeaseBuilder,
-              icon: Icons.add_rounded,
+              icon: Symbols.add_rounded,
               label: loc.tr('createNewLease'),
             ),
           ],

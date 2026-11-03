@@ -291,7 +291,7 @@ class _TashilTextFieldState extends State<TashilTextField> {
         textDirection: widget.textDirection,
         textAlign: widget.textAlign,
         autofocus: widget.autofocus,
-        style: (widget.style ?? const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)).copyWith(
+        style: (widget.style ?? Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600)).copyWith(
           color: widget.style?.color ??
               (widget.enabled
                   ? colorScheme.onSurface
@@ -307,25 +307,16 @@ class _TashilTextFieldState extends State<TashilTextField> {
           helperText: widget.helperText,
           errorText: widget.errorText,
           counterText: widget.counterText,
-          labelStyle: TextStyle(
-            fontSize: 14.0,
-            fontWeight: FontWeight.w500,
+          labelStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w500,
             color: hasError
                 ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant),
-          ),
-          floatingLabelStyle: TextStyle(
-            fontSize: 12.0,
-            fontWeight: FontWeight.bold,
+                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
+          floatingLabelStyle: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
             color: hasError
                 ? colorScheme.error
-                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant),
-          ),
-          hintStyle: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.normal,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-          ),
+                : (isFocused ? colorScheme.primary : colorScheme.onSurfaceVariant)),
+          hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.normal,
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
           prefixIcon: prefixWidget,
           prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           suffixIcon: suffixWidget,

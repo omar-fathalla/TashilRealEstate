@@ -95,13 +95,10 @@ class TashilBadge extends StatelessWidget {
                   child: Text(
                     label!,
                     maxLines: 1,
-                    style: TextStyle(
-                      color: effectiveTextColor,
-                      fontSize: 10.0,
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: effectiveTextColor,
                       fontWeight: FontWeight.bold,
                       height: 1.1,
-                      letterSpacing: -0.2,
-                    ),
+                      letterSpacing: -0.2),
                   ),
                 ),
         ),

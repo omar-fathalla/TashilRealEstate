@@ -7,6 +7,7 @@ import 'tashil_assist_chip.dart';
 import 'tashil_filter_chip.dart';
 import 'tashil_input_chip.dart';
 import 'tashil_suggestion_chip.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying the 4 official Material Design 3 Chip types:
 /// 1. Assist Chips (Type 1 - Outlined, Elevated, Tonal)
@@ -33,7 +34,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
   final Set<String> _selectedFilters = {'furnished', 'parking'};
 
   // Input Chip State
-  final List<String> _tags = ['التجمع الخامس', '3 غرف', 'مكيف بالكامل', 'إطلالة بحرية'];
+  final List<String> _tags = [AppLocalizations.trStatic('uiCopy123'), AppLocalizations.trStatic('uiCopy020'), 'مكيف بالكامل', 'إطلالة بحرية'];
 
   // Assist Chip State
   String? _lastAssistTapped;
@@ -70,7 +71,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
-                              Icons.label_important_outline_rounded,
+                              Symbols.label_important_outline_rounded,
                               color: theme.colorScheme.onPrimaryContainer,
                               size: 24,
                             ),
@@ -80,14 +81,14 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'منظومة رقائق المواد M3 (Chips Suite)',
+                                AppLocalizations.trStatic('uiCopy312'),
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.onSurface,
                                 ),
                               ),
                               Text(
-                                'المواصفات القياسية الرسمية لماتريال ديزاين 3 مع نقاء لغوي تام',
+                                AppLocalizations.trStatic('uiCopy146'),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -97,7 +98,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                         ],
                       ),
                       TashilIconButton.standard(
-                        icon: Icons.close_rounded,
+                        icon: Symbols.close_rounded,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -112,9 +113,9 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                         children: [
                           // 1. Assist Chips (Type 1)
                           _buildSectionTitle(
-                            title: '1. رقائق المساعدة (Assist Chips) — النوع الأول القياسي',
+                            title: AppLocalizations.trStatic('uiCopy006'),
                             description:
-                                'إجراءات سريعة وذكية مع أيقونة دلالية متوافقة مع السياق (ارتفاع 32dp وزوايا 8dp)',
+                                AppLocalizations.trStatic('uiCopy090'),
                             theme: theme,
                           ),
                           const SizedBox(height: 10),
@@ -123,32 +124,32 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             runSpacing: 8,
                             children: [
                               TashilAssistChip.outlined(
-                                icon: Icons.weekend_outlined,
+                                icon: Symbols.weekend_rounded,
                                 label: loc.tr('presetLivingRoom'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetLivingRoom')),
                               ),
                               TashilAssistChip.outlined(
-                                icon: Icons.bed_outlined,
+                                icon: Symbols.bed_rounded,
                                 label: loc.tr('presetMasterBed'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetMasterBed')),
                               ),
                               TashilAssistChip.elevated(
-                                icon: Icons.countertops_outlined,
+                                icon: Symbols.countertops_rounded,
                                 label: loc.tr('presetKitchen'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetKitchen')),
                               ),
                               TashilAssistChip.elevated(
-                                icon: Icons.balcony_outlined,
+                                icon: Symbols.balcony_rounded,
                                 label: loc.tr('presetBalcony'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetBalcony')),
                               ),
                               TashilAssistChip.tonal(
-                                icon: Icons.bathtub_outlined,
+                                icon: Symbols.bathtub_rounded,
                                 label: loc.tr('presetBathroom'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetBathroom')),
                               ),
                               TashilAssistChip.outlined(
-                                icon: Icons.apartment_outlined,
+                                icon: Symbols.apartment_rounded,
                                 label: loc.tr('presetFacade'),
                                 onPressed: () => setState(() => _lastAssistTapped = loc.tr('presetFacade')),
                               ),
@@ -158,15 +159,15 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             const SizedBox(height: 8),
                             Text(
                               'تم النقر على رقاقة المساعدة: $_lastAssistTapped',
-                              style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                             ),
                           ],
                           const SizedBox(height: 24),
 
                           // 2. Filter Chips (Type 2)
                           _buildSectionTitle(
-                            title: '2. رقائق التصفية والاختيار (Filter Chips)',
-                            description: 'اختيار المعايير والمرافق مع انتقال حركي سلس لأيقونة التأكيد (Checkmark)',
+                            title: AppLocalizations.trStatic('uiCopy015'),
+                            description: AppLocalizations.trStatic('uiCopy105'),
                             theme: theme,
                           ),
                           const SizedBox(height: 10),
@@ -175,8 +176,8 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             runSpacing: 8,
                             children: [
                               TashilFilterChip(
-                                icon: Icons.chair_outlined,
-                                label: 'مفروش بالكامل',
+                                icon: Symbols.chair_rounded,
+                                label: AppLocalizations.trStatic('uiCopy301'),
                                 selected: _selectedFilters.contains('furnished'),
                                 onSelected: (sel) => setState(() {
                                   if (sel) {
@@ -187,8 +188,8 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                                 }),
                               ),
                               TashilFilterChip(
-                                icon: Icons.local_parking_outlined,
-                                label: 'موقف سيارات',
+                                icon: Symbols.local_parking_rounded,
+                                label: AppLocalizations.trStatic('uiCopy315'),
                                 selected: _selectedFilters.contains('parking'),
                                 onSelected: (sel) => setState(() {
                                   if (sel) {
@@ -199,8 +200,8 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                                 }),
                               ),
                               TashilFilterChip.elevated(
-                                icon: Icons.ac_unit_outlined,
-                                label: 'تكييف مركزي',
+                                icon: Symbols.ac_unit_rounded,
+                                label: AppLocalizations.trStatic('uiCopy174'),
                                 selected: _selectedFilters.contains('ac'),
                                 onSelected: (sel) => setState(() {
                                   if (sel) {
@@ -211,8 +212,8 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                                 }),
                               ),
                               TashilFilterChip.elevated(
-                                icon: Icons.pool_outlined,
-                                label: 'مسبح ونادٍ',
+                                icon: Symbols.pool_rounded,
+                                label: AppLocalizations.trStatic('uiCopy288'),
                                 selected: _selectedFilters.contains('pool'),
                                 onSelected: (sel) => setState(() {
                                   if (sel) {
@@ -228,8 +229,8 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
 
                           // 3. Input Chips (Type 3)
                           _buildSectionTitle(
-                            title: '3. رقائق الإدخال والوسوم (Input Chips)',
-                            description: 'تمثيل المدخلات والكلمات المفتاحية مع زر حذف مدمج للتفريغ السريع',
+                            title: AppLocalizations.trStatic('uiCopy022'),
+                            description: AppLocalizations.trStatic('uiCopy181'),
                             theme: theme,
                           ),
                           const SizedBox(height: 10),
@@ -238,7 +239,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             runSpacing: 8,
                             children: _tags.map((tag) {
                               return TashilInputChip(
-                                icon: Icons.tag_rounded,
+                                icon: Symbols.tag_rounded,
                                 label: tag,
                                 onDeleted: () => setState(() => _tags.remove(tag)),
                               );
@@ -248,17 +249,17 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: TextButton.icon(
-                                onPressed: () => setState(() => _tags.addAll(['التجمع الخامس', '3 غرف', 'مكيف'])),
-                                icon: const Icon(Icons.refresh_rounded, size: 16),
-                                label: const Text('إعادة تعيين الوسوم'),
+                                onPressed: () => setState(() => _tags.addAll([AppLocalizations.trStatic('uiCopy123'), AppLocalizations.trStatic('uiCopy020'), 'مكيف'])),
+                                icon: const Icon(Symbols.refresh_rounded, size: 16),
+                                label: Text(AppLocalizations.trStatic('uiCopy096')),
                               ),
                             ),
                           const SizedBox(height: 24),
 
                           // 4. Suggestion Chips (Type 4)
                           _buildSectionTitle(
-                            title: '4. رقائق الاقتراحات الذكية (Suggestion Chips)',
-                            description: 'اقتراحات محادثة الذكاء الاصطناعي وصياغة الإعلانات الفورية',
+                            title: AppLocalizations.trStatic('uiCopy028'),
+                            description: AppLocalizations.trStatic('uiCopy116'),
                             theme: theme,
                           ),
                           const SizedBox(height: 10),
@@ -267,18 +268,18 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
                             runSpacing: 8,
                             children: [
                               TashilSuggestionChip(
-                                icon: Icons.auto_awesome_rounded,
-                                label: 'صياغة تسويقية تنفيذية فاخرة',
+                                icon: Symbols.auto_awesome_rounded,
+                                label: AppLocalizations.trStatic('uiCopy238'),
                                 onPressed: () {},
                               ),
                               TashilSuggestionChip.elevated(
-                                icon: Icons.psychology_rounded,
-                                label: 'تدقيق الصور بالذكاء الاصطناعي',
+                                icon: Symbols.psychology_rounded,
+                                label: AppLocalizations.trStatic('uiCopy169'),
                                 onPressed: () {},
                               ),
                               TashilSuggestionChip(
-                                icon: Icons.mic_rounded,
-                                label: 'إملاء صوتي فوري للوصف',
+                                icon: Symbols.mic_rounded,
+                                label: AppLocalizations.trStatic('uiCopy100'),
                                 onPressed: () {},
                               ),
                             ],
@@ -326,10 +327,7 @@ class _M3ChipsShowcaseDialogState extends State<M3ChipsShowcaseDialog> {
         const SizedBox(height: 2),
         Text(
           description,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontSize: 11.5,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
       ],
     );

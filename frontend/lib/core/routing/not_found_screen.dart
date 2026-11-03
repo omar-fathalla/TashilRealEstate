@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Material 3 not-found page for unknown paths.
 class NotFoundScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class NotFoundScreen extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.search_off_rounded, size: 48, color: colorScheme.primary),
+                        Icon(Symbols.search_off_rounded, size: 48, color: colorScheme.primary),
                         const SizedBox(height: 16),
                         Text(
                           loc.tr('notFoundTitle'),
@@ -46,7 +47,7 @@ class NotFoundScreen extends StatelessWidget {
                         const SizedBox(height: 24),
                         TashilButton(
                           label: loc.tr('notFoundAction'),
-                          icon: Icons.home_rounded,
+                          icon: Symbols.home_rounded,
                           onPressed: () => context.go('/'),
                         ),
                       ],

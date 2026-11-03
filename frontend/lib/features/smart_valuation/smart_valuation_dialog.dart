@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/smart_valuation/models/smart_valuation_model.dart';
 import 'package:tashil_real_estate/features/smart_valuation/widgets/district_location_picker_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 (M3) Smart AI Valuation Modal Dialog.
 ///
@@ -91,14 +92,23 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
     if (_countryCode == 'AE') {
       final lang = LocaleController.languageCode;
       if (lang == 'ar') {
-        return const ['دبي مارينا', 'داون تاون دبي', 'الخليج التجاري', 'نخلة جميرا', 'قرية جميرا', 'دبي هيلز'];
+        return [AppLocalizations.trStatic('uiCopy204'), 'داون تاون دبي', 'الخليج التجاري', 'نخلة جميرا', 'قرية جميرا', 'دبي هيلز'];
       }
       if (lang == 'hi') {
         return const ['दुबई मरीना', 'डाउनटाउन दुबई', 'बिज़नेस बे', 'पाम जुमेराह', 'जेवीसी', 'दुबई हिल्स'];
       }
       return const ['Dubai Marina', 'Downtown Dubai', 'Business Bay', 'Palm Jumeirah', 'JVC', 'Dubai Hills'];
     }
-    return const ['التجمع الخامس', 'الشيخ زايد', 'المعادي', 'مصر الجديدة', '6 أكتوبر', 'الرحاب', 'مدينتي', 'بيت الوطن'];
+    return [
+      AppLocalizations.trStatic('districtFifthSettlement'),
+      AppLocalizations.trStatic('uiCopy134'),
+      'المعادي',
+      'مصر الجديدة',
+      '6 أكتوبر',
+      'الرحاب',
+      AppLocalizations.trStatic('uiCopy283'),
+      'بيت الوطن',
+    ];
   }
 
   Future<void> _handleGpsLocation() async {
@@ -328,7 +338,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     ),
                   ),
                   child: Icon(
-                    Icons.auto_awesome_rounded,
+                    Symbols.auto_awesome_rounded,
                     color: colorScheme.onPrimaryContainer,
                     size: 22,
                   ),
@@ -341,23 +351,17 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     children: [
                       Text(
                         loc.tr('aiValuationTitle'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isMobile ? 16 : 18,
+                        style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
-                          letterSpacing: -0.2,
-                        ),
+                          letterSpacing: -0.2),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         loc.tr('geminiFlashEngine'),
-                        style: TextStyle(
-                          fontSize: isMobile ? 11 : 12,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                          color: colorScheme.primary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -395,7 +399,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.bolt_rounded,
+                          Symbols.bolt_rounded,
                           size: 14,
                           color: hasQuota
                               ? colorScheme.onSecondaryContainer
@@ -404,13 +408,10 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                         const SizedBox(width: 4),
                         Text(
                           '$remaining ${loc.tr('evaluationsLeftToday')}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                             color: hasQuota
                                 ? colorScheme.onSecondaryContainer
-                                : colorScheme.onErrorContainer,
-                          ),
+                                : colorScheme.onErrorContainer),
                         ),
                       ],
                     ),
@@ -466,7 +467,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.psychology_rounded,
+                    Symbols.psychology_rounded,
                     color: colorScheme.primary,
                     size: 24,
                   ),
@@ -478,20 +479,14 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     children: [
                       Text(
                         loc.tr('geminiFlashEngine'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         loc.tr('aiValuationSubtitle'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                          height: 1.4),
                       ),
                     ],
                   ),
@@ -512,14 +507,14 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 20),
+                  Icon(Symbols.error_outline_rounded, color: colorScheme.error, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMessage == 'quota_exceeded'
                           ? loc.tr('quotaExceededMsg')
                           : _errorMessage!,
-                      style: TextStyle(color: colorScheme.error, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.error, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -531,7 +526,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           // 2. Country Selector (Official TashilConnectedButtonGroup)
           _buildSectionHeader(
             title: loc.tr('selectCountry'),
-            icon: Icons.public_rounded,
+            icon: Symbols.public_rounded,
             colorScheme: colorScheme,
           ),
           TashilConnectedButtonGroup<String>(
@@ -549,12 +544,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                 TashilConnectedButtonSegment(
                   value: 'EG',
                   label: loc.tr('country_eg'),
-                  icon: Icons.flag_rounded,
+                  icon: Symbols.flag_rounded,
                 ),
               TashilConnectedButtonSegment(
                 value: 'AE',
                 label: loc.tr('country_ae'),
-                icon: Icons.flag_rounded,
+                icon: Symbols.flag_rounded,
               ),
             ],
           ),
@@ -563,7 +558,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           // 3. City / District Textfield with GPS and Google Maps Picker
           _buildSectionHeader(
             title: loc.tr('cityOrDistrict'),
-            icon: Icons.location_on_rounded,
+            icon: Symbols.location_on_rounded,
             colorScheme: colorScheme,
           ),
           TextField(
@@ -571,8 +566,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
             decoration: InputDecoration(
               hintText: _countryCode == 'AE'
                   ? 'e.g. Dubai Marina, Downtown, Palm Jumeirah'
-                  : 'مثال: التجمع الخامس، الشيخ زايد، المعادي',
-              prefixIcon: Icon(Icons.location_on_outlined, size: 20, color: colorScheme.primary),
+                  : AppLocalizations.trStatic('uiCopy276'),
+              prefixIcon: Icon(Symbols.location_on_rounded, size: 20, color: colorScheme.primary),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -600,14 +595,14 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                                 color: colorScheme.primary,
                               ),
                             )
-                          : Icon(Icons.my_location_rounded, size: 20, color: colorScheme.primary),
+                          : Icon(Symbols.my_location_rounded, size: 20, color: colorScheme.primary),
                       onPressed: _isLocatingGps ? null : _handleGpsLocation,
                     ),
                   ),
                   Tooltip(
                     message: loc.tr('searchOnGoogleMaps'),
                     child: IconButton(
-                      icon: Icon(Icons.map_rounded, size: 20, color: colorScheme.secondary),
+                      icon: Icon(Symbols.map_rounded, size: 20, color: colorScheme.secondary),
                       onPressed: _handleOpenDistrictPicker,
                     ),
                   ),
@@ -642,11 +637,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                   padding: const EdgeInsetsDirectional.only(end: 6),
                   child: Text(
                     '${loc.tr('popularAreas')}:',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurfaceVariant),
                   ),
                 ),
                 ..._quickDistricts.map((district) {
@@ -675,11 +667,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                         ),
                         child: Text(
                           district,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface),
                         ),
                       ),
                     ),
@@ -693,7 +682,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           // 4. Property Type (Official TashilFilterChip)
           _buildSectionHeader(
             title: loc.tr('propertyType'),
-            icon: Icons.domain_rounded,
+            icon: Symbols.domain_rounded,
             colorScheme: colorScheme,
           ),
           Wrap(
@@ -702,31 +691,31 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
             children: [
               TashilFilterChip(
                 label: loc.tr('propApartment'),
-                icon: Icons.apartment_rounded,
+                icon: Symbols.apartment_rounded,
                 selected: _propertyType == 'apartment',
                 onSelected: (val) => setState(() => _propertyType = 'apartment'),
               ),
               TashilFilterChip(
                 label: loc.tr('propVilla'),
-                icon: Icons.villa_rounded,
+                icon: Symbols.villa_rounded,
                 selected: _propertyType == 'villa',
                 onSelected: (val) => setState(() => _propertyType = 'villa'),
               ),
               TashilFilterChip(
                 label: loc.tr('propChalet'),
-                icon: Icons.beach_access_rounded,
+                icon: Symbols.beach_access_rounded,
                 selected: _propertyType == 'chalet',
                 onSelected: (val) => setState(() => _propertyType = 'chalet'),
               ),
               TashilFilterChip(
                 label: loc.tr('propStudio'),
-                icon: Icons.meeting_room_rounded,
+                icon: Symbols.meeting_room_rounded,
                 selected: _propertyType == 'studio',
                 onSelected: (val) => setState(() => _propertyType = 'studio'),
               ),
               TashilFilterChip(
                 label: loc.tr('propPenthouse'),
-                icon: Icons.corporate_fare_rounded,
+                icon: Symbols.corporate_fare_rounded,
                 selected: _propertyType == 'penthouse',
                 onSelected: (val) => setState(() => _propertyType = 'penthouse'),
               ),
@@ -775,21 +764,21 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           // 7. Special Amenities (Official TashilFilterChip)
           _buildSectionHeader(
             title: loc.tr('specialAmenitiesTitle'),
-            icon: Icons.stars_rounded,
+            icon: Symbols.stars_rounded,
             colorScheme: colorScheme,
           ),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildAmenityChip('sea_view', loc.tr('amenitySeaView'), Icons.water_rounded),
-              _buildAmenityChip('parking', loc.tr('amenityParking'), Icons.local_parking_rounded),
-              _buildAmenityChip('pool', loc.tr('amenityPool'), Icons.pool_rounded),
-              _buildAmenityChip('garden', loc.tr('amenityGarden'), Icons.yard_rounded),
-              _buildAmenityChip('elevator', loc.tr('amenityElevator'), Icons.elevator_rounded),
-              _buildAmenityChip('security', loc.tr('amenitySecurity'), Icons.security_rounded),
-              _buildAmenityChip('gym', loc.tr('amenityGym'), Icons.fitness_center_rounded),
-              _buildAmenityChip('balcony', loc.tr('amenityBalcony'), Icons.balcony_rounded),
+              _buildAmenityChip('sea_view', loc.tr('amenitySeaView'), Symbols.water_rounded),
+              _buildAmenityChip('parking', loc.tr('amenityParking'), Symbols.local_parking_rounded),
+              _buildAmenityChip('pool', loc.tr('amenityPool'), Symbols.pool_rounded),
+              _buildAmenityChip('garden', loc.tr('amenityGarden'), Symbols.yard_rounded),
+              _buildAmenityChip('elevator', loc.tr('amenityElevator'), Symbols.elevator_rounded),
+              _buildAmenityChip('security', loc.tr('amenitySecurity'), Symbols.security_rounded),
+              _buildAmenityChip('gym', loc.tr('amenityGym'), Symbols.fitness_center_rounded),
+              _buildAmenityChip('balcony', loc.tr('amenityBalcony'), Symbols.balcony_rounded),
             ],
           ),
           const SizedBox(height: 8),
@@ -813,11 +802,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           const SizedBox(width: 6),
           Text(
             title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface),
           ),
         ],
       ),
@@ -830,15 +816,15 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       children: [
         Text(
           loc.tr('areaSqm'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _areaController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            prefixIcon: Icon(Icons.square_foot_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-            suffixText: 'م²',
+            prefixIcon: Icon(Symbols.square_foot_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+            suffixText: AppLocalizations.trStatic('uiCopy272'),
             suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary),
             filled: true,
             fillColor: colorScheme.surfaceContainerLow,
@@ -867,18 +853,18 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       children: [
         Text(
           loc.tr('bedroomsCount'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TashilDropdownMenu<int>(
           value: _bedrooms,
-          prefixIcon: Icons.bed_outlined,
+          prefixIcon: Symbols.bed_rounded,
           height: 52,
           items: [1, 2, 3, 4, 5, 6].map((n) {
             return TashilDropdownMenuItem<int>(
               value: n,
               label: '$n ${loc.tr('rooms')}',
-              icon: Icons.bed_outlined,
+              icon: Symbols.bed_rounded,
             );
           }).toList(),
           onChanged: (val) {
@@ -895,18 +881,18 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       children: [
         Text(
           loc.tr('baths'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TashilDropdownMenu<int>(
           value: _bathrooms,
-          prefixIcon: Icons.bathtub_outlined,
+          prefixIcon: Symbols.bathtub_rounded,
           height: 52,
           items: [1, 2, 3, 4, 5].map((n) {
             return TashilDropdownMenuItem<int>(
               value: n,
               label: '$n ${loc.tr('baths')}',
-              icon: Icons.bathtub_outlined,
+              icon: Symbols.bathtub_rounded,
             );
           }).toList(),
           onChanged: (val) {
@@ -923,28 +909,28 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       children: [
         Text(
           loc.tr('finishing'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TashilDropdownMenu<String>(
           value: _finishingType,
-          prefixIcon: Icons.format_paint_outlined,
+          prefixIcon: Symbols.format_paint_rounded,
           height: 52,
           items: [
             TashilDropdownMenuItem<String>(
               value: 'luxury',
               label: loc.tr('finishingLuxury'),
-              icon: Icons.diamond_outlined,
+              icon: Symbols.diamond_rounded,
             ),
             TashilDropdownMenuItem<String>(
               value: 'super_lux',
               label: loc.tr('finishingSuperLux'),
-              icon: Icons.star_outline_rounded,
+              icon: Symbols.star_outline_rounded,
             ),
             TashilDropdownMenuItem<String>(
               value: 'semi_finished',
               label: loc.tr('finishingSemi'),
-              icon: Icons.construction_rounded,
+              icon: Symbols.construction_rounded,
             ),
           ],
           onChanged: (val) {
@@ -961,7 +947,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       children: [
         Text(
           loc.tr('furnishingState'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
         TashilConnectedButtonGroup<bool>(
@@ -973,12 +959,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
             TashilConnectedButtonSegment(
               value: true,
               label: loc.tr('fullyFurnished'),
-              icon: Icons.weekend_outlined,
+              icon: Symbols.weekend_rounded,
             ),
             TashilConnectedButtonSegment(
               value: false,
               label: loc.tr('unfurnished'),
-              icon: Icons.chair_alt_outlined,
+              icon: Symbols.chair_alt_rounded,
             ),
           ],
         ),
@@ -1013,7 +999,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
         width: double.infinity,
         child: TashilButton(
           onPressed: _startValuation,
-          icon: Icons.auto_awesome_rounded,
+          icon: Symbols.auto_awesome_rounded,
           label: loc.tr('calculateFairRent'),
           height: 50,
         ),
@@ -1032,17 +1018,17 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
       title = loc.tr('verifyingAddressTitle');
       subtitle = loc.tr('verifyingAddressSubtitle');
       stageBadge = 'Google Maps Geocoding';
-      stageIcon = Icons.map_rounded;
+      stageIcon = Symbols.map_rounded;
     } else if (_analyzingStageIndex == 1) {
       title = loc.tr('searchingPortalsTitle');
       subtitle = loc.tr('searchingPortalsSubtitle');
       stageBadge = loc.tr('topFourPortalsTitle');
-      stageIcon = Icons.travel_explore_rounded;
+      stageIcon = Symbols.travel_explore_rounded;
     } else {
       title = loc.tr('analyzingGeminiTitle');
       subtitle = loc.tr('analyzingGeminiSubtitle');
       stageBadge = loc.tr('geminiFlashEngine');
-      stageIcon = Icons.psychology_rounded;
+      stageIcon = Symbols.psychology_rounded;
     }
 
     return Center(
@@ -1064,21 +1050,15 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     subtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                      height: 1.4),
                   ),
                   const SizedBox(height: 14),
                   Container(
@@ -1095,11 +1075,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                         const SizedBox(width: 8),
                         Text(
                           stageBadge,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSecondaryContainer,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.onSecondaryContainer),
                         ),
                       ],
                     ),
@@ -1153,7 +1130,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     color: colorScheme.primary.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.location_on_rounded, color: colorScheme.primary, size: 20),
+                  child: Icon(Symbols.location_on_rounded, color: colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1164,24 +1141,18 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                         children: [
                           Text(
                             loc.tr('verifiedAddressBadge'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.primary),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
+                          Icon(Symbols.check_circle_rounded, color: colorScheme.primary, size: 14),
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
                         res.verifiedAddress ?? _cityOrArea,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1205,15 +1176,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.map_rounded, size: 14, color: colorScheme.secondary),
+                        Icon(Symbols.map_rounded, size: 14, color: colorScheme.secondary),
                         const SizedBox(width: 4),
                         Text(
                           loc.tr('searchOnGoogleMaps'),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.secondary,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.secondary),
                         ),
                       ],
                     ),
@@ -1231,7 +1199,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
               gradient: LinearGradient(
                 colors: [
                   colorScheme.primary,
-                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.75), Colors.black),
+                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.75), colorScheme.onSurface),
                 ],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
@@ -1253,23 +1221,23 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                   children: [
                     Text(
                       loc.tr('suggestedFairRent'),
-                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary.withValues(alpha: 0.70), fontWeight: FontWeight.w500),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
+                        color: colorScheme.onPrimary.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_rounded, color: Colors.white, size: 14),
+                          Icon(Symbols.verified_rounded, color: colorScheme.onPrimary, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '${res.confidenceScore}% ${loc.tr('confidenceScore')}',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -1279,10 +1247,10 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                 const SizedBox(height: 12),
                 Text(
                   '${CurrencyFormatter.formatAmount(res.estimatedRent, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                const TashilDivider(color: Colors.white24, height: 1),
+                TashilDivider(color: colorScheme.onPrimary.withValues(alpha: 0.24), height: 1),
                 const SizedBox(height: 16),
 
                 // Range (Min - Max - Per Sqm)
@@ -1292,32 +1260,32 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(loc.tr('marketMinRent'), style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                        Text(loc.tr('marketMinRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.minRent, langCode: lang)} $currency',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     Column(
                       children: [
-                        Text(loc.tr('pricePerSqmTitle'), style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                        Text(loc.tr('pricePerSqmTitle'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.pricePerSqm, langCode: lang)} $currency/م²',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(loc.tr('marketMaxRent'), style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                        Text(loc.tr('marketMaxRent'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Colors.white60)),
                         const SizedBox(height: 3),
                         Text(
                           '${CurrencyFormatter.formatAmount(res.maxRent, langCode: lang)} $currency',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -1352,7 +1320,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.travel_explore_rounded,
+                          Symbols.travel_explore_rounded,
                           color: colorScheme.secondary,
                           size: 20,
                         ),
@@ -1364,20 +1332,14 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                           children: [
                             Text(
                               loc.tr('googleSearchGroundingTitle'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               loc.tr('googleSearchGroundingSubtitle'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.35,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                                height: 1.35),
                             ),
                           ],
                         ),
@@ -1403,15 +1365,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.verified_rounded, color: Colors.green, size: 14),
+                              Icon(Symbols.verified_rounded, color: colorScheme.primary, size: 14),
                               const SizedBox(width: 5),
                               Text(
                                 source,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface),
                               ),
                             ],
                           ),
@@ -1423,16 +1382,13 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Icon(Icons.search_rounded, size: 14, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.search_rounded, size: 14, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             '${loc.tr('searchQueryExecuted')} "${res.searchQueries.first}"',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1461,13 +1417,13 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                         color: colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.analytics_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+                      child: Icon(Symbols.analytics_rounded, color: colorScheme.onPrimaryContainer, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         res.marketAnalysis,
-                        style: TextStyle(fontSize: 13, color: colorScheme.onSurface, height: 1.45),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface, height: 1.45),
                       ),
                     ),
                   ],
@@ -1481,7 +1437,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           if (res.comparableUnits.isNotEmpty) ...[
             Text(
               loc.tr('neighborCompsTitle'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
             ...res.comparableUnits.map((comp) {
@@ -1505,7 +1461,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                               Expanded(
                                 child: Text(
                                   comp.title,
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurface),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1521,15 +1477,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.verified_rounded, size: 12, color: Colors.green),
+                                    Icon(Symbols.verified_rounded, size: 12, color: colorScheme.primary),
                                     const SizedBox(width: 4),
                                     Text(
                                       comp.sourcePortal,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurfaceVariant),
                                     ),
                                   ],
                                 ),
@@ -1539,7 +1492,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                           const SizedBox(height: 4),
                           Text(
                             '${comp.location} • ${comp.areaSqm} م²',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -1550,7 +1503,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                       children: [
                         Text(
                           '${CurrencyFormatter.formatAmount(comp.rentPrice, langCode: lang)} $currency',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.primary),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                         ),
                         if (comp.sourceUrl != null && comp.sourceUrl!.isNotEmpty) ...[
                           const SizedBox(height: 2),
@@ -1561,15 +1514,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                               children: [
                                 Text(
                                   loc.tr('viewOriginalListing'),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
                                     color: colorScheme.secondary,
-                                    decoration: TextDecoration.underline,
-                                  ),
+                                    decoration: TextDecoration.underline),
                                 ),
                                 const SizedBox(width: 2),
-                                Icon(Icons.open_in_new_rounded, size: 10, color: colorScheme.secondary),
+                                Icon(Symbols.open_in_new_rounded, size: 10, color: colorScheme.secondary),
                               ],
                             ),
                           ),
@@ -1587,7 +1537,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
           if (res.optimizationTips.isNotEmpty) ...[
             Text(
               loc.tr('aiYieldMaximizerTitle'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
             ...res.optimizationTips.map((tip) {
@@ -1602,12 +1552,12 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.lightbulb_rounded, color: colorScheme.tertiary, size: 18),
+                    Icon(Symbols.lightbulb_rounded, color: colorScheme.tertiary, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         tip,
-                        style: TextStyle(fontSize: 12, color: colorScheme.onSurface, height: 1.4),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurface, height: 1.4),
                       ),
                     ),
                   ],
@@ -1623,7 +1573,7 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
               Expanded(
                 child: TashilButton.outlined(
                   onPressed: () => setState(() => _currentStep = 0),
-                  icon: Icons.refresh_rounded,
+                  icon: Symbols.refresh_rounded,
                   label: loc.tr('evaluateAnotherUnit'),
                   height: 48,
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/image_utils.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class VirtualStagingComparisonSlider extends StatefulWidget {
   final String beforeImageUrl;
@@ -108,7 +109,7 @@ class _VirtualStagingComparisonSliderState
                       ),
                       child: Center(
                         child: Icon(
-                          Icons.compare_arrows_rounded,
+                          Symbols.compare_arrows_rounded,
                           color: theme.colorScheme.primary,
                           size: 22,
                         ),
@@ -130,15 +131,12 @@ class _VirtualStagingComparisonSliderState
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.meeting_room_outlined, size: 12, color: theme.colorScheme.onSurface),
+                        Icon(Symbols.meeting_room_rounded, size: 12, color: theme.colorScheme.onSurface),
                         const SizedBox(width: 5),
                         Text(
                           loc.tr('beforeStagingEmpty'),
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -165,15 +163,12 @@ class _VirtualStagingComparisonSliderState
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome, size: 12, color: theme.colorScheme.onPrimary),
+                        Icon(Symbols.auto_awesome_rounded, size: 12, color: theme.colorScheme.onPrimary),
                         const SizedBox(width: 5),
                         Text(
                           loc.tr('afterStagingAi'),
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),

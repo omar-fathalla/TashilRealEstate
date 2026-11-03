@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/user_avatar_utils.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 (M3) Drawer Profile Tile.
 ///
@@ -109,21 +110,15 @@ class _TashilDrawerProfileTileState extends State<TashilDrawerProfileTile> {
                         children: [
                           Text(
                             widget.displayName,
-                            style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13.5,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 1.0),
                           Text(
                             widget.roleSubtitle,
-                            style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
-                              fontSize: 11.0,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(color: colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -131,7 +126,7 @@ class _TashilDrawerProfileTileState extends State<TashilDrawerProfileTile> {
                       ),
                     ),
                     Icon(
-                      Icons.unfold_more_rounded,
+                      Symbols.unfold_more_rounded,
                       size: 18.0,
                       color: colorScheme.onSurfaceVariant,
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 (M3) Filter Chip component for Tashil Real Estate.
 ///
@@ -127,7 +128,7 @@ class _TashilFilterChipState extends State<TashilFilterChip> {
                   transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
                   child: widget.selected
                       ? Icon(
-                          Icons.check_rounded,
+                          Symbols.check_rounded,
                           key: const ValueKey('checked'),
                           size: 18.0,
                           color: effectiveFg,
@@ -149,12 +150,9 @@ class _TashilFilterChipState extends State<TashilFilterChip> {
                 Flexible(
                   child: Text(
                     widget.label,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: effectiveFg,
-                      fontSize: 13.0,
+                    style: theme.textTheme.labelLarge?.copyWith(color: effectiveFg,
                       fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
-                      letterSpacing: 0.1,
-                    ),
+                      letterSpacing: 0.1),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

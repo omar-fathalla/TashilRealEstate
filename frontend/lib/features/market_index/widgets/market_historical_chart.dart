@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/features/market_index/models/market_index_model.dart';
 import 'package:tashil_real_estate/features/market_index/services/ai_market_index_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class MarketHistoricalChart extends StatefulWidget {
   final List<MarketHistoricalPoint> initialPoints;
@@ -71,7 +72,7 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
         border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: colorScheme.shadow.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -96,7 +97,7 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                       color: colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.show_chart_rounded, color: colorScheme.primary, size: 20),
+                    child: Icon(Symbols.show_chart_rounded, color: colorScheme.primary, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Flexible(
@@ -105,18 +106,12 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                       children: [
                         Text(
                           loc.tr('historicalTrajectoryTitle'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: widget.isMobile ? 13 : 15,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
                         ),
                         Text(
                           loc.tr('historicalTrajectorySubtitle'),
-                          style: TextStyle(
-                            fontSize: widget.isMobile ? 10 : 11,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -139,15 +134,12 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.science_rounded, size: 13, color: colorScheme.onSecondaryContainer),
+                        Icon(Symbols.science_rounded, size: 13, color: colorScheme.onSecondaryContainer),
                         const SizedBox(width: 4),
                         Text(
                           loc.tr('testDataBadge'),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSecondaryContainer,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSecondaryContainer),
                         ),
                       ],
                     ),
@@ -162,12 +154,12 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                     segments: [
                       TashilConnectedButtonSegment(
                         value: 'spline',
-                        icon: Icons.timeline_rounded,
+                        icon: Symbols.timeline_rounded,
                         label: loc.tr('chartSpline'),
                       ),
                       TashilConnectedButtonSegment(
                         value: 'bars',
-                        icon: Icons.bar_chart_rounded,
+                        icon: Symbols.bar_chart_rounded,
                         label: loc.tr('chartBars'),
                       ),
                     ],
@@ -185,16 +177,16 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
               children: [
                 Text(
                   loc.tr('selectTimeframeOrScenario'),
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(width: 8),
-                _buildFilterChip('6M', loc.tr('timeframe6Months'), Icons.calendar_today_rounded, colorScheme),
+                _buildFilterChip('6M', loc.tr('timeframe6Months'), Symbols.calendar_today_rounded, colorScheme),
                 const SizedBox(width: 6),
-                _buildFilterChip('12M', loc.tr('timeframe12Months'), Icons.date_range_rounded, colorScheme),
+                _buildFilterChip('12M', loc.tr('timeframe12Months'), Symbols.date_range_rounded, colorScheme),
                 const SizedBox(width: 6),
-                _buildFilterChip('BULLISH', loc.tr('testScenarioBullish'), Icons.trending_up_rounded, colorScheme),
+                _buildFilterChip('BULLISH', loc.tr('testScenarioBullish'), Symbols.trending_up_rounded, colorScheme),
                 const SizedBox(width: 6),
-                _buildFilterChip('SEASONAL', loc.tr('testScenarioSeasonal'), Icons.waves_rounded, colorScheme),
+                _buildFilterChip('SEASONAL', loc.tr('testScenarioSeasonal'), Symbols.waves_rounded, colorScheme),
               ],
             ),
           ),
@@ -209,28 +201,28 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                 label: loc.tr('currentLevel'),
                 value: '${currentPt.indexPoints} ${loc.tr('points')}',
                 badge: '+${currentPt.momGrowth ?? 3.5}%',
-                icon: Icons.insights_rounded,
+                icon: Symbols.insights_rounded,
                 color: colorScheme.primary,
                 colorScheme: colorScheme,
               ),
               _buildKpiPill(
                 label: loc.tr('netGrowth'),
                 value: '${netGrowth >= 0 ? '+' : ''}${netGrowth.toStringAsFixed(1)}%',
-                icon: Icons.auto_graph_rounded,
-                color: netGrowth >= 0 ? Colors.green.shade700 : colorScheme.error,
+                icon: Symbols.auto_graph_rounded,
+                color: netGrowth >= 0 ? colorScheme.primary : colorScheme.error,
                 colorScheme: colorScheme,
               ),
               _buildKpiPill(
                 label: loc.tr('highestPoint'),
                 value: '${maxPt.indexPoints} (${AiTranslationService.getLocalizedText(maxPt.localizedMonth, widget.lang)})',
-                icon: Icons.north_east_rounded,
+                icon: Symbols.north_east_rounded,
                 color: colorScheme.secondary,
                 colorScheme: colorScheme,
               ),
               _buildKpiPill(
                 label: loc.tr('lowestPoint'),
                 value: '${minPt.indexPoints} (${AiTranslationService.getLocalizedText(minPt.localizedMonth, widget.lang)})',
-                icon: Icons.south_west_rounded,
+                icon: Symbols.south_west_rounded,
                 color: colorScheme.tertiary,
                 colorScheme: colorScheme,
               ),
@@ -267,11 +259,11 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                     ),
                     Text(
                       '$activeMonthName ${activePt.year ?? ''}:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     Text(
                       '${activePt.indexPoints} ${loc.tr('points')}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.primary),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                     ),
                   ],
                 ),
@@ -288,16 +280,13 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                       ),
                       child: Text(
                         '${activePt.momGrowth != null && activePt.momGrowth! > 0 ? '+' : ''}${activePt.momGrowth ?? 0.0}% MoM',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimaryContainer),
                       ),
                     ),
                     Text(
                       '${activePt.demandPercentage.toInt()}% ${loc.tr('demandScore')}',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -325,23 +314,23 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
             children: [
               Text(
                 loc.tr('tapToInspect'),
-                style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '${AiTranslationService.getLocalizedText(firstPt.localizedMonth, widget.lang)} ${firstPt.year ?? ''}',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
                   ),
                   Icon(
-                    isRTL ? Icons.arrow_left_rounded : Icons.arrow_right_rounded,
+                    isRTL ? Symbols.arrow_left_rounded : Symbols.arrow_right_rounded,
                     size: 16,
                     color: colorScheme.primary,
                   ),
                   Text(
                     '${AiTranslationService.getLocalizedText(currentPt.localizedMonth, widget.lang)} ${currentPt.year ?? ''}',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colorScheme.primary),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
                   ),
                 ],
               ),
@@ -384,11 +373,8 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface),
             ),
           ],
         ),
@@ -423,13 +409,13 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
               const SizedBox(width: 4),
               Text(
                 '$label: ',
-                style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
           Text(
             value,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
           ),
           if (badge != null)
             Container(
@@ -440,7 +426,7 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
               ),
               child: Text(
                 badge,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: color),
               ),
             ),
         ],
@@ -529,11 +515,8 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                     ),
                     child: Text(
                       '${pt.indexPoints}',
-                      style: TextStyle(
-                        fontSize: widget.isMobile ? 8 : 9,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -550,7 +533,7 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                           colors: isSelected
                               ? [
                                   colorScheme.primary,
-                                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), Colors.black),
+                                  Color.alphaBlend(colorScheme.primary.withValues(alpha: 0.8), colorScheme.onSurface),
                                 ]
                               : [
                                   colorScheme.primary.withValues(alpha: 0.7),
@@ -577,11 +560,8 @@ class _MarketHistoricalChartState extends State<MarketHistoricalChart> {
                   // Month Label
                   Text(
                     monthName,
-                    style: TextStyle(
-                      fontSize: widget.isMobile ? 9 : 10,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -643,11 +623,8 @@ class _SplineChartPainter extends CustomPainter {
       // Value label
       final textSpan = TextSpan(
         text: '$val',
-        style: TextStyle(
-          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-          fontSize: 9,
-          fontWeight: FontWeight.w500,
-        ),
+        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          fontWeight: FontWeight.w500),
       );
       final textPainter = TextPainter(
         text: textSpan,
@@ -775,11 +752,8 @@ class _SplineChartPainter extends CustomPainter {
       // Month Label along X Axis
       final monthSpan = TextSpan(
         text: monthName,
-        style: TextStyle(
-          color: isCurrentActive ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          fontSize: 10,
-          fontWeight: isCurrentActive ? FontWeight.bold : FontWeight.w500,
-        ),
+        style: TextStyle(fontSize: 11, color: isCurrentActive ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          fontWeight: isCurrentActive ? FontWeight.bold : FontWeight.w500),
       );
       final monthPainter = TextPainter(
         text: monthSpan,

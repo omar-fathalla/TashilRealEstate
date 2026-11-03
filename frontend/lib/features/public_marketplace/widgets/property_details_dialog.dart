@@ -13,6 +13,7 @@ import '../../../core/utils/market_display.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
 import '../models/property_item.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PropertyDetailsDialog extends StatefulWidget {
   final PropertyItem property;
@@ -105,7 +106,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                       Text(
                         widget.property.getTitle(lang),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -114,7 +115,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                         controller: _nameController,
                         decoration: InputDecoration(
                           labelText: loc.tr('fullName'),
-                          prefixIcon: const Icon(Icons.person_outline),
+                          prefixIcon: const Icon(Symbols.person_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -124,7 +125,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
                           labelText: loc.tr('phoneWhatsapp'),
-                          prefixIcon: const Icon(Icons.phone_outlined),
+                          prefixIcon: const Icon(Symbols.phone_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -238,11 +239,8 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                               children: [
                                 Text(
                                   loc.tr(MarketDisplay.rentLabelKey(widget.property.currencyCode)),
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                    fontSize: 11.0,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500),
                                 ),
                                 const SizedBox(height: 2.0),
                                 Row(
@@ -252,20 +250,14 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                   children: [
                                     Text(
                                       formattedPrice,
-                                      style: TextStyle(
-                                        fontSize: isCompact ? 18.0 : 22.0,
-                                        fontWeight: FontWeight.w800,
-                                        color: colorScheme.primary,
-                                      ),
+                                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800,
+                                        color: colorScheme.primary),
                                     ),
                                     const SizedBox(width: 4.0),
                                     Text(
                                       currencyStr,
-                                      style: TextStyle(
-                                        fontSize: isCompact ? 12.0 : 14.0,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurfaceVariant),
                                     ),
                                   ],
                                 ),
@@ -278,13 +270,13 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                               TashilConnectedButtonSegment(
                                 value: 'booking',
                                 label: loc.tr('requestViewing'),
-                                icon: Icons.calendar_month_outlined,
+                                icon: Symbols.calendar_month_rounded,
                               ),
                               if (!isFurnished)
                                 TashilConnectedButtonSegment(
                                   value: 'staging',
                                   label: loc.tr('virtualStagingBtn'),
-                                  icon: Icons.chair_rounded,
+                                  icon: Symbols.chair_rounded,
                                 ),
                             ];
 
@@ -301,7 +293,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                             } else {
                               actionWidget = TashilButton(
                                 height: 44.0,
-                                icon: Icons.calendar_month_outlined,
+                                icon: Symbols.calendar_month_rounded,
                                 label: loc.tr('requestViewing'),
                                 onPressed: () => _handleActionSelected('booking'),
                               );
@@ -368,15 +360,12 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.star_rounded, color: theme.colorScheme.tertiary, size: 16.0),
+                                      Icon(Symbols.star_rounded, color: theme.colorScheme.tertiary, size: 16.0),
                                       const SizedBox(width: 4.0),
                                       Text(
                                         '${widget.property.rating}',
-                                        style: TextStyle(
-                                          color: theme.colorScheme.onSurface,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13.0,
-                                        ),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold),
                                       ),
                                     ],
                                   ),
@@ -408,16 +397,13 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                           const SizedBox(height: 8.0),
                                           Row(
                                             children: [
-                                              Icon(Icons.location_on_outlined, size: 18.0, color: colorScheme.secondary),
+                                              Icon(Symbols.location_on_rounded, size: 18.0, color: colorScheme.secondary),
                                               const SizedBox(width: 4.0),
                                               Expanded(
                                                 child: Text(
                                                   widget.property.getLocation(lang),
-                                                  style: TextStyle(
-                                                    color: theme.colorScheme.onSurfaceVariant,
-                                                    fontSize: 14.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
+                                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant,
+                                                    fontWeight: FontWeight.w500),
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
@@ -444,7 +430,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                       Expanded(
                                         child: _buildSpecItem(
                                           theme,
-                                          Icons.bed_outlined,
+                                          Symbols.bed_rounded,
                                           '${widget.property.bedrooms} ${loc.tr('bedrooms')}',
                                           isMobile,
                                         ),
@@ -453,7 +439,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                       Expanded(
                                         child: _buildSpecItem(
                                           theme,
-                                          Icons.bathtub_outlined,
+                                          Symbols.bathtub_rounded,
                                           '${widget.property.bathrooms} ${loc.tr('bathrooms')}',
                                           isMobile,
                                         ),
@@ -462,7 +448,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                       Expanded(
                                         child: _buildSpecItem(
                                           theme,
-                                          Icons.square_foot_outlined,
+                                          Symbols.square_foot_rounded,
                                           '${MarketDisplay.areaAmount(areaSqM: widget.property.areaSqM, countryCode: widget.property.countryCode).round()} ${loc.tr(MarketDisplay.areaUnitKey(widget.property.countryCode))}',
                                           isMobile,
                                         ),
@@ -471,7 +457,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                       Expanded(
                                         child: _buildSpecItem(
                                           theme,
-                                          Icons.chair_outlined,
+                                          Symbols.chair_rounded,
                                           widget.property.isFurnished ? loc.tr('furnished') : loc.tr('unfurnished'),
                                           isMobile,
                                         ),
@@ -483,30 +469,21 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                 const SizedBox(height: 24.0),
                                 Text(
                                   loc.tr('aboutProperty'),
-                                  style: TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 const SizedBox(height: 8.0),
                                 Text(
                                   widget.property.getDescription(lang),
-                                  style: TextStyle(
-                                    fontSize: 15.0,
-                                    height: 1.6,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(height: 1.6,
+                                    color: theme.colorScheme.onSurfaceVariant),
                                 ),
 
                                 const SizedBox(height: 24.0),
                                 Text(
                                   loc.tr('amenities'),
-                                  style: TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 const SizedBox(height: 12.0),
                                 Wrap(
@@ -523,11 +500,8 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                 const SizedBox(height: 24.0),
                                 Text(
                                   loc.tr('agencyBroker'),
-                                  style: TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface),
                                 ),
                                 const SizedBox(height: 12.0),
                                 TashilCard.outlined(
@@ -544,7 +518,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
-                                          Icons.apartment_rounded,
+                                          Symbols.apartment_rounded,
                                           color: colorScheme.onPrimaryContainer,
                                           size: isMobile ? 22.0 : 26.0,
                                         ),
@@ -567,18 +541,15 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                             Row(
                                               children: [
                                                 Icon(
-                                                  Icons.verified_rounded,
+                                                  Symbols.verified_rounded,
                                                   size: 15.0,
                                                   color: colorScheme.primary,
                                                 ),
                                                 const SizedBox(width: 4.0),
                                                 Text(
                                                   loc.tr('verifiedAgency'),
-                                                  style: theme.textTheme.bodySmall?.copyWith(
-                                                    color: theme.colorScheme.onSurfaceVariant,
-                                                    fontSize: 12.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
+                                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant,
+                                                    fontWeight: FontWeight.w500),
                                                 ),
                                               ],
                                             ),
@@ -592,7 +563,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                           TashilIconButton.outlined(
                                             size: isMobile ? 36.0 : 40.0,
                                             iconSize: isMobile ? 18.0 : 20.0,
-                                            icon: Icons.phone_outlined,
+                                            icon: Symbols.phone_rounded,
                                             tooltip: loc.tr('callAgency'),
                                             onPressed: () {
                                               TashilSnackBar.showInfo(
@@ -604,7 +575,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                           TashilIconButton.outlined(
                                             size: isMobile ? 36.0 : 40.0,
                                             iconSize: isMobile ? 18.0 : 20.0,
-                                            icon: Icons.chat_bubble_outline_rounded,
+                                            icon: Symbols.chat_bubble_outline_rounded,
                                             tooltip: loc.tr('chatAgency'),
                                             onPressed: () {
                                               TashilSnackBar.showInfo(
@@ -645,11 +616,8 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: isMobile ? 11.0 : 13.0,
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface),
         ),
       ],
     );
@@ -658,17 +626,17 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
   IconData _getPropertyTypeIcon(String typeCode) {
     switch (typeCode.toLowerCase()) {
       case 'apartment':
-        return Icons.apartment_rounded;
+        return Symbols.apartment_rounded;
       case 'villa':
-        return Icons.villa_rounded;
+        return Symbols.villa_rounded;
       case 'studio':
-        return Icons.meeting_room_rounded;
+        return Symbols.meeting_room_rounded;
       case 'duplex':
-        return Icons.home_work_rounded;
+        return Symbols.home_work_rounded;
       case 'chalet':
-        return Icons.beach_access_rounded;
+        return Symbols.beach_access_rounded;
       default:
-        return Icons.home_rounded;
+        return Symbols.home_rounded;
     }
   }
 
@@ -723,10 +691,7 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                     const SizedBox(height: 2.0),
                     Text(
                       widget.property.getLocation(lang),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 12.0,
-                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -740,14 +705,14 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                   TashilIconButton.tonal(
                     size: 40.0,
                     iconSize: 20.0,
-                    icon: Icons.mic_none_rounded,
+                    icon: Symbols.mic_none_rounded,
                     tooltip: loc.tr('talkToVoiceBroker'),
                     onPressed: () => GeminiVoiceBrokerDialog.show(context, widget.property),
                   ),
                   TashilIconButton.tonal(
                     size: 40.0,
                     iconSize: 20.0,
-                    icon: Icons.share_outlined,
+                    icon: Symbols.share_rounded,
                     tooltip: loc.tr('share'),
                     onPressed: () {
                       TashilSnackBar.showSuccess(
@@ -776,67 +741,67 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
     final lower = amenity.toLowerCase();
 
     // Furnished
-    if (lower.contains('مفروش') || lower.contains('furnished') || lower.contains('सुसज्जित')) {
-      return Icons.chair_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy300')) || lower.contains('furnished') || lower.contains('सुसज्जित')) {
+      return Symbols.chair_rounded;
     }
     // A/C
-    if (lower.contains('تكييف') || lower.contains('a/c') || lower.contains('ac') || lower.contains('एसी')) {
-      return Icons.ac_unit_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy173')) || lower.contains('a/c') || lower.contains('ac') || lower.contains('एसी')) {
+      return Symbols.ac_unit_rounded;
     }
     // Parking
-    if (lower.contains('موقف') || lower.contains('parking') || lower.contains('جراج') || lower.contains('पार्किंग')) {
-      return Icons.local_parking_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy314')) || lower.contains('parking') || lower.contains('جراج') || lower.contains('पार्किंग')) {
+      return Symbols.local_parking_rounded;
     }
     // Security
-    if (lower.contains('أمن') || lower.contains('حراسة') || lower.contains('security') || lower.contains('सुरक्षा')) {
-      return Icons.security_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy087')) || lower.contains(AppLocalizations.trStatic('uiCopy194')) || lower.contains('security') || lower.contains('सुरक्षा')) {
+      return Symbols.security_rounded;
     }
     // CCTV
-    if (lower.contains('كاميرات') || lower.contains('cctv') || lower.contains('सीसीटीवी')) {
-      return Icons.videocam_outlined;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy263')) || lower.contains('cctv') || lower.contains('सीसीटीवी')) {
+      return Symbols.videocam_rounded;
     }
     // Elevator
-    if (lower.contains('مصعد') || lower.contains('elevator') || lower.contains('lift') || lower.contains('लिफ्ट')) {
-      return Icons.elevator_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy293')) || lower.contains('elevator') || lower.contains('lift') || lower.contains('लिफ्ट')) {
+      return Symbols.elevator_rounded;
     }
     // Pool
-    if (lower.contains('سباحة') || lower.contains('pool') || lower.contains('पूल')) {
-      return Icons.pool_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy215')) || lower.contains('pool') || lower.contains('पूल')) {
+      return Symbols.pool_rounded;
     }
     // Garden / Yard
-    if (lower.contains('حديقة') || lower.contains('garden') || lower.contains('बगीचा')) {
-      return Icons.yard_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy193')) || lower.contains('garden') || lower.contains('बगीचा')) {
+      return Symbols.yard_rounded;
     }
     // Balcony
-    if (lower.contains('شرفة') || lower.contains('balcony') || lower.contains('बालकनी')) {
-      return Icons.balcony_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy220')) || lower.contains('balcony') || lower.contains('बालकनी')) {
+      return Symbols.balcony_rounded;
     }
     // Gym / Fitness
-    if (lower.contains('جيم') || lower.contains('نادي') || lower.contains('gym') || lower.contains('fitness') || lower.contains('फिटनेस')) {
-      return Icons.fitness_center_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy190')) || lower.contains('نادي') || lower.contains('gym') || lower.contains('fitness') || lower.contains('फिटनेस')) {
+      return Symbols.fitness_center_rounded;
     }
     // Sea / River / Water View
-    if (lower.contains('بحر') || lower.contains('نيل') || lower.contains('sea') || lower.contains('water') || lower.contains('समुद्र')) {
-      return Icons.water_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy157')) || lower.contains('نيل') || lower.contains('sea') || lower.contains('water') || lower.contains('समुद्र')) {
+      return Symbols.water_rounded;
     }
     // Internet / Wifi
-    if (lower.contains('إنترنت') || lower.contains('واي فاي') || lower.contains('wifi') || lower.contains('internet') || lower.contains('इंटरनेट')) {
-      return Icons.wifi_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy101')) || lower.contains('واي فاي') || lower.contains('wifi') || lower.contains('internet') || lower.contains('इंटरनेट')) {
+      return Symbols.wifi_rounded;
     }
     // Kitchen
-    if (lower.contains('مطبخ') || lower.contains('kitchen') || lower.contains('रसोई')) {
-      return Icons.kitchen_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy295')) || lower.contains('kitchen') || lower.contains('रसोई')) {
+      return Symbols.kitchen_rounded;
     }
     // Maid's room
-    if (lower.contains('خادمة') || lower.contains('maid') || lower.contains('कमरा')) {
-      return Icons.meeting_room_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy199')) || lower.contains('maid') || lower.contains('कमरा')) {
+      return Symbols.meeting_room_rounded;
     }
     // Pets
-    if (lower.contains('حيوانات') || lower.contains('pet') || lower.contains('पालतू')) {
-      return Icons.pets_rounded;
+    if (lower.contains(AppLocalizations.trStatic('uiCopy198')) || lower.contains('pet') || lower.contains('पालतू')) {
+      return Symbols.pets_rounded;
     }
     // Default contextual icon
-    return Icons.verified_outlined;
+    return Symbols.verified_rounded;
   }
 }
 

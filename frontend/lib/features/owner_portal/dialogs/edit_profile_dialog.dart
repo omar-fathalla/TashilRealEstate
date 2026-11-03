@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/core/utils/image_utils.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/features/document_ocr/models/document_ocr_result_model.dart';
 import 'package:tashil_real_estate/features/document_ocr/widgets/ai_document_ocr_modal.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Material Design 3 Dialog for viewing and editing personal profile info.
 /// Fully equipped with:
@@ -209,7 +210,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     if (localPhone.length < 7) {
       TashilSnackBar.showWarning(
         context: context,
-        message: 'يرجى إدخال رقم هاتف صحيح أولاً',
+        message: AppLocalizations.trStatic('uiCopy327'),
       );
       return;
     }
@@ -239,11 +240,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         String errMsg = 'تعذر إرسال رمز التحقق: $e';
         final str = e.toString().toLowerCase();
         if (str.contains('quota-exceeded') || str.contains('too-many-requests')) {
-          errMsg = 'تم تجاوز حد إرسال الرسائل لليوم، يرجى المحاولة لاحقاً';
+          errMsg = AppLocalizations.trStatic('uiCopy179');
         } else if (str.contains('invalid-phone-number')) {
-          errMsg = 'رقم الهاتف غير صالح للدولة المحددة';
+          errMsg = AppLocalizations.trStatic('uiCopy210');
         } else if (str.contains('captcha')) {
-          errMsg = 'يرجى إكمال اختبار التحقق reCAPTCHA';
+          errMsg = AppLocalizations.trStatic('uiCopy329');
         }
         TashilSnackBar.showError(
           context: context,
@@ -258,7 +259,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     if (code.length != 6) {
       TashilSnackBar.showWarning(
         context: context,
-        message: 'يرجى إدخال رمز التحقق المكون من 6 أرقام',
+        message: AppLocalizations.trStatic('uiCopy328'),
       );
       return;
     }
@@ -302,7 +303,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         String errMsg = loc.tr('otpInvalid');
         final str = e.toString().toLowerCase();
         if (str.contains('session-expired') || str.contains('code-expired')) {
-          errMsg = 'انتهت صلاحية الرمز، يرجى طلب رمز جديد';
+          errMsg = AppLocalizations.trStatic('uiCopy155');
         }
         TashilSnackBar.showError(
           context: context,
@@ -382,7 +383,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
+                    color: colorScheme.shadow.withValues(alpha: 0.18),
                     blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
@@ -406,16 +407,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                 color: colorScheme.primaryContainer.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.badge_rounded, color: colorScheme.primary, size: 18),
+                              child: Icon(Symbols.badge_rounded, color: colorScheme.primary, size: 18),
                             ),
                             const SizedBox(width: 10),
                             Text(
                               title,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                           ],
                         ),
@@ -478,7 +476,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         children: [
                           // Zoom In (+)
                           TashilIconButton.tonal(
-                            icon: Icons.zoom_in_rounded,
+                            icon: Symbols.zoom_in_rounded,
                             tooltip: loc.tr('zoomIn'),
                             size: 40,
                             iconSize: 20,
@@ -493,7 +491,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                           // Zoom Out (-)
                           TashilIconButton.tonal(
-                            icon: Icons.zoom_out_rounded,
+                            icon: Symbols.zoom_out_rounded,
                             tooltip: loc.tr('zoomOut'),
                             size: 40,
                             iconSize: 20,
@@ -508,7 +506,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                           // Rotate Left 90°
                           TashilIconButton.tonal(
-                            icon: Icons.rotate_left_rounded,
+                            icon: Symbols.rotate_left_rounded,
                             tooltip: loc.tr('rotateLeft'),
                             size: 40,
                             iconSize: 20,
@@ -523,7 +521,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                           // Rotate Right 90°
                           TashilIconButton.tonal(
-                            icon: Icons.rotate_right_rounded,
+                            icon: Symbols.rotate_right_rounded,
                             tooltip: loc.tr('rotateRight'),
                             size: 40,
                             iconSize: 20,
@@ -537,7 +535,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                           // Flip Horizontal
                           TashilIconButton.tonal(
-                            icon: Icons.flip_rounded,
+                            icon: Symbols.flip_rounded,
                             tooltip: loc.tr('flipHorizontal'),
                             size: 40,
                             iconSize: 20,
@@ -551,7 +549,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                           // Reset View & Orientation
                           TashilIconButton.tonal(
-                            icon: Icons.restart_alt_rounded,
+                            icon: Symbols.restart_alt_rounded,
                             tooltip: loc.tr('resetOrientation'),
                             size: 40,
                             iconSize: 20,
@@ -644,7 +642,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     return TashilModalDialog(
       title: loc.tr('personalInfo'),
       subtitle: loc.tr('editProfileSubtitle'),
-      icon: Icons.manage_accounts_rounded,
+      icon: Symbols.manage_accounts_rounded,
       maxWidth: 560,
       footer: Container(
         width: double.infinity,
@@ -671,15 +669,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.close_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                        Icon(Symbols.close_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Text(
                           loc.tr('cancel'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -708,15 +703,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             color: colorScheme.onPrimary,
                           )
                         else
-                          Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary),
+                          Icon(Symbols.check_rounded, size: 16, color: colorScheme.onPrimary),
                         const SizedBox(width: 6),
                         Text(
                           loc.tr('save'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onPrimary),
                         ),
                       ],
                     ),
@@ -765,7 +757,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             border: Border.all(color: colorScheme.surface, width: 2),
                           ),
                           child: Icon(
-                            Icons.verified_user_rounded,
+                            Symbols.verified_user_rounded,
                             size: 13,
                             color: colorScheme.onPrimary,
                           ),
@@ -775,20 +767,14 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     const SizedBox(height: 10),
                     Text(
                       fullName.isNotEmpty ? fullName : 'Mohamed Fathallah',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _emailController.text.isNotEmpty ? _emailController.text : 'mohamed.fathalla@gmail.com',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -803,15 +789,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.g_mobiledata_rounded, size: 18, color: colorScheme.primary),
+                          Icon(Symbols.g_mobiledata_rounded, size: 18, color: colorScheme.primary),
                           const SizedBox(width: 4),
                           Text(
                             loc.tr('googleAccountLinked'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimaryContainer),
                           ),
                         ],
                       ),
@@ -819,7 +802,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     const SizedBox(height: 10),
                     TashilAssistChip.outlined(
                       label: loc.tr('syncPhotoFromGoogle'),
-                      icon: _isSyncingPhoto ? Icons.hourglass_top_rounded : Icons.sync_rounded,
+                      icon: _isSyncingPhoto ? Symbols.hourglass_top_rounded : Symbols.sync_rounded,
                       onPressed: _isSyncingPhoto ? null : () => _handleSyncGooglePhoto(loc),
                     ),
                   ],
@@ -851,29 +834,23 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           children: [
                             Icon(
                               completenessRatio >= 1.0
-                                  ? Icons.check_circle_rounded
-                                  : Icons.shield_outlined,
+                                  ? Symbols.check_circle_rounded
+                                  : Symbols.shield_rounded,
                               size: 15,
                               color: colorScheme.primary,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               loc.tr('profileCompleteness'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                           ],
                         ),
                         Text(
                           '$completenessPercent%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -928,13 +905,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                               padding: const EdgeInsets.all(3),
                               margin: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.65),
+                                color: colorScheme.shadow.withValues(alpha: 0.65),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.zoom_in_rounded,
+                              child: Icon(
+                                Symbols.zoom_in_rounded,
                                 size: 14,
-                                color: Colors.white,
+                                color: colorScheme.onPrimary,
                               ),
                             ),
                           ],
@@ -947,16 +924,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.verified_rounded, size: 16, color: colorScheme.primary),
+                                Icon(Symbols.verified_rounded, size: 16, color: colorScheme.primary),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -965,10 +939,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             const SizedBox(height: 2),
                             Text(
                               loc.tr('tapToViewFullCard'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                             const SizedBox(height: 6),
                             InkWell(
@@ -976,16 +947,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.refresh_rounded, size: 14, color: colorScheme.primary),
+                                  Icon(Symbols.refresh_rounded, size: 14, color: colorScheme.primary),
                                   const SizedBox(width: 4),
                                   Text(
                                     loc.tr('rescanIdCard'),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                       color: colorScheme.primary,
-                                      decoration: TextDecoration.underline,
-                                    ),
+                                      decoration: TextDecoration.underline),
                                   ),
                                 ],
                               ),
@@ -1020,7 +988,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.document_scanner_rounded, size: 18, color: colorScheme.onPrimary),
+                        child: Icon(Symbols.document_scanner_rounded, size: 18, color: colorScheme.onPrimary),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1029,28 +997,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           children: [
                             Text(
                               loc.tr('scanIdWithAi'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                             Text(
                               isUAE
-                                  ? 'استخراج بيانات الهوية الإماراتية وحفظ الصورة تلقائياً'
-                                  : 'استخراج الرقم القومي والاسم والعنوان وتعبئة الحقول فورياً',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                                  ? AppLocalizations.trStatic('uiCopy112')
+                                  : AppLocalizations.trStatic('uiCopy111'),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       TashilButton.tonal(
-                        label: 'مسح AI',
-                        icon: Icons.flash_on_rounded,
+                        label: AppLocalizations.trStatic('uiCopy290'),
+                        icon: Symbols.flash_on_rounded,
                         isLoading: _isScanningOcr,
                         onPressed: () => _handleScanIdWithAi(loc),
                       ),
@@ -1067,7 +1029,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     child: TashilTextField.outlined(
                       controller: _firstNameController,
                       labelText: loc.tr('firstNameLabel'),
-                      prefixIcon: Icons.person_outline_rounded,
+                      prefixIcon: Symbols.person_outline_rounded,
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
@@ -1076,7 +1038,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     child: TashilTextField.outlined(
                       controller: _surnameController,
                       labelText: loc.tr('surnameLabel'),
-                      prefixIcon: Icons.badge_outlined,
+                      prefixIcon: Symbols.badge_rounded,
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
@@ -1088,7 +1050,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               TashilTextField.outlined(
                 controller: _emailController,
                 labelText: loc.tr('emailAddress'),
-                prefixIcon: Icons.email_outlined,
+                prefixIcon: Symbols.email_rounded,
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 14),
@@ -1126,25 +1088,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                       height: 56,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.12),
+                        color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.4),
+                          color: colorScheme.primary.withValues(alpha: 0.4),
                           width: 1.0,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_rounded, size: 20, color: Colors.green),
+                          Icon(Symbols.verified_rounded, size: 20, color: colorScheme.primary),
                           const SizedBox(width: 6),
                           Text(
                             loc.tr('phoneVerifiedBadge'),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.primary),
                           ),
                         ],
                       ),
@@ -1157,7 +1116,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             ? null
                             : () => _handleSendOtp(loc),
                         isLoading: _isSendingOtp,
-                        icon: Icons.sms_outlined,
+                        icon: Symbols.sms_rounded,
                         label: loc.tr('sendOtp'),
                         height: 56,
                         borderRadius: BorderRadius.circular(12),
@@ -1189,7 +1148,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                               keyboardType: TextInputType.number,
                               maxLength: 6,
                               labelText: loc.tr('enterOtpCode'),
-                              prefixIcon: Icons.pin_rounded,
+                              prefixIcon: Symbols.pin_rounded,
                               textDirection: TextDirection.ltr,
                             ),
                           ),
@@ -1197,8 +1156,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           SizedBox(
                             height: 56,
                             child: TashilButton.filled(
-                              label: 'تأكيد الرمز',
-                              icon: Icons.check_rounded,
+                              label: AppLocalizations.trStatic('uiCopy163'),
+                              icon: Symbols.check_rounded,
                               isLoading: _isVerifyingOtp,
                               onPressed: () => _handleVerifyOtp(loc),
                             ),
@@ -1212,23 +1171,17 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           if (_otpCountdown > 0)
                             Text(
                               '$_otpCountdown ${loc.tr('secondsRemaining')}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.primary,
-                              ),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                                color: colorScheme.primary),
                             )
                           else
                             InkWell(
                               onTap: () => _handleSendOtp(loc),
                               child: Text(
                                 loc.tr('resendOtp'),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                   color: colorScheme.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
+                                  decoration: TextDecoration.underline),
                               ),
                             ),
                         ],
@@ -1242,15 +1195,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               // 5. Official Identity & Address Section
               Row(
                 children: [
-                  Icon(Icons.badge_rounded, size: 16, color: colorScheme.primary),
+                  Icon(Symbols.badge_rounded, size: 16, color: colorScheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('officialIdentitySectionTitle'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -1260,7 +1210,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               TashilTextField.outlined(
                 controller: _nationalIdController,
                 labelText: isUAE ? loc.tr('emiratesIdLabel') : loc.tr('nationalIdLabel'),
-                prefixIcon: Icons.credit_card_rounded,
+                prefixIcon: Symbols.credit_card_rounded,
                 keyboardType: TextInputType.number,
                 maxLength: isUAE ? 18 : 14,
                 onChanged: (_) => setState(() {}),
@@ -1271,8 +1221,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               TashilTextField.outlined(
                 controller: _addressController,
                 labelText: loc.tr('officialAddressLabel'),
-                prefixIcon: Icons.location_on_outlined,
-                suffixIcon: Icons.my_location_rounded,
+                prefixIcon: Symbols.location_on_rounded,
+                suffixIcon: Symbols.my_location_rounded,
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 20),
@@ -1280,15 +1230,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               // 6. Landlord Bank Payout Details Section
               Row(
                 children: [
-                  Icon(Icons.account_balance_rounded, size: 16, color: colorScheme.primary),
+                  Icon(Symbols.account_balance_rounded, size: 16, color: colorScheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('bankPayoutSectionTitle'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -1305,7 +1252,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     return TashilDropdownMenuItem<String?>(
                       value: bank.code,
                       label: bank.localizedName(lang),
-                      icon: bank.isOther ? Icons.edit_note_rounded : Icons.account_balance_outlined,
+                      icon: bank.isOther ? Symbols.edit_note_rounded : Symbols.account_balance_rounded,
                       supportingText: bank.isOther ? null : (isUAE ? 'CBUAE' : 'CBE'),
                     );
                   }).toList();
@@ -1323,7 +1270,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         items: bankItems,
                         labelText: loc.tr('bankNameLabel'),
                         hintText: loc.tr('selectBankPlaceholder'),
-                        prefixIcon: Icons.account_balance_outlined,
+                        prefixIcon: Symbols.account_balance_rounded,
                         isSearchable: true,
                         searchHintText: loc.tr('searchBankPlaceholder'),
                         height: 52,
@@ -1350,7 +1297,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                         TashilTextField.outlined(
                           controller: _customBankController,
                           labelText: loc.tr('customBankNameLabel'),
-                          prefixIcon: Icons.edit_note_rounded,
+                          prefixIcon: Symbols.edit_note_rounded,
                           onChanged: (text) {
                             setState(() {
                               _bankNameController.text = text.trim();
@@ -1367,7 +1314,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               TashilTextField.outlined(
                 controller: _bankAccountNumberController,
                 labelText: loc.tr('bankAccountOrIbanLabel'),
-                prefixIcon: Icons.payments_outlined,
+                prefixIcon: Symbols.payments_rounded,
                 textDirection: TextDirection.ltr,
                 onChanged: (_) => setState(() {}),
               ),
@@ -1376,11 +1323,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
               // 7. Preferred Contact Method (Connected Button Group)
               Text(
                 loc.tr('preferredContactMethodLabel'),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
               ),
               const SizedBox(height: 8),
               TashilConnectedButtonGroup<String>(
@@ -1393,17 +1337,17 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                   TashilConnectedButtonSegment(
                     value: 'phone',
                     label: loc.tr('contactMethodPhone'),
-                    icon: Icons.phone_outlined,
+                    icon: Symbols.phone_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'whatsapp',
                     label: loc.tr('contactMethodWhatsApp'),
-                    icon: Icons.chat_bubble_outline_rounded,
+                    icon: Symbols.chat_bubble_outline_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'email',
                     label: loc.tr('contactMethodEmail'),
-                    icon: Icons.mail_outline_rounded,
+                    icon: Symbols.mail_outline_rounded,
                   ),
                 ],
               ),

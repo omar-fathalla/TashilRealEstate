@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Enumeration of M3 Icon Button variants.
 enum TashilIconButtonVariant {
@@ -63,7 +64,7 @@ class TashilIconButton extends StatelessWidget {
     this.iconSize = 18.0,
     this.color,
     this.backgroundColor,
-  })  : icon = Icons.close_rounded,
+  })  : icon = Symbols.close_rounded,
         variant = TashilIconButtonVariant.close;
 
   const TashilIconButton.filled({
@@ -105,10 +106,10 @@ class TashilIconButton extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final isCloseIcon = icon == Icons.close_rounded ||
-        icon == Icons.close ||
-        icon == Icons.clear_rounded ||
-        icon == Icons.clear;
+    final isCloseIcon = icon == Symbols.close_rounded ||
+        icon == Symbols.close_rounded ||
+        icon == Symbols.clear_rounded ||
+        icon == Symbols.clear_rounded;
 
     // Apply the M3 Shaded Close Button standard to any close variant or close icon
     if (variant == TashilIconButtonVariant.close ||
@@ -177,11 +178,11 @@ class TashilIconButton extends StatelessWidget {
             backgroundColor: backgroundColor ?? colorScheme.primary,
             foregroundColor: color ?? colorScheme.onPrimary,
             hoverColor: isDark
-                ? Colors.white.withValues(alpha: 0.12)
-                : Colors.black.withValues(alpha: 0.10),
+                ? colorScheme.onPrimary.withValues(alpha: 0.12)
+                : colorScheme.shadow.withValues(alpha: 0.10),
             highlightColor: isDark
-                ? Colors.white.withValues(alpha: 0.18)
-                : Colors.black.withValues(alpha: 0.18),
+                ? colorScheme.onPrimary.withValues(alpha: 0.18)
+                : colorScheme.shadow.withValues(alpha: 0.18),
             minimumSize: Size(touchSize, touchSize),
             fixedSize: Size(touchSize, touchSize),
             padding: EdgeInsets.zero,

@@ -420,7 +420,7 @@ class TashilTransitions {
       context: context,
       barrierDismissible: barrierDismissible,
       barrierLabel: barrierLabel ?? 'Dismiss',
-      barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.54),
+      barrierColor: barrierColor ?? Theme.of(context).colorScheme.shadow.withValues(alpha: 0.54),
       transitionDuration: TashilMotionWebCurves.expressiveDefaultSpatialDuration,
       pageBuilder: (context, animation, secondaryAnimation) => builder(context),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -469,7 +469,7 @@ class TashilTransitions {
         pageBuilder: (ctx, animation, secondaryAnimation) => builder(ctx),
         barrierDismissible: barrierDismissible,
         barrierLabel: barrierLabel ?? 'Dismiss',
-        barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.45),
+        barrierColor: barrierColor ?? Theme.of(context).colorScheme.shadow.withValues(alpha: 0.45),
         transitionDuration: duration,
         reverseTransitionDuration: reverseDuration,
         transitionBuilder: (ctx, animation, secondaryAnimation, child) {

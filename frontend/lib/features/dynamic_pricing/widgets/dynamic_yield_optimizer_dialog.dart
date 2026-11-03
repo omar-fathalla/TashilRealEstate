@@ -13,6 +13,7 @@ import '../../../core/utils/image_utils.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../models/dynamic_pricing_model.dart';
 import '../services/dynamic_pricing_optimizer_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class DynamicYieldOptimizerDialog extends StatefulWidget {
   final String countryCode;
@@ -112,7 +113,7 @@ class _DynamicYieldOptimizerDialogState
                     const SizedBox(height: 16),
                     Text(
                       loc.tr('runningPredictivePricingAlgorithm'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -145,12 +146,12 @@ class _DynamicYieldOptimizerDialogState
                                 padding: const EdgeInsets.all(12),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.apartment_rounded, size: 16, color: theme.colorScheme.primary),
+                                    Icon(Symbols.apartment_rounded, size: 16, color: theme.colorScheme.primary),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         loc.tr('managedUnitsList'),
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -164,7 +165,7 @@ class _DynamicYieldOptimizerDialogState
                                       ),
                                       child: Text(
                                         '${_summary!.assetRecommendations.length}',
-                                        style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 10, fontWeight: FontWeight.bold),
+                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ],
@@ -201,14 +202,14 @@ class _DynamicYieldOptimizerDialogState
                                                 children: [
                                                   Text(
                                                     item.asset.name[lang] ?? item.asset.name['ar'] ?? '',
-                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     item.asset.location[lang] ?? item.asset.location['ar'] ?? '',
-                                                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
@@ -220,11 +221,8 @@ class _DynamicYieldOptimizerDialogState
                                                     children: [
                                                       Text(
                                                         '${CurrencyFormatter.formatAmount(item.recommendedDynamicRent, langCode: lang)} $currency',
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          color: theme.colorScheme.primary,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
+                                                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.primary,
+                                                          fontWeight: FontWeight.bold),
                                                       ),
                                                       if (item.isApplied || _appliedIds.contains(item.asset.id))
                                                         Container(
@@ -236,15 +234,12 @@ class _DynamicYieldOptimizerDialogState
                                                           child: Row(
                                                             mainAxisSize: MainAxisSize.min,
                                                             children: [
-                                                              Icon(Icons.check_circle_rounded, size: 10, color: theme.colorScheme.primary),
+                                                              Icon(Symbols.check_circle_rounded, size: 10, color: theme.colorScheme.primary),
                                                               const SizedBox(width: 3),
                                                               Text(
                                                                 loc.tr('priceApplied'),
-                                                                style: TextStyle(
-                                                                  fontSize: 9,
-                                                                  color: theme.colorScheme.onPrimaryContainer,
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
+                                                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                                                                  fontWeight: FontWeight.bold),
                                                               ),
                                                             ],
                                                           ),
@@ -258,11 +253,8 @@ class _DynamicYieldOptimizerDialogState
                                                           ),
                                                           child: Text(
                                                             '+${((item.dynamicMultiplier - 1.0) * 100).toStringAsFixed(0)}%',
-                                                            style: TextStyle(
-                                                              fontSize: 9,
-                                                              color: theme.colorScheme.onPrimaryContainer,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
+                                                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                                                              fontWeight: FontWeight.bold),
                                                           ),
                                                         ),
                                                     ],
@@ -311,7 +303,7 @@ class _DynamicYieldOptimizerDialogState
             color: theme.colorScheme.primary,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(Icons.bolt_rounded, color: theme.colorScheme.onPrimary, size: 22),
+          child: Icon(Symbols.bolt_rounded, color: theme.colorScheme.onPrimary, size: 22),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -325,7 +317,7 @@ class _DynamicYieldOptimizerDialogState
                 children: [
                   Text(
                     loc.tr('dynamicYieldOptimizerTitle'),
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -336,7 +328,7 @@ class _DynamicYieldOptimizerDialogState
                     ),
                     child: Text(
                       'Vertex AI + Gemini',
-                      style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
@@ -348,7 +340,7 @@ class _DynamicYieldOptimizerDialogState
                     ),
                     child: Text(
                       isAE ? '🇦🇪 ${loc.tr('country_ae')}' : '🇪🇬 ${loc.tr('country_eg')}',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                     ),
                   ),
                 ],
@@ -356,7 +348,7 @@ class _DynamicYieldOptimizerDialogState
               const SizedBox(height: 2),
               Text(
                 loc.tr('dynamicYieldOptimizerSubtitle'),
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -392,7 +384,7 @@ class _DynamicYieldOptimizerDialogState
                   sub: isApplied
                       ? '${loc.tr('originalBaseRent')}: ${CurrencyFormatter.formatAmount(item.originalBaseRent, langCode: lang)} $currency'
                       : '${loc.tr('currentRent')}: ${CurrencyFormatter.formatAmount(item.currentBaseRent, langCode: lang)} $currency',
-                  icon: Icons.trending_up_rounded,
+                  icon: Symbols.trending_up_rounded,
                   color: theme.colorScheme.primary,
                 ),
               ),
@@ -402,7 +394,7 @@ class _DynamicYieldOptimizerDialogState
                   title: loc.tr('projectedNetAnnualGain'),
                   value: '+${CurrencyFormatter.formatAmount(item.projectedAnnualNetGain, langCode: lang)} $currency',
                   sub: '+${item.projectedYieldIncreasePct.toStringAsFixed(1)}% ${loc.tr('yieldRoiBonus')}',
-                  icon: Icons.auto_graph_rounded,
+                  icon: Symbols.auto_graph_rounded,
                   color: theme.colorScheme.secondary,
                 ),
               ),
@@ -412,7 +404,7 @@ class _DynamicYieldOptimizerDialogState
                   title: loc.tr('vacancyReductionDays'),
                   value: '${item.projectedVacancyReductionDays} ${loc.tr('daysSaved')}',
                   sub: loc.tr('vacancyProtectionDesc'),
-                  icon: Icons.shield_rounded,
+                  icon: Symbols.shield_rounded,
                   color: theme.colorScheme.tertiary,
                 ),
               ),
@@ -433,12 +425,12 @@ class _DynamicYieldOptimizerDialogState
               children: [
                 Row(
                   children: [
-                    Icon(Icons.psychology_rounded, color: theme.colorScheme.onPrimary, size: 18),
+                    Icon(Symbols.psychology_rounded, color: theme.colorScheme.onPrimary, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         loc.tr('aiYieldStrategyRationale'),
-                        style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -454,17 +446,17 @@ class _DynamicYieldOptimizerDialogState
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.check_circle_rounded, size: 12, color: theme.colorScheme.onTertiaryContainer),
+                                Icon(Symbols.check_circle_rounded, size: 12, color: theme.colorScheme.onTertiaryContainer),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${((item.dynamicMultiplier - 1.0) * 100).toStringAsFixed(0)}% ${loc.tr('multiplierBadge')} • ${loc.tr('priceApplied')}',
-                                  style: TextStyle(color: theme.colorScheme.onTertiaryContainer, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onTertiaryContainer, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             )
                           : Text(
                               '${((item.dynamicMultiplier - 1.0) * 100).toStringAsFixed(0)}% ${loc.tr('multiplierBadge')}',
-                              style: TextStyle(color: theme.colorScheme.onTertiaryContainer, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onTertiaryContainer, fontWeight: FontWeight.bold),
                             ),
                     ),
                   ],
@@ -472,7 +464,7 @@ class _DynamicYieldOptimizerDialogState
                 const SizedBox(height: 8),
                 Text(
                   item.getStrategy(lang),
-                  style: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), fontSize: 12, height: 1.5),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), height: 1.5),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -488,9 +480,9 @@ class _DynamicYieldOptimizerDialogState
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_outline_rounded, color: theme.colorScheme.onPrimary, size: 11),
+                          Icon(Symbols.check_circle_outline_rounded, color: theme.colorScheme.onPrimary, size: 11),
                           const SizedBox(width: 4),
-                          Text(d, style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 10)),
+                          Text(d, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary)),
                         ],
                       ),
                     );
@@ -504,7 +496,7 @@ class _DynamicYieldOptimizerDialogState
           // 12-Month Forecast Curve Chart
           Text(
             loc.tr('twelveMonthForecastCurve'),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
           _build12MonthForecastBars(item.monthlyForecastCurve, currency, lang, loc),
@@ -523,7 +515,7 @@ class _DynamicYieldOptimizerDialogState
                     Flexible(
                       child: Text(
                         loc.tr('autoPilotYieldMode'),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -543,7 +535,7 @@ class _DynamicYieldOptimizerDialogState
               const SizedBox(width: 12),
               TashilButton(
                 onPressed: isApplied ? null : () => _applyPrice(item),
-                icon: isApplied ? Icons.check_circle_rounded : Icons.bolt_rounded,
+                icon: isApplied ? Symbols.check_circle_rounded : Symbols.bolt_rounded,
                 label: isApplied ? loc.tr('priceApplied') : loc.tr('applyDynamicPriceBtn'),
                 variant: isApplied ? TashilButtonVariant.tonal : TashilButtonVariant.filled,
               ),
@@ -579,7 +571,7 @@ class _DynamicYieldOptimizerDialogState
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -589,14 +581,14 @@ class _DynamicYieldOptimizerDialogState
           const SizedBox(height: 6),
           Text(
             value,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: color),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             sub,
-            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -648,7 +640,7 @@ class _DynamicYieldOptimizerDialogState
                 children: [
                   Text(
                     '${f.occupancyRatePct.toInt()}%',
-                    style: TextStyle(fontSize: 8, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 2),
                   Container(
@@ -662,7 +654,7 @@ class _DynamicYieldOptimizerDialogState
                   const SizedBox(height: 4),
                   Text(
                     f.getMonthName(lang),
-                    style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

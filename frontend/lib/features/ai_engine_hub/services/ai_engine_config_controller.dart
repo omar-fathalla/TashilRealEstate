@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ai_model_definition.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Centralized Controller managing AI engine configurations, model switching,
 /// and token/budget analytics across the Tashil Real Estate platform.
@@ -25,7 +26,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'استخراج وتفريغ مواصفات العقار (الصوت والنص)',
         titleEn: 'Property Ingestion & Voice Transcription',
         titleHi: 'संपत्ति निष्कर्षण और आवाज प्रतिलेखन',
-        icon: Icons.mic_external_on_rounded,
+        icon: Symbols.mic_external_on_rounded,
         usedForAr: 'تفريغ التسجيل الصوتي واستخراج بيانات الشقة (الموقع، السعر، الغرف، المرافق) وتعبئة الحقول آلياً.',
         usedForEn: 'Transcribing voice audio, extracting property attributes (location, price, rooms), and autofilling onboarding fields.',
         usedForHi: 'आवाज ऑडियो लिखना, संपत्ति विवरण (स्थान, मूल्य, कमरे) निकालना और फ़ील्ड को स्वतः भरना।',
@@ -92,7 +93,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'صياغة الوصف التسويقي والإعلانات العقارية',
         titleEn: 'Marketing Copywriting & Ad Description',
         titleHi: 'विपणन विवरण और विज्ञापन लेखन',
-        icon: Icons.auto_awesome_rounded,
+        icon: Symbols.auto_awesome_rounded,
         usedForAr: 'إنشاء وصف عقاري تسويقي احترافي بأسلوب راقٍ يبرز المزايا والمرافق ونقاط الجذب الاستثمارية.',
         usedForEn: 'Generating compelling marketing copy and SEO listing descriptions highlighting amenities and lifestyle.',
         usedForHi: 'सुविधाओं और जीवन शैली को उजागर करने वाले आकर्षक विपणन विवरण और विज्ञापन तैयार करना।',
@@ -159,7 +160,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'التقييم المالي الذكي ومقارنات السوق (Zestimate)',
         titleEn: 'Smart Rental Valuation & Market Comps',
         titleHi: 'स्मार्ट किराया मूल्यांकन और बाजार तुलना',
-        icon: Icons.price_check_rounded,
+        icon: Symbols.price_check_rounded,
         usedForAr: 'تقدير القيمة الإيجارية العادلة للعقار ومقارنته بالوحدات المماثلة في أكبر المنصات العقارية المعتمدة.',
         usedForEn: 'Estimating fair market rental value and benchmarking against live certified real estate comps.',
         usedForHi: 'उचित बाजार किराया मूल्य का अनुमान लगाना और प्रमाणित वास्तविक संपत्ति से तुलना करना।',
@@ -226,7 +227,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'البحث الدلالي الذكي والمتجهات (Vector Embeddings)',
         titleEn: 'Semantic Search & Vector Embeddings',
         titleHi: 'सिमेंटिक सर्च और वेक्टर एम्बेडिंग',
-        icon: Icons.travel_explore_rounded,
+        icon: Symbols.travel_explore_rounded,
         usedForAr: 'فهم المعنى الحقيقي لعبارات البحث (مثل "شقة هادئة قريبة من المترو") ومطابقتها دلالياً مع العقارات.',
         usedForEn: 'Matching natural language queries (e.g., quiet apartment near transit) via high-dimensional vector spaces.',
         usedForHi: 'प्राकृतिक भाषा प्रश्नों का मिलान उच्च-आयामी वेक्टर रिक्त स्थान के माध्यम से करना।',
@@ -293,7 +294,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'المستشار القانوني وفحص بنود العقود الإيجارية',
         titleEn: 'Legal AI Advisor & Contract Clauses',
         titleHi: 'कानूनी एआई सलाहकार और अनुबंध की शर्तें',
-        icon: Icons.balance_rounded,
+        icon: Symbols.balance_rounded,
         usedForAr: 'التدقيق القانوني لبنود العقود، التحقق من مطابقتها للقوانين (ريرا في دبي والقانون المصري)، وحماية الطرفين.',
         usedForEn: 'Auditing tenancy clauses, verifying compliance with RERA & Civil Code statutes, and resolving ambiguities.',
         usedForHi: 'किरायेदारी खंडों का ऑडिट करना, कानूनों के अनुपालन की पुष्टि करना और अस्पष्टताओं को हल करना।',
@@ -360,7 +361,7 @@ class AiEngineConfigController extends ChangeNotifier {
         titleAr: 'الفرش الافتراضي والتوليد البصري (Visual AI)',
         titleEn: 'Virtual Staging & Visual Image Synthesis',
         titleHi: 'आभासी स्टेजिंग और विजुअल इमेज जनरेशन',
-        icon: Icons.image_search_rounded,
+        icon: Symbols.image_search_rounded,
         usedForAr: 'فرش الغرف الفارغة افتراضياً بأثاث عصري واقعي، فحص جودة الصور، والتعرف على عيوب الصيانة.',
         usedForEn: 'Room-preserving virtual staging of unfurnished spaces, photo quality moderation, and defect inspection.',
         usedForHi: 'बिना सुसज्जित स्थानों का कमरे-संरक्षण आभासी स्टेजिंग और दोष निरीक्षण।',

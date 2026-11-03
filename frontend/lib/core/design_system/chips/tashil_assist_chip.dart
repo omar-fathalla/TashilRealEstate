@@ -251,12 +251,9 @@ class _TashilAssistChipState extends State<TashilAssistChip> {
               Flexible(
                 child: Text(
                   widget.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: effectiveFg,
-                    fontSize: 12.0,
+                  style: theme.textTheme.labelLarge?.copyWith(color: effectiveFg,
                     fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                    letterSpacing: 0.1,
-                  ),
+                    letterSpacing: 0.1),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

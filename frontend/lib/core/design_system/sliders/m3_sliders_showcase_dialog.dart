@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'tashil_slider.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog displaying the Official Google Material Design 3 Sliders Suite.
 /// Conforms to:
@@ -71,7 +72,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                                 color: colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: Icon(Icons.tune_rounded, color: colorScheme.onPrimaryContainer, size: 24),
+                              child: Icon(Symbols.tune_rounded, color: colorScheme.onPrimaryContainer, size: 24),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -100,7 +101,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Symbols.close_rounded),
                         tooltip: loc.tr('closeModalBtn'),
                       ),
                     ],
@@ -119,7 +120,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                           // 1. M3 Expressive Slider (Vertical Bar 3.5x26dp, 16dp track, slim 2dp gap)
                           _buildSectionTitle(
                             context,
-                            title: '1. M3 Expressive Unified Slider (Vertical Bar & Slim 2dp Gap)',
+                            title: AppLocalizations.trStatic('uiCopy004'),
                             badge: '16dp Track • 2dp Gap',
                           ),
                           const SizedBox(height: 8),
@@ -128,11 +129,8 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                             children: [
                               Text(
                                 loc.tr('maxRent'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -142,11 +140,8 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                                 ),
                                 child: Text(
                                   '${CurrencyFormatter.formatAmount(_expressivePrice, langCode: lang)} ${loc.tr('currency_eg')}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: colorScheme.onPrimaryContainer,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimaryContainer),
                                 ),
                               ),
                             ],
@@ -173,7 +168,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                           // 2. Discrete Stepped Slider
                           _buildSectionTitle(
                             context,
-                            title: '2. Discrete Stepped Slider (10 Divisions with Tick Dots)',
+                            title: AppLocalizations.trStatic('uiCopy012'),
                             badge: 'Stepped • Snapping',
                           ),
                           const SizedBox(height: 8),
@@ -182,19 +177,13 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                             children: [
                               Text(
                                 'Quality Score',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                               ),
                               Text(
                                 '${_steppedScore.round()} / 100',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: colorScheme.primary,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary),
                               ),
                             ],
                           ),
@@ -219,7 +208,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                           // 3. Round Thumb Handle Variant
                           _buildSectionTitle(
                             context,
-                            title: '3. Round Thumb Handle Variant (20dp Circle)',
+                            title: AppLocalizations.trStatic('uiCopy021'),
                             badge: 'Classic Round Thumb',
                           ),
                           const SizedBox(height: 8),
@@ -228,19 +217,13 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                             children: [
                               Text(
                                 'Radius Coverage',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                               ),
                               Text(
                                 '${_roundValue.round()} km',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: colorScheme.primary,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary),
                               ),
                             ],
                           ),
@@ -270,7 +253,7 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
                     alignment: AlignmentDirectional.centerEnd,
                     child: TashilButton(
                       label: loc.tr('closeModalBtn'),
-                      icon: Icons.check_rounded,
+                      icon: Symbols.check_rounded,
                       onPressed: () => Navigator.of(context).pop(),
                       height: 40,
                     ),
@@ -309,11 +292,8 @@ class _M3SlidersShowcaseDialogState extends State<M3SlidersShowcaseDialog> {
           ),
           child: Text(
             badge,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSecondaryContainer,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSecondaryContainer),
           ),
         ),
       ],

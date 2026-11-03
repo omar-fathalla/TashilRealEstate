@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class TenantPaymentsView extends StatelessWidget {
   const TenantPaymentsView({super.key});
@@ -62,11 +63,11 @@ class TenantPaymentsView extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.shield_outlined, size: 14, color: colorScheme.onSecondaryContainer),
+                            Icon(Symbols.shield_rounded, size: 14, color: colorScheme.onSecondaryContainer),
                             const SizedBox(width: 4),
                             Text(
                               loc.tr('automatedSplitActive'),
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
                             ),
                           ],
                         ),
@@ -121,7 +122,7 @@ class TenantPaymentsView extends StatelessWidget {
                                           backgroundColor: statusBg,
                                           radius: 18,
                                           child: Icon(
-                                            isPaid ? Icons.check_rounded : (isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded),
+                                            isPaid ? Symbols.check_rounded : (isOverdue ? Symbols.warning_amber_rounded : Symbols.schedule_rounded),
                                             color: statusColor,
                                             size: 20,
                                           ),
@@ -133,13 +134,13 @@ class TenantPaymentsView extends StatelessWidget {
                                             children: [
                                               Text(
                                                 '${inv.unitTitle} (${inv.unitNumber})',
-                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                               Text(
                                                 '${loc.tr('invoiceNo')}: ${inv.invoiceNumber}',
-                                                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -159,11 +160,8 @@ class TenantPaymentsView extends StatelessWidget {
                                         ),
                                         child: Text(
                                           statusText,
-                                          style: TextStyle(
-                                            color: statusColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusColor,
+                                            fontWeight: FontWeight.bold),
                                         ),
                                       ),
                                     ),
@@ -178,7 +176,7 @@ class TenantPaymentsView extends StatelessWidget {
                                                 backgroundColor: statusBg,
                                                 radius: 18,
                                                 child: Icon(
-                                                  isPaid ? Icons.check_rounded : (isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded),
+                                                  isPaid ? Symbols.check_rounded : (isOverdue ? Symbols.warning_amber_rounded : Symbols.schedule_rounded),
                                                   color: statusColor,
                                                   size: 20,
                                                 ),
@@ -190,13 +188,13 @@ class TenantPaymentsView extends StatelessWidget {
                                                   children: [
                                                     Text(
                                                       '${inv.unitTitle} (${inv.unitNumber})',
-                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                     ),
                                                     Text(
                                                       '${loc.tr('invoiceNo')}: ${inv.invoiceNumber}',
-                                                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+                                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                     ),
@@ -215,11 +213,8 @@ class TenantPaymentsView extends StatelessWidget {
                                           ),
                                           child: Text(
                                             statusText,
-                                            style: TextStyle(
-                                              color: statusColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
+                                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: statusColor,
+                                              fontWeight: FontWeight.bold),
                                           ),
                                         ),
                                       ],
@@ -237,25 +232,25 @@ class TenantPaymentsView extends StatelessWidget {
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(loc.tr('totalDueToPay'), style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                                          Text(loc.tr('totalDueToPay'), style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant)),
                                           const SizedBox(height: 2),
                                           Text(
                                             '${CurrencyFormatter.formatAmount(inv.totalAmountDue, langCode: lang)} $currency',
-                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isOverdue ? colorScheme.error : colorScheme.onSurface),
+                                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold, color: isOverdue ? colorScheme.error : colorScheme.onSurface),
                                           ),
                                         ],
                                       ),
                                       if (isPaid)
                                         TashilButton(
                                           onPressed: () => RentReceiptDialog.show(context, inv),
-                                          icon: Icons.receipt_long_rounded,
+                                          icon: Symbols.receipt_long_rounded,
                                           label: loc.tr('viewOfficialReceipt'),
                                           variant: TashilButtonVariant.outlined,
                                         )
                                       else
                                         TashilButton(
                                           onPressed: () => TenantCheckoutDialog.show(context, inv),
-                                          icon: Icons.payment_rounded,
+                                          icon: Symbols.payment_rounded,
                                           label: loc.tr('payRentNowAction'),
                                           variant: TashilButtonVariant.filled,
                                         ),

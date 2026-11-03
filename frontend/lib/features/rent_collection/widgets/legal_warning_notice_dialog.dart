@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class LegalWarningNoticeDialog extends StatelessWidget {
   final RentInvoiceModel invoice;
@@ -59,15 +60,12 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.gavel_rounded, color: theme.colorScheme.error, size: 16),
+                        Icon(Symbols.gavel_rounded, color: theme.colorScheme.error, size: 16),
                         const SizedBox(width: 6),
                         Text(
                           isUAE ? loc.tr('rdcOfficialNotice') : loc.tr('egLegalEvictionNotice'),
-                          style: TextStyle(
-                            color: theme.colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -85,16 +83,13 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                   children: [
                     Text(
                       isUAE ? loc.tr('uaeGovHeader') : loc.tr('egGovHeader'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       isUAE ? loc.tr('dubaiLandDept') : loc.tr('egyptMinistryJustice'),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -108,11 +103,8 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${loc.tr('contractNumber')}: ${invoice.contractNumber}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary),
                     ),
                   ],
                 ),
@@ -135,16 +127,13 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                         Expanded(
                           child: Text(
                             loc.tr('overdueDaysCount'),
-                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onErrorContainer),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onErrorContainer),
                           ),
                         ),
                         Text(
                           '${invoice.overdueDays} ${loc.tr('days')}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.error,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.error),
                         ),
                       ],
                     ),
@@ -155,16 +144,13 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                         Expanded(
                           child: Text(
                             loc.tr('unpaidBaseRent'),
-                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onErrorContainer),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onErrorContainer),
                           ),
                         ),
                         Text(
                           '${CurrencyFormatter.formatAmount(invoice.baseAmount, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface),
                         ),
                       ],
                     ),
@@ -175,16 +161,13 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                         Expanded(
                           child: Text(
                             loc.tr('accumulatedLateFee'),
-                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onErrorContainer),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onErrorContainer),
                           ),
                         ),
                         Text(
                           '+ ${CurrencyFormatter.formatAmount(invoice.latePenaltyAmount, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.error,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.error),
                         ),
                       ],
                     ),
@@ -195,20 +178,14 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                         Expanded(
                           child: Text(
                             loc.tr('totalDueClaimed'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onErrorContainer,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onErrorContainer),
                           ),
                         ),
                         Text(
                           '${CurrencyFormatter.formatAmount(invoice.totalAmountDue, langCode: lang)} $currency',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.error,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.error),
                         ),
                       ],
                     ),
@@ -227,7 +204,7 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                 ),
                 child: Text(
                   isUAE ? loc.tr('legalNoticeBody_ae') : loc.tr('legalNoticeBody_eg'),
-                  style: TextStyle(fontSize: 12, height: 1.6, color: theme.colorScheme.onSurface),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(height: 1.6, color: theme.colorScheme.onSurface),
                 ),
               ),
               const SizedBox(height: 24),
@@ -259,12 +236,12 @@ class LegalWarningNoticeDialog extends StatelessWidget {
                   TashilConnectedButtonSegment(
                     value: 'export',
                     label: loc.tr('exportOfficialWarningPdf'),
-                    icon: Icons.print_rounded,
+                    icon: Symbols.print_rounded,
                   ),
                   TashilConnectedButtonSegment(
                     value: 'remind',
                     label: loc.tr('sendViaWhatsAppSMS'),
-                    icon: Icons.send_to_mobile_rounded,
+                    icon: Symbols.send_to_mobile_rounded,
                   ),
                 ],
               ),

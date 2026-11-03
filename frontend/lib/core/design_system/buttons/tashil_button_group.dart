@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Item model for connected button groups.
 class TashilConnectedButtonSegment<T> {
@@ -359,7 +360,7 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
     Widget? leadingWidget;
     if (isSelected && widget.showCheckmark) {
       leadingWidget = Icon(
-        Icons.check_rounded,
+        Symbols.check_rounded,
         key: const ValueKey('m3_check_icon'),
         size: 16.0,
         color: currentFg,
@@ -431,12 +432,9 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: currentFg,
+                        style: theme.textTheme.labelMedium?.copyWith(color: currentFg,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          letterSpacing: 0.2,
-                          fontSize: widget.height <= 38.0 ? 11.0 : (isSelected ? 11.5 : 12.0),
-                        ),
+                          letterSpacing: 0.2),
                       ),
                     ),
                   ),
@@ -452,11 +450,8 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                       ),
                       child: Text(
                         widget.segment.badge!,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: currentFg,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10.0,
-                        ),
+                        style: theme.textTheme.labelSmall?.copyWith(color: currentFg,
+                          fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],

@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class RentReceiptDialog extends StatelessWidget {
   final RentInvoiceModel invoice;
@@ -72,7 +73,7 @@ class RentReceiptDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            Icons.receipt_long_rounded,
+                            Symbols.receipt_long_rounded,
                             color: theme.colorScheme.onPrimaryContainer,
                             size: 20,
                           ),
@@ -84,17 +85,14 @@ class RentReceiptDialog extends StatelessWidget {
                             children: [
                               Text(
                                 loc.tr('officialPaymentReceiptTitle'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 isUAE ? loc.tr('taxAuthorityUAEStandard') : loc.tr('taxAuthorityEGStandard'),
-                                style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
@@ -132,7 +130,7 @@ class RentReceiptDialog extends StatelessWidget {
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons.check_circle_rounded,
+                                    Symbols.check_circle_rounded,
                                     size: 16,
                                     color: theme.colorScheme.primary,
                                   ),
@@ -140,11 +138,8 @@ class RentReceiptDialog extends StatelessWidget {
                                   Flexible(
                                     child: Text(
                                       loc.tr('receiptVerifiedStamp'),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.primary),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -156,12 +151,9 @@ class RentReceiptDialog extends StatelessWidget {
                               textDirection: TextDirection.ltr,
                               child: Text(
                                 'RCP-${invoice.invoiceNumber}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                                  color: theme.colorScheme.onSurface),
                               ),
                             ),
                           ],
@@ -195,21 +187,15 @@ class RentReceiptDialog extends StatelessWidget {
                           children: [
                             Text(
                               loc.tr('totalAmountPaid'),
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
+                                fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               '${CurrencyFormatter.formatAmount(invoice.totalAmountDue, langCode: lang)} $currency',
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontSize: 26,
+                              style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: theme.colorScheme.onPrimary,
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: -0.5,
-                              ),
+                                letterSpacing: -0.5),
                             ),
                             const SizedBox(height: 10),
                             Container(
@@ -222,18 +208,15 @@ class RentReceiptDialog extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Icons.payment_rounded,
+                                    Symbols.payment_rounded,
                                     size: 14,
                                     color: theme.colorScheme.onPrimary,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     '${loc.tr('paymentMethod')}: ${_getPaymentMethodLabel(loc, invoice.paymentMethod ?? 'card')}',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onPrimary,
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary,
+                                      fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -336,7 +319,7 @@ class RentReceiptDialog extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
                                 boxShadow: [
@@ -375,15 +358,12 @@ class RentReceiptDialog extends StatelessWidget {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.verified_rounded, size: 14, color: theme.colorScheme.primary),
+                                        Icon(Symbols.verified_rounded, size: 14, color: theme.colorScheme.primary),
                                         const SizedBox(width: 4),
                                         Text(
                                           loc.tr('digitallyCertified'),
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.onPrimaryContainer),
                                         ),
                                       ],
                                     ),
@@ -391,42 +371,30 @@ class RentReceiptDialog extends StatelessWidget {
                                   const SizedBox(height: 6),
                                   Text(
                                     loc.tr('receiptQrVerificationTitle'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface),
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
                                     isUAE
                                         ? loc.tr('taxAuthorityUAEStandard')
                                         : loc.tr('taxAuthorityEGStandard'),
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                                      color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     loc.tr('qrScanVerifyHint'),
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 6),
                                   Directionality(
                                     textDirection: TextDirection.ltr,
                                     child: Text(
                                       'Token: $token • ${loc.tr('escrowSecured')}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
                                         letterSpacing: 0.4,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                        color: theme.colorScheme.primary),
                                     ),
                                   ),
                                 ],
@@ -454,7 +422,7 @@ class RentReceiptDialog extends StatelessWidget {
                             SnackBar(content: Text(loc.tr('downloadPdfNotice'))),
                           );
                         },
-                        icon: Icons.download_rounded,
+                        icon: Symbols.download_rounded,
                         label: loc.tr('exportPdf'),
                       ),
                     ),
@@ -462,7 +430,7 @@ class RentReceiptDialog extends StatelessWidget {
                     Expanded(
                       child: TashilButton.tonal(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: Icons.check_rounded,
+                        icon: Symbols.check_rounded,
                         label: loc.tr('doneAction'),
                       ),
                     ),
@@ -480,11 +448,8 @@ class RentReceiptDialog extends StatelessWidget {
     final theme = Theme.of(context);
     return Text(
       title,
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 13,
-        color: theme.colorScheme.onSurface,
-      ),
+      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+        color: theme.colorScheme.onSurface),
     );
   }
 
@@ -502,7 +467,7 @@ class RentReceiptDialog extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(width: 8),
         Flexible(
@@ -511,11 +476,8 @@ class RentReceiptDialog extends StatelessWidget {
             child: Text(
               value,
               textAlign: isLtr ? TextAlign.start : TextAlign.end,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                color: color ?? theme.colorScheme.onSurface,
-              ),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                color: color ?? theme.colorScheme.onSurface),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -536,7 +498,7 @@ class RentReceiptDialog extends StatelessWidget {
       children: [
         Text(
           loc.tr('ownerBank'),
-          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(width: 8),
         Flexible(
@@ -546,11 +508,8 @@ class RentReceiptDialog extends StatelessWidget {
               Flexible(
                 child: Text(
                   bankName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -559,11 +518,8 @@ class RentReceiptDialog extends StatelessWidget {
                 textDirection: TextDirection.ltr,
                 child: Text(
                   '(${loc.tr('iban')}: ...$ibanSuffix)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
             ],

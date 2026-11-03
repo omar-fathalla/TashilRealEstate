@@ -3,6 +3,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/theme/font_theme_controller.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Official Material Design 3 Font Picker Dialog for Tashil Real Estate.
 ///
@@ -64,7 +65,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
         border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(isMobile ? 80 : 40),
+            color: colorScheme.onSurface.withAlpha(isMobile ? 80 : 40),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -155,7 +156,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              Icons.format_size_rounded,
+              Symbols.format_size_rounded,
               color: colorScheme.onPrimaryContainer,
               size: 20,
             ),
@@ -168,18 +169,12 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
               children: [
                 Text(
                   loc.tr('fontSelectionTitle'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface),
                 ),
                 Text(
                   loc.tr('fontSelectionSubtitle'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -209,22 +204,22 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
         TashilConnectedButtonSegment(
           value: null,
           label: loc.tr('fontCategoryAll'),
-          icon: Icons.apps_rounded,
+          icon: Symbols.apps_rounded,
         ),
         TashilConnectedButtonSegment(
           value: FontCategory.modern,
           label: loc.tr('fontCategoryModern'),
-          icon: Icons.auto_awesome_rounded,
+          icon: Symbols.auto_awesome_rounded,
         ),
         TashilConnectedButtonSegment(
           value: FontCategory.headlines,
           label: loc.tr('fontCategoryHeadlines'),
-          icon: Icons.title_rounded,
+          icon: Symbols.title_rounded,
         ),
         TashilConnectedButtonSegment(
           value: FontCategory.classic,
           label: loc.tr('fontCategoryClassic'),
-          icon: Icons.menu_book_rounded,
+          icon: Symbols.menu_book_rounded,
         ),
       ],
     );
@@ -298,7 +293,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      Icons.text_fields_rounded,
+                      Symbols.text_fields_rounded,
                       size: 16,
                       color: isSelected
                           ? colorScheme.onPrimary
@@ -332,11 +327,8 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
                           ),
                           child: Text(
                             categoryName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ],
@@ -347,8 +339,8 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
                       isSelected
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
+                          ? Symbols.check_circle_rounded
+                          : Symbols.radio_button_unchecked_rounded,
                       key: ValueKey(isSelected),
                       size: 22,
                       color: isSelected
@@ -389,10 +381,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
               // Description
               Text(
                 loc.tr(font.descriptionKey),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -429,17 +418,14 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
             builder: (context, activeFont, _) {
               return Text(
                 '${loc.tr('currentActiveFont')}: ${activeFont.getLocalizedName(loc.locale.languageCode).split(' ').first}',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurfaceVariant),
               );
             },
           ),
           TashilButton(
             label: loc.tr('applyFont'),
-            icon: Icons.check_rounded,
+            icon: Symbols.check_rounded,
             height: 38,
             onPressed: () => Navigator.of(context).pop(),
           ),

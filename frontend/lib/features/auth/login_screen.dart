@@ -17,6 +17,7 @@ import 'package:tashil_real_estate/core/services/storage/property_draft_cache_se
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 enum AuthMethod {
   google,
@@ -386,7 +387,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   scrolledUnderElevation: 0,
                   leading: IconButton(
                     icon: Icon(
-                      isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                      isRtl ? Symbols.arrow_forward_rounded : Symbols.arrow_back_rounded,
                       color: colorScheme.onSurface,
                     ),
                     tooltip: loc.tr('browseAsVisitor'),
@@ -401,7 +402,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   actions: [
                     // Single Unified Settings Icon Button (conforming to M3 standard)
                     TashilIconButton.tonal(
-                      icon: Icons.tune_rounded,
+                      icon: Symbols.tune_rounded,
                       size: 38,
                       iconSize: 20,
                       tooltip: loc.tr('settings'),
@@ -425,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withAlpha(colorScheme.brightness == Brightness.dark ? 70 : 25),
+                                color: colorScheme.onSurface.withAlpha(colorScheme.brightness == Brightness.dark ? 70 : 25),
                                 blurRadius: 28,
                                 offset: const Offset(0, 10),
                               ),
@@ -455,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     ],
                                   ),
                                   child: Icon(
-                                    Icons.apartment_rounded,
+                                    Symbols.apartment_rounded,
                                     size: 30,
                                     color: colorScheme.onPrimary,
                                   ),
@@ -465,31 +466,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               Text(
                                 loc.tr('appName'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 loc.tr('unifiedAuthGatewaySubtitle'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                               const SizedBox(height: 22),
 
                               // 2. Role Selector (Official TashilConnectedButtonGroup)
                               Text(
                                 loc.tr('selectAccountRoleTitle'),
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                               ),
                               const SizedBox(height: 8),
                               _buildRoleConnectedGroup(loc, colorScheme),
@@ -528,7 +520,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               Center(
                                 child: TashilButton.text(
                                   onPressed: () => context.go('/'),
-                                  icon: Icons.travel_explore_rounded,
+                                  icon: Symbols.travel_explore_rounded,
                                   label: loc.tr('browseAsVisitor'),
                                 ),
                               ),
@@ -565,17 +557,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             TashilConnectedButtonSegment(
               value: 'Owner',
               label: loc.tr('roleOwner'),
-              icon: Icons.person_rounded,
+              icon: Symbols.person_rounded,
             ),
             TashilConnectedButtonSegment(
               value: 'AgencyAdmin',
               label: loc.tr('roleAgency'),
-              icon: Icons.business_rounded,
+              icon: Symbols.business_rounded,
             ),
             TashilConnectedButtonSegment(
               value: 'Tenant',
               label: loc.tr('roleTenant'),
-              icon: Icons.home_rounded,
+              icon: Symbols.home_rounded,
             ),
           ],
         );
@@ -595,7 +587,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         const TashilConnectedButtonSegment(
           value: AuthMethod.google,
           label: 'Google',
-          icon: Icons.g_mobiledata_rounded,
+          icon: Symbols.g_mobiledata_rounded,
         ),
         const TashilConnectedButtonSegment(
           value: AuthMethod.apple,
@@ -605,12 +597,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         TashilConnectedButtonSegment(
           value: AuthMethod.email,
           label: loc.tr('emailWord'),
-          icon: Icons.mail_outline_rounded,
+          icon: Symbols.mail_outline_rounded,
         ),
         TashilConnectedButtonSegment(
           value: AuthMethod.phoneOtp,
           label: loc.tr('phoneOtpWord'),
-          icon: Icons.smartphone_rounded,
+          icon: Symbols.smartphone_rounded,
         ),
       ],
     );
@@ -640,12 +632,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ),
       child: Column(
         children: [
-          Icon(Icons.g_mobiledata_rounded, size: 48, color: colorScheme.primary),
+          Icon(Symbols.g_mobiledata_rounded, size: 48, color: colorScheme.primary),
           const SizedBox(height: 8),
           Text(
             loc.tr('signInWithGoogleDesc'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -653,7 +645,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             height: 46,
             child: TashilButton(
               onPressed: _isLoading ? null : () => _handleGoogleAuth(loc),
-              icon: Icons.account_circle_rounded,
+              icon: Symbols.account_circle_rounded,
               label: loc.tr('continueWithGoogleBtn'),
               isLoading: _isLoading,
             ),
@@ -679,7 +671,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           Text(
             loc.tr('signInWithAppleDesc'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -687,7 +679,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             height: 46,
             child: TashilButton(
               onPressed: _isLoading ? null : () => _handleAppleAuth(loc),
-              icon: Icons.fingerprint_rounded,
+              icon: Symbols.fingerprint_rounded,
               label: loc.tr('continueWithAppleBtn'),
               isLoading: _isLoading,
             ),
@@ -713,11 +705,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         children: [
           Text(
             loc.tr('phoneOtpAuthTitle'),
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface),
           ),
           const SizedBox(height: 12),
 
@@ -736,11 +725,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   child: Text(
                     dialCode,
                     textDirection: TextDirection.ltr,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13.5,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -751,7 +737,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     textDirection: TextDirection.ltr,
                     textAlign: TextAlign.left,
                     labelText: loc.tr('phoneNumberLabel'),
-                    prefixIcon: Icons.phone_outlined,
+                    prefixIcon: Symbols.phone_rounded,
                   ),
                 ),
               ],
@@ -765,7 +751,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               height: 46,
               child: TashilButton(
                 onPressed: _isLoading ? null : () => _handleSendOtp(loc),
-                icon: Icons.send_rounded,
+                icon: Symbols.send_rounded,
                 label: loc.tr('sendOtpSmsCodeBtn'),
                 isLoading: _isLoading,
               ),
@@ -781,9 +767,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 counterText: '',
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 6),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold, letterSpacing: 6),
                 labelText: loc.tr('enterSixDigitOtpLabel'),
-                prefixIcon: Icons.pin_rounded,
+                prefixIcon: Symbols.pin_rounded,
               ),
             ),
             const SizedBox(height: 10),
@@ -795,14 +781,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   _resendCountdown > 0
                       ? '${loc.tr('resendOtpIn')} 00:${_resendCountdown.toString().padLeft(2, '0')}'
                       : loc.tr('didNotReceiveOtp'),
-                  style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
                 if (_resendCountdown == 0)
                   TextButton(
                     onPressed: () => _handleSendOtp(loc),
                     child: Text(
                       loc.tr('resendOtpBtn'),
-                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
               ],
@@ -832,7 +818,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           TashilTextField.outlined(
             controller: _nameController,
             labelText: loc.tr('fullNameLabel'),
-            prefixIcon: Icons.person_outline_rounded,
+            prefixIcon: Symbols.person_outline_rounded,
           ),
           const SizedBox(height: 12),
         ],
@@ -840,15 +826,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           labelText: loc.tr('email'),
-          prefixIcon: Icons.email_outlined,
+          prefixIcon: Symbols.email_rounded,
         ),
         const SizedBox(height: 12),
         TashilTextField.outlined(
           controller: _passwordController,
           obscureText: _obscurePassword,
           labelText: loc.tr('password'),
-          prefixIcon: Icons.lock_outline_rounded,
-          suffixIcon: _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          prefixIcon: Symbols.lock_outline_rounded,
+          suffixIcon: _obscurePassword ? Symbols.visibility_rounded : Symbols.visibility_off_rounded,
           onSuffixIconTap: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
         const SizedBox(height: 18),
@@ -857,7 +843,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           height: 48,
           child: TashilButton(
             onPressed: _isLoading ? null : () => _handleEmailAuth(loc),
-            icon: _isSignUpMode ? Icons.person_add_rounded : Icons.login_rounded,
+            icon: _isSignUpMode ? Symbols.person_add_rounded : Symbols.login_rounded,
             label: _isSignUpMode ? loc.tr('createAccountBtn') : loc.tr('signIn'),
             isLoading: _isLoading,
           ),
@@ -867,11 +853,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           onPressed: () => setState(() => _isSignUpMode = !_isSignUpMode),
           child: Text(
             _isSignUpMode ? loc.tr('alreadyHaveAccountSignIn') : loc.tr('dontHaveAccountSignUp'),
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.primary,
-            ),
+            style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+              color: colorScheme.primary),
           ),
         ),
       ],

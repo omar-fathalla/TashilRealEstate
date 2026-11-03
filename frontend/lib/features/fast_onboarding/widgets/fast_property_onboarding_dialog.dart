@@ -24,6 +24,7 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class FastPropertyOnboardingDialog extends StatefulWidget {
   final FastPropertyDraft? initialDraft;
@@ -483,10 +484,10 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
           'ar': [
             if (_draft.furnishingStatus == FurnishingStatus.fullyFurnished) 'مفروش بالكامل',
             if (_draft.furnishingStatus == FurnishingStatus.semiFurnished) 'نصف مفروش',
-            if (_draft.hasCentralAc) 'تكييف مركزي',
-            if (_draft.hasParking) 'موقف سيارات خاص',
-            if (_draft.hasSecurity) 'حراسة وأمن 24/7',
-            if (_draft.hasBalconyView) 'شرفة / إطلالة مميزة',
+            if (_draft.hasCentralAc) AppLocalizations.trStatic('uiCopy174'),
+            if (_draft.hasParking) AppLocalizations.trStatic('uiCopy316'),
+            if (_draft.hasSecurity) AppLocalizations.trStatic('uiCopy195'),
+            if (_draft.hasBalconyView) AppLocalizations.trStatic('uiCopy221'),
             if (_draft.hasPoolGym) 'مسبح ونادٍ رياضي',
             if (_draft.isPetFriendly) 'السماح بالحيوانات الأليفة',
           ],
@@ -601,7 +602,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  isEditing ? Icons.edit_note_rounded : Icons.add_business_rounded,
+                                  isEditing ? Symbols.edit_note_rounded : Symbols.add_business_rounded,
                                   color: theme.colorScheme.onPrimaryContainer,
                                   size: 20,
                                 ),
@@ -659,17 +660,17 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.mic_rounded, color: theme.colorScheme.onPrimary, size: 24),
+                              Icon(Symbols.mic_rounded, color: theme.colorScheme.onPrimary, size: 24),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   loc.tr('voiceAutofillHeroDesc'),
-                                  style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 12),
+                                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onPrimary),
                                 ),
                               ),
                               TashilButton.tonal(
                                 onPressed: _handleVoiceAutofill,
-                                icon: Icons.record_voice_over_rounded,
+                                icon: Symbols.record_voice_over_rounded,
                                 label: loc.tr('startVoiceDictationBtn'),
                               ),
                             ],
@@ -696,7 +697,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                               TashilTextField.outlined(
                                 controller: _addressSearchCtrl,
                                 hintText: loc.tr('searchAddressPlaceholder'),
-                                prefixIcon: Icons.search_rounded,
+                                prefixIcon: Symbols.search_rounded,
                                 suffix: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -705,7 +706,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                       tooltip: loc.tr('useGpsOptionBtn'),
                                       icon: _isLocatingGps
                                           ? const TashilLoadingIndicator.small()
-                                          : Icon(Icons.my_location_rounded, size: 18, color: theme.colorScheme.primary),
+                                          : Icon(Symbols.my_location_rounded, size: 18, color: theme.colorScheme.primary),
                                       onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
                                     ),
                                     // Submit Search Button
@@ -716,7 +717,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                           )
                                         : IconButton(
                                             tooltip: loc.tr('searchAddressBtn'),
-                                            icon: Icon(Icons.arrow_forward_rounded, size: 18, color: theme.colorScheme.onSurface),
+                                            icon: Icon(Symbols.arrow_forward_rounded, size: 18, color: theme.colorScheme.onSurface),
                                             onPressed: () => _handleSearchAddress(loc),
                                           ),
                                   ],
@@ -731,7 +732,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                   children: [
                                     TashilAssistChip.outlined(
                                       onPressed: _isLocatingGps ? null : () => _handleFetchGpsLocation(loc),
-                                      icon: Icons.gps_fixed_rounded,
+                                      icon: Symbols.gps_fixed_rounded,
                                       label: loc.tr('useGpsOptionBtn'),
                                       isLoading: _isLocatingGps,
                                       height: 28.0,
@@ -753,7 +754,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 18),
+                                      Icon(Symbols.check_circle_rounded, color: theme.colorScheme.primary, size: 18),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Column(
@@ -762,22 +763,16 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                           children: [
                                             Text(
                                               '${_draft.city} - ${_draft.district}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.colorScheme.onPrimaryContainer,
-                                              ),
+                                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.onPrimaryContainer),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 1),
                                             Text(
                                               '${_draft.latitude.toStringAsFixed(5)}, ${_draft.longitude.toStringAsFixed(5)}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                                                fontFamily: 'monospace',
-                                              ),
+                                              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                                                fontFamily: 'monospace'),
                                             ),
                                           ],
                                         ),
@@ -785,7 +780,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                       const SizedBox(width: 8),
                                       TashilAssistChip.outlined(
                                         onPressed: _handleOpenInGoogleMaps,
-                                        icon: Icons.map_rounded,
+                                        icon: Symbols.map_rounded,
                                         label: loc.tr('viewOnGoogleMapsBtn'),
                                       ),
                                     ],
@@ -802,16 +797,13 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.location_on_outlined, color: theme.colorScheme.onSurfaceVariant, size: 18),
+                                      Icon(Symbols.location_on_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           '${_draft.city} - ${_draft.district}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.onSurface,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.onSurface),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -819,7 +811,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                       const SizedBox(width: 8),
                                       TashilAssistChip.outlined(
                                         onPressed: _handleOpenInGoogleMaps,
-                                        icon: Icons.map_rounded,
+                                        icon: Symbols.map_rounded,
                                         label: loc.tr('viewOnGoogleMapsBtn'),
                                       ),
                                     ],
@@ -835,8 +827,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: TashilTextField.outlined(
                                 controller: _cityCtrl,
-                                labelText: '${loc.tr('cityLabel')} (إجباري 🔴)',
-                                prefixIcon: Icons.location_city_rounded,
+                                labelText: '${loc.tr('cityLabel')} (${loc.tr('fieldRequiredBadge')})',
+                                prefixIcon: Symbols.location_city_rounded,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.city = v,
                               ),
@@ -845,8 +837,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: TashilTextField.outlined(
                                 controller: _districtCtrl,
-                                labelText: '${loc.tr('districtLabel')} (إجباري 🔴)',
-                                prefixIcon: Icons.map_rounded,
+                                labelText: '${loc.tr('districtLabel')} (${loc.tr('fieldRequiredBadge')})',
+                                prefixIcon: Symbols.map_rounded,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.district = v,
                               ),
@@ -859,8 +851,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: TashilTextField.outlined(
                                 controller: _buildingNameCtrl,
-                                labelText: '${loc.tr('buildingCompoundLabel')} (اختياري 🟢)',
-                                prefixIcon: Icons.domain_rounded,
+                                labelText: '${loc.tr('buildingCompoundLabel')} (${loc.tr('fieldOptionalBadge')})',
+                                prefixIcon: Symbols.domain_rounded,
                                 onChanged: (v) => _draft.buildingName = v,
                               ),
                             ),
@@ -868,8 +860,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: TashilTextField.outlined(
                                 controller: _unitNumberCtrl,
-                                labelText: '${loc.tr('unitNumberFieldLabel')} (اختياري 🟢)',
-                                prefixIcon: Icons.meeting_room_rounded,
+                                labelText: '${loc.tr('unitNumberFieldLabel')} (${loc.tr('fieldOptionalBadge')})',
+                                prefixIcon: Symbols.meeting_room_rounded,
                                 onChanged: (v) => _draft.unitNumber = v,
                               ),
                             ),
@@ -888,8 +880,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                 controller: _rentCtrl,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: const [ArabicToEnglishDigitsFormatter()],
-                                labelText: '${loc.tr('rentPriceFieldLabel')} (إجباري 🔴)',
-                                prefixIcon: Icons.payments_outlined,
+                                labelText: '${loc.tr('rentPriceFieldLabel')} (${loc.tr('fieldRequiredBadge')})',
+                                prefixIcon: Symbols.payments_rounded,
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.monthlyRent = DigitUtils.tryParseDouble(v) ?? _draft.monthlyRent,
                               ),
@@ -909,18 +901,18 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                 borderRadius: BorderRadius.circular(10),
                                 child: InputDecorator(
                                   decoration: InputDecoration(
-                                    labelText: 'العملة 🔴',
+                                    labelText: AppLocalizations.trStatic('uiCopy136'),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                    suffixIcon: const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                                    suffixIcon: const Icon(Symbols.arrow_drop_down_rounded, size: 22),
                                   ),
                                   child: Text(
                                     _draft.currency == 'EGP'
-                                        ? '🇪🇬 ج.م'
+                                        ? AppLocalizations.trStatic('uiCopy336')
                                         : _draft.currency == 'AED'
-                                            ? '🇦🇪 د.إ'
+                                            ? AppLocalizations.trStatic('uiCopy335')
                                             : '🇺🇸 \$',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
@@ -933,7 +925,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: CheckboxListTile(
                                 contentPadding: EdgeInsets.zero,
-                                title: Text(loc.tr('billsIncludedOption'), style: const TextStyle(fontSize: 11)),
+                                title: Text(loc.tr('billsIncludedOption'), style: Theme.of(context).textTheme.labelSmall!),
                                 value: _draft.isBillsIncluded,
                                 onChanged: (v) => setState(() => _draft.isBillsIncluded = v ?? false),
                               ),
@@ -941,7 +933,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             Expanded(
                               child: CheckboxListTile(
                                 contentPadding: EdgeInsets.zero,
-                                title: Text(loc.tr('isNegotiableOption'), style: const TextStyle(fontSize: 11)),
+                                title: Text(loc.tr('isNegotiableOption'), style: Theme.of(context).textTheme.labelSmall!),
                                 value: _draft.isNegotiable,
                                 onChanged: (v) => setState(() => _draft.isNegotiable = v ?? false),
                               ),
@@ -960,10 +952,10 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                                 controller: _areaCtrl,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: const [ArabicToEnglishDigitsFormatter()],
-                                labelText: '${loc.tr('areaSqmFieldLabel')} (إجباري 🔴)',
-                                suffix: const Padding(
+                                labelText: '${loc.tr('areaSqmFieldLabel')} (${loc.tr('fieldRequiredBadge')})',
+                                suffix: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 8),
-                                  child: Text('م²', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  child: Text(AppLocalizations.trStatic('uiCopy272'), style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                                 validator: (v) => (v == null || v.trim().isEmpty) ? loc.tr('fieldRequiredError') : null,
                                 onChanged: (v) => _draft.areaSqm = DigitUtils.tryParseInt(v) ?? _draft.areaSqm,
@@ -1005,17 +997,17 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             TashilConnectedButtonSegment(
                               value: FurnishingStatus.fullyFurnished,
                               label: loc.tr('fullyFurnishedOption'),
-                              icon: Icons.chair_rounded,
+                              icon: Symbols.chair_rounded,
                             ),
                             TashilConnectedButtonSegment(
                               value: FurnishingStatus.semiFurnished,
                               label: loc.tr('semiFurnishedOption'),
-                              icon: Icons.weekend_outlined,
+                              icon: Symbols.weekend_rounded,
                             ),
                             TashilConnectedButtonSegment(
                               value: FurnishingStatus.unfurnished,
                               label: loc.tr('unfurnishedOption'),
-                              icon: Icons.crop_free_rounded,
+                              icon: Symbols.crop_free_rounded,
                             ),
                           ],
                         ),
@@ -1026,37 +1018,37 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           runSpacing: 8,
                           children: [
                             TashilFilterChip(
-                              icon: Icons.ac_unit_rounded,
+                              icon: Symbols.ac_unit_rounded,
                               label: loc.tr('centralAcAmenity'),
                               selected: _draft.hasCentralAc,
                               onSelected: (val) => setState(() => _draft.hasCentralAc = val),
                             ),
                             TashilFilterChip(
-                              icon: Icons.local_parking_rounded,
+                              icon: Symbols.local_parking_rounded,
                               label: loc.tr('parkingAmenity'),
                               selected: _draft.hasParking,
                               onSelected: (val) => setState(() => _draft.hasParking = val),
                             ),
                             TashilFilterChip(
-                              icon: Icons.security_rounded,
+                              icon: Symbols.security_rounded,
                               label: loc.tr('securityAmenity'),
                               selected: _draft.hasSecurity,
                               onSelected: (val) => setState(() => _draft.hasSecurity = val),
                             ),
                             TashilFilterChip(
-                              icon: Icons.balcony_rounded,
+                              icon: Symbols.balcony_rounded,
                               label: loc.tr('balconyViewAmenity'),
                               selected: _draft.hasBalconyView,
                               onSelected: (val) => setState(() => _draft.hasBalconyView = val),
                             ),
                             TashilFilterChip(
-                              icon: Icons.pool_rounded,
+                              icon: Symbols.pool_rounded,
                               label: loc.tr('poolGymAmenity'),
                               selected: _draft.hasPoolGym,
                               onSelected: (val) => setState(() => _draft.hasPoolGym = val),
                             ),
                             TashilFilterChip(
-                              icon: Icons.pets_rounded,
+                              icon: Symbols.pets_rounded,
                               label: loc.tr('petFriendlyAmenity'),
                               selected: _draft.isPetFriendly,
                               onSelected: (val) => setState(() => _draft.isPetFriendly = val),
@@ -1073,7 +1065,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                             const SizedBox(width: 8),
                             TashilAssistChip.elevated(
                               onPressed: () => AiImageModeratorDialog.show(context),
-                              icon: Icons.shield_outlined,
+                              icon: Symbols.shield_rounded,
                               label: loc.tr('aiImageModeratorTitle'),
                             ),
                           ],
@@ -1092,7 +1084,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           alignment: AlignmentDirectional.centerStart,
                           child: TashilButton.tonal(
                             onPressed: _isGeneratingDesc ? null : _triggerAiCopywriting,
-                            icon: Icons.auto_awesome_rounded,
+                            icon: Symbols.auto_awesome_rounded,
                             label: _isGeneratingDesc
                                 ? loc.tr('savingListing')
                                 : loc.tr('generateTitleAndDescAiBtn'),
@@ -1148,12 +1140,12 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                         TashilConnectedButtonSegment(
                           value: 'cancel',
                           label: loc.tr('cancel'),
-                          icon: Icons.close_rounded,
+                          icon: Symbols.close_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'submit',
                           label: isEditing ? loc.tr('saveChangesBtn') : loc.tr('publishPropertyDirectBtn'),
-                          icon: isEditing ? Icons.save_rounded : Icons.publish_rounded,
+                          icon: isEditing ? Symbols.save_rounded : Symbols.publish_rounded,
                           enabled: !_isSubmitting,
                         ),
                       ],
@@ -1174,7 +1166,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
     final t = theme ?? Theme.of(context);
     return Text(
       '$number $title',
-      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: t.colorScheme.onSurface),
+      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: t.colorScheme.onSurface),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );

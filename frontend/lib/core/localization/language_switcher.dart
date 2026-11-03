@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'locale_controller.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class LanguageSwitcher extends StatelessWidget {
   final bool isCompact;
@@ -74,7 +75,7 @@ class LanguageSwitcher extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.language_rounded,
+                    Symbols.language_rounded,
                     size: 18,
                     color: colorScheme.primary,
                   ),
@@ -90,7 +91,7 @@ class LanguageSwitcher extends StatelessWidget {
                   ],
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.keyboard_arrow_down_rounded,
+                    Symbols.keyboard_arrow_down_rounded,
                     size: 16,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -128,7 +129,7 @@ class LanguageSwitcher extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              Icons.translate_rounded,
+              Symbols.translate_rounded,
               size: 16,
               color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
@@ -147,17 +148,14 @@ class LanguageSwitcher extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 10,
-                ),
+                style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
           const SizedBox(width: 16),
           if (isSelected)
             Icon(
-              Icons.check_rounded,
+              Symbols.check_rounded,
               size: 18,
               color: colorScheme.primary,
             )

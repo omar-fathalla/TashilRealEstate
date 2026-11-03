@@ -107,11 +107,8 @@ class TashilSecondaryTabBar extends StatelessWidget {
               ],
               Text(
                 item.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: currentColor,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: currentColor),
               ),
               if (item.count != null) ...[
                 const SizedBox(width: 6),
@@ -123,11 +120,8 @@ class TashilSecondaryTabBar extends StatelessWidget {
                   ),
                   child: Text(
                     item.count!,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                      color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant),
                   ),
                 ),
               ],

@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/chips/tashil_chips.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/services/media/media_picker_service.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class PropertyMediaGalleryUploader extends StatefulWidget {
   final List<String> photoUrls;
@@ -110,7 +111,7 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
               final isNarrow = constraints.maxWidth < 460;
               final chipWidget = TashilAssistChip(
                 label: badgeText,
-                icon: isMinMet ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                icon: isMinMet ? Symbols.check_circle_rounded : Symbols.info_rounded,
                 variant: TashilChipVariant.tonal,
                 backgroundColor: badgeBg,
                 foregroundColor: badgeFg,
@@ -136,7 +137,7 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isMinMet ? Icons.photo_library_rounded : Icons.add_photo_alternate_rounded,
+                      isMinMet ? Symbols.photo_library_rounded : Symbols.add_photo_alternate_rounded,
                       size: 20,
                       color: isMinMet ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onErrorContainer,
                     ),
@@ -196,7 +197,7 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
             alignment: AlignmentDirectional.centerStart,
             child: TashilButton.filled(
               onPressed: (_isUploading || isMaxReached) ? null : _pickFromDevice,
-              icon: Icons.add_photo_alternate_rounded,
+              icon: Symbols.add_photo_alternate_rounded,
               label: loc.tr('uploadPhotosBtn'),
               isLoading: _isUploading,
             ),
@@ -225,7 +226,7 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.cloud_upload_outlined,
+                        Symbols.cloud_upload_rounded,
                         size: 38,
                         color: theme.colorScheme.primary,
                       ),
@@ -233,11 +234,8 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                       Text(
                         loc.tr('minPhotosNotice'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -317,9 +315,9 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
               right: 0,
               height: 48,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black54, Colors.transparent],
+                    colors: [Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), Colors.transparent],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -358,21 +356,18 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star_rounded, size: 12, color: theme.colorScheme.onTertiary),
+                          Icon(Symbols.star_rounded, size: 12, color: theme.colorScheme.onTertiary),
                           const SizedBox(width: 3),
                           Text(
                             loc.tr('coverPhotoBadge'),
-                            style: TextStyle(
-                              color: theme.colorScheme.onTertiary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onTertiary,
+                              fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     )
                       .animate(onPlay: (c) => c.repeat(reverse: true))
-                      .shimmer(duration: 2200.ms, color: Colors.white38)
+                      .shimmer(duration: 2200.ms, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.38))
                   : Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -381,11 +376,8 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                       ),
                       child: Text(
                         '#${index + 1}',
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold),
                       ),
                     ),
             ),
@@ -410,13 +402,13 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.2),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
                       ],
                     ),
-                    child: Icon(Icons.close_rounded, size: 14, color: theme.colorScheme.onSurface),
+                    child: Icon(Symbols.close_rounded, size: 14, color: theme.colorScheme.onSurface),
                   ),
                 ),
               ),

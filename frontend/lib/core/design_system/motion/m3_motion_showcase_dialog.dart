@@ -4,6 +4,7 @@ import '../buttons/tashil_buttons.dart';
 import '../dialogs/tashil_dialogs.dart';
 import '../dividers/tashil_dividers.dart';
 import 'tashil_motion.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog allowing live visual inspection and testing of
 /// the official Google Material Design 3 (M3) Motion & Transitions System,
@@ -64,11 +65,11 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
     return TashilModalDialog(
       title: loc.tr('m3MotionShowcase'),
       subtitle: loc.tr('m3MotionSubtitle'),
-      icon: Icons.animation_rounded,
+      icon: Symbols.animation_rounded,
       maxWidth: 720,
       footer: TashilButton(
         label: loc.tr('close'),
-        icon: Icons.check_rounded,
+        icon: Symbols.check_rounded,
         variant: TashilButtonVariant.filled,
         onPressed: () => Navigator.of(context).pop(),
       ),
@@ -138,7 +139,7 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
                                 ],
                               ),
                               child: Icon(
-                                Icons.auto_awesome_rounded,
+                                Symbols.auto_awesome_rounded,
                                 color: colorScheme.onPrimary,
                                 size: 24,
                               ),
@@ -157,7 +158,7 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
             Center(
               child: TashilButton(
                 label: loc.tr('playMotionDemo'),
-                icon: Icons.play_arrow_rounded,
+                icon: Symbols.play_arrow_rounded,
                 variant: TashilButtonVariant.filled,
                 onPressed: _triggerMotion,
               ),
@@ -193,12 +194,12 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
                   curveName: 'Emphasized (0.2, 0.0, 0.0, 1.0) - On Screen',
                 ),
                 _buildCurveChip(
-                  label: 'Emphasized Decelerate',
+                  label: AppLocalizations.trStatic('uiCopy043'),
                   curve: TashilMotionEasing.emphasizedDecelerate,
                   curveName: 'Emphasized Decelerate (0.05, 0.7, 0.1, 1.0) - Enter',
                 ),
                 _buildCurveChip(
-                  label: 'Emphasized Accelerate',
+                  label: AppLocalizations.trStatic('uiCopy042'),
                   curve: TashilMotionEasing.emphasizedAccelerate,
                   curveName: 'Emphasized Accelerate (0.3, 0.0, 0.8, 0.15) - Exit',
                 ),
@@ -208,7 +209,7 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
                   curveName: 'Standard (0.2, 0.0, 0.0, 1.0) - Utility',
                 ),
                 _buildCurveChip(
-                  label: 'Standard Decelerate',
+                  label: AppLocalizations.trStatic('uiCopy076'),
                   curve: TashilMotionEasing.standardDecelerate,
                   curveName: 'Standard Decelerate (0.0, 0.0, 0.2, 1.0) - Small Enter',
                 ),
@@ -256,28 +257,28 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
             const SizedBox(height: 10),
             _buildPatternRow(
               index: 0,
-              icon: Icons.aspect_ratio_rounded,
+              icon: Symbols.aspect_ratio_rounded,
               title: loc.tr('containerTransformPattern'),
               description: '500ms Emphasized container morphing with elevation sync',
             ),
             const SizedBox(height: 8),
             _buildPatternRow(
               index: 1,
-              icon: Icons.sync_alt_rounded,
+              icon: Symbols.sync_alt_rounded,
               title: loc.tr('sharedAxisPattern'),
               description: 'Horizontal (X-Axis RTL/LTR), Vertical (Y), Depth (Z)',
             ),
             const SizedBox(height: 8),
             _buildPatternRow(
               index: 2,
-              icon: Icons.layers_outlined,
+              icon: Symbols.layers_rounded,
               title: loc.tr('fadeThroughPattern'),
               description: 'Outgoing fades out, incoming fades in and scales 92% to 100%',
             ),
             const SizedBox(height: 8),
             _buildPatternRow(
               index: 3,
-              icon: Icons.opacity_rounded,
+              icon: Symbols.opacity_rounded,
               title: loc.tr('fadePattern'),
               description: 'Simple opacity fade for dialog scrims and tooltips',
             ),
@@ -499,7 +500,7 @@ class _M3MotionShowcaseDialogState extends State<M3MotionShowcaseDialog>
             ),
             if (isSelected)
               Icon(
-                Icons.check_circle_rounded,
+                Symbols.check_circle_rounded,
                 color: colorScheme.primary,
                 size: 20,
               ),

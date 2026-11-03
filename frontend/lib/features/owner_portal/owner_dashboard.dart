@@ -36,6 +36,7 @@ import 'package:flutter/services.dart';
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -161,7 +162,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.apartment_rounded,
+                  Symbols.apartment_rounded,
                   color: colorScheme.onPrimary,
                   size: 20,
                 ),
@@ -173,20 +174,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15.5,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                      letterSpacing: -0.3),
                   ),
                   Text(
                     loc.tr('ownerPortal'),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -202,7 +197,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 valueListenable: MotionPreferenceController.currentTransition,
                 builder: (context, activeMotion, _) {
                   return TashilIconButton.tonal(
-                    icon: Icons.animation_rounded,
+                    icon: Symbols.animation_rounded,
                     size: 38,
                     iconSize: 20,
                     tooltip: loc.tr('m3MotionPreferenceTitle'),
@@ -212,7 +207,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.tune_rounded,
+                icon: Symbols.tune_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('settings'),
@@ -220,7 +215,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
-                icon: Icons.travel_explore_rounded,
+                icon: Symbols.travel_explore_rounded,
                 size: 38,
                 iconSize: 20,
                 tooltip: loc.tr('browseAsVisitor'),
@@ -303,16 +298,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   menuTooltip: isExpanded ? loc.tr('collapseMenu') : loc.tr('expandMenu'),
                   destinations: [
                     TashilRailDestination(
-                      icon: Icons.dashboard_outlined,
-                      selectedIcon: Icons.dashboard_rounded,
+                      icon: Symbols.dashboard_rounded,
+                      selectedIcon: Symbols.dashboard_rounded,
                       label: loc.tr('portfolioOverview'),
                       isSelected: _selectedIndex == 0,
                       isExpanded: isExpanded,
                       onTap: () => _selectView(0),
                     ),
                     TashilRailDestination(
-                      icon: Icons.apartment_outlined,
-                      selectedIcon: Icons.apartment_rounded,
+                      icon: Symbols.apartment_rounded,
+                      selectedIcon: Symbols.apartment_rounded,
                       label: loc.tr('myProperties'),
                       badgeCount: myPropertiesBadge,
                       isSelected: _selectedIndex == 1,
@@ -320,8 +315,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       onTap: () => _selectView(1),
                     ),
                     TashilRailDestination(
-                      icon: Icons.payments_outlined,
-                      selectedIcon: Icons.payments_rounded,
+                      icon: Symbols.payments_rounded,
+                      selectedIcon: Symbols.payments_rounded,
                       label: loc.tr('navCollection'),
                       badgeCount: collectionBadge,
                       isSelected: _selectedIndex == 2,
@@ -329,8 +324,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       onTap: () => _selectView(2),
                     ),
                     TashilRailDestination(
-                      icon: Icons.description_outlined,
-                      selectedIcon: Icons.description_rounded,
+                      icon: Symbols.description_rounded,
+                      selectedIcon: Symbols.description_rounded,
                       label: loc.tr('navContracts'),
                       badgeCount: contractsBadge,
                       isSelected: _selectedIndex == 3,
@@ -338,24 +333,24 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       onTap: () => _selectView(3),
                     ),
                     TashilRailDestination(
-                      icon: Icons.account_balance_wallet_outlined,
-                      selectedIcon: Icons.account_balance_wallet_rounded,
+                      icon: Symbols.account_balance_wallet_rounded,
+                      selectedIcon: Symbols.account_balance_wallet_rounded,
                       label: loc.tr('financialsAndPayouts'),
                       isSelected: _selectedIndex == 4,
                       isExpanded: isExpanded,
                       onTap: () => _selectView(4),
                     ),
                     TashilRailDestination(
-                      icon: Icons.show_chart_outlined,
-                      selectedIcon: Icons.show_chart_rounded,
+                      icon: Symbols.show_chart_rounded,
+                      selectedIcon: Symbols.show_chart_rounded,
                       label: loc.tr('navAnalytics'),
                       isSelected: _selectedIndex == 5,
                       isExpanded: isExpanded,
                       onTap: () => _selectView(5),
                     ),
                     TashilRailDestination(
-                      icon: Icons.build_outlined,
-                      selectedIcon: Icons.build_rounded,
+                      icon: Symbols.build_rounded,
+                      selectedIcon: Symbols.build_rounded,
                       label: loc.tr('maintenanceTickets'),
                       badgeCount: maintenanceBadge,
                       isSelected: _selectedIndex == 6,
@@ -363,8 +358,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       onTap: () => _selectView(6),
                     ),
                     TashilRailDestination(
-                      icon: Icons.delete_outline_rounded,
-                      selectedIcon: Icons.delete_rounded,
+                      icon: Symbols.delete_outline_rounded,
+                      selectedIcon: Symbols.delete_rounded,
                       label: loc.tr('trashAndDeleted'),
                       badgeCount: trashBadge,
                       isSelected: _selectedIndex == 7,
@@ -372,14 +367,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       onTap: () => _selectView(7),
                     ),
                     TashilRailDestination(
-                      icon: Icons.tune_outlined,
-                      selectedIcon: Icons.tune_rounded,
+                      icon: Symbols.tune_rounded,
+                      selectedIcon: Symbols.tune_rounded,
                       label: loc.tr('settings'),
                       isSelected: false,
                       isExpanded: isExpanded,
                       trailing: isExpanded
                           ? Icon(
-                              Icons.chevron_right_rounded,
+                              Symbols.chevron_right_rounded,
                               size: 18.0,
                               color: colorScheme.outlineVariant,
                             )
@@ -488,17 +483,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 Flexible(
                                   child: Text(
                                     displayName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.5,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Icon(
-                                  Icons.verified_rounded,
+                                  Symbols.verified_rounded,
                                   size: 16,
                                   color: colorScheme.primary,
                                 ),
@@ -506,11 +498,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             ),
                             Text(
                               roleSubtitle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -559,7 +548,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                   // 1. Dashboard Action
                   _buildProfileMenuItem(
-                    icon: Icons.dashboard_outlined,
+                    icon: Symbols.dashboard_rounded,
                     title: loc.tr('dashboard'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -569,7 +558,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   ),
                   // 2. Profile Details Action
                   _buildProfileMenuItem(
-                    icon: Icons.person_outline_rounded,
+                    icon: Symbols.person_outline_rounded,
                     title: loc.tr('ownerProfileMenu'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -579,7 +568,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   ),
                   // 3. Settings Action
                   _buildProfileMenuItem(
-                    icon: Icons.tune_rounded,
+                    icon: Symbols.tune_rounded,
                     title: loc.tr('settings'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -589,7 +578,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   ),
                   // 4. Security Action
                   _buildProfileMenuItem(
-                    icon: Icons.security_rounded,
+                    icon: Symbols.security_rounded,
                     title: loc.tr('accountSecurity'),
                     colorScheme: colorScheme,
                     onTap: () {
@@ -608,7 +597,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                   // 5. Logout Action
                   _buildProfileMenuItem(
-                    icon: Icons.logout_rounded,
+                    icon: Symbols.logout_rounded,
                     title: loc.tr('logout'),
                     colorScheme: colorScheme,
                     isDestructive: true,
@@ -637,18 +626,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+            color: colorScheme.primary),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10.5,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -676,15 +659,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: isDestructive ? FontWeight.bold : FontWeight.w500,
-                  color: itemColor,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isDestructive ? FontWeight.bold : FontWeight.w500,
+                  color: itemColor),
               ),
             ),
             Icon(
-              Icons.chevron_right_rounded,
+              Symbols.chevron_right_rounded,
               size: 16,
               color: isDestructive
                   ? colorScheme.error.withAlpha(120)
@@ -798,15 +778,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.account_circle_outlined, size: 22, color: colorScheme.primary),
+                      Icon(Symbols.account_circle_rounded, size: 22, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         loc.tr('ownerProfileMenu'),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface),
                       ),
                     ],
                   ),
@@ -882,7 +859,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 ),
                               ),
                               child: Icon(
-                                Icons.camera_alt_rounded,
+                                Symbols.camera_alt_rounded,
                                 size: 12,
                                 color: colorScheme.onPrimary,
                               ),
@@ -895,7 +872,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 ),
                 title: Text(
                   displayName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(roleSubtitle),
                 trailing: Container(
@@ -907,15 +884,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.verified_user_rounded, size: 14, color: colorScheme.primary),
+                      Icon(Symbols.verified_user_rounded, size: 14, color: colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         loc.tr('verifiedOwner'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimaryContainer),
                       ),
                     ],
                   ),
@@ -947,29 +921,23 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                           children: [
                             Icon(
                               profile.completeness == 1.0
-                                  ? Icons.check_circle_rounded
-                                  : Icons.shield_outlined,
+                                  ? Symbols.check_circle_rounded
+                                  : Symbols.shield_rounded,
                               size: 15,
                               color: colorScheme.primary,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               loc.tr('profileCompleteness'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                           ],
                         ),
                         Text(
                           '${profile.completenessPercent}%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                         ),
                       ],
                     ),
@@ -987,10 +955,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       const SizedBox(height: 6),
                       Text(
                         loc.tr('completeProfileHint'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ],
@@ -1003,20 +968,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   Icon(
                     profile.preferredContactMethod == 'whatsapp'
-                        ? Icons.chat_bubble_outline_rounded
+                        ? Symbols.chat_bubble_outline_rounded
                         : (profile.preferredContactMethod == 'email'
-                            ? Icons.mail_outline_rounded
-                            : Icons.phone_outlined),
+                            ? Symbols.mail_outline_rounded
+                            : Symbols.phone_rounded),
                     size: 15,
                     color: colorScheme.primary,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '${loc.tr('preferredContactMethodLabel')}: ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1030,11 +992,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                           : (profile.preferredContactMethod == 'email'
                               ? loc.tr('contactMethodEmail')
                               : loc.tr('contactMethodPhone')),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.primary),
                     ),
                   ),
                 ],
@@ -1050,14 +1009,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildDetailRow(
-                        icon: Icons.email_outlined,
+                        context: context,
+                        icon: Symbols.email_rounded,
                         text: email,
                         colorScheme: colorScheme,
                         onCopy: () => _copyToClipboard(context, email, loc.tr('emailCopied')),
                       ),
                       const SizedBox(height: 6),
                       _buildDetailRow(
-                        icon: Icons.phone_outlined,
+                        context: context,
+                        icon: Symbols.phone_rounded,
                         text: profile.hasPhone
                             ? DigitUtils.normalize(profile.phone)
                             : loc.tr('addPhoneNumberPrompt'),
@@ -1073,21 +1034,18 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             ? Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.12),
+                                  color: colorScheme.primary.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.verified_rounded, size: 12, color: Colors.green),
+                                    Icon(Symbols.verified_rounded, size: 12, color: colorScheme.primary),
                                     const SizedBox(width: 4),
                                     Text(
                                       loc.tr('phoneVerifiedBadge'),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary),
                                     ),
                                   ],
                                 ),
@@ -1106,15 +1064,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               // 6. Official Identity & Address Section
               Row(
                 children: [
-                  Icon(Icons.badge_rounded, size: 16, color: colorScheme.primary),
+                  Icon(Symbols.badge_rounded, size: 16, color: colorScheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('officialIdentitySectionTitle'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -1122,7 +1077,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
               // National ID Row
               _buildDetailRow(
-                icon: Icons.credit_card_rounded,
+                context: context,
+                icon: Symbols.credit_card_rounded,
                 text: profile.hasNationalId
                     ? '${isUAE ? loc.tr('emiratesIdLabel') : loc.tr('nationalIdLabel')}: ${DigitUtils.normalize(profile.nationalId)}'
                     : loc.tr('addNationalIdPrompt'),
@@ -1137,7 +1093,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
               // Official Address Row
               _buildDetailRow(
-                icon: Icons.location_on_outlined,
+                context: context,
+                icon: Symbols.location_on_rounded,
                 text: profile.hasAddress
                     ? '${loc.tr('officialAddressLabel')}: ${DigitUtils.normalize(profile.address)}'
                     : loc.tr('addAddressPrompt'),
@@ -1180,7 +1137,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              Icons.badge_rounded,
+                              Symbols.badge_rounded,
                               size: 20,
                               color: colorScheme.primary,
                             ),
@@ -1194,15 +1151,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                   children: [
                                     Text(
                                       isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardVerifiedPreview'),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface),
                                     ),
                                     const SizedBox(width: 6),
                                     Icon(
-                                      Icons.verified_rounded,
+                                      Symbols.verified_rounded,
                                       size: 15,
                                       color: colorScheme.primary,
                                     ),
@@ -1211,10 +1165,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 const SizedBox(height: 3),
                                 Text(
                                   loc.tr('tapToViewFullCardAndRotate'),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -1226,7 +1177,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.fullscreen_rounded,
+                              Symbols.fullscreen_rounded,
                               size: 18,
                               color: colorScheme.primary,
                             ),
@@ -1245,15 +1196,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               // 7. Landlord Bank Payout Details Section
               Row(
                 children: [
-                  Icon(Icons.account_balance_rounded, size: 16, color: colorScheme.primary),
+                  Icon(Symbols.account_balance_rounded, size: 16, color: colorScheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     loc.tr('bankPayoutSectionTitle'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -1261,7 +1209,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
               // Bank Name Row
               _buildDetailRow(
-                icon: Icons.account_balance_outlined,
+                context: context,
+                icon: Symbols.account_balance_rounded,
                 text: profile.bankName.isNotEmpty
                     ? '${loc.tr('bankNameLabel')}: ${profile.bankName}'
                     : loc.tr('addBankInfoPrompt'),
@@ -1274,7 +1223,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               // Account Number / IBAN Row
               if (profile.bankAccountNumber.isNotEmpty || profile.iban.isNotEmpty) ...[
                 _buildDetailRow(
-                  icon: Icons.payments_outlined,
+                context: context,
+                  icon: Symbols.payments_rounded,
                   text: '${loc.tr('bankAccountOrIbanLabel')}: ${DigitUtils.normalize(profile.bankAccountNumber.isNotEmpty ? profile.bankAccountNumber : profile.iban)}',
                   colorScheme: colorScheme,
                   onCopy: () => _copyToClipboard(
@@ -1285,7 +1235,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 ),
               ] else ...[
                 _buildDetailRow(
-                  icon: Icons.payments_outlined,
+                context: context,
+                  icon: Symbols.payments_rounded,
                   text: loc.tr('bankAccountOrIbanLabel'),
                   isPlaceholder: true,
                   colorScheme: colorScheme,
@@ -1341,7 +1292,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
+                    color: colorScheme.shadow.withValues(alpha: 0.18),
                     blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
@@ -1365,16 +1316,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 color: colorScheme.primaryContainer.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.badge_rounded, color: colorScheme.primary, size: 18),
+                              child: Icon(Symbols.badge_rounded, color: colorScheme.primary, size: 18),
                             ),
                             const SizedBox(width: 10),
                             Text(
                               title,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface),
                             ),
                           ],
                         ),
@@ -1437,7 +1385,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         children: [
                           // Zoom In (+)
                           TashilIconButton.tonal(
-                            icon: Icons.zoom_in_rounded,
+                            icon: Symbols.zoom_in_rounded,
                             tooltip: loc.tr('zoomIn'),
                             size: 40,
                             iconSize: 20,
@@ -1452,7 +1400,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                           // Zoom Out (-)
                           TashilIconButton.tonal(
-                            icon: Icons.zoom_out_rounded,
+                            icon: Symbols.zoom_out_rounded,
                             tooltip: loc.tr('zoomOut'),
                             size: 40,
                             iconSize: 20,
@@ -1467,7 +1415,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                           // Rotate Left 90°
                           TashilIconButton.tonal(
-                            icon: Icons.rotate_left_rounded,
+                            icon: Symbols.rotate_left_rounded,
                             tooltip: loc.tr('rotateLeft'),
                             size: 40,
                             iconSize: 20,
@@ -1482,7 +1430,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                           // Rotate Right 90°
                           TashilIconButton.tonal(
-                            icon: Icons.rotate_right_rounded,
+                            icon: Symbols.rotate_right_rounded,
                             tooltip: loc.tr('rotateRight'),
                             size: 40,
                             iconSize: 20,
@@ -1496,7 +1444,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                           // Flip Horizontal
                           TashilIconButton.tonal(
-                            icon: Icons.flip_rounded,
+                            icon: Symbols.flip_rounded,
                             tooltip: loc.tr('flipHorizontal'),
                             size: 40,
                             iconSize: 20,
@@ -1510,7 +1458,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                           // Reset View & Orientation
                           TashilIconButton.tonal(
-                            icon: Icons.restart_alt_rounded,
+                            icon: Symbols.restart_alt_rounded,
                             tooltip: loc.tr('resetOrientation'),
                             size: 40,
                             iconSize: 20,
@@ -1538,6 +1486,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 
   static Widget _buildDetailRow({
+    required BuildContext context,
     required IconData icon,
     required String text,
     required ColorScheme colorScheme,
@@ -1564,12 +1513,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               Expanded(
                 child: Text(
                   text,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isPlaceholder ? colorScheme.primary : colorScheme.onSurface,
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: isPlaceholder ? colorScheme.primary : colorScheme.onSurface,
                     fontWeight: isPlaceholder ? FontWeight.w600 : FontWeight.w500,
-                    decoration: isPlaceholder ? TextDecoration.underline : TextDecoration.none,
-                  ),
+                    decoration: isPlaceholder ? TextDecoration.underline : TextDecoration.none),
                 ),
               ),
               if (trailing != null) ...[
@@ -1579,14 +1525,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               if (onCopy != null) ...[
                 const SizedBox(width: 8),
                 Icon(
-                  Icons.copy_rounded,
+                  Symbols.content_copy_rounded,
                   size: 14,
                   color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 ),
               ] else if (isPlaceholder) ...[
                 const SizedBox(width: 8),
                 Icon(
-                  Icons.arrow_forward_rounded,
+                  Symbols.arrow_forward_rounded,
                   size: 14,
                   color: colorScheme.primary,
                 ),
@@ -1628,17 +1574,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.apartment_rounded, color: colorScheme.onPrimary, size: 18),
+              child: Icon(Symbols.apartment_rounded, color: colorScheme.onPrimary, size: 18),
             ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 loc.tr('appName'),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1649,7 +1592,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             valueListenable: MotionPreferenceController.currentTransition,
             builder: (context, activeMotion, _) {
               return TashilIconButton.tonal(
-                icon: Icons.animation_rounded,
+                icon: Symbols.animation_rounded,
                 size: 38,
                 iconSize: 18,
                 tooltip: loc.tr('m3MotionPreferenceTitle'),
@@ -1659,7 +1602,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           ),
           const SizedBox(width: 4),
           TashilIconButton.tonal(
-            icon: Icons.tune_rounded,
+            icon: Symbols.tune_rounded,
             size: 38,
             iconSize: 18,
             tooltip: loc.tr('settings'),
@@ -1668,7 +1611,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           const SizedBox(width: 4),
           Builder(
             builder: (ctx) => TashilIconButton.tonal(
-              icon: Icons.menu_rounded,
+              icon: Symbols.menu_rounded,
               size: 38,
               iconSize: 20,
               tooltip: loc.tr('menu'),
@@ -1700,33 +1643,33 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         onDestinationSelected: _selectView,
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard_rounded),
+            icon: const Icon(Symbols.dashboard_rounded),
+            selectedIcon: const Icon(Symbols.dashboard_rounded),
             label: loc.tr('navOverview'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.apartment_outlined),
-            selectedIcon: const Icon(Icons.apartment_rounded),
+            icon: const Icon(Symbols.apartment_rounded),
+            selectedIcon: const Icon(Symbols.apartment_rounded),
             label: loc.tr('navProperties'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.payments_outlined),
-            selectedIcon: const Icon(Icons.payments_rounded),
+            icon: const Icon(Symbols.payments_rounded),
+            selectedIcon: const Icon(Symbols.payments_rounded),
             label: loc.tr('navCollection'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.description_outlined),
-            selectedIcon: const Icon(Icons.description_rounded),
+            icon: const Icon(Symbols.description_rounded),
+            selectedIcon: const Icon(Symbols.description_rounded),
             label: loc.tr('navContracts'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: const Icon(Icons.account_balance_wallet_rounded),
+            icon: const Icon(Symbols.account_balance_wallet_rounded),
+            selectedIcon: const Icon(Symbols.account_balance_wallet_rounded),
             label: loc.tr('navFinancials'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.build_outlined),
-            selectedIcon: const Icon(Icons.build_rounded),
+            icon: const Icon(Symbols.build_rounded),
+            selectedIcon: const Icon(Symbols.build_rounded),
             label: loc.tr('navMaintenance'),
           ),
         ],
@@ -1800,7 +1743,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.apartment_rounded, color: colorScheme.onPrimary, size: 20),
+              child: Icon(Symbols.apartment_rounded, color: colorScheme.onPrimary, size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -1809,19 +1752,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   Text(
                     loc.tr('appName'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                   ),
                   Text(
                     loc.tr('ownerPortal'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.primary,
+                      fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1836,8 +1773,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       ),
       destinations: [
         TashilDrawerDestination(
-          icon: Icons.dashboard_outlined,
-          selectedIcon: Icons.dashboard_rounded,
+          icon: Symbols.dashboard_rounded,
+          selectedIcon: Symbols.dashboard_rounded,
           label: loc.tr('portfolioOverview'),
           isSelected: _selectedIndex == 0,
           onTap: () {
@@ -1846,8 +1783,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.apartment_outlined,
-          selectedIcon: Icons.apartment_rounded,
+          icon: Symbols.apartment_rounded,
+          selectedIcon: Symbols.apartment_rounded,
           label: loc.tr('myProperties'),
           badgeCount: myPropertiesBadge,
           isSelected: _selectedIndex == 1,
@@ -1857,8 +1794,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.payments_outlined,
-          selectedIcon: Icons.payments_rounded,
+          icon: Symbols.payments_rounded,
+          selectedIcon: Symbols.payments_rounded,
           label: loc.tr('navCollection'),
           badgeCount: collectionBadge,
           isSelected: _selectedIndex == 2,
@@ -1868,8 +1805,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.description_outlined,
-          selectedIcon: Icons.description_rounded,
+          icon: Symbols.description_rounded,
+          selectedIcon: Symbols.description_rounded,
           label: loc.tr('navContracts'),
           badgeCount: contractsBadge,
           isSelected: _selectedIndex == 3,
@@ -1879,8 +1816,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.account_balance_wallet_outlined,
-          selectedIcon: Icons.account_balance_wallet_rounded,
+          icon: Symbols.account_balance_wallet_rounded,
+          selectedIcon: Symbols.account_balance_wallet_rounded,
           label: loc.tr('financialsAndPayouts'),
           isSelected: _selectedIndex == 4,
           onTap: () {
@@ -1889,8 +1826,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
+          icon: Symbols.show_chart_rounded,
+          selectedIcon: Symbols.show_chart_rounded,
           label: loc.tr('navAnalytics'),
           isSelected: _selectedIndex == 5,
           onTap: () {
@@ -1899,8 +1836,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.build_outlined,
-          selectedIcon: Icons.build_rounded,
+          icon: Symbols.build_rounded,
+          selectedIcon: Symbols.build_rounded,
           label: loc.tr('maintenanceTickets'),
           badgeCount: maintenanceBadge,
           isSelected: _selectedIndex == 6,
@@ -1910,8 +1847,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           },
         ),
         TashilDrawerDestination(
-          icon: Icons.delete_outline_rounded,
-          selectedIcon: Icons.delete_rounded,
+          icon: Symbols.delete_outline_rounded,
+          selectedIcon: Symbols.delete_rounded,
           label: loc.tr('trashAndDeleted'),
           badgeCount: trashBadge,
           isSelected: _selectedIndex == 7,
@@ -1924,12 +1861,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           title: loc.tr('settings'),
         ),
         TashilDrawerDestination(
-          icon: Icons.tune_outlined,
-          selectedIcon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
+          selectedIcon: Symbols.tune_rounded,
           label: loc.tr('settings'),
           isSelected: false,
           trailing: Icon(
-            Icons.chevron_right_rounded,
+            Symbols.chevron_right_rounded,
             size: 18.0,
             color: colorScheme.outlineVariant,
           ),
@@ -1998,7 +1935,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                Icons.animation_rounded,
+                                Symbols.animation_rounded,
                                 size: 20,
                                 color: colorScheme.onPrimaryContainer,
                               ),
@@ -2010,20 +1947,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 children: [
                                   Text(
                                     loc.tr('m3MotionPreferenceTitle'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     loc.tr('m3MotionSubtitle'),
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -2051,7 +1982,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             context: context,
                             title: loc.tr('m3MotionFadeThrough'),
                             subtitle: loc.tr('m3MotionFadeThroughTooltip'),
-                            icon: Icons.auto_awesome_motion_rounded,
+                            icon: Symbols.auto_awesome_motion_rounded,
                             isSelected: activeType == TashilPageTransitionType.fadeThrough,
                             colorScheme: colorScheme,
                             onTap: () {
@@ -2064,7 +1995,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             context: context,
                             title: loc.tr('m3MotionSharedAxisX'),
                             subtitle: loc.tr('m3MotionSharedAxisXTooltip'),
-                            icon: Icons.swap_horiz_rounded,
+                            icon: Symbols.swap_horiz_rounded,
                             isSelected: activeType == TashilPageTransitionType.sharedAxisX,
                             colorScheme: colorScheme,
                             onTap: () {
@@ -2077,7 +2008,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             context: context,
                             title: loc.tr('m3MotionSharedAxisZ'),
                             subtitle: loc.tr('m3MotionSharedAxisZTooltip'),
-                            icon: Icons.zoom_in_map_rounded,
+                            icon: Symbols.zoom_in_map_rounded,
                             isSelected: activeType == TashilPageTransitionType.sharedAxisZ,
                             colorScheme: colorScheme,
                             onTap: () {
@@ -2095,7 +2026,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   SizedBox(
                     width: double.infinity,
                     child: TashilButton.tonal(
-                      icon: Icons.movie_filter_outlined,
+                      icon: Symbols.movie_filter_rounded,
                       label: loc.tr('m3MotionSuiteButton'),
                       height: 40,
                       onPressed: () {
@@ -2157,25 +2088,19 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13.5,
-                      color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                      color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurface),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
             if (isSelected)
               Icon(
-                Icons.check_circle_rounded,
+                Symbols.check_circle_rounded,
                 size: 20,
                 color: colorScheme.primary,
               ),

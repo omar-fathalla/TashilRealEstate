@@ -116,11 +116,7 @@ class TashilLoadingIndicator extends StatefulWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2),
               ),
             ],
           ],

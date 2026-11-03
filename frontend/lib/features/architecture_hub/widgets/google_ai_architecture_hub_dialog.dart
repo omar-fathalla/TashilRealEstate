@@ -16,6 +16,7 @@ import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
 import '../../ai_engine_hub/models/ai_model_definition.dart';
 import '../../ai_engine_hub/services/ai_engine_config_controller.dart';
 import '../../ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class GoogleAiArchitectureHubDialog extends StatelessWidget {
   const GoogleAiArchitectureHubDialog({super.key});
@@ -58,7 +59,7 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                     // Tier 1: Flutter UI Layer (Frontend)
                     _buildTierContainer(
                       context: context,
-                      title: 'Flutter UI Layer (Frontend)',
+                      title: AppLocalizations.trStatic('uiCopy048'),
                       badge: 'Client-Side Web & Mobile',
                       accentColor: theme.colorScheme.primary,
                       child: _buildFrontendTier(context, loc, lang),
@@ -66,13 +67,13 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Connection Connectors Downward Arrow
-                    Icon(Icons.arrow_downward_rounded, color: theme.colorScheme.primary, size: 24),
+                    Icon(Symbols.arrow_downward_rounded, color: theme.colorScheme.primary, size: 24),
                     const SizedBox(height: 16),
 
                     // Tier 2: Firebase & Google Cloud Backend
                     _buildTierContainer(
                       context: context,
-                      title: 'Firebase & Google Cloud Backend',
+                      title: AppLocalizations.trStatic('uiCopy045'),
                       badge: 'Serverless Cloud Infrastructure',
                       accentColor: theme.colorScheme.secondary,
                       child: _buildBackendTier(context, loc),
@@ -80,13 +81,13 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Connection Connectors Downward Arrow
-                    Icon(Icons.arrow_downward_rounded, color: theme.colorScheme.tertiary, size: 24),
+                    Icon(Symbols.arrow_downward_rounded, color: theme.colorScheme.tertiary, size: 24),
                     const SizedBox(height: 16),
 
                     // Tier 3: Google AI & Gemini Services
                     _buildTierContainer(
                       context: context,
-                      title: 'Google AI & Gemini Services',
+                      title: AppLocalizations.trStatic('uiCopy054'),
                       badge: 'Generative Intelligence Engine',
                       accentColor: theme.colorScheme.tertiary,
                       child: _buildAiServicesTier(context, loc),
@@ -112,7 +113,7 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
           ),
-          child: Icon(Icons.hub_rounded, color: theme.colorScheme.primary, size: 24),
+          child: Icon(Symbols.hub_rounded, color: theme.colorScheme.primary, size: 24),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -124,11 +125,8 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                   Flexible(
                     child: Text(
                       loc.tr('architectureHubTitle'),
-                      style: TextStyle(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -143,7 +141,7 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                     ),
                     child: Text(
                       'Live Multi-Cloud Mesh',
-                      style: TextStyle(color: theme.colorScheme.onSecondaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -151,14 +149,14 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 loc.tr('architectureHubSubtitle'),
-                style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
         ),
         const SizedBox(width: 10),
         TashilButton.filled(
-          icon: Icons.tune_rounded,
+          icon: Symbols.tune_rounded,
           label: loc.tr('switchAiModelsBtn'),
           onPressed: () => AiEngineHubDialog.show(context),
         ),
@@ -194,11 +192,8 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                  color: accentColor),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -208,7 +203,7 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                 ),
                 child: Text(
                   badge,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: accentColor),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: accentColor),
                 ),
               ),
             ],
@@ -231,49 +226,49 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
       children: [
         _buildNodeChip(
           context: context,
-          icon: Icons.search_rounded,
-          title: 'Vector & Image Semantic Search',
-          subtitle: 'Firestore Vector Embeddings',
+          icon: Symbols.search_rounded,
+          title: AppLocalizations.trStatic('uiCopy080'),
+          subtitle: AppLocalizations.trStatic('uiCopy047'),
           accentColor: theme.colorScheme.primary,
           onTap: () => VisualSearchModal.show(context, countryCode: country),
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.document_scanner_rounded,
-          title: 'Document AI Auto-Fill',
-          subtitle: 'OCR & ID Extractor',
+          icon: Symbols.document_scanner_rounded,
+          title: AppLocalizations.trStatic('uiCopy041'),
+          subtitle: AppLocalizations.trStatic('uiCopy068'),
           accentColor: theme.colorScheme.primary,
           onTap: () => AiDocumentOcrModal.show(context, countryCode: country),
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.chair_rounded,
-          title: 'AI Virtual Staging',
-          subtitle: 'Imagen 3 Generative Engine',
+          icon: Symbols.chair_rounded,
+          title: AppLocalizations.trStatic('uiCopy030'),
+          subtitle: AppLocalizations.trStatic('uiCopy056'),
           accentColor: theme.colorScheme.primary,
           onTap: () => AiVirtualStagingDialog.show(context),
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.troubleshoot_rounded,
-          title: 'Vision Maintenance Diagnosis',
-          subtitle: 'Gemini 2.0 Flash Vision',
+          icon: Symbols.troubleshoot_rounded,
+          title: AppLocalizations.trStatic('uiCopy082'),
+          subtitle: AppLocalizations.trStatic('uiCopy050'),
           accentColor: theme.colorScheme.primary,
           onTap: () => AiVisionMaintenanceDialog.show(context),
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.mic_rounded,
-          title: 'Gemini Live Voice Broker',
-          subtitle: 'Multimodal Audio Streaming',
+          icon: Symbols.mic_rounded,
+          title: AppLocalizations.trStatic('uiCopy053'),
+          subtitle: AppLocalizations.trStatic('uiCopy067'),
           accentColor: theme.colorScheme.primary,
           onTap: () => GeminiVoiceBrokerDialog.show(context, defaultProperty),
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.gavel_rounded,
-          title: 'Legal Reasoning & RAG',
-          subtitle: 'Gemini 2.0 Pro Legal Audit',
+          icon: Symbols.gavel_rounded,
+          title: AppLocalizations.trStatic('uiCopy057'),
+          subtitle: AppLocalizations.trStatic('uiCopy052'),
           accentColor: theme.colorScheme.primary,
           onTap: () => AiLegalClauseAdvisorDialog.show(context),
         ),
@@ -289,33 +284,33 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
       children: [
         _buildNodeChip(
           context: context,
-          icon: Icons.lock_outline_rounded,
-          title: 'Firebase Auth',
-          subtitle: 'Multi-Tenant RBAC Gateway',
+          icon: Symbols.lock_outline_rounded,
+          title: AppLocalizations.trStatic('uiCopy046'),
+          subtitle: AppLocalizations.trStatic('uiCopy066'),
           accentColor: theme.colorScheme.secondary,
           onTap: () {},
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.storage_rounded,
-          title: 'Cloud Firestore',
-          subtitle: 'Vector Embeddings & Live Messaging',
+          icon: Symbols.storage_rounded,
+          title: AppLocalizations.trStatic('uiCopy035'),
+          subtitle: AppLocalizations.trStatic('uiCopy081'),
           accentColor: theme.colorScheme.secondary,
           onTap: () {},
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.cloud_upload_outlined,
-          title: 'Cloud Storage',
-          subtitle: 'Media, Leases & Identity PDFs',
+          icon: Symbols.cloud_upload_rounded,
+          title: AppLocalizations.trStatic('uiCopy037'),
+          subtitle: AppLocalizations.trStatic('uiCopy065'),
           accentColor: theme.colorScheme.secondary,
           onTap: () {},
         ),
         _buildNodeChip(
           context: context,
-          icon: Icons.functions_rounded,
-          title: 'Cloud Functions Gen 2',
-          subtitle: 'Serverless Event Mesh & AI Bridges',
+          icon: Symbols.functions_rounded,
+          title: AppLocalizations.trStatic('uiCopy036'),
+          subtitle: AppLocalizations.trStatic('uiCopy075'),
           accentColor: theme.colorScheme.secondary,
           onTap: () {},
         ),
@@ -349,24 +344,21 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.teal,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.tertiary,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       '${loc.tr('allEnginesOperational')} • ${controller.categories.length} ${loc.tr('activeAiEnginesCount')}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
                 TashilButton.tonal(
-                  icon: Icons.swap_horiz_rounded,
+                  icon: Symbols.swap_horiz_rounded,
                   label: loc.tr('switchActiveModelsTierBtn'),
                   onPressed: () => AiEngineHubDialog.show(context),
                 ),
@@ -379,65 +371,65 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
               children: [
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.mic_external_on_rounded,
+                  icon: Symbols.mic_external_on_rounded,
                   title: ingestionModel.name,
-                  subtitle: 'Voice & Property Ingestion',
+                  subtitle: AppLocalizations.trStatic('uiCopy084'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiEngineHubDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.balance_rounded,
+                  icon: Symbols.balance_rounded,
                   title: legalModel.name,
-                  subtitle: 'Legal Reasoning & Tenancy RAG',
+                  subtitle: AppLocalizations.trStatic('uiCopy058'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiLegalClauseAdvisorDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.price_check_rounded,
+                  icon: Symbols.price_check_rounded,
                   title: valuationModel.name,
-                  subtitle: 'Rental Valuation & Comps',
+                  subtitle: AppLocalizations.trStatic('uiCopy072'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiEngineHubDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.travel_explore_rounded,
+                  icon: Symbols.travel_explore_rounded,
                   title: searchModel.name,
-                  subtitle: 'Semantic Vector Embeddings',
+                  subtitle: AppLocalizations.trStatic('uiCopy074'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiEngineHubDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.auto_awesome,
+                  icon: Symbols.auto_awesome_rounded,
                   title: stagingModel.name,
-                  subtitle: 'Room-Preserving Virtual Staging',
+                  subtitle: AppLocalizations.trStatic('uiCopy073'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiVirtualStagingDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.description_rounded,
-                  title: 'Cloud Document AI',
-                  subtitle: 'ID Extraction & Fraud Analysis',
+                  icon: Symbols.description_rounded,
+                  title: AppLocalizations.trStatic('uiCopy034'),
+                  subtitle: AppLocalizations.trStatic('uiCopy055'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiDocumentOcrModal.show(context, countryCode: country),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.remove_red_eye_rounded,
-                  title: 'Gemini 2.0 Flash Vision',
-                  subtitle: 'Defect Analysis & Struct JSON',
+                  icon: Symbols.remove_red_eye_rounded,
+                  title: AppLocalizations.trStatic('uiCopy050'),
+                  subtitle: AppLocalizations.trStatic('uiCopy040'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => AiVisionMaintenanceDialog.show(context),
                 ),
                 _buildNodeChip(
                   context: context,
-                  icon: Icons.graphic_eq_rounded,
-                  title: 'Gemini 2.0 Multimodal Live',
-                  subtitle: 'Low-Latency WebRTC Voice API',
+                  icon: Symbols.graphic_eq_rounded,
+                  title: AppLocalizations.trStatic('uiCopy051'),
+                  subtitle: AppLocalizations.trStatic('uiCopy059'),
                   accentColor: theme.colorScheme.tertiary,
                   onTap: () => GeminiVoiceBrokerDialog.show(context, defaultProperty),
                 ),
@@ -485,21 +477,18 @@ class GoogleAiArchitectureHubDialog extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
             const SizedBox(width: 8),
-            Icon(Icons.open_in_new_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+            Icon(Symbols.open_in_new_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
         ),
       ),

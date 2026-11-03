@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Modal dialog for managing property marketplace publication status and fast tenant recording.
 /// Fully adheres to Material Design 3 guidelines:
@@ -208,7 +209,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                Icons.storefront_rounded,
+                                Symbols.storefront_rounded,
                                 color: colorScheme.onPrimaryContainer,
                                 size: 22,
                               ),
@@ -220,17 +221,14 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                 children: [
                                   Text(
                                     loc.tr('manageListingStatusTitle'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: colorScheme.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     widget.property.getTitle(lang),
-                                    style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -265,7 +263,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                     child: Row(
                       children: [
                         Icon(
-                          widget.property.isPublished ? Icons.check_circle_rounded : Icons.visibility_off_rounded,
+                          widget.property.isPublished ? Symbols.check_circle_rounded : Symbols.visibility_off_rounded,
                           color: widget.property.isPublished
                               ? (isDark ? const Color(0xFF81C995) : const Color(0xFF137333))
                               : (isDark ? const Color(0xFFE8EAED) : const Color(0xFF3C4043)),
@@ -280,23 +278,17 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                 widget.property.isPublished
                                     ? loc.tr('currentlyLiveOnMarketplace')
                                     : loc.tr('currentlyHiddenFromMarketplace'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13.5,
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
                                   color: widget.property.isPublished
                                       ? (isDark ? const Color(0xFF81C995) : const Color(0xFF137333))
-                                      : (isDark ? const Color(0xFFE8EAED) : const Color(0xFF3C4043)),
-                                ),
+                                      : (isDark ? const Color(0xFFE8EAED) : const Color(0xFF3C4043))),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 '${CurrencyFormatter.formatAmount(widget.property.pricePerMonth, langCode: lang)} $currency / ${loc.tr('perMonth')}',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: widget.property.isPublished
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: widget.property.isPublished
                                       ? (isDark ? const Color(0xFF81C995).withValues(alpha: 0.85) : const Color(0xFF137333).withValues(alpha: 0.85))
-                                      : colorScheme.onSurfaceVariant,
-                                ),
+                                      : colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -327,18 +319,18 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                           TashilConnectedButtonSegment(
                             value: 'publish',
                             label: loc.tr('publishToMarketplaceBtn'),
-                            icon: Icons.rocket_launch_rounded,
+                            icon: Symbols.rocket_launch_rounded,
                           )
                         else
                           TashilConnectedButtonSegment(
                             value: 'unpublish',
                             label: loc.tr('unpublishFromMarketplaceBtn'),
-                            icon: Icons.visibility_off_rounded,
+                            icon: Symbols.visibility_off_rounded,
                           ),
                         TashilConnectedButtonSegment(
                           value: 'rent',
                           label: loc.tr('markAsRentedBtn'),
-                          icon: Icons.vpn_key_rounded,
+                          icon: Symbols.vpn_key_rounded,
                         ),
                       ],
                     ),
@@ -366,7 +358,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
-                                  Icons.verified_user_rounded,
+                                  Symbols.verified_user_rounded,
                                   color: colorScheme.primary,
                                   size: 18,
                                 ),
@@ -375,11 +367,8 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                               Expanded(
                                 child: Text(
                                   loc.tr('createCertifiedLeaseBtn'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: colorScheme.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface),
                                 ),
                               ),
                             ],
@@ -387,11 +376,8 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                           const SizedBox(height: 8),
                           Text(
                             loc.tr('certifiedLeaseDesc'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant,
-                              height: 1.4,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant,
+                              height: 1.4),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
@@ -402,7 +388,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                 Navigator.of(context).pop();
                                 LeaseBuilderWizardDialog.show(context, targetProperty: widget.property);
                               },
-                              icon: Icons.description_outlined,
+                              icon: Symbols.description_rounded,
                               label: loc.tr('createCertifiedLeaseBtn'),
                             ),
                           ),
@@ -418,16 +404,13 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
 
                     Text(
                       loc.tr('quickTenantLogBtn'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.5,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       loc.tr('quickTenantLogDesc'),
-                      style: TextStyle(fontSize: 11.5, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 12),
                     // 1. Tenant Full Name
@@ -435,7 +418,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                       controller: _tenantNameCtrl,
                       decoration: InputDecoration(
                         labelText: loc.tr('tenantFullNameLabel'),
-                        prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                        prefixIcon: const Icon(Symbols.person_outline_rounded, size: 20),
                         filled: true,
                         fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.35 : 0.25),
                         border: OutlineInputBorder(
@@ -461,7 +444,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                       textDirection: TextDirection.ltr,
                       decoration: InputDecoration(
                         labelText: loc.tr('tenantPhoneLabel'),
-                        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                        prefixIcon: const Icon(Symbols.phone_rounded, size: 20),
                         filled: true,
                         fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.35 : 0.25),
                         border: OutlineInputBorder(
@@ -490,7 +473,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                             decoration: InputDecoration(
                               labelText: loc.tr('monthlyRentAmountLabel'),
                               suffixText: currency,
-                              prefixIcon: const Icon(Icons.payments_outlined, size: 20),
+                              prefixIcon: const Icon(Symbols.payments_rounded, size: 20),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.35 : 0.25),
                               border: OutlineInputBorder(
@@ -523,7 +506,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today_rounded, size: 18, color: colorScheme.primary),
+                                  Icon(Symbols.calendar_today_rounded, size: 18, color: colorScheme.primary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
@@ -532,20 +515,17 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                                       children: [
                                         Text(
                                           loc.tr('leaseStartDateLabel'),
-                                          style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                         ),
                                         Text(
                                           '${_leaseStartDate.year}/${_leaseStartDate.month.toString().padLeft(2, '0')}/${_leaseStartDate.day.toString().padLeft(2, '0')}',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: colorScheme.onSurface,
-                                          ),
+                                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                            color: colorScheme.onSurface),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Icon(Icons.edit_calendar_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                                  Icon(Symbols.edit_calendar_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                                 ],
                               ),
                             ),
@@ -558,7 +538,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                     // 4. Lease Duration Selector (M3 Connected Button Group)
                     Text(
                       loc.tr('leaseDurationLabel'),
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 6),
                     TashilConnectedButtonGroup<int>(
@@ -571,17 +551,17 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                         TashilConnectedButtonSegment(
                           value: 6,
                           label: loc.tr('duration6Months'),
-                          icon: Icons.calendar_view_month_rounded,
+                          icon: Symbols.calendar_view_month_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 12,
                           label: loc.tr('duration12Months'),
-                          icon: Icons.calendar_month_rounded,
+                          icon: Symbols.calendar_month_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 24,
                           label: loc.tr('duration24Months'),
-                          icon: Icons.date_range_rounded,
+                          icon: Symbols.date_range_rounded,
                         ),
                       ],
                     ),
@@ -590,7 +570,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                     // 5. First Month Payment Status (M3 Connected Button Group)
                     Text(
                       loc.tr('firstMonthPaymentStatusLabel'),
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
                     const SizedBox(height: 6),
                     TashilConnectedButtonGroup<String>(
@@ -603,17 +583,17 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                         TashilConnectedButtonSegment(
                           value: 'due',
                           label: loc.tr('firstMonthNotPaid'),
-                          icon: Icons.pending_actions_rounded,
+                          icon: Symbols.pending_actions_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'cash',
                           label: loc.tr('firstMonthPaidCash'),
-                          icon: Icons.payments_outlined,
+                          icon: Symbols.payments_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'bank_wire',
                           label: loc.tr('firstMonthPaidBankWire'),
-                          icon: Icons.account_balance_outlined,
+                          icon: Symbols.account_balance_rounded,
                         ),
                       ],
                     ),
@@ -641,12 +621,12 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                         TashilConnectedButtonSegment(
                           value: 'cancel',
                           label: loc.tr('cancel'),
-                          icon: Icons.close_rounded,
+                          icon: Symbols.close_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'confirm',
                           label: loc.tr('confirm'),
-                          icon: Icons.check_rounded,
+                          icon: Symbols.check_rounded,
                         ),
                       ],
                     ),

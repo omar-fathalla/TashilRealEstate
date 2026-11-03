@@ -8,6 +8,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Item representing a verified district, neighborhood, or compound.
 class DistrictItem {
@@ -34,7 +35,7 @@ class DistrictItem {
     required this.category,
     required this.latitude,
     required this.longitude,
-    this.icon = Icons.apartment_rounded,
+    this.icon = Symbols.apartment_rounded,
   });
 
   String getLocalizedName(String lang) {
@@ -127,7 +128,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_prime',
           latitude: 25.0805,
           longitude: 55.1403,
-          icon: Icons.water_rounded,
+          icon: Symbols.water_rounded,
         ),
         DistrictItem(
           id: 'ae_downtown_dubai',
@@ -140,7 +141,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_prime',
           latitude: 25.1972,
           longitude: 55.2744,
-          icon: Icons.location_city_rounded,
+          icon: Symbols.location_city_rounded,
         ),
         DistrictItem(
           id: 'ae_business_bay',
@@ -153,7 +154,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_prime',
           latitude: 25.1857,
           longitude: 55.2656,
-          icon: Icons.business_rounded,
+          icon: Symbols.business_rounded,
         ),
         DistrictItem(
           id: 'ae_palm_jumeirah',
@@ -166,7 +167,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_prime',
           latitude: 25.1124,
           longitude: 55.1390,
-          icon: Icons.villa_rounded,
+          icon: Symbols.villa_rounded,
         ),
         DistrictItem(
           id: 'ae_jvc',
@@ -179,7 +180,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_suburbs',
           latitude: 25.0601,
           longitude: 55.2078,
-          icon: Icons.apartment_rounded,
+          icon: Symbols.apartment_rounded,
         ),
         DistrictItem(
           id: 'ae_dubai_hills',
@@ -192,7 +193,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_suburbs',
           latitude: 25.1130,
           longitude: 55.2530,
-          icon: Icons.park_rounded,
+          icon: Symbols.park_rounded,
         ),
         DistrictItem(
           id: 'ae_jlt',
@@ -205,7 +206,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'dubai_prime',
           latitude: 25.0743,
           longitude: 55.1492,
-          icon: Icons.domain_rounded,
+          icon: Symbols.domain_rounded,
         ),
         DistrictItem(
           id: 'ae_yas_island',
@@ -218,7 +219,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'abu_dhabi',
           latitude: 24.4988,
           longitude: 54.6062,
-          icon: Icons.attractions_rounded,
+          icon: Symbols.attractions_rounded,
         ),
         DistrictItem(
           id: 'ae_al_reem',
@@ -231,7 +232,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
           category: 'abu_dhabi',
           latitude: 24.4965,
           longitude: 54.4042,
-          icon: Icons.holiday_village_rounded,
+          icon: Symbols.holiday_village_rounded,
         ),
       ];
     }
@@ -249,7 +250,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0131,
         longitude: 31.4913,
-        icon: Icons.location_city_rounded,
+        icon: Symbols.location_city_rounded,
       ),
       DistrictItem(
         id: 'eg_el_narges',
@@ -262,7 +263,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0185,
         longitude: 31.4721,
-        icon: Icons.apartment_rounded,
+        icon: Symbols.apartment_rounded,
       ),
       DistrictItem(
         id: 'eg_beit_el_watan',
@@ -275,7 +276,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0380,
         longitude: 31.5420,
-        icon: Icons.villa_rounded,
+        icon: Symbols.villa_rounded,
       ),
       DistrictItem(
         id: 'eg_el_yasmeen',
@@ -288,7 +289,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0450,
         longitude: 31.4750,
-        icon: Icons.domain_rounded,
+        icon: Symbols.domain_rounded,
       ),
       DistrictItem(
         id: 'eg_al_rehab',
@@ -301,7 +302,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0610,
         longitude: 31.4920,
-        icon: Icons.park_rounded,
+        icon: Symbols.park_rounded,
       ),
       DistrictItem(
         id: 'eg_madinaty',
@@ -314,7 +315,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'new_cairo',
         latitude: 30.0910,
         longitude: 31.6430,
-        icon: Icons.holiday_village_rounded,
+        icon: Symbols.holiday_village_rounded,
       ),
       DistrictItem(
         id: 'eg_sheikh_zayed',
@@ -327,7 +328,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'zayed_october',
         latitude: 30.0561,
         longitude: 30.9788,
-        icon: Icons.villa_rounded,
+        icon: Symbols.villa_rounded,
       ),
       DistrictItem(
         id: 'eg_beverly_hills',
@@ -340,7 +341,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'zayed_october',
         latitude: 30.0680,
         longitude: 30.9320,
-        icon: Icons.home_work_rounded,
+        icon: Symbols.home_work_rounded,
       ),
       DistrictItem(
         id: 'eg_6_october',
@@ -353,7 +354,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'zayed_october',
         latitude: 29.9723,
         longitude: 30.9426,
-        icon: Icons.apartment_rounded,
+        icon: Symbols.apartment_rounded,
       ),
       DistrictItem(
         id: 'eg_maadi',
@@ -366,7 +367,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'central_cairo',
         latitude: 29.9602,
         longitude: 31.2569,
-        icon: Icons.park_rounded,
+        icon: Symbols.park_rounded,
       ),
       DistrictItem(
         id: 'eg_heliopolis',
@@ -379,7 +380,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'central_cairo',
         latitude: 30.0890,
         longitude: 31.3280,
-        icon: Icons.location_city_rounded,
+        icon: Symbols.location_city_rounded,
       ),
       DistrictItem(
         id: 'eg_nasr_city',
@@ -392,7 +393,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'central_cairo',
         latitude: 30.0571,
         longitude: 31.3411,
-        icon: Icons.domain_rounded,
+        icon: Symbols.domain_rounded,
       ),
       DistrictItem(
         id: 'eg_zamalek',
@@ -405,7 +406,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'central_cairo',
         latitude: 30.0609,
         longitude: 31.2197,
-        icon: Icons.water_rounded,
+        icon: Symbols.water_rounded,
       ),
       DistrictItem(
         id: 'eg_dokki',
@@ -418,7 +419,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'central_cairo',
         latitude: 30.0382,
         longitude: 31.2119,
-        icon: Icons.business_rounded,
+        icon: Symbols.business_rounded,
       ),
       DistrictItem(
         id: 'eg_smouha',
@@ -431,7 +432,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'coastal',
         latitude: 31.2156,
         longitude: 29.9489,
-        icon: Icons.apartment_rounded,
+        icon: Symbols.apartment_rounded,
       ),
       DistrictItem(
         id: 'eg_agami_kilo21',
@@ -444,7 +445,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
         category: 'coastal',
         latitude: 31.0860,
         longitude: 29.7130,
-        icon: Icons.beach_access_rounded,
+        icon: Symbols.beach_access_rounded,
       ),
     ];
   }
@@ -551,7 +552,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: colorScheme.shadow.withValues(alpha: 0.18),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -573,7 +574,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        Icons.map_rounded,
+                        Symbols.map_rounded,
                         color: colorScheme.onPrimaryContainer,
                         size: 22,
                       ),
@@ -585,19 +586,13 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                         children: [
                           Text(
                             loc.tr('pickDistrictOrCompound'),
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             loc.tr('searchOnGoogleMaps'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -619,7 +614,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: loc.tr('searchDistrictsPlaceholder'),
-                        prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary, size: 20),
+                        prefixIcon: Icon(Symbols.search_rounded, color: colorScheme.primary, size: 20),
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -634,7 +629,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                               ),
                             IconButton(
                               tooltip: loc.tr('openInGoogleMapsAction'),
-                              icon: Icon(Icons.travel_explore_rounded, color: colorScheme.secondary, size: 20),
+                              icon: Icon(Symbols.travel_explore_rounded, color: colorScheme.secondary, size: 20),
                               onPressed: _handleGoogleMapsSearch,
                             ),
                           ],
@@ -665,7 +660,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                         Expanded(
                           child: TashilButton.tonal(
                             onPressed: _isLocatingGps ? null : _handleGpsLocate,
-                            icon: _isLocatingGps ? Icons.hourglass_top_rounded : Icons.my_location_rounded,
+                            icon: _isLocatingGps ? Symbols.hourglass_top_rounded : Symbols.my_location_rounded,
                             label: _isLocatingGps
                                 ? loc.tr('locatingCurrentPosition')
                                 : loc.tr('useCurrentGpsLocation'),
@@ -675,7 +670,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                         const SizedBox(width: 8),
                         TashilAssistChip.outlined(
                           onPressed: () => setState(() => _showMapsUrlInput = !_showMapsUrlInput),
-                          icon: Icons.link_rounded,
+                          icon: Symbols.link_rounded,
                           label: loc.tr('pasteGoogleMapsLink'),
                         ),
                       ],
@@ -736,11 +731,11 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.search_off_rounded, size: 48, color: colorScheme.outline),
+                              Icon(Symbols.search_off_rounded, size: 48, color: colorScheme.outline),
                               const SizedBox(height: 10),
                               Text(
                                 loc.tr('searchDistrictsPlaceholder'),
-                                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -780,18 +775,12 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                               ),
                               title: Text(
                                 localizedName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-                                  color: isCurrent ? colorScheme.primary : colorScheme.onSurface,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                                  color: isCurrent ? colorScheme.primary : colorScheme.onSurface),
                               ),
                               subtitle: Text(
                                 '$localizedCity • ${item.latitude.toStringAsFixed(3)}, ${item.longitude.toStringAsFixed(3)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                               trailing: TashilButton.text(
                                 height: 32,
@@ -823,10 +812,10 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
 
     return [
       _buildFilterPill('all', loc.tr('allDistrictsTab')),
-      _buildFilterPill('new_cairo', 'القاهرة الجديدة والتجمع'),
-      _buildFilterPill('zayed_october', 'الشيخ زايد و 6 أكتوبر'),
-      _buildFilterPill('central_cairo', 'المعادي ومصر الجديدة ووسط البلد'),
-      _buildFilterPill('coastal', 'الإسكندرية والساحل الشمالي'),
+      _buildFilterPill('new_cairo', AppLocalizations.trStatic('uiCopy140')),
+      _buildFilterPill('zayed_october', AppLocalizations.trStatic('uiCopy135')),
+      _buildFilterPill('central_cairo', AppLocalizations.trStatic('uiCopy144')),
+      _buildFilterPill('coastal', AppLocalizations.trStatic('uiCopy117')),
     ];
   }
 

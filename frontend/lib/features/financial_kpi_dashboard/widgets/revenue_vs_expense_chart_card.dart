@@ -6,6 +6,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class RevenueVsExpenseChartCard extends StatelessWidget {
   final List<MonthlyCashFlowPoint> history;
@@ -52,7 +53,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.bar_chart_rounded, color: colorScheme.primary, size: 20),
+                      child: Icon(Symbols.bar_chart_rounded, color: colorScheme.primary, size: 20),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -61,12 +62,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         children: [
                           Text(
                             loc.tr('monthlyRevenueVsExpensesChartTitle'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: colorScheme.onSurface),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             loc.tr('netProfitCashFlowTrendSubtitle'),
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -78,9 +79,9 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 6,
                 children: [
-                  _buildLegendItem(loc.tr('grossIncomeLegend'), colorScheme.primary, colorScheme),
-                  _buildLegendItem(loc.tr('expensesLegend'), colorScheme.error, colorScheme),
-                  _buildLegendItem(loc.tr('netProfitLegend'), colorScheme.secondary, colorScheme),
+                  _buildLegendItem(context, loc.tr('grossIncomeLegend'), colorScheme.primary, colorScheme),
+                  _buildLegendItem(context, loc.tr('expensesLegend'), colorScheme.error, colorScheme),
+                  _buildLegendItem(context, loc.tr('netProfitLegend'), colorScheme.secondary, colorScheme),
                 ],
               ),
             ],
@@ -112,7 +113,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                           ),
                           child: Text(
                             '+${(pt.netProfit / 1000).toStringAsFixed(0)}k',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSecondaryContainer),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -156,11 +157,8 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                         // Month Label
                         Text(
                           monthName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -182,12 +180,12 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.trending_up_rounded, size: 18, color: colorScheme.secondary),
+                    Icon(Symbols.trending_up_rounded, size: 18, color: colorScheme.secondary),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         '${loc.tr('averageMonthlyNetProfit')}: ${CurrencyFormatter.formatAmount(history.last.netProfit, langCode: lang)} $currency',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: colorScheme.onSurface),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -204,7 +202,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
                 ),
                 child: Text(
                   loc.tr('yoyProfitGrowthRate'),
-                  style: TextStyle(color: colorScheme.onSecondaryContainer, fontSize: 10.5, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -214,7 +212,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, ColorScheme colorScheme) {
+  Widget _buildLegendItem(BuildContext context, String label, Color color, ColorScheme colorScheme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -226,7 +224,7 @@ class RevenueVsExpenseChartCard extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
         ),
       ],
     );

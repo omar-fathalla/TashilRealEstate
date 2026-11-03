@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tashil_real_estate/core/utils/image_utils.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Custom ScrollBehavior that allows smooth dragging with mouse, touch, and stylus.
 ///
@@ -175,7 +176,7 @@ class _TashilCarouselState extends State<TashilCarousel> {
           borderRadius: radius,
         ),
         child: Center(
-          child: Icon(Icons.photo_outlined, size: 40, color: colorScheme.onSurfaceVariant),
+          child: Icon(Symbols.photo_rounded, size: 40, color: colorScheme.onSurfaceVariant),
         ),
       );
     }
@@ -273,7 +274,7 @@ class _TashilCarouselState extends State<TashilCarousel> {
                         child: Padding(
                           padding: const EdgeInsets.all(6),
                           child: Icon(
-                            isRtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                            isRtl ? Symbols.chevron_right_rounded : Symbols.chevron_left_rounded,
                             color: theme.colorScheme.onSurface,
                             size: 20,
                           ),
@@ -303,7 +304,7 @@ class _TashilCarouselState extends State<TashilCarousel> {
                         child: Padding(
                           padding: const EdgeInsets.all(6),
                           child: Icon(
-                            isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                            isRtl ? Symbols.chevron_left_rounded : Symbols.chevron_right_rounded,
                             color: theme.colorScheme.onSurface,
                             size: 20,
                           ),
@@ -328,15 +329,12 @@ class _TashilCarouselState extends State<TashilCarousel> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.photo_library_outlined, color: theme.colorScheme.onSurface, size: 12),
+                      Icon(Symbols.photo_library_rounded, color: theme.colorScheme.onSurface, size: 12),
                       const SizedBox(width: 4),
                       Text(
                         '${_currentIndex + 1} / $count',
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),

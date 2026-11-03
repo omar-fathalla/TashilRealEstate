@@ -13,6 +13,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../models/dynamic_pricing_model.dart';
 import '../services/dynamic_pricing_optimizer_service.dart';
 import 'dynamic_yield_optimizer_dialog.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class DynamicPricingTabView extends StatefulWidget {
   final VoidCallback? onOpenFullYieldCurve;
@@ -114,7 +115,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                                 color: colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.bolt_rounded, color: colorScheme.onPrimaryContainer, size: 22),
+                              child: Icon(Symbols.bolt_rounded, color: colorScheme.onPrimaryContainer, size: 22),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -133,7 +134,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                                   const SizedBox(height: 2),
                                   Text(
                                     loc.tr('managedUnitsDynamicPricingTitle'),
-                                    style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -178,19 +179,19 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             children: [
                               Text(
                                 unitTitle,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 3),
                               Row(
                                 children: [
-                                  Icon(Icons.location_on_outlined, size: 12, color: colorScheme.onSurfaceVariant),
+                                  Icon(Symbols.location_on_rounded, size: 12, color: colorScheme.onSurfaceVariant),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       unitLocation,
-                                      style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -225,17 +226,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                                 children: [
                                   Text(
                                     loc.tr('oldRentLabel'),
-                                    style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${CurrencyFormatter.formatAmount(item.currentBaseRent, langCode: lang)} $currency',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600,
                                       color: colorScheme.onSurfaceVariant,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
+                                      decoration: TextDecoration.lineThrough),
                                   ),
                                 ],
                               ),
@@ -250,15 +248,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.trending_up_rounded, size: 14, color: colorScheme.onPrimaryContainer),
+                                  Icon(Symbols.trending_up_rounded, size: 14, color: colorScheme.onPrimaryContainer),
                                   const SizedBox(width: 4),
                                   Text(
                                     '+$surgePct%',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.onPrimaryContainer,
-                                    ),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.onPrimaryContainer),
                                   ),
                                 ],
                               ),
@@ -270,16 +265,13 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                                 children: [
                                   Text(
                                     loc.tr('newRentLabel'),
-                                    style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.bold),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${CurrencyFormatter.formatAmount(item.recommendedDynamicRent, langCode: lang)} $currency',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
+                                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary),
                                   ),
                                 ],
                               ),
@@ -295,7 +287,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             Expanded(
                               child: Text(
                                 loc.tr('priceUpdateSummary'),
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -303,7 +295,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             const SizedBox(width: 8),
                             Text(
                               '+${CurrencyFormatter.formatAmount(item.projectedAnnualNetGain, langCode: lang)} $currency / ${loc.tr('annualGainBadge')}',
-                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: colorScheme.tertiary),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.tertiary),
                             ),
                           ],
                         ),
@@ -324,23 +316,23 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.psychology_outlined, size: 16, color: colorScheme.secondary),
+                            Icon(Symbols.psychology_rounded, size: 16, color: colorScheme.secondary),
                             const SizedBox(width: 6),
                             Text(
                               loc.tr('pricingStrategyReason'),
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.secondary),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.secondary),
                             ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Text(
                           item.getStrategy(lang),
-                          style: TextStyle(fontSize: 11.5, color: colorScheme.onSurface, height: 1.4),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface, height: 1.4),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           loc.tr('confirmPriceApplicationDesc'),
-                          style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant, height: 1.35),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.35),
                         ),
                       ],
                     ),
@@ -365,12 +357,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       TashilConnectedButtonSegment<String>(
                         value: 'cancel',
                         label: loc.tr('cancel'),
-                        icon: Icons.close_rounded,
+                        icon: Symbols.close_rounded,
                       ),
                       TashilConnectedButtonSegment<String>(
                         value: 'confirm',
                         label: loc.tr('confirm'),
-                        icon: Icons.check_rounded,
+                        icon: Symbols.check_rounded,
                       ),
                     ],
                   ),
@@ -409,7 +401,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   const SizedBox(height: 16),
                   Text(
                     loc.tr('loading') == 'loading' ? 'جاري تحليل التسعير الديناميكي...' : loc.tr('loading'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -453,12 +445,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                         TashilConnectedButtonSegment(
                           value: 'table',
                           label: loc.tr('tableView'),
-                          icon: Icons.table_chart_rounded,
+                          icon: Symbols.table_chart_rounded,
                         ),
                         TashilConnectedButtonSegment(
                           value: 'grid',
                           label: loc.tr('cardsView'),
-                          icon: Icons.grid_view_rounded,
+                          icon: Symbols.grid_view_rounded,
                         ),
                       ],
                       onSelectionChanged: (mode) => setState(() => _viewMode = mode),
@@ -472,7 +464,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                           DynamicYieldOptimizerDialog.show(context);
                         }
                       },
-                      icon: Icons.show_chart_rounded,
+                      icon: Symbols.show_chart_rounded,
                       label: loc.tr('openFullYieldDialogBtn'),
                     ),
                   ],
@@ -530,7 +522,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   color: theme.colorScheme.onPrimary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.bolt_rounded, color: theme.colorScheme.onPrimary, size: 20),
+                child: Icon(Symbols.bolt_rounded, color: theme.colorScheme.onPrimary, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -539,12 +531,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   children: [
                     Text(
                       loc.tr('dynamicYieldOptimizerTitle'),
-                      style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       loc.tr('yieldEngineDescription'),
-                      style: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.75), fontSize: 11),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.75)),
                     ),
                   ],
                 ),
@@ -557,7 +549,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 ),
                 child: Text(
                   '+${summary.revenueIncreasePercentage.toStringAsFixed(1)}% ${loc.tr('annualYieldBoost')}',
-                  style: TextStyle(color: theme.colorScheme.onTertiaryContainer, fontWeight: FontWeight.bold, fontSize: 11),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onTertiaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -613,14 +605,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         children: [
           Text(
             title,
-            style: TextStyle(color: theme.colorScheme.onPrimary.withValues(alpha: 0.75), fontSize: 10.5),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.75)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: color, fontWeight: FontWeight.bold),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -640,12 +632,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
       ),
       child: Row(
         children: [
-          Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.primary, size: 18),
+          Icon(Symbols.auto_awesome_rounded, color: theme.colorScheme.primary, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               isAE ? loc.tr('uaeSeasonalityInsight') : loc.tr('egyptSeasonalityInsight'),
-              style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurface, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -703,14 +695,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   children: [
                     Text(
                       item.asset.name[lang] ?? item.asset.name['ar'] ?? '',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       item.asset.location[lang] ?? item.asset.location['ar'] ?? '',
-                      style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -725,7 +717,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 ),
                 child: Text(
                   '+${((item.dynamicMultiplier - 1.0) * 100).toStringAsFixed(0)}% ${loc.tr('multiplierBadge')}',
-                  style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 9.5),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -739,30 +731,49 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(loc.tr('currentRent'), style: TextStyle(fontSize: 9.5, color: colorScheme.onSurfaceVariant)),
-                    const SizedBox(height: 1),
-                    Text(
-                      '${CurrencyFormatter.formatAmount(item.currentBaseRent, langCode: lang)} $currency',
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.tr('currentRent'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '${CurrencyFormatter.formatAmount(item.currentBaseRent, langCode: lang)} $currency',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                      ),
+                    ],
+                  ),
                 ),
-                Icon(Icons.arrow_forward_rounded, size: 14, color: colorScheme.onSurfaceVariant),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(loc.tr('recommendedDynamicRent'), style: TextStyle(fontSize: 9.5, color: colorScheme.primary, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 1),
-                    Text(
-                      '${CurrencyFormatter.formatAmount(item.recommendedDynamicRent, langCode: lang)} $currency',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.primary),
-                    ),
-                  ],
+                Icon(Symbols.arrow_forward_rounded, size: 14, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        loc.tr('recommendedDynamicRent'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '${CurrencyFormatter.formatAmount(item.recommendedDynamicRent, langCode: lang)} $currency',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -771,7 +782,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
           // AI Strategy Snippet (Compact)
           Text(
             item.getStrategy(lang),
-            style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant, height: 1.3),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.3),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -796,7 +807,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
               ),
               TashilButton(
                 onPressed: isApplied ? null : () => _showApplyPriceConfirmation(item, currency, lang, loc),
-                icon: isApplied ? Icons.check_circle_rounded : Icons.bolt_rounded,
+                icon: isApplied ? Symbols.check_circle_rounded : Symbols.bolt_rounded,
                 label: isApplied ? loc.tr('priceApplied') : loc.tr('applyDynamicPriceBtn'),
                 variant: isApplied ? TashilButtonVariant.tonal : TashilButtonVariant.filled,
               ),
@@ -884,11 +895,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 16),
                             child: Text(
                               loc.tr('unitAndProperty'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -898,11 +906,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 12),
                             child: Text(
                               loc.tr('surgeMultiplierHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -912,11 +917,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 16),
                             child: Text(
                               loc.tr('rentComparisonHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -925,11 +927,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
                             child: Text(
                               loc.tr('aiStrategyHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -938,11 +937,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                           child: Center(
                             child: Text(
                               loc.tr('actionsHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1011,23 +1007,20 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       children: [
                         Text(
                           item.asset.name[lang] ?? item.asset.name['ar'] ?? '',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            Icon(Icons.location_on_outlined, size: 12, color: colorScheme.onSurfaceVariant),
+                            Icon(Symbols.location_on_rounded, size: 12, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
                                 item.asset.location[lang] ?? item.asset.location['ar'] ?? '',
-                                style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1061,16 +1054,13 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.bolt_rounded, size: 13, color: colorScheme.onPrimaryContainer),
+                        Icon(Symbols.bolt_rounded, size: 13, color: colorScheme.onPrimaryContainer),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             '+${((item.dynamicMultiplier - 1.0) * 100).toStringAsFixed(0)}% ${loc.tr('multiplierBadge')}',
-                            style: TextStyle(
-                              color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1082,7 +1072,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     const SizedBox(height: 4),
                     Text(
                       item.getDemandDrivers(lang).first,
-                      style: TextStyle(fontSize: 9.5, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1104,26 +1094,20 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.trending_up_rounded, size: 14, color: colorScheme.primary),
+                      Icon(Symbols.trending_up_rounded, size: 14, color: colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         '${CurrencyFormatter.formatAmount(item.recommendedDynamicRent, langCode: lang)} $currency',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
                       ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${loc.tr('currentRent')}: ${CurrencyFormatter.formatAmount(item.currentBaseRent, langCode: lang)} $currency',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: colorScheme.onSurfaceVariant,
-                      decoration: TextDecoration.lineThrough,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                      decoration: TextDecoration.lineThrough),
                   ),
                   const SizedBox(height: 3),
                   Container(
@@ -1134,11 +1118,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     ),
                     child: Text(
                       '+${CurrencyFormatter.formatAmount(item.projectedAnnualNetGain, langCode: lang)} $currency ${loc.tr('annualGainBadge')}',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onTertiaryContainer,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                        color: colorScheme.onTertiaryContainer),
                     ),
                   ),
                 ],
@@ -1156,11 +1137,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 children: [
                   Text(
                     item.getStrategy(lang),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.35,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                      height: 1.35),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1177,7 +1155,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                           ),
                           child: Text(
                             tag,
-                            style: TextStyle(fontSize: 9, color: colorScheme.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         );
                       }).toList(),
@@ -1223,7 +1201,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                         height: 32,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         onPressed: isApplied ? null : () => _showApplyPriceConfirmation(item, currency, lang, loc),
-                        icon: isApplied ? Icons.check_rounded : Icons.bolt_rounded,
+                        icon: isApplied ? Symbols.check_rounded : Symbols.bolt_rounded,
                         label: isApplied ? loc.tr('priceApplied') : loc.tr('applyBtn'),
                         variant: isApplied ? TashilButtonVariant.tonal : TashilButtonVariant.filled,
                       ),
@@ -1271,12 +1249,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 TashilConnectedButtonSegment(
                   value: 'table',
                   label: loc.tr('tableView'),
-                  icon: Icons.table_chart_rounded,
+                  icon: Symbols.table_chart_rounded,
                 ),
                 TashilConnectedButtonSegment(
                   value: 'grid',
                   label: loc.tr('cardsView'),
-                  icon: Icons.grid_view_rounded,
+                  icon: Symbols.grid_view_rounded,
                 ),
               ],
               onSelectionChanged: (mode) => setState(() => _multipliersViewMode = mode),
@@ -1338,11 +1316,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 16),
                             child: Text(
                               loc.tr('seasonNameHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1352,11 +1327,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 14),
                             child: Text(
                               loc.tr('activeMonthsHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1366,11 +1338,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 14),
                             child: Text(
                               loc.tr('multiplierSurgeHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1380,11 +1349,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 16),
                             child: Text(
                               loc.tr('expectedOccupancyHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1394,11 +1360,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(end: 14),
                             child: Text(
                               loc.tr('targetRegionHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1407,11 +1370,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                             padding: const EdgeInsetsDirectional.only(start: 8, end: 16),
                             child: Text(
                               loc.tr('seasonStrategyHeader'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant),
                             ),
                           ),
                         ),
@@ -1476,26 +1436,20 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       children: [
                         Text(
                           item.getSeasonName(lang),
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            Icon(Icons.event_available_rounded, size: 12, color: colorScheme.onSurfaceVariant),
+                            Icon(Symbols.event_available_rounded, size: 12, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
                                 loc.tr('seasonalDemandWindow'),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1525,17 +1479,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                     ),
-                    child: Icon(Icons.calendar_month_rounded, size: 16, color: colorScheme.primary),
+                    child: Icon(Symbols.calendar_month_rounded, size: 16, color: colorScheme.primary),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item.getActiveMonths(lang),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1562,16 +1513,13 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.bolt_rounded, size: 13, color: colorScheme.onPrimaryContainer),
+                      Icon(Symbols.bolt_rounded, size: 13, color: colorScheme.onPrimaryContainer),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           item.surgeMultiplierDisplay,
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1597,19 +1545,13 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     children: [
                       Text(
                         '${item.expectedOccupancyPct}%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.secondary,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.secondary),
                       ),
                       Text(
                         loc.tr('occupancy'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -1643,17 +1585,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                     ),
-                    child: Icon(Icons.location_on_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+                    child: Icon(Symbols.location_on_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item.getTargetRegion(lang),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1673,11 +1612,8 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 children: [
                   Text(
                     item.getAiStrategy(lang),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.35,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant,
+                      height: 1.35),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1691,15 +1627,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.trending_up_rounded, size: 12, color: colorScheme.onTertiaryContainer),
+                        Icon(Symbols.trending_up_rounded, size: 12, color: colorScheme.onTertiaryContainer),
                         const SizedBox(width: 3),
                         Text(
                           item.getImpactOnYield(lang),
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onTertiaryContainer,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                            color: colorScheme.onTertiaryContainer),
                         ),
                       ],
                     ),
@@ -1789,14 +1722,14 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   children: [
                     Text(
                       item.getSeasonName(lang),
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       item.getActiveMonths(lang),
-                      style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1811,7 +1744,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 ),
                 child: Text(
                   item.surgeMultiplierDisplay,
-                  style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 10),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -1828,11 +1761,11 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on_outlined, size: 13, color: colorScheme.onSurfaceVariant),
+                    Icon(Symbols.location_on_rounded, size: 13, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(
                       item.getTargetRegion(lang),
-                      style: TextStyle(fontSize: 10.5, color: colorScheme.onSurface),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -1845,15 +1778,12 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.trending_up_rounded, size: 12, color: colorScheme.onTertiaryContainer),
+                      Icon(Symbols.trending_up_rounded, size: 12, color: colorScheme.onTertiaryContainer),
                       const SizedBox(width: 3),
                       Text(
                         item.getImpactOnYield(lang),
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onTertiaryContainer,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.bold,
+                          color: colorScheme.onTertiaryContainer),
                       ),
                     ],
                   ),
@@ -1863,7 +1793,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
           ),
           Text(
             item.getAiStrategy(lang),
-            style: TextStyle(fontSize: 10.5, color: colorScheme.onSurfaceVariant, height: 1.3),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: colorScheme.onSurfaceVariant, height: 1.3),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1877,7 +1807,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
       return const [
         PeakMultiplierSeasonItem(
           id: 'uae_winter_tourism',
-          icon: Icons.celebration_rounded,
+          icon: Symbols.celebration_rounded,
           seasonName: {
             'ar': 'ذروة السياحة الشتوية والمعارض العالمية',
             'en': 'Winter Tourism & Global Expos Peak',
@@ -1908,7 +1838,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         ),
         PeakMultiplierSeasonItem(
           id: 'uae_corporate_rera',
-          icon: Icons.business_center_rounded,
+          icon: Symbols.business_center_rounded,
           seasonName: {
             'ar': 'فترة الأعمال وتجديد عقود ريرا',
             'en': 'Business Inflow & RERA Index Window',
@@ -1939,7 +1869,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         ),
         PeakMultiplierSeasonItem(
           id: 'uae_summer_promotion',
-          icon: Icons.wb_sunny_rounded,
+          icon: Symbols.wb_sunny_rounded,
           seasonName: {
             'ar': 'العروض الصيفية وحماية الإشغال التام',
             'en': 'Summer Promotion & Zero Vacancy',
@@ -1973,7 +1903,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
       return const [
         PeakMultiplierSeasonItem(
           id: 'eg_summer_coast',
-          icon: Icons.beach_access_rounded,
+          icon: Symbols.beach_access_rounded,
           seasonName: {
             'ar': 'موسم صيف الساحل الشمالي والمصايف',
             'en': 'North Coast Summer Vacation Surge',
@@ -2004,7 +1934,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         ),
         PeakMultiplierSeasonItem(
           id: 'eg_academic_influx',
-          icon: Icons.school_rounded,
+          icon: Symbols.school_rounded,
           seasonName: {
             'ar': 'موسم الطلاب والجامعات الدولية',
             'en': 'University & Expat Academic Influx',
@@ -2035,7 +1965,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         ),
         PeakMultiplierSeasonItem(
           id: 'eg_zayed_urban',
-          icon: Icons.location_city_rounded,
+          icon: Symbols.location_city_rounded,
           seasonName: {
             'ar': 'النمو السكني ومواكبة التضخم',
             'en': 'Urban Inflow & Inflation Benchmark',
@@ -2066,7 +1996,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
         ),
         PeakMultiplierSeasonItem(
           id: 'eg_coast_winter',
-          icon: Icons.ac_unit_rounded,
+          icon: Symbols.ac_unit_rounded,
           seasonName: {
             'ar': 'الموسم الشتوي المنخفض والعقود المرنة',
             'en': 'Winter Coast Low-Overhead Period',

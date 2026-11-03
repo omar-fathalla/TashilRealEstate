@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'tashil_navigation_bar.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive Showcase Dialog for Material Design 3 Navigation Bar & Badges.
 class M3NavigationBarShowcaseDialog extends StatefulWidget {
@@ -46,7 +47,7 @@ class _M3NavigationBarShowcaseDialogState
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Symbols.close_rounded),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -66,31 +67,31 @@ class _M3NavigationBarShowcaseDialogState
               child: TashilNavigationBar(
                 destinations: [
                   TashilNavigationDestination(
-                    icon: Icons.add_home_work_outlined,
-                    selectedIcon: Icons.add_home_work_rounded,
+                    icon: Symbols.add_home_work_rounded,
+                    selectedIcon: Symbols.add_home_work_rounded,
                     label: 'رفع العقار',
                     isSelected: _selectedIndex == 0,
                     onTap: () => setState(() => _selectedIndex = 0),
                   ),
                   TashilNavigationDestination(
-                    icon: Icons.auto_awesome_outlined,
-                    selectedIcon: Icons.auto_awesome_rounded,
+                    icon: Symbols.auto_awesome_rounded,
+                    selectedIcon: Symbols.auto_awesome_rounded,
                     label: 'التقييم',
                     badgeLabel: 'AI',
                     isSelected: _selectedIndex == 1,
                     onTap: () => setState(() => _selectedIndex = 1),
                   ),
                   TashilNavigationDestination(
-                    icon: Icons.analytics_outlined,
-                    selectedIcon: Icons.analytics_rounded,
+                    icon: Symbols.analytics_rounded,
+                    selectedIcon: Symbols.analytics_rounded,
                     label: 'عقار ماب',
                     hasBadgeDot: true,
                     isSelected: _selectedIndex == 2,
                     onTap: () => setState(() => _selectedIndex = 2),
                   ),
                   TashilNavigationDestination(
-                    icon: Icons.tune_outlined,
-                    selectedIcon: Icons.tune_rounded,
+                    icon: Symbols.tune_rounded,
+                    selectedIcon: Symbols.tune_rounded,
                     label: 'الإعدادات',
                     isSelected: _selectedIndex == 3,
                     onTap: () => setState(() => _selectedIndex = 3),

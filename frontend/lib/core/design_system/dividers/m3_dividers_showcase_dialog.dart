@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/dialogs/tashil_modal_dialo
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'tashil_divider.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Interactive showcase dialog demonstrating Google Material Design 3 (M3) Divider guidelines:
 /// https://m3.material.io/components/divider/guidelines
@@ -45,11 +46,11 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
         final isArabic = locale.languageCode == 'ar';
 
         return TashilModalDialog(
-          title: isArabic ? 'منظومة الفواصل M3 (Dividers Suite)' : 'M3 Dividers Design Suite',
+          title: isArabic ? AppLocalizations.trStatic('uiCopy311') : 'M3 Dividers Design Suite',
           subtitle: isArabic
-              ? 'المواصفات القياسية لفواصل ماتيريال ديزاين 3 مع إرشادات (Do) و (Caution)'
+              ? AppLocalizations.trStatic('uiCopy147')
               : 'Google Material Design 3 official divider specifications with Do and Caution guidelines',
-          icon: Icons.linear_scale_rounded,
+          icon: Symbols.linear_scale_rounded,
           maxWidth: 800,
           maxHeight: 760,
           footer: Row(
@@ -68,7 +69,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 // 1. M3 "DO" Rule: Full-width Divider in Cards
                 _buildSectionHeader(
                   title: isArabic
-                      ? '1. قاعدة (Do): فاصل يفصل بين المحتوى والإجراءات التفاعلية في البطاقة'
+                      ? AppLocalizations.trStatic('uiCopy008')
                       : '1. (Do): Full-width divider separating content and interactive card actions',
                   badgeColor: const Color(0xFF16A34A),
                   badgeText: 'DO',
@@ -77,7 +78,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 const SizedBox(height: 8),
                 Text(
                   isArabic
-                      ? 'استخدم فاصلاً بعرض الحاوية بالكامل (Full-width) للفصل بين النصوص الوصفية غير التفاعلية ومنطقة الأزرار التفاعلية.'
+                      ? AppLocalizations.trStatic('uiCopy110')
                       : 'Use full-width divider lines to separate interactive and non-interactive areas of a container such as a card.',
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
@@ -94,13 +95,13 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isArabic ? 'فيلا راقية بالتجمع الخامس' : 'Luxury Villa in Fifth Settlement',
+                              isArabic ? AppLocalizations.trStatic('uiCopy256') : 'Luxury Villa in Fifth Settlement',
                               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               isArabic
-                                  ? 'تشطيب فاخر مع حديقة خاصة وحمام سباحة، موقع استراتيجي بالقرب من الخدمات.'
+                                  ? AppLocalizations.trStatic('uiCopy171')
                                   : 'Premium finish with private garden and pool, prime location near amenities.',
                               style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
@@ -117,20 +118,20 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                         child: Row(
                           children: [
                             TashilButton(
-                              label: isArabic ? 'قراءة المزيد' : 'Read more',
+                              label: isArabic ? AppLocalizations.trStatic('uiCopy259') : 'Read more',
                               variant: TashilButtonVariant.filled,
                               onPressed: () {},
                             ),
                             const Spacer(),
                             TashilIconButton(
-                              icon: Icons.bookmark_border_rounded,
-                              tooltip: isArabic ? 'حفظ' : 'Bookmark',
+                              icon: Symbols.bookmark_border_rounded,
+                              tooltip: isArabic ? AppLocalizations.trStatic('uiCopy197') : 'Bookmark',
                               onPressed: () {},
                             ),
                             const SizedBox(width: 8),
                             TashilIconButton(
-                              icon: Icons.share_outlined,
-                              tooltip: isArabic ? 'مشاركة' : 'Share',
+                              icon: Symbols.share_rounded,
+                              tooltip: isArabic ? AppLocalizations.trStatic('uiCopy291') : 'Share',
                               onPressed: () {},
                             ),
                           ],
@@ -144,7 +145,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 // 2. M3 "DO" Rule: Inset List Divider
                 _buildSectionHeader(
                   title: isArabic
-                      ? '2. قاعدة (Do): الفواصل الداخلية للقوائم (Inset Dividers)'
+                      ? AppLocalizations.trStatic('uiCopy016')
                       : '2. (Do): Inset Dividers for Lists',
                   badgeColor: const Color(0xFF16A34A),
                   badgeText: 'DO',
@@ -153,7 +154,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 const SizedBox(height: 8),
                 Text(
                   isArabic
-                      ? 'استخدم الفواصل الداخلية التي تبدأ مع بداية النص لتجنب قطع الأيقونات أو الصور الرمزية في القوائم، مع دعم كامل للاتجاهين (RTL / LTR).'
+                      ? AppLocalizations.trStatic('uiCopy109')
                       : 'Use inset dividers to group list items aligning with the text after leading avatars/icons.',
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
@@ -163,23 +164,23 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                   child: Column(
                     children: [
                       _buildListItem(
-                        icon: Icons.apartment_rounded,
-                        title: isArabic ? 'برج الياسمين - وحدة 402' : 'Al Yasmin Tower - Unit 402',
-                        subtitle: isArabic ? 'عقد إيجار نشط • 22,000 ج.م' : 'Active Lease • 22,000 EGP',
+                        icon: Symbols.apartment_rounded,
+                        title: isArabic ? AppLocalizations.trStatic('uiCopy161') : 'Al Yasmin Tower - Unit 402',
+                        subtitle: isArabic ? AppLocalizations.trStatic('uiCopy245') : 'Active Lease • 22,000 EGP',
                         theme: theme,
                       ),
                       const TashilDivider.listTextInset(),
                       _buildListItem(
-                        icon: Icons.storefront_rounded,
-                        title: isArabic ? 'مكتب إداري - التجمع الخامس' : 'Commercial Office - New Cairo',
-                        subtitle: isArabic ? 'قيد المراجعة • 45,000 ج.م' : 'Under Review • 45,000 EGP',
+                        icon: Symbols.storefront_rounded,
+                        title: isArabic ? AppLocalizations.trStatic('uiCopy303') : 'Commercial Office - New Cairo',
+                        subtitle: isArabic ? AppLocalizations.trStatic('uiCopy261') : 'Under Review • 45,000 EGP',
                         theme: theme,
                       ),
                       const TashilDivider.listTextInset(),
                       _buildListItem(
-                        icon: Icons.cottage_rounded,
-                        title: isArabic ? 'فيلا بالم هيلز - القطامية' : 'Palm Hills Villa - Katameya',
-                        subtitle: isArabic ? 'مجدول للصيانة • زيارة فنية' : 'Maintenance Scheduled',
+                        icon: Symbols.cottage_rounded,
+                        title: isArabic ? AppLocalizations.trStatic('uiCopy255') : 'Palm Hills Villa - Katameya',
+                        subtitle: isArabic ? AppLocalizations.trStatic('uiCopy277') : 'Maintenance Scheduled',
                         theme: theme,
                       ),
                     ],
@@ -190,7 +191,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 // 3. M3 "CAUTION" Rule: Spare Full-Width Dividers
                 _buildSectionHeader(
                   title: isArabic
-                      ? '3. قاعدة (Caution): تجنب الإفراط في الفواصل حتى لا يزدحم التصميم'
+                      ? AppLocalizations.trStatic('uiCopy023')
                       : '3. (Caution): Use full-width dividers sparingly to prevent clutter',
                   badgeColor: const Color(0xFFD97706),
                   badgeText: 'CAUTION',
@@ -199,7 +200,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 const SizedBox(height: 8),
                 Text(
                   isArabic
-                      ? 'الإفراط في وضع خطوط فواصل عريضة بين كل سطر يجعل الشاشة مزدحمة ومشوشة بصرياً. المسافات البيضاء وظلال الحاويات كافية في كثير من الأحيان.'
+                      ? AppLocalizations.trStatic('uiCopy118')
                       : 'Use full-width dividers sparingly. Too many divider lines will make an interface look cluttered.',
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
@@ -210,15 +211,15 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      isArabic ? 'معاينة المقارنة بين التصميمين:' : 'Toggle visual comparison:',
+                      isArabic ? AppLocalizations.trStatic('uiCopy296') : 'Toggle visual comparison:',
                       style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     TashilButton(
                       label: _showClutteredDividerComparison
-                          ? (isArabic ? 'عرض التصميم المريح النظيف' : 'Show Clean Design')
-                          : (isArabic ? 'عرض التصميم المزدحم الخاطئ' : 'Show Cluttered Design'),
+                          ? (isArabic ? AppLocalizations.trStatic('uiCopy243') : 'Show Clean Design')
+                          : (isArabic ? AppLocalizations.trStatic('uiCopy244') : 'Show Cluttered Design'),
                       variant: TashilButtonVariant.tonal,
-                      icon: Icons.compare_arrows_rounded,
+                      icon: Symbols.compare_arrows_rounded,
                       onPressed: () {
                         setState(() {
                           _showClutteredDividerComparison = !_showClutteredDividerComparison;
@@ -232,21 +233,21 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      _buildCompactRow('إيجار شهر سبتمبر', '22,000 ج.م', theme),
+                      _buildCompactRow(AppLocalizations.trStatic('uiCopy102'), '22,000 ج.م', theme),
                       if (_showClutteredDividerComparison)
                         const TashilDivider.fullWidth(height: 12)
                       else
                         const SizedBox(height: 8),
-                      _buildCompactRow('رسوم الصيانة الدورية', '1,500 ج.م', theme),
+                      _buildCompactRow('رسوم الصيانة الدورية', AppLocalizations.trStatic('uiCopy003'), theme),
                       if (_showClutteredDividerComparison)
                         const TashilDivider.fullWidth(height: 12)
                       else
                         const SizedBox(height: 8),
-                      _buildCompactRow('استهلاك المياه والكهرباء', '850 ج.م', theme),
+                      _buildCompactRow(AppLocalizations.trStatic('uiCopy114'), '850 ج.م', theme),
                       const SizedBox(height: 8),
                       const TashilDivider.fullWidth(height: 1),
                       const SizedBox(height: 8),
-                      _buildCompactRow('الإجمالي المستحق', '24,350 ج.م', theme, isBold: true),
+                      _buildCompactRow('الإجمالي المستحق', AppLocalizations.trStatic('uiCopy018'), theme, isBold: true),
                     ],
                   ),
                 ),
@@ -255,10 +256,10 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 // 4. Vertical Dividers
                 _buildSectionHeader(
                   title: isArabic
-                      ? '4. الفواصل الرأسية (Vertical Dividers) للأشرطة والمقاييس'
+                      ? AppLocalizations.trStatic('uiCopy027')
                       : '4. Vertical Dividers for Toolbars and Metric Tiles',
                   badgeColor: colorScheme.primary,
-                  badgeText: 'M3 SPECS',
+                  badgeText: AppLocalizations.trStatic('uiCopy064'),
                   theme: theme,
                 ),
                 const SizedBox(height: 12),
@@ -273,9 +274,9 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildMetricStat('142', isArabic ? 'إجمالي العقارات' : 'Total Units', theme),
+                        _buildMetricStat('142', isArabic ? AppLocalizations.trStatic('uiCopy091') : 'Total Units', theme),
                         const TashilVerticalDivider.inset(width: 24, inset: 4),
-                        _buildMetricStat('94.2%', isArabic ? 'نسبة الإشغال' : 'Occupancy', theme),
+                        _buildMetricStat('94.2%', isArabic ? AppLocalizations.trStatic('uiCopy318') : 'Occupancy', theme),
                         const TashilVerticalDivider.inset(width: 24, inset: 4),
                         _buildMetricStat('0', isArabic ? 'متأخرات معلقة' : 'Overdue', theme),
                       ],
@@ -287,7 +288,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 // 5. Labelled Divider
                 _buildSectionHeader(
                   title: isArabic
-                      ? '5. الفواصل المعنونة (Labelled Dividers) للفصل النصي و "أو"'
+                      ? AppLocalizations.trStatic('uiCopy029')
                       : '5. Labelled Dividers (Section titles & "OR" separators)',
                   badgeColor: colorScheme.secondary,
                   badgeText: 'LABELLED',
@@ -295,7 +296,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
                 ),
                 const SizedBox(height: 12),
                 TashilDivider.withLabel(
-                  label: isArabic ? 'أو المتابعة عبر' : 'OR CONTINUE WITH',
+                  label: isArabic ? AppLocalizations.trStatic('uiCopy088') : 'OR CONTINUE WITH',
                 ),
               ],
             ),
@@ -321,7 +322,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
           ),
           child: Text(
             badgeText,
-            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(width: 8),
@@ -361,7 +362,7 @@ class _M3DividersShowcaseDialogState extends State<M3DividersShowcaseDialog> {
               ],
             ),
           ),
-          Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant),
+          Icon(Symbols.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant),
         ],
       ),
     );

@@ -210,8 +210,8 @@ class TashilButton extends StatelessWidget {
             backgroundColor: backgroundColor,
             foregroundColor: foregroundColor,
             overlayColor: isDark
-                ? Colors.white.withValues(alpha: 0.12)
-                : Colors.black.withValues(alpha: 0.10),
+                ? colorScheme.onPrimary.withValues(alpha: 0.12)
+                : colorScheme.shadow.withValues(alpha: 0.10),
             shape: RoundedRectangleBorder(borderRadius: radius),
             minimumSize: Size(width ?? 0, height),
             padding: effectivePadding,

@@ -10,6 +10,7 @@ import '../models/viewing_appointment_model.dart';
 import '../models/voice_broker_message.dart';
 import '../services/gemini_live_voice_broker_service.dart';
 import 'gemini_voice_broker_orb.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class GeminiVoiceBrokerDialog extends StatefulWidget {
   final PropertyItem property;
@@ -64,7 +65,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
 
   void _sendInitialGreeting() {
     final greetingMsg = _service.processUserSpeech(
-      userSpeechText: 'مرحباً',
+      userSpeechText: AppLocalizations.trStatic('uiCopy285'),
       property: widget.property,
       dialect: _selectedDialect,
       conversationHistory: [],
@@ -158,9 +159,9 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
   String _getSampleQueryForDialect(VoiceBrokerDialect dialect) {
     switch (dialect) {
       case VoiceBrokerDialect.egyptianArabic:
-        return 'هل الشقة قريبة من محطة المترو والمواصلات؟ واحجزلي موعد معاينة بكرة';
+        return AppLocalizations.trStatic('uiCopy322');
       case VoiceBrokerDialect.emiratiArabic:
-        return 'كم شيك بالسنة لهالعقار؟ وهل قريب من محطة المترو والمارينا؟';
+        return AppLocalizations.trStatic('uiCopy266');
       case VoiceBrokerDialect.english:
         return 'Is this property close to the Metro? I would like to book a viewing for tomorrow.';
       case VoiceBrokerDialect.hindi:
@@ -292,14 +293,14 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                       width: 44,
                       height: 44,
                       color: theme.colorScheme.surfaceContainerHighest,
-                      child: Icon(Icons.apartment, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                      child: Icon(Symbols.apartment_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
                     ),
                   )
                 : Container(
                     width: 44,
                     height: 44,
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: Icon(Icons.apartment, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                    child: Icon(Symbols.apartment_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
                   ),
           ),
           const SizedBox(width: 12),
@@ -320,22 +321,16 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                       ),
                       child: Text(
                         widget.property.countryCode == 'AE' ? '🇦🇪 UAE' : '🇪🇬 EGY',
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         widget.property.getTitle(lang),
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -345,11 +340,8 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                 const SizedBox(height: 2),
                 Text(
                   '${CurrencyFormatter.formatAmount(widget.property.pricePerMonth, langCode: lang)} ${widget.property.currencyCode == 'AED' ? loc.tr('currency_ae') : loc.tr('currency_eg')}',
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -361,7 +353,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
 
           // Close Dialog
           TashilIconButton(
-            icon: Icons.close_rounded,
+            icon: Symbols.close_rounded,
             tooltip: loc.tr('close'),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -375,7 +367,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
       initialValue: _selectedDialect,
       onSelected: (dialect) {
         setState(() => _selectedDialect = dialect);
-        _handleSendMessage('مرحباً، تحدث معي بهذه اللهجة من فضلك.');
+        _handleSendMessage(AppLocalizations.trStatic('uiCopy287'));
       },
       color: theme.colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
@@ -387,11 +379,11 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           value: VoiceBrokerDialect.egyptianArabic,
           child: Row(
             children: [
-              const Text('🇪🇬', style: TextStyle(fontSize: 16)),
+              Text('🇪🇬', style: Theme.of(context).textTheme.titleMedium!),
               const SizedBox(width: 8),
               Text(
                 loc.tr('dialectEG'),
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -400,11 +392,11 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           value: VoiceBrokerDialect.emiratiArabic,
           child: Row(
             children: [
-              const Text('🇦🇪', style: TextStyle(fontSize: 16)),
+              Text('🇦🇪', style: Theme.of(context).textTheme.titleMedium!),
               const SizedBox(width: 8),
               Text(
                 loc.tr('dialectAE'),
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -413,11 +405,11 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           value: VoiceBrokerDialect.english,
           child: Row(
             children: [
-              const Text('🇬🇧', style: TextStyle(fontSize: 16)),
+              Text('🇬🇧', style: Theme.of(context).textTheme.titleMedium!),
               const SizedBox(width: 8),
               Text(
                 loc.tr('dialectEN'),
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -426,11 +418,11 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           value: VoiceBrokerDialect.hindi,
           child: Row(
             children: [
-              const Text('🇮🇳', style: TextStyle(fontSize: 16)),
+              Text('🇮🇳', style: Theme.of(context).textTheme.titleMedium!),
               const SizedBox(width: 8),
               Text(
                 loc.tr('dialectHI'),
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -446,20 +438,17 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_getDialectFlag(_selectedDialect), style: const TextStyle(fontSize: 14)),
+            Text(_getDialectFlag(_selectedDialect), style: Theme.of(context).textTheme.bodyMedium!),
             if (!isMobile) ...[
               const SizedBox(width: 6),
               Text(
                 _getDialectLabel(_selectedDialect, loc),
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold),
               ),
             ],
             const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurfaceVariant, size: 18),
+            Icon(Symbols.arrow_drop_down_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
           ],
         ),
       ),
@@ -544,11 +533,8 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: color,
+                  fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -576,7 +562,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                     color: theme.colorScheme.primaryContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.smart_toy_rounded, color: theme.colorScheme.primary, size: 16),
+                  child: Icon(Symbols.smart_toy_rounded, color: theme.colorScheme.primary, size: 16),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -599,11 +585,8 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                   ),
                   child: Text(
                     msg.text,
-                    style: TextStyle(
-                      color: isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                      height: 1.4),
                   ),
                 ),
               ),
@@ -615,7 +598,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                     color: theme.colorScheme.primaryContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.person_rounded, color: theme.colorScheme.onPrimaryContainer, size: 16),
+                  child: Icon(Symbols.person_rounded, color: theme.colorScheme.onPrimaryContainer, size: 16),
                 ),
               ],
             ],
@@ -647,16 +630,13 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
         children: [
           Row(
             children: [
-              Icon(Icons.verified_rounded, color: theme.colorScheme.primary, size: 18),
+              Icon(Symbols.verified_rounded, color: theme.colorScheme.primary, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   loc.tr('appointmentBookedSuccess'),
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold),
                 ),
               ),
               Container(
@@ -667,11 +647,8 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                 ),
                 child: Text(
                   'CRM Sync ✓',
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onPrimary,
+                    fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -679,22 +656,22 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           Divider(color: theme.colorScheme.outlineVariant, height: 16),
           Row(
             children: [
-              Icon(Icons.person_outline, color: theme.colorScheme.onSurfaceVariant, size: 14),
+              Icon(Symbols.person_rounded, color: theme.colorScheme.onSurfaceVariant, size: 14),
               const SizedBox(width: 6),
               Text(
                 '${loc.tr('clientNameLabel')}: ${appointment.clientName}',
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 12),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.calendar_today_rounded, color: theme.colorScheme.onSurfaceVariant, size: 14),
+              Icon(Symbols.calendar_today_rounded, color: theme.colorScheme.onSurfaceVariant, size: 14),
               const SizedBox(width: 6),
               Text(
                 '${loc.tr('appointmentDateLabel')}: ${appointment.scheduledDateTime.toString().substring(0, 16)}',
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 12),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -720,16 +697,13 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
             children: [
               Text(
                 loc.tr('affordabilityAnalysisTitle'),
-                style: TextStyle(
-                  color: theme.colorScheme.secondary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
               Text(
                 '${loc.tr('monthlyInstallmentEst')}: ${result.estimatedMonthlyPayment.toInt()}',
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 12),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -741,11 +715,8 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
             ),
             child: Text(
               result.affordabilityLevel,
-              style: TextStyle(
-                color: theme.colorScheme.onSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSecondary,
+                fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -765,9 +736,9 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: facilities.map((f) {
-          IconData icon = Icons.train_rounded;
-          if (f.facilityType == 'school') icon = Icons.school_rounded;
-          if (f.facilityType == 'mall') icon = Icons.local_mall_rounded;
+          IconData icon = Symbols.train_rounded;
+          if (f.facilityType == 'school') icon = Symbols.school_rounded;
+          if (f.facilityType == 'mall') icon = Symbols.local_mall_rounded;
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -778,17 +749,14 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                 Expanded(
                   child: Text(
                     f.facilityName,
-                    style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 12),
+                    style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   f.travelTimeMinutes,
-                  style: TextStyle(
-                    color: theme.colorScheme.tertiary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.tertiary,
+                    fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -820,7 +788,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
             side: BorderSide(color: theme.colorScheme.outlineVariant),
             label: Text(
               prompts[index],
-              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 11),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(color: theme.colorScheme.onSurface),
             ),
             onPressed: () => _handleSendMessage(prompts[index]),
           );
@@ -843,7 +811,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
         children: [
           // Audio Mute/Unmute Toggle
           TashilIconButton(
-            icon: _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            icon: _isMuted ? Symbols.volume_off_rounded : Symbols.volume_up_rounded,
             tooltip: _isMuted ? loc.tr('audioMuted') : loc.tr('audioUnmuted'),
             onPressed: () {
               setState(() {
@@ -860,10 +828,10 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
           Expanded(
             child: TextField(
               controller: _textController,
-              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: loc.tr('sendVoiceMessage'),
-                hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
+                hintStyle: Theme.of(context).textTheme.labelMedium!.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 filled: true,
                 fillColor: theme.colorScheme.surface,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -887,7 +855,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
 
           // Send Text Button
           TashilIconButton(
-            icon: Icons.send_rounded,
+            icon: Symbols.send_rounded,
             tooltip: loc.tr('send'),
             variant: TashilIconButtonVariant.filled,
             onPressed: () => _handleSendMessage(_textController.text),
@@ -902,7 +870,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
 
               return TashilFloatingActionButton(
                 onPressed: _toggleMicListening,
-                icon: isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                icon: isListening ? Symbols.stop_rounded : Symbols.mic_rounded,
                 tooltip: loc.tr('talkToVoiceBroker'),
                 size: TashilFabSize.small,
               );

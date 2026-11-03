@@ -138,11 +138,8 @@ class TashilModalDialog extends StatelessWidget {
                             children: [
                               Text(
                                 title,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                  fontSize: 16.0,
-                                ),
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -150,10 +147,7 @@ class TashilModalDialog extends StatelessWidget {
                                 const SizedBox(height: 2.0),
                                 Text(
                                   subtitle!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 12.0,
-                                  ),
+                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),

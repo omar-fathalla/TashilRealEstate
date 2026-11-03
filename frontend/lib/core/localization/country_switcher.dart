@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'country_controller.dart';
 import 'app_localizations.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class CountrySwitcher extends StatelessWidget {
   final bool isCompact;
@@ -70,7 +71,7 @@ class CountrySwitcher extends StatelessWidget {
                 children: [
                   Text(
                     currentCountry == 'EG' ? '🇪🇬' : '🇦🇪',
-                    style: const TextStyle(fontSize: 16),
+                    style: Theme.of(context).textTheme.titleMedium!,
                   ),
                   if (showLabel) ...[
                     const SizedBox(width: 6),
@@ -84,7 +85,7 @@ class CountrySwitcher extends StatelessWidget {
                   ],
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.keyboard_arrow_down_rounded,
+                    Symbols.keyboard_arrow_down_rounded,
                     size: 16,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -122,7 +123,7 @@ class CountrySwitcher extends StatelessWidget {
                   : colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(flag, style: const TextStyle(fontSize: 16)),
+            child: Text(flag, style: Theme.of(context).textTheme.titleMedium!),
           ),
           const SizedBox(width: 12),
           Column(
@@ -138,17 +139,14 @@ class CountrySwitcher extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 10,
-                ),
+                style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
           const SizedBox(width: 16),
           if (isSelected)
             Icon(
-              Icons.check_rounded,
+              Symbols.check_rounded,
               size: 18,
               color: colorScheme.primary,
             )
