@@ -160,8 +160,8 @@ class _EmailActionHandlerScreenState extends State<EmailActionHandlerScreen> {
                           height: 80,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                              begin: AlignmentDirectional.topStart,
+                              end: AlignmentDirectional.bottomEnd,
                               colors: [
                                 colorScheme.primary,
                                 colorScheme.secondary,

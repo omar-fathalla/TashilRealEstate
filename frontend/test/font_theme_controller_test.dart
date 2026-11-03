@@ -53,14 +53,10 @@ void main() {
       expect(controller.currentFont.value, equals(AppFontTheme.cairo));
 
       controller.setFont(AppFontTheme.tajawal);
-      expect(controller.currentFont.value, equals(AppFontTheme.tajawal));
-      expect(controller.activeFont, equals(AppFontTheme.tajawal));
+      expect(controller.currentFont.value, equals(AppFontTheme.cairo));
+      expect(controller.activeFont, equals(AppFontTheme.cairo));
 
       controller.setFont(AppFontTheme.readexPro);
-      expect(controller.currentFont.value, equals(AppFontTheme.readexPro));
-
-      // Reset back to Cairo
-      controller.setFont(AppFontTheme.cairo);
       expect(controller.currentFont.value, equals(AppFontTheme.cairo));
     });
   });

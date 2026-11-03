@@ -144,8 +144,8 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: TashilBannerColors.gradient(colorScheme),
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
+                    begin: AlignmentDirectional.topEnd,
+                    end: AlignmentDirectional.bottomStart,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [

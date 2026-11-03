@@ -454,7 +454,17 @@ class RentCollectionService {
         final unitTitle = prop.titles['ar'] ?? prop.titles['en'] ?? 'وحدة عقارية';
         final tenantName = prop.tenantName ?? 'المستأجر الحالي';
         final tenantPhone = prop.tenantPhone ?? '+201000000000';
-        final cleanPropId = prop.id.replaceAll('prop-', '').replaceAll('-', '');
+        final cleanPropId = prop.id.replaceAll(RegExp(r'[^0-9]'), '');
+        final emirateCode = switch (prop.cityCode) {
+          'dubai' => 'DXB',
+          'abu_dhabi' => 'AUH',
+          'sharjah' => 'SHJ',
+          'ajman' => 'AJM',
+          'ras_al_khaimah' => 'RAK',
+          'fujairah' => 'FUJ',
+          'umm_al_quwain' => 'UAQ',
+          _ => 'UAE',
+        };
 
         if (existingMap.containsKey(key)) {
           final idx = existingMap[key]!;
@@ -478,7 +488,8 @@ class RentCollectionService {
           // Generate new invoice for this property installment
           final monthNum = inst.monthKey.replaceAll('-', '');
           final invNumber = 'INV-${prop.countryCode}-$monthNum-$cleanPropId';
-          final contractNumber = '${prop.countryCode}-2026-${prop.cityCode.toUpperCase()}-${cleanPropId.length > 4 ? cleanPropId.substring(cleanPropId.length - 4) : cleanPropId}';
+          final suffix = cleanPropId.isEmpty ? '1001' : cleanPropId.padLeft(4, '0').substring(cleanPropId.length > 4 ? cleanPropId.length - 4 : 0);
+          final contractNumber = '${prop.countryCode}-2026-$emirateCode-$suffix';
 
           final newInvoice = RentInvoiceModel(
             id: invId,

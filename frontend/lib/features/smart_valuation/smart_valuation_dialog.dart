@@ -1202,8 +1202,8 @@ class _SmartValuationDialogState extends State<SmartValuationDialog> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: TashilBannerColors.gradient(colorScheme),
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
+                begin: AlignmentDirectional.topEnd,
+                end: AlignmentDirectional.bottomStart,
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [

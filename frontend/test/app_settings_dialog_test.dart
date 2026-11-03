@@ -128,19 +128,11 @@ void main() {
       expect(find.byIcon(Symbols.title_rounded), findsWidgets);
       expect(find.byIcon(Symbols.menu_book_rounded), findsWidgets);
 
-      // Verify category filtering: Filter by Headlines & Bold using its icon
-      await tester.tap(find.byIcon(Symbols.title_rounded));
-      await tester.pumpAndSettle();
-
-      // In headlines category, Changa should be visible
-      expect(find.textContaining('Changa'), findsOneWidget);
-
-      // Select a new font
-      await tester.tap(find.textContaining('Changa'));
-      await tester.pumpAndSettle();
-
-      // Verify active font updated in FontThemeController
-      expect(FontThemeController.instance.activeFont, AppFontTheme.changa);
+      // Only Cairo is offered. Tajawal and Lemonada are not choices.
+      expect(find.textContaining('Cairo'), findsWidgets);
+      expect(find.textContaining('Changa'), findsNothing);
+      expect(find.textContaining('Lemonada'), findsNothing);
+      expect(FontThemeController.instance.activeFont, AppFontTheme.cairo);
 
       // Close modal using Apply button
       await tester.tap(find.text('تطبيق الخط'));

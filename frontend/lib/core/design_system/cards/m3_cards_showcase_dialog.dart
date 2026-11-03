@@ -148,7 +148,7 @@ class _M3CardsShowcaseDialogState extends State<M3CardsShowcaseDialog> {
 
                 // View Switcher Bar using TashilConnectedButtonGroup
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                  padding: const EdgeInsetsDirectional.fromSTEB(24, 16, 24, 0),
                   child: Center(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,

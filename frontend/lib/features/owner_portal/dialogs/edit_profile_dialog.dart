@@ -730,7 +730,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                 child: Column(
                   children: [
                     Stack(
-                      alignment: Alignment.bottomRight,
+                      alignment: AlignmentDirectional.bottomEnd,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(3),
@@ -890,7 +890,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           isUAE ? loc.tr('emiratesIdLabel') : loc.tr('idCardPreviewTitle'),
                         ),
                         child: Stack(
-                          alignment: Alignment.bottomRight,
+                          alignment: AlignmentDirectional.bottomEnd,
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),

@@ -79,7 +79,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
 
           // 2. Category Filter Bar (TashilConnectedButtonGroup)
           Padding(
-            padding: EdgeInsets.fromLTRB(
+            padding: EdgeInsetsDirectional.fromSTEB(
               isMobile ? 16 : 24,
               16,
               isMobile ? 16 : 24,
@@ -93,11 +93,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
             child: ValueListenableBuilder<AppFontTheme>(
               valueListenable: FontThemeController.instance.currentFont,
               builder: (context, activeFont, _) {
-                final filteredFonts = _selectedCategory == null
-                    ? AppFontTheme.values
-                    : AppFontTheme.values
-                        .where((f) => f.category == _selectedCategory)
-                        .toList();
+                final filteredFonts = [AppFontTheme.cairo];
 
                 return ListView.separated(
                   padding: EdgeInsets.symmetric(

@@ -578,8 +578,8 @@ class _InvestmentSimulatorDialogState extends State<InvestmentSimulatorDialog> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: TashilBannerColors.gradient(theme.colorScheme),
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [

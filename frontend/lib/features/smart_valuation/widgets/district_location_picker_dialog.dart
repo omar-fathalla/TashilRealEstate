@@ -607,7 +607,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
 
               // 2. Search Box + Quick GPS Locate + Google Maps Web
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 20, 8),
                 child: Column(
                   children: [
                     TextField(

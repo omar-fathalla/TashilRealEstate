@@ -167,7 +167,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
             // Animated Dropdown Menu Window anchored to the field
             Positioned.fill(
               child: Align(
-                alignment: Alignment.topLeft,
+                alignment: AlignmentDirectional.topStart,
                 child: CompositedTransformFollower(
                   link: _layerLink,
                   showWhenUnlinked: false,
@@ -210,7 +210,7 @@ class _TashilDropdownMenuState<T> extends State<TashilDropdownMenu<T>>
                             children: [
                               if (widget.isSearchable) ...[
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                                  padding: const EdgeInsetsDirectional.fromSTEB(10, 8, 10, 6),
                                   child: TextField(
                                     controller: _searchController,
                                     autofocus: true,

@@ -346,7 +346,7 @@ class TashilListTile extends StatelessWidget {
                 const SizedBox(width: 16.0), // Official M3 16dp spacing
                 Align(
                   alignment: lines == TashilListTileLines.threeLine
-                      ? Alignment.topRight
+                      ? AlignmentDirectional.topEnd
                       : Alignment.center,
                   child: trailing!,
                 ),

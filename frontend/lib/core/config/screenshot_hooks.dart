@@ -126,7 +126,12 @@ class ScreenshotHooks {
     return RentInvoiceModel(
       id: 'shot-legal-$emirate',
       invoiceNumber: 'INV-AE-2026-$emirate',
-      contractNumber: 'AE-2026-${cityCode.toUpperCase()}-2204',
+      contractNumber: 'AE-2026-${switch (cityCode) {
+        'abu_dhabi' => 'AUH',
+        'sharjah' => 'SHJ',
+        'ajman' => 'AJM',
+        _ => 'DXB',
+      }}-2204',
       countryCode: 'AE',
       unitTitle: 'Waterfront apartment',
       unitNumber: '2204',

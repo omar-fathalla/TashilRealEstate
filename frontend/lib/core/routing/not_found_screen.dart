@@ -18,6 +18,17 @@ class NotFoundScreen extends StatelessWidget {
         final colorScheme = Theme.of(context).colorScheme;
         return Scaffold(
           backgroundColor: colorScheme.surface,
+          appBar: AppBar(
+            leading: IconButton(
+              tooltip: loc.tr('back'),
+              icon: Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Symbols.arrow_forward_rounded
+                    : Symbols.arrow_back_rounded,
+              ),
+              onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+            ),
+          ),
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),

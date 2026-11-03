@@ -2597,7 +2597,7 @@ class AppLocalizations {
       'signAsLessor': 'Sign as landlord',
       'signAsTenant': 'Sign as tenant',
       'egGovHeader': 'Arab republic of egypt',
-      'uaeGovHeader': 'United arab emirates',
+      'uaeGovHeader': 'United Arab Emirates',
       'dubaiLandDept': 'Dubai land department — real estate regulatory agency (RERA)',
       'egyptMinistryJustice': 'Real estate publicity department — ministry of justice',
       'verifiedDigitalLease': 'Verified digital tenancy',

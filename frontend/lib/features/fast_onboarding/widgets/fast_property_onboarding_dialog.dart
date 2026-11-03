@@ -746,7 +746,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
 
                               // Optional Quick GPS Assist Chip
                               Padding(
-                                padding: const EdgeInsets.only(top: 6, right: 4, left: 4),
+                                padding: const EdgeInsetsDirectional.only(top: 6, end: 4, start: 4),
                                 child: Row(
                                   children: [
                                     TashilAssistChip.outlined(

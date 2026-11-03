@@ -147,8 +147,8 @@ class _MarketIndexViewState extends State<MarketIndexView> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: TashilBannerColors.gradient(colorScheme),
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          begin: AlignmentDirectional.topEnd,
+          end: AlignmentDirectional.bottomStart,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [

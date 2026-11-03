@@ -1004,7 +1004,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

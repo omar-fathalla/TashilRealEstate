@@ -57,7 +57,7 @@ class _VirtualStagingComparisonSliderState
                   width: splitX.clamp(0.0, totalWidth),
                   child: ClipRect(
                     child: OverflowBox(
-                      alignment: Alignment.topLeft,
+                      alignment: AlignmentDirectional.topStart,
                       maxWidth: totalWidth,
                       maxHeight: widget.height,
                       child: ImageUtils.cachedImage(
