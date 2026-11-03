@@ -1,20 +1,20 @@
 const admin = require('firebase-admin');
 
-// Refuse to touch any project unless the caller names it and confirms.
-// This script can write Auth users and Firestore documents for that project.
-const projectFlag = process.argv.indexOf('--project');
-const projectId = projectFlag >= 0 ? process.argv[projectFlag + 1] : '';
-const confirm = process.env.TASHIL_SEED_CONFIRM;
+function loopback(value) {
+  if (!value) return false;
+  const host = value.split(':')[0].trim().toLowerCase();
+  return host === 'localhost' || host === '::1' || host.startsWith('127.');
+}
 
-if (!projectId || confirm !== 'I_UNDERSTAND_THIS_WRITES_DATA') {
+if (!loopback(process.env.FIRESTORE_EMULATOR_HOST) || !loopback(process.env.FIREBASE_AUTH_EMULATOR_HOST)) {
   console.error(
-    'Refusing to run backend/seed.js. Pass --project <firebase-project-id> and set TASHIL_SEED_CONFIRM=I_UNDERSTAND_THIS_WRITES_DATA. For local data use backend/seed_emulator.js instead.',
+    'Refusing to run backend/seed.js. It only runs when FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST point at loopback. Use npm run seed:emulator for the demo accounts.',
   );
   process.exit(1);
 }
 
 admin.initializeApp({
-  projectId,
+  projectId: process.env.FIREBASE_PROJECT_ID || 'tashil-proptech-os',
 });
 
 const auth = admin.auth();
