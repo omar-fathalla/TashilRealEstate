@@ -6,7 +6,9 @@ import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dar
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
+import 'package:tashil_real_estate/core/utils/uae_emirate.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
@@ -62,6 +64,37 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     super.initState();
     _syncInvoices();
     PropertyLifecycleService().propertiesNotifier.addListener(_syncInvoices);
+    final emirate = ScreenshotHooks.legalEmirate;
+    if (emirate != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openHookedLegalNotice(emirate));
+    }
+  }
+
+  void _openHookedLegalNotice(String emirate) {
+    if (!mounted) return;
+    RentInvoiceModel? match;
+    for (final invoice in _service.invoicesNotifier.value) {
+      if (invoice.countryCode != 'AE' || invoice.isDeleted) continue;
+      final resolved = resolveUaeEmirate(
+        cityCode: invoice.cityCode,
+        district: invoice.district,
+      );
+      final key = switch (resolved) {
+        UaeEmirate.dubai => 'dubai',
+        UaeEmirate.abuDhabi => 'abu_dhabi',
+        UaeEmirate.sharjah => 'sharjah',
+        UaeEmirate.ajman => 'ajman',
+        _ => '',
+      };
+      if (key == emirate) {
+        match = invoice;
+        break;
+      }
+    }
+    LegalWarningNoticeDialog.show(
+      context,
+      match ?? ScreenshotHooks.demoLegalInvoice(emirate),
+    );
   }
 
   void _syncInvoices() {

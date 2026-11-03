@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/config/demo_data.dart';
+import 'package:tashil_real_estate/core/config/firebase_emulator.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/routing/route_access.dart';
@@ -18,6 +20,10 @@ void main() {
 
   test('production builds do not publish sample listings or fake permits', () {
     expect(DemoData.enabled, isFalse);
+    expect(FirebaseEmulatorConfig.enabled, isFalse);
+    expect(ScreenshotHooks.enabled, isFalse);
+    expect(ScreenshotHooks.details, isNull);
+    expect(ScreenshotHooks.legalEmirate, isNull);
     expect(PropertyItem.marketplaceSamples, isEmpty);
     final dubai = PropertyItem.sampleProperties.where((item) => item.cityCode == 'dubai');
     expect(dubai, isNotEmpty);

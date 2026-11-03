@@ -10,9 +10,11 @@ import '../../core/widgets/public_header_navbar.dart';
 import '../semantic_search/models/semantic_search_result_model.dart';
 import '../semantic_search/services/ai_semantic_vector_search_service.dart';
 import '../semantic_search/widgets/visual_search_modal.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 import 'models/property_item.dart';
 import 'repositories/property_repository.dart';
 import 'widgets/property_card.dart';
+import 'widgets/property_details_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/menus/tashil_menus.dart';
 import 'package:tashil_real_estate/core/design_system/sliders/tashil_sliders.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
@@ -32,6 +34,7 @@ class PublicMarketplaceScreen extends StatefulWidget {
 
 class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   final TextEditingController _searchController = TextEditingController();
+  bool _openedHookedListing = false;
   String _selectedCityCode = 'all';
   String _selectedTypeCode = 'all';
   double _maxPrice = 80000;
@@ -58,8 +61,44 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   @override
   void initState() {
     super.initState();
+    final hookedQuery = ScreenshotHooks.searchQuery;
+    if (hookedQuery != null) {
+      _searchController.text = hookedQuery;
+    }
     _maxPrice = CountryController.isUAE ? 40000 : 80000;
     CountryController.currentCountry.addListener(_onCountryChanged);
+    if (ScreenshotHooks.details != null) {
+      PropertyRepository().updatesNotifier.addListener(_maybeOpenHookedListing);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenHookedListing());
+    }
+  }
+
+  void _maybeOpenHookedListing() {
+    if (!mounted || _openedHookedListing) return;
+    final which = ScreenshotHooks.details;
+    if (which == null) return;
+    final props = PropertyRepository().getPropertiesByCountry('AE');
+    PropertyItem? item;
+    if (which == 'permit') {
+      for (final property in props) {
+        if (!property.isSample &&
+            property.cityCode == 'dubai' &&
+            property.advertisingPermitNumber.trim().isNotEmpty) {
+          item = property;
+          break;
+        }
+      }
+    } else if (which == 'sample') {
+      for (final property in props) {
+        if (property.isSample && property.cityCode == 'dubai') {
+          item = property;
+          break;
+        }
+      }
+    }
+    if (item == null) return;
+    _openedHookedListing = true;
+    PropertyDetailsDialog.show(context, item);
   }
 
   void _onCountryChanged() {
@@ -77,6 +116,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   @override
   void dispose() {
     CountryController.currentCountry.removeListener(_onCountryChanged);
+    PropertyRepository().updatesNotifier.removeListener(_maybeOpenHookedListing);
     _searchController.dispose();
     super.dispose();
   }

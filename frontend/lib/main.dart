@@ -16,6 +16,8 @@ import 'package:tashil_real_estate/core/services/remote_config_service.dart';
 import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
 import 'package:tashil_real_estate/core/services/performance_monitoring_service.dart';
 import 'package:tashil_real_estate/core/services/crash_reporting_service.dart';
+import 'package:tashil_real_estate/core/config/firebase_emulator.dart';
+import 'package:tashil_real_estate/core/config/screenshot_hooks.dart';
 
 /// Global M3 ScrollBehavior for Tashil Real Estate.
 /// Enables smooth dragging with mouse, touch, and stylus across all platforms and web,
@@ -73,12 +75,20 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Enterprise Firebase Services (non-blocking so UI mounts instantly)
-  CrashReportingService().initialize();
-  unawaited(AppCheckService().initialize());
-  unawaited(RemoteConfigService().initialize());
-  unawaited(FcmNotificationService().initialize());
-  unawaited(PerformanceMonitoringService().initialize());
+  if (FirebaseEmulatorConfig.enabled) {
+    await FirebaseEmulatorConfig.connect();
+  } else {
+    // Production services stay off when the build is pointed at emulators,
+    // so a screenshot run never talks to the live project.
+    CrashReportingService().initialize();
+    unawaited(AppCheckService().initialize());
+    unawaited(RemoteConfigService().initialize());
+    unawaited(FcmNotificationService().initialize());
+    unawaited(PerformanceMonitoringService().initialize());
+  }
+
+  ScreenshotHooks.applyFromUri();
+  await ScreenshotHooks.signInIfRequested();
 
   runApp(const TashilRealEstateApp());
 }
