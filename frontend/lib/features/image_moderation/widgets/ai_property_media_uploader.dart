@@ -158,7 +158,7 @@ class _AiPropertyMediaUploaderState extends State<AiPropertyMediaUploader> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final it = items[index];
                       final isApproved = it.isApproved;

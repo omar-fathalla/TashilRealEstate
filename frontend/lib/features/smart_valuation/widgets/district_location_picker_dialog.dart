@@ -745,7 +745,7 @@ class _DistrictLocationPickerDialogState extends State<DistrictLocationPickerDia
                         shrinkWrap: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         itemCount: filteredDistricts.length,
-                        separatorBuilder: (_, __) => const TashilDivider.inset(),
+                        separatorBuilder: (_, _) => const TashilDivider.inset(),
                         itemBuilder: (context, index) {
                           final item = filteredDistricts[index];
                           final localizedName = item.getLocalizedName(lang);

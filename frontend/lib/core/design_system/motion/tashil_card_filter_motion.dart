@@ -72,7 +72,7 @@ class TashilCardFilterMotion<T> extends StatelessWidget {
                   shrinkWrap: shrinkWrap,
                   physics: physics,
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => SizedBox(height: spacing),
+                  separatorBuilder: (_, _) => SizedBox(height: spacing),
                   itemBuilder: (context, index) {
                     final item = items[index];
                     return TashilStaggeredEntrance(

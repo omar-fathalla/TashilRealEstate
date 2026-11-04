@@ -396,7 +396,7 @@ class _FirebaseEnterpriseHubDialogState extends State<FirebaseEnterpriseHubDialo
               alignment: AlignmentDirectional.centerEnd,
               child: actionButton,
             ),
-            if (child != null) child,
+            ?child,
           ],
         ),
       ),

@@ -44,7 +44,7 @@ class _MarketplaceVisitorPreviewDialogState extends State<MarketplaceVisitorPrev
 
     return ValueListenableBuilder<Locale>(
       valueListenable: LocaleController.currentLocale,
-      builder: (context, _, __) {
+      builder: (context, _, _) {
         return TashilDialogFrame(
           backgroundColor: theme.colorScheme.surface,
           insetPadding: EdgeInsets.symmetric(

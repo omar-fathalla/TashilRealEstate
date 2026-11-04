@@ -762,7 +762,7 @@ class _LeaseDocumentViewState extends State<LeaseDocumentView> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: cheques.length,
-        separatorBuilder: (_, __) => Divider(height: 1, color: theme.colorScheme.outlineVariant),
+        separatorBuilder: (_, _) => Divider(height: 1, color: theme.colorScheme.outlineVariant),
         itemBuilder: (context, index) {
           final c = cheques[index];
           final isCleared = c.status == 'cleared';

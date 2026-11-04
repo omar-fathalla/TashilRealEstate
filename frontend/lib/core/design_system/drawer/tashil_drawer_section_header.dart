@@ -48,7 +48,7 @@ class TashilDrawerSectionHeader extends StatelessWidget {
               letterSpacing: 0.2,
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

@@ -561,11 +561,11 @@ class _M3DialogRoute<T> extends RawDialogRoute<T> {
     super.barrierLabel,
     super.barrierColor,
     required super.transitionDuration,
-    required Duration reverseTransitionDuration,
+    required this._reverseTransitionDuration,
     super.transitionBuilder,
     super.settings,
     super.anchorPoint,
-  }) : _reverseTransitionDuration = reverseTransitionDuration;
+  });
 
   final Duration _reverseTransitionDuration;
 
@@ -620,7 +620,7 @@ class TashilPageTransitionSwitcher extends StatelessWidget {
           alignment: Alignment.topCenter,
           children: <Widget>[
             ...previousChildren,
-            if (currentChild != null) currentChild,
+            ?currentChild,
           ],
         );
       },

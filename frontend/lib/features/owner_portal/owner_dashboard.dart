@@ -239,16 +239,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
     return ValueListenableBuilder<List<RentInvoiceModel>>(
       valueListenable: RentCollectionService().invoicesNotifier,
-      builder: (context, _, __) {
+      builder: (context, _, _) {
         return ValueListenableBuilder<List<LeaseContractModel>>(
           valueListenable: LegalClausesService().contractsNotifier,
-          builder: (context, _, __) {
+          builder: (context, _, _) {
             return ValueListenableBuilder<List<ManagedPropertyModel>>(
               valueListenable: PropertyLifecycleService().propertiesNotifier,
               builder: (context, props, _) {
                 return ValueListenableBuilder<List<Map<String, dynamic>>>(
                   valueListenable: AiVisionMaintenanceService().ticketsNotifier,
-                  builder: (context, _, __) {
+                  builder: (context, _, _) {
                     final targetCountry = CountryController.isUAE ? 'AE' : 'EG';
                     final countryProps = props.where((p) => p.countryCode == targetCountry).toList();
                     final propertiesCount = countryProps.length;
@@ -1701,16 +1701,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   ) {
     return ValueListenableBuilder<List<RentInvoiceModel>>(
       valueListenable: RentCollectionService().invoicesNotifier,
-      builder: (context, _, __) {
+      builder: (context, _, _) {
         return ValueListenableBuilder<List<LeaseContractModel>>(
           valueListenable: LegalClausesService().contractsNotifier,
-          builder: (context, _, __) {
+          builder: (context, _, _) {
             return ValueListenableBuilder<List<ManagedPropertyModel>>(
               valueListenable: PropertyLifecycleService().propertiesNotifier,
               builder: (context, props, _) {
                 return ValueListenableBuilder<List<Map<String, dynamic>>>(
                   valueListenable: AiVisionMaintenanceService().ticketsNotifier,
-                  builder: (context, _, __) {
+                  builder: (context, _, _) {
                     final targetCountry = CountryController.isUAE ? 'AE' : 'EG';
                     final countryProps = props.where((p) => p.countryCode == targetCountry).toList();
                     final propertiesCount = countryProps.length;
