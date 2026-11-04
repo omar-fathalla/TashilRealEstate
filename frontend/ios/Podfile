@@ -1,6 +1,10 @@
 # Uncomment this line to define a global platform for your project
 platform :ios, '15.0'
 
+# Last Firebase Apple SDK on CocoaPods that drops the compromised eMudhra roots.
+# FlutterFire 7.1.0 reads this when it is set; do not pin an older 12.x release.
+$FirebaseSDKVersion = '12.19.3'
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -27,9 +31,50 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+# TODO: remove patch_firebase_app_check_podspec_for_cocoapods once FlutterFire
+# publishes a firebase_app_check release whose podspec depends on
+# Firebase/AppCheck instead of the unpublished FirebaseAppCheck ~> 12.19.3 pod.
+def patch_firebase_app_check_podspec_for_cocoapods(ios_application_path)
+  require 'json'
+  plugins_file = File.expand_path('../.flutter-plugins-dependencies', ios_application_path)
+  unless File.exist?(plugins_file)
+    raise 'firebase_app_check podspec rewrite could not read .flutter-plugins-dependencies. Run flutter pub get first.'
+  end
+
+  plugins = JSON.parse(File.read(plugins_file))
+  ios_plugins = plugins.dig('plugins', 'ios') || []
+  app_check = ios_plugins.find { |plugin| plugin['name'] == 'firebase_app_check' }
+  if app_check.nil?
+    raise 'firebase_app_check podspec rewrite found no iOS plugin entry. Remove the rewrite only after FlutterFire no longer ships this pod.'
+  end
+
+  podspec_path = File.join(app_check['path'], 'ios', 'firebase_app_check.podspec')
+  unless File.exist?(podspec_path)
+    raise "firebase_app_check podspec rewrite could not find #{podspec_path}"
+  end
+
+  unpublished = "s.dependency 'FirebaseAppCheck', \"~> \#{firebase_sdk_version}\""
+  published = "s.dependency 'Firebase/AppCheck', \"~> \#{firebase_sdk_version}\""
+  original = File.read(podspec_path)
+  replacements = 0
+  patched = original.gsub(unpublished) do
+    replacements += 1
+    published
+  end
+
+  if replacements.positive?
+    File.write(podspec_path, patched)
+  elsif original.include?(published)
+    Pod::UI.warn 'firebase_app_check podspec already depends on Firebase/AppCheck. TODO: remove patch_firebase_app_check_podspec_for_cocoapods if FlutterFire has shipped that fix.'
+  else
+    raise 'firebase_app_check podspec rewrite matched nothing. The FirebaseAppCheck dependency line changed, so the CocoaPods pin was not updated. Update or remove patch_firebase_app_check_podspec_for_cocoapods in ios/Podfile.'
+  end
+end
+
 target 'Runner' do
   use_frameworks!
 
+  patch_firebase_app_check_podspec_for_cocoapods(File.dirname(File.realpath(__FILE__)))
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths

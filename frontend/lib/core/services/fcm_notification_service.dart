@@ -46,6 +46,7 @@ class FcmNotificationService {
   FcmNotificationService._internal();
 
   FirebaseMessaging? _messaging;
+  StreamSubscription<String>? _tokenRefreshSubscription;
   String? _fcmToken;
   bool _isInitialized = false;
 
@@ -87,10 +88,18 @@ class FcmNotificationService {
         }
       }
 
-      // 3. Obtain Device Push Token safely if permitted
+      // 3. Obtain the FCM device token if permitted.
+      // onRegistered is a Firebase Installation ID, not an FCM token.
       if (isAuthorized) {
         try {
-          _fcmToken = await _messaging!.getToken();
+          final messaging = _messaging!;
+          // ignore: deprecated_member_use
+          _tokenRefreshSubscription ??= messaging.onTokenRefresh.listen((token) {
+            _fcmToken = token;
+            debugPrint('🔑 FCM token refreshed');
+          });
+          // ignore: deprecated_member_use
+          _fcmToken = await messaging.getToken();
           debugPrint('🔑 FCM Device Token: $_fcmToken');
         } catch (tokenErr) {
           debugPrint('ℹ️ FCM token fetch note (e.g. Web VAPID missing in dev): $tokenErr');
