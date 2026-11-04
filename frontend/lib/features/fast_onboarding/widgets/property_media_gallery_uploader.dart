@@ -248,7 +248,7 @@ class _PropertyMediaGalleryUploaderState extends State<PropertyMediaGalleryUploa
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: widget.photoUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final url = widget.photoUrls[index];
                   final isCover = index == 0;

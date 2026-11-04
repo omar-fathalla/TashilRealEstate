@@ -235,7 +235,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
       builder: (context, currentCountry, child) {
         return ValueListenableBuilder<int>(
           valueListenable: PropertyRepository().updatesNotifier,
-          builder: (context, _, __) {
+          builder: (context, _, _) {
             final filteredList = _getFilteredProperties(currentCountry);
 
             return Scaffold(

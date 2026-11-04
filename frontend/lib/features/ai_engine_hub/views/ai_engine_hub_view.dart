@@ -67,7 +67,7 @@ class _AiEngineHubViewState extends State<AiEngineHubView> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 20),
+                    separatorBuilder: (_, _) => const SizedBox(height: 20),
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       return _buildServiceCard(context, category, loc, colorScheme, isMobile, lang);

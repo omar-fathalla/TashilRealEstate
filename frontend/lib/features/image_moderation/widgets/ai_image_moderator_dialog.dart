@@ -258,7 +258,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                                       child: ListView.separated(
                                         scrollDirection: Axis.horizontal,
                                         itemCount: filteredItems.length,
-                                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                        separatorBuilder: (_, _) => const SizedBox(width: 10),
                                         itemBuilder: (context, index) {
                                           final item = filteredItems[index];
                                           return SizedBox(
@@ -389,7 +389,7 @@ class _AiImageModeratorDialogState extends State<AiImageModeratorDialog> {
                     Image.network(
                       item.imagePathOrUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         color: theme.colorScheme.surfaceContainerHighest,
                         child: Icon(Symbols.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
                       ),

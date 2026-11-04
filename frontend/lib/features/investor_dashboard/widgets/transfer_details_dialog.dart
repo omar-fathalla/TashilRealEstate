@@ -285,7 +285,7 @@ class TransferDetailsDialog extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) trailing,
+        ?trailing,
       ],
     );
   }

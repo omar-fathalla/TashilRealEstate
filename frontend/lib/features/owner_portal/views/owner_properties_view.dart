@@ -1337,7 +1337,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                   width: 54,
                   height: 54,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     width: 54,
                     height: 54,
                     color: colorScheme.surfaceContainerHigh,
@@ -1661,7 +1661,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                   width: 54,
                   height: 54,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     width: 54,
                     height: 54,
                     color: colorScheme.surfaceContainerHigh,

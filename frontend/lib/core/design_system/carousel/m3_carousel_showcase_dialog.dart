@@ -207,7 +207,7 @@ class M3CarouselShowcaseDialog extends StatelessWidget {
                                   Image.network(
                                     item['image']!,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                                    errorBuilder: (_, _, _) => Container(
                                       color: colorScheme.surfaceContainerHigh,
                                       child: const Icon(Symbols.broken_image_rounded, size: 30),
                                     ),

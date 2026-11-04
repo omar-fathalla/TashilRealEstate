@@ -421,7 +421,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                     width: 70,
                                     height: 70,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                                    errorBuilder: (_, _, _) => Container(
                                       width: 70,
                                       height: 70,
                                       color: colorScheme.surfaceContainerHighest,
@@ -483,7 +483,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   width: 80,
                                   height: 80,
                                   color: colorScheme.surfaceContainerHighest,
@@ -613,7 +613,7 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: summary.cashFlowHistory.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final flow = summary.cashFlowHistory[index];
             final monthName = AiTranslationService.getLocalizedText(flow.monthName, lang);

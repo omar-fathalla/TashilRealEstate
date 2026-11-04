@@ -953,7 +953,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const TashilDivider.fullWidth(),
+                    separatorBuilder: (_, _) => const TashilDivider.fullWidth(),
                     itemBuilder: (context, index) {
                       final item = items[index];
                       return _buildTableRowItem(item, currency, lang, loc);
@@ -1386,7 +1386,7 @@ class _DynamicPricingTabViewState extends State<DynamicPricingTabView> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: seasons.length,
-                    separatorBuilder: (_, __) => const TashilDivider.fullWidth(),
+                    separatorBuilder: (_, _) => const TashilDivider.fullWidth(),
                     itemBuilder: (context, index) {
                       final item = seasons[index];
                       return _buildPeakMultiplierTableRow(item, colorScheme, lang, loc);

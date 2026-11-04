@@ -500,7 +500,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: summary.keyDrivers.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final driver = summary.keyDrivers[index];
             final title = AiTranslationService.getLocalizedText(driver.title, lang);
@@ -858,7 +858,7 @@ class _MarketIndexViewState extends State<MarketIndexView> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: summary.topDistricts.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               return _buildDistrictSingleCard(
                 summary.topDistricts[index],

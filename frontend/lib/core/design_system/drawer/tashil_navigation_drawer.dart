@@ -85,7 +85,7 @@ class TashilNavigationDrawer extends StatelessWidget {
             isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.stretch,
         children: [
           // 1. Header Slot
-          if (header != null) header!,
+          ?header,
 
           // 2. Scrollable Destinations Area
           Expanded(

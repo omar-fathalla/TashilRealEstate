@@ -294,7 +294,7 @@ class _DynamicYieldCurveTabViewState extends State<DynamicYieldCurveTabView> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _summary!.assetRecommendations.length,
-            separatorBuilder: (_, __) => Divider(color: colorScheme.outlineVariant, height: 1),
+            separatorBuilder: (_, _) => Divider(color: colorScheme.outlineVariant, height: 1),
             itemBuilder: (context, index) {
               final item = _summary!.assetRecommendations[index];
               final isSelected = index == _selectedAssetIndex;
@@ -409,7 +409,7 @@ class _DynamicYieldCurveTabViewState extends State<DynamicYieldCurveTabView> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _summary!.assetRecommendations.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final item = _summary!.assetRecommendations[index];
           final isSelected = index == _selectedAssetIndex;

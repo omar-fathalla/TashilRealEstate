@@ -35,7 +35,7 @@ class OwnerMaintenanceView extends StatelessWidget {
 
         return ValueListenableBuilder<List<Map<String, dynamic>>>(
           valueListenable: AiVisionMaintenanceService().ticketsNotifier,
-          builder: (context, _, __) {
+          builder: (context, _, _) {
             final tickets = AiVisionMaintenanceService().getTicketsForCountry(
               targetCountry,
               hasRealProps: hasRealProps,

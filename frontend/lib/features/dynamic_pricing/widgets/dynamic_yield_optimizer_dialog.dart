@@ -176,7 +176,7 @@ class _DynamicYieldOptimizerDialogState
                               Expanded(
                                 child: ListView.separated(
                                   itemCount: _summary!.assetRecommendations.length,
-                                  separatorBuilder: (_, __) => Divider(color: theme.colorScheme.outlineVariant, height: 1),
+                                  separatorBuilder: (_, _) => Divider(color: theme.colorScheme.outlineVariant, height: 1),
                                   itemBuilder: (context, index) {
                                     final item = _summary!.assetRecommendations[index];
                                     final isSelected = index == _selectedAssetIndex;

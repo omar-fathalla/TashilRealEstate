@@ -102,7 +102,7 @@ class _FontPickerDialogState extends State<FontPickerDialog> {
                     vertical: 12,
                   ),
                   itemCount: filteredFonts.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final font = filteredFonts[index];
                     final isSelected = font == activeFont;

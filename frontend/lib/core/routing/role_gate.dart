@@ -50,7 +50,7 @@ class RoleGate extends StatelessWidget {
       builder: (context, profile, _) {
         return ValueListenableBuilder<bool>(
           valueListenable: UserProfileService().roleConfirmed,
-          builder: (context, confirmed, __) {
+          builder: (context, confirmed, _) {
             final user = _currentUser();
             final matches = user != null && profile.uid == user.uid;
             return _decide(

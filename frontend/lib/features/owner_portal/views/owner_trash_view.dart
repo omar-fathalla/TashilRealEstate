@@ -49,10 +49,10 @@ class _OwnerTrashViewState extends State<OwnerTrashView> {
 
         return ValueListenableBuilder<List<RentInvoiceModel>>(
           valueListenable: RentCollectionService().invoicesNotifier,
-          builder: (context, _, __) {
+          builder: (context, _, _) {
             return ValueListenableBuilder<List<LeaseContractModel>>(
               valueListenable: LegalClausesService().contractsNotifier,
-              builder: (context, _, __) {
+              builder: (context, _, _) {
                 final deletedInvoices = RentCollectionService()
                     .getDeletedInvoicesForCountry(currentCountry);
                 final deletedContracts = LegalClausesService()

@@ -103,7 +103,7 @@ class CloudFunctionsService {
       final callable = functions.httpsCallable('sendCustomVerificationEmail');
       final response = await callable.call<Map<String, dynamic>>({
         'email': email,
-        if (continueUrl != null) 'continueUrl': continueUrl,
+        'continueUrl': ?continueUrl,
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
@@ -124,7 +124,7 @@ class CloudFunctionsService {
       final callable = functions.httpsCallable('sendCustomPasswordResetEmail');
       final response = await callable.call<Map<String, dynamic>>({
         'email': email,
-        if (continueUrl != null) 'continueUrl': continueUrl,
+        'continueUrl': ?continueUrl,
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {

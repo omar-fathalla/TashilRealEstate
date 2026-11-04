@@ -296,7 +296,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
                     width: 44,
                     height: 44,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       width: 44,
                       height: 44,
                       color: theme.colorScheme.surfaceContainerHighest,
@@ -788,7 +788,7 @@ class _GeminiVoiceBrokerDialogState extends State<GeminiVoiceBrokerDialog> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: prompts.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           return ActionChip(
             backgroundColor: theme.colorScheme.surfaceContainerHigh,

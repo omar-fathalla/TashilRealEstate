@@ -186,7 +186,7 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                         shrinkWrap: true,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: widget.suggestions.length,
-                        separatorBuilder: (_, __) => Divider(
+                        separatorBuilder: (_, _) => Divider(
                           height: 1,
                           thickness: 1,
                           indent: 16,
