@@ -160,10 +160,9 @@ service cloud.firestore {
     }
 
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties.
-      // Hidden, rented, and draft listings are visible only to their owner, agency, or SuperAdmin.
-      allow read: if resource.data.status == 'vacant'
-        || resource.data.is_published == true
+      // Anyone (including unauthenticated visitors) can read published listings. Unpublished
+      // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
+      allow read: if resource.data.get('is_published', false) == true
         || isSuperAdmin()
         || ownsListing()
         || agencyManagesResource();

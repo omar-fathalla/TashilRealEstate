@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
+const assert = require("node:assert/strict");
 const {
   initializeTestEnvironment,
   assertFails,
@@ -334,6 +335,39 @@ test("TAQ-47: the platform agency contact is server-managed", async () => {
 test("TAQ-47: a listing id must match its document id", async () => {
   await seed("Users/owner", { role: "Owner" });
   await assertFails(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner", { id: "someone-elses-id" })));
+});
+
+// --- TAQ-48: only published listings are public ---
+
+test("TAQ-48: a vacant but unpublished listing is hidden from the public", async () => {
+  await seed("Properties/prop-1", listing("owner", { status: "vacant", is_published: false }));
+  await seed("Properties/prop-2", (({ is_published: _omit, ...rest }) => ({ ...rest, id: "prop-2" }))(listing("owner")));
+  for (const reader of [anonDb(), db("stranger"), db("tenant", { role: "Tenant" }), db("agent2", { role: "AgencyAdmin", agency_id: "agency-2" })]) {
+    await assertFails(getDoc(doc(reader, "Properties/prop-1")));
+    await assertFails(getDoc(doc(reader, "Properties/prop-2")));
+  }
+  await assertFails(getDocs(query(collection(anonDb(), "Properties"), where("status", "==", "vacant"))));
+});
+
+test("TAQ-48: unpublished listings stay visible to their owner, agency, and SuperAdmin", async () => {
+  await seed("Properties/prop-1", listing("owner", { status: "vacant", is_published: false, agency_id: "agency-1" }));
+  await assertSucceeds(getDoc(doc(db("owner"), "Properties/prop-1")));
+  await assertSucceeds(getDoc(doc(db("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }), "Properties/prop-1")));
+  await assertSucceeds(getDoc(doc(db("root", { role: "SuperAdmin" }), "Properties/prop-1")));
+});
+
+test("TAQ-48: marketplace search over published listings still works", async () => {
+  await seed("Properties/pub-1", listing("owner", { id: "pub-1" }));
+  await seed("Properties/pub-2", listing("owner", { id: "pub-2", countryCode: "EG", currencyCode: "EGP" }));
+  await seed("Properties/hidden-1", listing("owner", { id: "hidden-1", is_published: false }));
+  const all = await assertSucceeds(getDocs(query(collection(anonDb(), "Properties"), where("is_published", "==", true))));
+  assert.deepEqual(all.docs.map((d) => d.id).sort(), ["pub-1", "pub-2"]);
+  const ae = await assertSucceeds(getDocs(query(
+    collection(anonDb(), "Properties"),
+    where("is_published", "==", true),
+    where("countryCode", "==", "AE"),
+  )));
+  assert.deepEqual(ae.docs.map((d) => d.id), ["pub-1"]);
 });
 
 // --- TAQ-17: lease documents are the source of truth for party checks ---
