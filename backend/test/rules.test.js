@@ -88,6 +88,7 @@ test("TAQ-8: a SuperAdmin role written into the profile grants nothing without a
   await seed("Properties/prop-x", listing("victim", { is_published: false, status: "unavailable" }));
   const legacy = db("legacy");
   await assertFails(updateDoc(doc(legacy, "Properties/prop-x"), { pricePerMonth: 1 }));
+  await assertFails(getDoc(doc(legacy, "Properties/prop-x")));
 });
 
 test("TAQ-8: a SuperAdmin custom claim is honoured", async () => {
@@ -174,4 +175,88 @@ test("owner private property tree is private to its owner", async () => {
   await seed("Users/owner/properties/prop-2", { tenantName: "Tenant" });
   await assertFails(getDoc(doc(db("stranger"), "Users/owner/properties/prop-2")));
   await assertFails(setDoc(doc(db("stranger"), "Users/owner/properties/prop-3"), { title: "x" }));
+});
+
+// --- TAQ-11: properties are created in the creator's own name ---
+
+test("TAQ-11: an Owner can create, update, and delete their own listing", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  const owner = db("owner");
+  const ref = doc(owner, "Properties/prop-1");
+  await assertSucceeds(setDoc(ref, listing("owner"), { merge: true }));
+  await assertSucceeds(setDoc(ref, { pricePerMonth: 9500, owner_id: "owner", updated_at: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(setDoc(ref, { is_published: false, status: "rented", owner_id: "owner" }, { merge: true }));
+  await assertSucceeds(deleteDoc(ref));
+});
+
+test("TAQ-11: a user cannot create a listing for another owner or without an owner", async () => {
+  const mallory = db("mallory", { role: "Owner" });
+  await assertFails(setDoc(doc(mallory, "Properties/prop-1"), listing("victim")));
+  const { owner_id: _omit, ...noOwner } = listing("x");
+  await assertFails(setDoc(doc(mallory, "Properties/prop-2"), noOwner));
+});
+
+test("TAQ-11: an Owner cannot attach a listing to an agency", async () => {
+  await assertFails(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner", { agency_id: "agency-1" })));
+});
+
+test("TAQ-11: an AgencyAdmin can only list under their own agency", async () => {
+  const agent = db("agent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await assertSucceeds(setDoc(doc(agent, "Properties/prop-1"), listing("agent", { agency_id: "agency-1" })));
+  await assertFails(setDoc(doc(agent, "Properties/prop-2"), listing("agent", { agency_id: "agency-2" })));
+  const selfMadeAgent = db("fake", { role: "Owner" });
+  await seed("Users/fake", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await assertFails(setDoc(doc(selfMadeAgent, "Properties/prop-3"), listing("fake", { agency_id: "agency-1" })));
+});
+
+test("TAQ-11: ownership and agency cannot be reassigned on update", async () => {
+  await seed("Properties/prop-1", listing("owner"));
+  const owner = db("owner");
+  await assertFails(updateDoc(doc(owner, "Properties/prop-1"), { owner_id: "someone-else" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-1"), { agency_id: "agency-1" }));
+});
+
+test("TAQ-11: a user cannot edit or delete someone else's listing", async () => {
+  await seed("Properties/prop-1", listing("victim"));
+  const mallory = db("mallory", { role: "Owner" });
+  await assertFails(updateDoc(doc(mallory, "Properties/prop-1"), { pricePerMonth: 1 }));
+  await assertFails(setDoc(doc(mallory, "Properties/prop-1"), { pricePerMonth: 1, owner_id: "mallory" }, { merge: true }));
+  await assertFails(deleteDoc(doc(mallory, "Properties/prop-1")));
+});
+
+test("TAQ-11: unpublished listings are hidden from strangers but visible to their owner", async () => {
+  await seed("Properties/draft-1", listing("owner", { status: "unavailable", is_published: false }));
+  await assertFails(getDoc(doc(db("stranger"), "Properties/draft-1")));
+  await assertFails(getDoc(doc(anonDb(), "Properties/draft-1")));
+  await assertSucceeds(getDoc(doc(db("owner"), "Properties/draft-1")));
+});
+
+test("TAQ-11: visitors can still browse published listings", async () => {
+  await seed("Properties/pub-1", listing("owner"));
+  await seed("Properties/draft-1", listing("owner", { status: "unavailable", is_published: false }));
+  await assertSucceeds(getDoc(doc(anonDb(), "Properties/pub-1")));
+  await assertSucceeds(getDocs(query(collection(anonDb(), "Properties"), where("is_published", "==", true))));
+  await assertSucceeds(getDocs(query(
+    collection(anonDb(), "Properties"),
+    where("is_published", "==", true),
+    where("countryCode", "==", "AE"),
+  )));
+});
+
+test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is allowed", async () => {
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), { user_id: "owner", updated_at: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(setDoc(doc(owner, "Users/owner/properties/prop-9"), {
+    id: "prop-9", owner_id: "owner", isPublished: false, tenantName: "T", tenantPhone: "+971", unitNumber: "12",
+  }, { merge: true }));
+  // Unpublished: hidden marketplace stub.
+  await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), {
+    owner_id: "owner", is_published: false, status: "unavailable", updated_at: serverTimestamp(),
+  }, { merge: true }));
+  // Published later.
+  await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), listing("owner", {
+    id: "prop-9", imageUrls: ["assets/images/properties/prop_eg_6_1.jpg"], updated_at: serverTimestamp(),
+  }), { merge: true }));
+  await assertSucceeds(deleteDoc(doc(owner, "Users/owner/properties/prop-9")));
+  await assertSucceeds(deleteDoc(doc(owner, "Properties/prop-9")));
 });

@@ -322,6 +322,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       logger.info(`Concealing property [${propertyId}] from /Properties (status: ${rentalStatus}, isPublished: ${isPublished})`);
       try {
         await marketDocRef.set({
+          owner_id: ownerId,
           is_published: false,
           status: rentalStatus === "rented" ? "rented" : "unavailable",
           updated_at: admin.firestore.FieldValue.serverTimestamp(),

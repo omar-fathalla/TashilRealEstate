@@ -103,19 +103,42 @@ service cloud.firestore {
     }
 
     // 2. Properties Collection (Public Marketplace)
+    function ownsListing() {
+      return isAuthenticated() && resource.data.get('owner_id', '') == request.auth.uid;
+    }
+
     function agencyManagesResource() {
       return isAgencyAdminOf(resource.data.get('agency_id', ''));
     }
 
+    function newListingAgencyOk() {
+      return request.resource.data.get('agency_id', '') == ''
+        || isAgencyAdminOf(request.resource.data.agency_id);
+    }
+
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties
-      allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
-      
-      // Agency admins and Owners can create/update properties
-      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
-      allow update, delete: if isSuperAdmin() || 
-        agencyManagesResource() ||
-        (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+      // Anyone (including unauthenticated visitors) can read vacant or published properties.
+      // Hidden, rented, and draft listings are visible only to their owner, agency, or SuperAdmin.
+      allow read: if resource.data.status == 'vacant'
+        || resource.data.is_published == true
+        || isSuperAdmin()
+        || ownsListing()
+        || agencyManagesResource();
+
+      // A listing is always created in the creator's own name.
+      allow create: if isSuperAdmin() || (
+        isAuthenticated()
+        && request.resource.data.get('owner_id', '') == request.auth.uid
+        && newListingAgencyOk()
+      );
+
+      // Ownership and agency attribution cannot be reassigned by the client.
+      allow update: if isSuperAdmin() || (
+        (ownsListing() || agencyManagesResource())
+        && !changedKeys().hasAny(['owner_id', 'agency_id'])
+      );
+
+      allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
     }
 
     // 3. Agencies Collection
