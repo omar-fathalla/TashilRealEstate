@@ -69,15 +69,41 @@ void main() {
 
       // Verify Role Segments with Google Icons
       expect(find.byIcon(Icons.person_rounded), findsWidgets);
-      expect(find.byIcon(Icons.business_rounded), findsWidgets);
       expect(find.byIcon(Icons.home_rounded), findsWidgets);
-      expect(find.byIcon(Icons.shield_rounded), findsWidgets);
 
       // Verify Auth Method Segments
       expect(find.byIcon(Icons.g_mobiledata_rounded), findsOneWidget);
       expect(find.byIcon(Icons.apple_rounded), findsOneWidget);
       expect(find.byIcon(Icons.mail_outline_rounded), findsOneWidget);
       expect(find.byIcon(Icons.smartphone_rounded), findsOneWidget);
+    });
+
+    testWidgets('Signup role picker offers only self-service roles (Owner, Tenant)', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithApp(child: const LoginScreen()));
+      await tester.pumpAndSettle();
+
+      final roleGroup = tester.widget<TashilConnectedButtonGroup<String>>(
+        find.byType(TashilConnectedButtonGroup<String>),
+      );
+      expect(roleGroup.segments.map((s) => s.value).toList(), ['Owner', 'Tenant']);
+      expect(
+        find.descendant(
+          of: find.byType(TashilConnectedButtonGroup<String>),
+          matching: find.byIcon(Icons.shield_rounded),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(TashilConnectedButtonGroup<String>),
+          matching: find.byIcon(Icons.business_rounded),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('Switching auth methods transitions smoothly to Google and Phone OTP forms', (tester) async {

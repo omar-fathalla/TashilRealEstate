@@ -39,8 +39,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  /// Roles a user may pick for themselves. AgencyAdmin and SuperAdmin are assigned
+  /// server-side (setUserRole custom claims) and are rejected by Firestore rules.
+  static const selfServiceRoles = {'Owner', 'Tenant'};
+
   AuthMethod _selectedAuthMethod = AuthMethod.email;
-  String _selectedRole = 'Owner'; // 'Owner', 'AgencyAdmin', 'Tenant', 'SuperAdmin'
+  String _selectedRole = 'Owner';
   bool _isSignUpMode = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -120,13 +124,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
   }
 
+  Future<String?> _claimedRole(User user) async {
+    try {
+      final token = await user.getIdTokenResult();
+      final role = token.claims?['role'];
+      return role is String && role.isNotEmpty ? role : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _handlePostAuthNavigation(User user, String role) async {
     final uid = user.uid;
     final photoUrl = UserAvatarUtils.getPhotoUrl(user);
-    String? existingRole = await _firestoreService.getUserRole(uid);
+    String? existingRole = await _claimedRole(user) ?? await _firestoreService.getUserRole(uid);
 
     if (existingRole == null || existingRole.isEmpty) {
-      existingRole = role;
+      existingRole = selfServiceRoles.contains(role) ? role : 'Owner';
       await _firestoreService.setUserRole(
         uid: uid,
         email: user.email ?? 'user@tashil.com',
@@ -336,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() {
       _emailController.text = email;
       _passwordController.text = pass;
-      _selectedRole = role;
+      if (selfServiceRoles.contains(role)) _selectedRole = role;
       _selectedAuthMethod = AuthMethod.email;
       _isSignUpMode = false;
     });
@@ -570,19 +584,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               icon: Icons.person_rounded,
             ),
             TashilConnectedButtonSegment(
-              value: 'AgencyAdmin',
-              label: loc.tr('roleAgency'),
-              icon: Icons.business_rounded,
-            ),
-            TashilConnectedButtonSegment(
               value: 'Tenant',
               label: loc.tr('roleTenant'),
               icon: Icons.home_rounded,
-            ),
-            TashilConnectedButtonSegment(
-              value: 'SuperAdmin',
-              label: loc.tr('roleSuperAdmin'),
-              icon: Icons.shield_rounded,
             ),
           ],
         );

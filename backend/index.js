@@ -8,6 +8,9 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+const { requireAuth, requireRole } = require("./authz");
+const { applyUserRole } = require("./roles");
+
 exports.processRentPayment = onCall(async (request) => {
   const data = request.data;
   const auth = request.auth;
@@ -142,6 +145,21 @@ exports.generateRentalInvoiceReceipt = onCall(async (request) => {
   }
 });
 
+// SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
+exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, ["SuperAdmin"]);
+  const data = request.data || {};
+  const result = await applyUserRole({
+    uid: data.uid,
+    role: data.role,
+    agencyId: data.agencyId,
+    actorUid: auth.uid,
+  });
+  logger.info(`Role ${result.role} assigned to ${result.uid} by ${auth.uid}`);
+  return { success: true, ...result };
+});
+
 
 exports.seedDatabase = onRequest(async (req, res) => {
   const users = [
@@ -177,6 +195,12 @@ exports.seedDatabase = onRequest(async (req, res) => {
         role: u.role,
         agency_id: "agency_test_123" // Mock agency ID
       }, { merge: true });
+      await applyUserRole({
+        uid: userRecord.uid,
+        role: u.role,
+        agencyId: u.role === "AgencyAdmin" ? "agency_test_123" : undefined,
+        actorUid: "seedDatabase",
+      });
 
       results.push({ email: u.email, uid: userRecord.uid, status: "Seeded" });
     } catch (error) {
