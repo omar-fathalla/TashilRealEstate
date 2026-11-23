@@ -4,6 +4,14 @@ Welcome to the Tashil Real Estate PropTech SaaS ecosystem. Whenever an AI Agent 
 
 ---
 
+## Ticket workflow (mandatory)
+
+Before any task, follow `.cursor/rules/linear-ticket-workflow.mdc`. Team **Tashil Aqar** (`TAQ`) in Linear workspace `sw-point`, project "Website — tashilaqar.com". No numbered `TAQ` issue, no work. Process: https://linear.app/sw-point/document/nzam-altyktat-walmrahl-tashil-aqar-28a1cf0574c8
+
+Ship to `dev` first. Do not merge to `main`/`master` or deploy without Mohamed's explicit approval. Never commit secrets. Do not delete demo or test accounts.
+
+---
+
 ## 1. Trilingual Architecture (AR, EN, HI)
 The platform natively supports 3 languages:
 1. **Arabic (`ar`)** — Default / Primary:
