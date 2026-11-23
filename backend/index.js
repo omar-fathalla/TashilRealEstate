@@ -325,6 +325,28 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
 }
 
 /**
+ * Applies `mutate(tx, marketDocRef)` only when /Properties/{propertyId} is absent or already
+ * belongs to ownerId. Property ids are global, so any owner can create a private doc with
+ * someone else's listing id; without this check that owner could overwrite, conceal, or
+ * delete the other owner's public listing. Returns false when the write was refused.
+ */
+async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate) {
+  const marketDocRef = db.collection("Properties").doc(propertyId);
+  return db.runTransaction(async (tx) => {
+    const current = await tx.get(marketDocRef);
+    if (current.exists && current.get("owner_id") !== ownerId) {
+      logger.warn(
+        `Refusing to sync [${propertyId}] from owner [${ownerId}]: the public listing belongs to ` +
+        `[${current.get("owner_id") || "no owner"}].`
+      );
+      return false;
+    }
+    mutate(tx, marketDocRef, current);
+    return true;
+  });
+}
+
+/**
  * Event-Driven Cloud Function: Automatically synchronizes owner property mutations
  * from the private tree (Users/{ownerId}/properties/{propertyId}) to the public
  * marketplace collection (/Properties/{propertyId}).
@@ -335,13 +357,14 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const ownerId = event.params.ownerId;
     const propertyId = event.params.propertyId;
     const db = admin.firestore();
-    const marketDocRef = db.collection("Properties").doc(propertyId);
 
     // 1. Handle document deletion in owner's tree
     if (!event.data || !event.data.after || !event.data.after.exists) {
       logger.info(`Property [${propertyId}] was deleted by owner [${ownerId}]. Removing from /Properties.`);
       try {
-        await marketDocRef.delete();
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
+          if (current.exists) tx.delete(ref);
+        });
       } catch (err) {
         logger.error(`Error deleting property [${propertyId}] from /Properties`, err);
       }
@@ -358,8 +381,8 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {
         // Full replace (no merge) so stale or previously leaked fields are purged.
-        await marketDocRef.set(sanitized);
-        logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
+        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, sanitized));
+        if (written) logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);
         throw err;
@@ -368,12 +391,12 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       // 3. Handle rented, unpublished, or maintenance properties -> Conceal from public marketplace
       logger.info(`Concealing property [${propertyId}] from /Properties (status: ${rentalStatus}, isPublished: ${isPublished})`);
       try {
-        await marketDocRef.set({
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, {
           owner_id: ownerId,
           is_published: false,
           status: rentalStatus === "rented" ? "rented" : "unavailable",
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
+        }, { merge: true }));
       } catch (err) {
         logger.error(`Error updating concealed state for property [${propertyId}] in /Properties`, err);
       }
