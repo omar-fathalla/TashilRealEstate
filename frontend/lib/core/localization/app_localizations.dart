@@ -12,6 +12,12 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'ar': {
+      // Route access
+      'checkingAccess': 'جارٍ التحقق من صلاحيات الوصول…',
+      'accessDeniedTitle': 'لا تملك صلاحية الوصول إلى هذه الصفحة',
+      'accessDeniedMessage': 'هذه الصفحة مخصصة لدور آخر في المنصة. يمكنك العودة إلى صفحتك الرئيسية.',
+      'goToMyHome': 'الذهاب إلى صفحتي الرئيسية',
+      'roleSignedInUser': 'مستخدم مسجّل',
       // Branding
       'appName': 'Tashil Real Estate',
       'appSlogan': 'تسهيل لإدارة وعرض العقارات',
@@ -1939,6 +1945,12 @@ class AppLocalizations {
       'firebaseSecurityTier': 'مستوى الحماية',
     },
     'en': {
+      // Route access
+      'checkingAccess': 'Checking your access…',
+      'accessDeniedTitle': "You don't have access to this page",
+      'accessDeniedMessage': 'This page belongs to a different role on the platform. You can go back to your home page.',
+      'goToMyHome': 'Go to my home page',
+      'roleSignedInUser': 'Signed-in user',
       // Branding
       'appName': 'Tashil Real Estate',
       'appSlogan': 'Smart PropTech Rental Management',
@@ -3866,6 +3878,12 @@ class AppLocalizations {
       'firebaseSecurityTier': 'Security Tier',
     },
     'hi': {
+      // Route access
+      'checkingAccess': 'आपकी पहुँच की जाँच हो रही है…',
+      'accessDeniedTitle': 'आपके पास इस पेज की पहुँच नहीं है',
+      'accessDeniedMessage': 'यह पेज प्लेटफ़ॉर्म पर किसी अन्य भूमिका के लिए है। आप अपने होम पेज पर लौट सकते हैं।',
+      'goToMyHome': 'मेरे होम पेज पर जाएँ',
+      'roleSignedInUser': 'साइन-इन उपयोगकर्ता',
       // Branding
       'appName': 'ताशिल रियल एस्टेट',
       'appSlogan': 'स्मार्ट रेंटल और प्रॉपर्टी मैनेजमेंट',

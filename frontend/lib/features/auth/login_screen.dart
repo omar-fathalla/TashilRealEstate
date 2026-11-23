@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/auth/role_session.dart';
 import 'package:tashil_real_estate/core/auth/trusted_role.dart';
 import 'package:tashil_real_estate/core/config/demo_data.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
@@ -18,6 +20,24 @@ import 'package:tashil_real_estate/core/services/storage/property_draft_cache_se
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+
+/// Where to go after sign-in: the requested route when [role] may open it, a pending
+/// listing draft for roles that can list, otherwise the role's home.
+String postLoginDestination({required String role, String? redirect, bool hasDraft = false}) {
+  final target = redirect == null ? null : Uri.tryParse(redirect);
+  if (target != null &&
+      !target.hasScheme &&
+      !target.hasAuthority &&
+      target.path.startsWith('/') &&
+      target.path != RouteAccess.login &&
+      target.path != RouteAccess.authCheck &&
+      RouteAccess.table.containsKey(target.path) &&
+      RouteAccess.canAccess(target.path, role)) {
+    return target.toString();
+  }
+  if (hasDraft && RouteAccess.canAccess('/fast-onboarding', role)) return '/fast-onboarding';
+  return RouteAccess.homeFor(role);
+}
 
 enum AuthMethod {
   google,
@@ -147,38 +167,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     // An elevated role written into the profile is not trusted without a matching claim.
     final trustedRole = TrustedRole.fromSources(claimRole: claimRole, profileRole: profileRole);
+    // The router guards read the session, which may have resolved before the profile existed.
+    await RoleSession.instance.refresh();
 
     await UserProfileService().loadProfile();
 
     if (!mounted) return;
 
-    // Check if user has a pending property onboarding draft or requested redirect
+    String? redirect;
     try {
-      final uri = GoRouterState.of(context).uri;
-      final redirect = uri.queryParameters['redirect'];
-      if (redirect == '/fast-onboarding' || PropertyDraftCacheService().hasDraft()) {
-        context.go('/fast-onboarding');
-        return;
-      }
+      redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
     } catch (_) {}
-
-    switch (trustedRole) {
-      case TrustedRole.superAdmin:
-        context.go('/super-admin');
-        break;
-      case TrustedRole.agencyAdmin:
-        context.go('/agency');
-        break;
-      case TrustedRole.tenant:
-        context.go('/tenant');
-        break;
-      case TrustedRole.owner:
-        context.go('/owner');
-        break;
-      default:
-        context.go('/');
-        break;
-    }
+    context.go(postLoginDestination(
+      role: trustedRole,
+      redirect: redirect,
+      hasDraft: PropertyDraftCacheService().hasDraft(),
+    ));
   }
 
   Future<void> _handleEmailAuth(AppLocalizations loc) async {

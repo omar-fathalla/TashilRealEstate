@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/auth/role_session.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
+import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -518,7 +521,10 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
           // 4. Portal Login / User Profile CTA
           if (user != null)
             TashilConnectedIconItem(
-              customWidget: _buildUserDropdown(context, loc, user),
+              customWidget: ListenableBuilder(
+                listenable: RoleSession.instance,
+                builder: (context, _) => _buildUserDropdown(context, loc, user),
+              ),
             )
           else
             TashilConnectedIconItem(
@@ -684,49 +690,34 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
       );
   }
 
+  /// Role title and dashboard come from the trusted role (ID-token claim first), never
+  /// from the email address or a self-written profile field.
   static _UserRoleInfo _resolveUserInfo(User user, AppLocalizations loc) {
-    final email = (user.email ?? '').toLowerCase();
+    final role = RoleSession.instance.role;
+    final displayName = user.displayName?.trim() ?? '';
 
-    if (email.contains('admin')) {
-      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
-          ? user.displayName!
-          : 'Super Admin';
+    _UserRoleInfo info(String fallbackName, String roleTitle, String initialsFallback) {
+      final name = displayName.isNotEmpty ? displayName : fallbackName;
       return _UserRoleInfo(
         displayName: name,
-        roleTitle: loc.tr('roleSuperAdmin'),
-        initials: UserAvatarUtils.getInitials(name, 'SA'),
-        dashboardRoute: '/super-admin',
+        roleTitle: roleTitle,
+        initials: UserAvatarUtils.getInitials(name, initialsFallback),
+        dashboardRoute: RouteAccess.homeFor(role),
       );
-    } else if (email.contains('agency') || email.contains('broker')) {
-      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
-          ? user.displayName!
-          : loc.tr('roleAgency');
-      return _UserRoleInfo(
-        displayName: name,
-        roleTitle: loc.tr('roleAgency'),
-        initials: UserAvatarUtils.getInitials(name, 'AG'),
-        dashboardRoute: '/agency',
-      );
-    } else if (email.contains('tenant')) {
-      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
-          ? user.displayName!
-          : loc.tr('roleTenant');
-      return _UserRoleInfo(
-        displayName: name,
-        roleTitle: loc.tr('roleTenant'),
-        initials: UserAvatarUtils.getInitials(name, 'TN'),
-        dashboardRoute: '/tenant',
-      );
-    } else {
-      final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
-          ? user.displayName!
-          : loc.tr('ownerProfile');
-      return _UserRoleInfo(
-        displayName: name,
-        roleTitle: loc.tr('ownerRoleTitle'),
-        initials: UserAvatarUtils.getInitials(name, 'AF'),
-        dashboardRoute: '/owner',
-      );
+    }
+
+    switch (role) {
+      case TrustedRole.superAdmin:
+        return info('Super Admin', loc.tr('roleSuperAdmin'), 'SA');
+      case TrustedRole.agencyAdmin:
+        return info(loc.tr('roleAgency'), loc.tr('roleAgency'), 'AG');
+      case TrustedRole.tenant:
+        return info(loc.tr('roleTenant'), loc.tr('roleTenant'), 'TN');
+      case TrustedRole.owner:
+        return info(loc.tr('ownerProfile'), loc.tr('ownerRoleTitle'), 'AF');
+      default:
+        final emailName = (user.email ?? '').split('@').first;
+        return info(emailName.isNotEmpty ? emailName : loc.tr('roleSignedInUser'), loc.tr('roleSignedInUser'), 'U');
     }
   }
 }
