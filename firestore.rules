@@ -69,7 +69,10 @@ service cloud.firestore {
     // 1. Users Collection
     // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
     function lockedUserFields() {
-      return ['agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims'];
+      return [
+        'agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims',
+        'phone_verified', 'phoneVerified', 'kycStatus', 'kyc_status', 'account_status', 'accountStatus'
+      ];
     }
 
     function selfUserCreate(userId) {

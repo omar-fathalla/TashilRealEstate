@@ -142,6 +142,47 @@ test("TAQ-9: a profile created without a role can take a self-service role once"
   await assertFails(setDoc(doc(owner, "Users/owner"), { role: "Tenant" }, { merge: true }));
 });
 
+// --- TAQ-50: verification and account state are server-managed ---
+
+const TAQ50_FIELDS = {
+  phone_verified: true,
+  phoneVerified: true,
+  kycStatus: "approved",
+  kyc_status: "approved",
+  account_status: "active",
+  accountStatus: "active",
+};
+
+test("TAQ-50: a user cannot set their own phone, KYC, or account status flags", async () => {
+  await seed("Users/owner", {
+    user_id: "owner", role: "Owner", phone_verified: false, kycStatus: "pending", account_status: "suspended",
+  });
+  const owner = db("owner");
+  for (const [field, value] of Object.entries(TAQ50_FIELDS)) {
+    await assertFails(updateDoc(doc(owner, "Users/owner"), { [field]: value }));
+    await assertFails(setDoc(doc(owner, "Users/owner"), { [field]: value, full_name: "X" }, { merge: true }));
+  }
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { phone_verified: false, kycStatus: "rejected" }));
+});
+
+test("TAQ-50: a new profile cannot start out verified, KYC-approved, or active", async () => {
+  for (const [field, value] of Object.entries(TAQ50_FIELDS)) {
+    await assertFails(setDoc(doc(db("mallory"), "Users/mallory"), { user_id: "mallory", role: "Owner", [field]: value }));
+  }
+});
+
+test("TAQ-50: a profile save that leaves the locked flags untouched still works", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner", phone_verified: true, kycStatus: "approved", account_status: "active" });
+  const owner = db("owner");
+  // Matches UserProfileService.updateProfile, which no longer sends phone_verified.
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), {
+    full_name: "Owner Demo", first_name: "Owner", surname: "Demo", phone: "+971500000000",
+    preferred_contact_method: "phone", updated_at: serverTimestamp(),
+  }, { merge: true }));
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(updateDoc(doc(root, "Users/owner"), { kycStatus: "rejected", account_status: "suspended" }));
+});
+
 test("TAQ-9: users cannot delete their profile to reset their role", async () => {
   await seed("Users/owner", { role: "Owner" });
   await assertFails(deleteDoc(doc(db("owner"), "Users/owner")));
