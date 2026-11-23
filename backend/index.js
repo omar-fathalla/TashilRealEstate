@@ -397,16 +397,39 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
 }
 
 /**
- * Applies `mutate(tx, marketDocRef)` only when /Properties/{propertyId} is absent or already
- * belongs to ownerId. Property ids are global, so any owner can create a private doc with
- * someone else's listing id; without this check that owner could overwrite, conceal, or
- * delete the other owner's public listing. Returns false when the write was refused.
+ * A public doc that nobody can legitimately hold: it is not live, and either never carried
+ * listing content (the bare owner_id/status stubs older versions of the trigger created for
+ * unpublished private docs) or belongs to an account that may not publish at all.
  */
-async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate) {
+async function isClaimablePlaceholder(current) {
+  const holder = current.get("owner_id");
+  if (!holder || current.get("is_published") === true) return false;
+  if (!current.get("titles")) return true;
+  const { role } = await resolveUserAuthority(holder);
+  return !PUBLISHER_ROLES.includes(role);
+}
+
+/**
+ * Applies `mutate(tx, marketDocRef, current)` only when /Properties/{propertyId} is absent or
+ * already belongs to ownerId. Property ids are global, so any owner can create a private doc
+ * with someone else's listing id; without this check that owner could overwrite, conceal, or
+ * delete the other owner's public listing. With `claimPlaceholder`, a real publish may also
+ * replace an unpublished placeholder left by a non-owner, so it cannot block the real owner.
+ * Returns false when the write was refused.
+ */
+async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlaceholder = false } = {}) {
   const marketDocRef = db.collection("Properties").doc(propertyId);
   return db.runTransaction(async (tx) => {
     const current = await tx.get(marketDocRef);
     if (current.exists && current.get("owner_id") !== ownerId) {
+      if (claimPlaceholder && await isClaimablePlaceholder(current)) {
+        logger.warn(
+          `Replacing the unpublished placeholder [${propertyId}] held by ` +
+          `[${current.get("owner_id") || "no owner"}] with the listing of owner [${ownerId}].`
+        );
+        mutate(tx, marketDocRef, { exists: false, data: () => null });
+        return true;
+      }
       logger.warn(
         `Refusing to sync [${propertyId}] from owner [${ownerId}]: the public listing belongs to ` +
         `[${current.get("owner_id") || "no owner"}].`
@@ -476,22 +499,27 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
         const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => tx.set(
           ref,
           sanitizeForMarketplace(afterData, ownerId, propertyId, { agencyId, current: current.exists ? current.data() : null }),
-        ));
+        ), { claimPlaceholder: true });
         if (written) logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);
         throw err;
       }
     } else {
-      // 3. Handle rented, unpublished, or maintenance properties -> Conceal from public marketplace
+      // 3. Handle rented, unpublished, or maintenance properties -> Conceal from public marketplace.
+      // Only an existing public doc of this owner is updated; an unpublished private doc must
+      // never create one, or it would reserve the id against the real owner's later publish.
       logger.info(`Concealing property [${propertyId}] from /Properties (status: ${rentalStatus}, isPublished: ${isPublished})`);
       try {
-        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, {
-          owner_id: ownerId,
-          is_published: false,
-          status: rentalStatus === "rented" ? "rented" : "unavailable",
-          updated_at: FieldValue.serverTimestamp(),
-        }, { merge: true }));
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
+          if (current.exists) {
+            tx.set(ref, {
+              is_published: false,
+              status: rentalStatus === "rented" ? "rented" : "unavailable",
+              updated_at: FieldValue.serverTimestamp(),
+            }, { merge: true });
+          }
+        });
       } catch (err) {
         logger.error(`Error updating concealed state for property [${propertyId}] in /Properties`, err);
       }
