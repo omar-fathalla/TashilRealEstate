@@ -34,3 +34,20 @@ test("TAQ-44: the Flutter version pin is consistent", () => {
   assert.match(pubspec, new RegExp(`flutter: '>=${pinned.replace(/\./g, "\\.")}'`));
   assert.match(lock, new RegExp(`flutter: ">=${pinned.replace(/\./g, "\\.")}"`));
 });
+
+// --- TAQ-54: `flutter analyze` exits 0 and leaves the tree clean ---
+
+test("TAQ-54: analysis_options.yaml already excludes build and every platform folder", () => {
+  // Otherwise Flutter's AnalysisOptionsMigration rewrites the file on every flutter command.
+  const options = read("frontend/analysis_options.yaml");
+  const excludes = new Set([...options.matchAll(/^\s+-\s+(\S+\/\*\*)\s*$/gm)].map((m) => m[1]));
+  const platforms = ["android", "ios", "web", "windows", "macos", "linux"]
+    .filter((dir) => fs.existsSync(path.join(root, "frontend", dir)));
+  for (const dir of ["build", ...platforms]) {
+    assert.ok(excludes.has(`${dir}/**`), `add "${dir}/**" to analyzer.exclude`);
+  }
+});
+
+test("TAQ-54: the material_ui deprecation infos do not fail flutter analyze", () => {
+  assert.match(read("frontend/analysis_options.yaml"), /^\s+deprecated_member_use:\s+ignore\s*$/m);
+});

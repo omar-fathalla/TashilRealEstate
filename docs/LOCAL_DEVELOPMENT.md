@@ -16,6 +16,28 @@ and `flutter pub get` on an older SDK fails right away with "Try using the Flutt
 version: 3.50.1" instead of failing later during `flutter build web`. With
 [FVM](https://fvm.app), run `fvm use` inside `frontend/`.
 
+## Static analysis
+
+`flutter analyze` (inside `frontend/`) must exit 0 and leave the tree clean. Two settings in
+`frontend/analysis_options.yaml` make that true on Flutter 3.50:
+
+- **Platform excludes.** Every `flutter` command runs `AnalysisOptionsMigration`, which
+  rewrites `analysis_options.yaml` when `build/**` or an existing platform folder
+  (`android/**`, `ios/**`, `web/**`, `windows/**`, ...) is missing from `analyzer.exclude`.
+  The committed file already lists them. When you add a platform folder (for example
+  `flutter create --platforms=macos .`), add its `<folder>/**` entry too;
+  `backend/test/project_config.test.js` fails until you do.
+- **`deprecated_member_use: ignore`.** Flutter 3.47+ deprecates
+  `package:flutter/material.dart`, `GlobalMaterialLocalizations`, and
+  `GlobalCupertinoLocalizations` in favour of the `material_ui` and `cupertino_ui` packages.
+  These account for all 352 infos. `material_ui` is a separate copy of the Material library
+  (its own `Theme`, `Material`, `MaterialApp`), not a re-export. Switching only our imports
+  would leave plugins and `go_router` on the old classes. `Theme.of`, `Material` ancestor
+  lookups, and page transitions would then disagree between the two copies. The migration
+  waits until the dependencies support `material_ui`. Until then, `flutter analyze` hides
+  deprecation infos. To list them, remove that line locally and run
+  `flutter analyze --no-fatal-infos`.
+
 ## Firebase projects
 
 `.firebaserc` defaults to the emulator-only project `demo-tashil-dev`. Production is only
