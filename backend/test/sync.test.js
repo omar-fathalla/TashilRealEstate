@@ -164,3 +164,59 @@ test("TAQ-46: the owner can still conceal and delete their own listing", async (
   pub = await publicDoc("listing-a");
   assert.equal(pub, null);
 });
+
+// --- TAQ-51: the trigger is the only writer of public listings ---
+
+test("TAQ-51: the trigger publishes a listing id nobody could claim first", async () => {
+  await ownerWrites("ownerA", "fresh-id", privateListing());
+  const pub = await publicDoc("fresh-id");
+  assert.equal(pub.owner_id, "ownerA");
+  assert.equal(pub.is_published, true);
+});
+
+test("TAQ-51: agency attribution comes from the AgencyAdmin's claims, not the private doc", async () => {
+  await admin.auth().createUser({ uid: "agent1" });
+  await admin.auth().setCustomUserClaims("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+
+  await ownerWrites("agent1", "agency-listing", privateListing({ agency_id: "agency-2" }));
+  await ownerWrites("ownerA", "owner-listing", privateListing({ agency_id: "agency-1", agencyId: "agency-1" }));
+  assert.equal((await publicDoc("agency-listing")).agency_id, "agency-1");
+  assert.equal("agency_id" in (await publicDoc("owner-listing")), false);
+});
+
+// --- TAQ-52: the trigger validates listing values ---
+
+test("TAQ-52: a listing without a positive rent is not published", async () => {
+  await ownerWrites("ownerA", "neg-price", privateListing({ pricePerMonth: -500 }));
+  await ownerWrites("ownerA", "no-price", privateListing({ pricePerMonth: 0 }));
+  assert.equal(await publicDoc("neg-price"), null);
+  assert.equal(await publicDoc("no-price"), null);
+
+  await ownerWrites("ownerA", "listing-a", privateListing());
+  await ownerWrites("ownerA", "listing-a", privateListing({ pricePerMonth: -1 }));
+  assert.equal((await publicDoc("listing-a")).is_published, false);
+});
+
+test("TAQ-52: owners cannot set rating or featured; moderated values survive republishing", async () => {
+  await ownerWrites("ownerA", "listing-a", privateListing({ rating: 999, isFeatured: true }));
+  let pub = await publicDoc("listing-a");
+  assert.equal(pub.rating, 5);
+  assert.equal(pub.isFeatured, false);
+
+  await db.doc("Properties/listing-a").update({ rating: 3.5, isFeatured: true });
+  await ownerWrites("ownerA", "listing-a", privateListing({ rating: 5, isFeatured: false, pricePerMonth: 9500 }));
+  pub = await publicDoc("listing-a");
+  assert.equal(pub.rating, 3.5);
+  assert.equal(pub.isFeatured, true);
+  assert.equal(pub.pricePerMonth, 9500);
+});
+
+test("TAQ-52: unsafe images and contact details never reach the catalog", async () => {
+  await ownerWrites("ownerA", "listing-a", privateListing({
+    buildingName: "Tower 0501234567",
+    imageUrls: ["javascript:alert(1)", "http://evil.example.com/a.jpg", "assets/images/properties/prop_eg_6_1.jpg"],
+  }));
+  const pub = await publicDoc("listing-a");
+  assert.equal(pub.buildingName, "Tower");
+  assert.deepEqual(pub.imageUrls, ["assets/images/properties/prop_eg_6_1.jpg"]);
+});

@@ -1,1 +1,17 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  # Flutter's AnalysisOptionsMigration adds these on every flutter command when they are
+  # missing, so keep one entry per platform folder that exists in this project.
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+  errors:
+    # Flutter 3.47+ deprecates package:flutter/material.dart and the Global*Localizations
+    # delegates in favour of the material_ui / cupertino_ui packages. Those packages are
+    # separate copies of the widget libraries, so migrating means moving every dependency
+    # at once. See docs/LOCAL_DEVELOPMENT.md (Static analysis).
+    deprecated_member_use: ignore

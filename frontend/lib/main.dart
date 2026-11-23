@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:tashil_real_estate/core/auth/role_session.dart';
 import 'package:tashil_real_estate/core/routing/app_router.dart';
 import 'package:tashil_real_estate/core/theme/app_theme.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
@@ -63,6 +64,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  RoleSession.instance.bindToFirebaseAuth();
 
   // Initialize Enterprise Firebase Services
   CrashReportingService().initialize();

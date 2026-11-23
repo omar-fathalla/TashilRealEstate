@@ -15,7 +15,7 @@ const {
   PUBLISHER_ROLES,
   requireAuth,
   requireRole,
-  resolveUserRole,
+  resolveUserAuthority,
   loadLease,
   leaseAmount,
   leaseCountry,
@@ -231,9 +231,21 @@ const PLATFORM_AGENCY_NAMES = {
   hi: "तशिल संपत्ति प्रबंधन",
 };
 const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
+// Shown until a SuperAdmin rates the listing; owners cannot set it.
+const DEFAULT_LISTING_RATING = 5.0;
+
+// Mirrored by contactFree() in firestore.rules. A phone number starts with + or a
+// (Latin, Arabic-Indic, or Persian) zero and has at least 9 digits, so prices do not match.
+// Up to two separators (space, dot, dash, parentheses) may sit between digits.
+const PHONE_PATTERN = /(?<![0-9\u0660-\u0669\u06F0-\u06F9])\(?(?:\+|[0\u0660\u06F0])[\s.()-]{0,2}(?:[0-9\u0660-\u0669\u06F0-\u06F9][\s.()-]{0,2}){8,}/g;
+const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+function stripContacts(text) {
+  return text.replace(EMAIL_PATTERN, "").replace(PHONE_PATTERN, "");
+}
 
 function cleanText(value, maxLength) {
-  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+  return typeof value === "string" ? stripContacts(value).trim().slice(0, maxLength).trim() : "";
 }
 
 // Keeps only the ar/en/hi string entries; any other nested key is dropped.
@@ -259,29 +271,66 @@ function localizedAmenities(map) {
   return result;
 }
 
-const PRIVATE_STORAGE_PREFIX = /\/o\/(users|private|kyc|documents|leases|contracts)\//i;
+const PRIVATE_STORAGE_FOLDER = /^(users|private|kyc|documents|leases|contracts)\//i;
+const IMAGE_EXTENSION = "\\.(png|jpe?g|webp|gif)$";
+const BUNDLED_ASSET = new RegExp(`^assets/[A-Za-z0-9_/.-]+${IMAGE_EXTENSION}`, "i");
+const BUNDLED_FILE_NAME = new RegExp(`^[A-Za-z0-9_.-]+${IMAGE_EXTENSION}`, "i");
+const INLINE_IMAGE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
+
+/** This project's default Storage buckets (both the current and the legacy domain). */
+function projectStorageBuckets() {
+  let config = {};
+  try {
+    config = JSON.parse(process.env.FIREBASE_CONFIG || "{}");
+  } catch (_) {
+    config = {};
+  }
+  const projectId = config.projectId || process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "";
+  return [
+    config.storageBucket,
+    projectId && `${projectId}.firebasestorage.app`,
+    projectId && `${projectId}.appspot.com`,
+  ].filter(Boolean);
+}
+
+/** The object path of an https download URL in this project's bucket, or null. */
+function projectStorageObject(ref) {
+  let url;
+  try {
+    url = new URL(ref);
+  } catch (_) {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const match = url.hostname === "firebasestorage.googleapis.com"
+    ? url.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/)
+    : url.hostname === "storage.googleapis.com"
+      ? url.pathname.match(/^\/([^/]+)\/(.+)$/)
+      : null;
+  if (!match || !projectStorageBuckets().includes(match[1])) return null;
+  try {
+    return decodeURIComponent(match[2]);
+  } catch (_) {
+    return null;
+  }
+}
 
 /**
- * Accepts https URLs outside private Storage folders, bundled assets, and inline
- * raster images from the web picker. Anything else (http, blob:, PDFs, paths into
- * users/ or kyc/) is dropped.
+ * Accepts https download URLs from this project's Storage bucket (outside private
+ * folders), bundled asset paths, and inline raster images from the web picker.
+ * Anything else (other hosts, http, javascript:, blob:, PDFs) is dropped.
  */
 function isPublicImageRef(value) {
   if (typeof value !== "string") return false;
   const ref = value.trim();
   if (!ref) return false;
-  if (ref.startsWith("data:")) return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(ref);
-  if (ref.startsWith("assets/")) return true;
-  if (/^https:\/\//i.test(ref)) {
-    let decoded = ref;
-    try {
-      decoded = decodeURIComponent(ref);
-    } catch (_) {
-      return false;
-    }
-    return !PRIVATE_STORAGE_PREFIX.test(decoded);
+  if (ref.startsWith("data:")) return INLINE_IMAGE.test(ref);
+  if (ref.startsWith("assets/")) return BUNDLED_ASSET.test(ref) && !ref.includes("..");
+  if (ref.includes(":")) {
+    const objectPath = projectStorageObject(ref);
+    return objectPath !== null && !PRIVATE_STORAGE_FOLDER.test(objectPath);
   }
-  return !ref.includes(":") && !ref.includes("/");
+  return BUNDLED_FILE_NAME.test(ref);
 }
 
 function boundedNumber(value, fallback, max) {
@@ -295,14 +344,29 @@ function boundedNumber(value, fallback, max) {
  * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
  * identity, installments, unit numbers, notes, and owner contact data never do.
  */
-function sanitizeForMarketplace(data, ownerId, propertyId) {
+/** Rating and featured flag are moderated server-side, so they come from the current public doc. */
+function moderatedFields(current) {
+  const rating = current && current.rating;
+  return {
+    rating: typeof rating === "number" && rating >= 0 && rating <= 5 ? rating : DEFAULT_LISTING_RATING,
+    isFeatured: Boolean(current && current.isFeatured === true),
+  };
+}
+
+/** Only listings with a positive rent can be published. */
+function hasPublishablePrice(data) {
+  const price = Number(data.pricePerMonth);
+  return Number.isFinite(price) && price > 0;
+}
+
+function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", current = null } = {}) {
   const countryCode = data.countryCode === "AE" ? "AE" : "EG";
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
     : [data.image];
   const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map((ref) => ref.trim());
 
-  return {
+  const listing = {
     id: propertyId || cleanText(data.id, 200),
     owner_id: ownerId,
     countryCode: countryCode,
@@ -313,7 +377,7 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
     cityCode: cleanText(data.cityCode, 60) || "cairo",
     propertyTypeCode: cleanText(data.propertyTypeCode, 60) || "apartment",
     buildingName: cleanText(data.buildingName, 200),
-    pricePerMonth: boundedNumber(data.pricePerMonth, 0, 1e9),
+    pricePerMonth: hasPublishablePrice(data) ? Math.min(Number(data.pricePerMonth), 1e9) : 0,
     bedrooms: boundedNumber(data.bedrooms, 1, 100) || 1,
     bathrooms: boundedNumber(data.bathrooms, 1, 100) || 1,
     areaSqM: boundedNumber(data.areaSqM, 100, 1e6) || 100,
@@ -323,12 +387,13 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
     isFurnished: data.isFurnished !== false,
     agencyNames: PLATFORM_AGENCY_NAMES,
     agencyPhone: PLATFORM_AGENCY_PHONE,
-    rating: Math.min(boundedNumber(data.rating, 5.0, 5), 5),
-    isFeatured: data.isFeatured !== false,
+    ...moderatedFields(current),
     is_published: true,
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
   };
+  if (agencyId) listing.agency_id = agencyId;
+  return listing;
 }
 
 /**
@@ -382,10 +447,15 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
     const wantsPublic = isPublished && rentalStatus === "available";
-    const ownerRole = wantsPublic ? await resolveUserRole(ownerId) : "";
+    const { role: ownerRole, agencyId } = wantsPublic ? await resolveUserAuthority(ownerId) : { role: "", agencyId: "" };
 
-    if (wantsPublic && !PUBLISHER_ROLES.includes(ownerRole)) {
-      logger.warn(`Not publishing [${propertyId}]: owner [${ownerId}] has role [${ownerRole || "none"}].`);
+    const refusal = !wantsPublic ? ""
+      : !PUBLISHER_ROLES.includes(ownerRole) ? `owner [${ownerId}] has role [${ownerRole || "none"}]`
+        : !hasPublishablePrice(afterData) ? "the rent is not a positive number"
+          : "";
+
+    if (refusal) {
+      logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
       try {
         await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
           if (current.exists) {
@@ -401,10 +471,12 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     // 2. Handle active published property
     if (wantsPublic) {
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
-      const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {
         // Full replace (no merge) so stale or previously leaked fields are purged.
-        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, sanitized));
+        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => tx.set(
+          ref,
+          sanitizeForMarketplace(afterData, ownerId, propertyId, { agencyId, current: current.exists ? current.data() : null }),
+        ));
         if (written) logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);

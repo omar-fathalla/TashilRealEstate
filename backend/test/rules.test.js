@@ -183,6 +183,55 @@ test("TAQ-50: a profile save that leaves the locked flags untouched still works"
   await assertSucceeds(updateDoc(doc(root, "Users/owner"), { kycStatus: "rejected", account_status: "suspended" }));
 });
 
+// --- TAQ-53: remaining trust and plan fields are server-managed ---
+
+const TAQ53_FIELDS = {
+  is_verified: true,
+  kyc_verified: true,
+  isPhoneVerified: true,
+  email_verified: true,
+  Role: "SuperAdmin",
+  role_updated_by: "root",
+  role_updated_at: new Date("2026-01-01T00:00:00Z"),
+  plan: "Enterprise",
+};
+
+test("TAQ-53: a user cannot set trust, role audit, or plan fields on their profile", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner" });
+  const owner = db("owner");
+  for (const [field, value] of Object.entries(TAQ53_FIELDS)) {
+    await assertFails(updateDoc(doc(owner, "Users/owner"), { [field]: value }), field);
+    await assertFails(setDoc(doc(owner, "Users/owner"), { [field]: value, full_name: "X" }, { merge: true }), field);
+  }
+});
+
+test("TAQ-53: a user cannot change server-set values of those fields", async () => {
+  await seed("Users/owner", {
+    user_id: "owner", role: "Owner", is_verified: false, kyc_verified: false, isPhoneVerified: false,
+    email_verified: false, role_updated_by: "root", plan: "Free",
+  });
+  const owner = db("owner");
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { is_verified: true }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { plan: "Enterprise" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { role_updated_by: "owner" }));
+});
+
+test("TAQ-53: a new profile cannot carry trust, role audit, or plan fields", async () => {
+  for (const [field, value] of Object.entries(TAQ53_FIELDS)) {
+    await assertFails(setDoc(doc(db("mallory"), "Users/mallory"), { user_id: "mallory", role: "Owner", [field]: value }), field);
+  }
+});
+
+test("TAQ-53: normal profile saves and SuperAdmin updates still work", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner", is_verified: true, plan: "Free", role_updated_by: "root" });
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), {
+    full_name: "Owner Demo", phone: "+971500000000", updated_at: serverTimestamp(),
+  }, { merge: true }));
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(updateDoc(doc(root, "Users/owner"), { is_verified: false, plan: "Enterprise" }));
+});
+
 test("TAQ-9: users cannot delete their profile to reset their role", async () => {
   await seed("Users/owner", { role: "Owner" });
   await assertFails(deleteDoc(doc(db("owner"), "Users/owner")));
@@ -228,14 +277,10 @@ test("notifications are readable by their recipient and written by the server on
 
 // --- TAQ-11: properties are created in the creator's own name ---
 
-test("TAQ-11: an Owner can create, update, and delete their own listing", async () => {
+test("TAQ-11: an Owner can delete their own listing", async () => {
   await seed("Users/owner", { role: "Owner" });
-  const owner = db("owner");
-  const ref = doc(owner, "Properties/prop-1");
-  await assertSucceeds(setDoc(ref, listing("owner"), { merge: true }));
-  await assertSucceeds(setDoc(ref, { pricePerMonth: 9500, owner_id: "owner", updated_at: serverTimestamp() }, { merge: true }));
-  await assertSucceeds(setDoc(ref, { is_published: false, status: "rented", owner_id: "owner" }, { merge: true }));
-  await assertSucceeds(deleteDoc(ref));
+  await seed("Properties/prop-1", listing("owner"));
+  await assertSucceeds(deleteDoc(doc(db("owner"), "Properties/prop-1")));
 });
 
 test("TAQ-11: a user cannot create a listing for another owner or without an owner", async () => {
@@ -249,9 +294,8 @@ test("TAQ-11: an Owner cannot attach a listing to an agency", async () => {
   await assertFails(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner", { agency_id: "agency-1" })));
 });
 
-test("TAQ-11: an AgencyAdmin can only list under their own agency", async () => {
+test("TAQ-11: an AgencyAdmin cannot list under another agency", async () => {
   const agent = db("agent", { role: "AgencyAdmin", agency_id: "agency-1" });
-  await assertSucceeds(setDoc(doc(agent, "Properties/prop-1"), listing("agent", { agency_id: "agency-1" })));
   await assertFails(setDoc(doc(agent, "Properties/prop-2"), listing("agent", { agency_id: "agency-2" })));
   const selfMadeAgent = db("fake", { role: "Owner" });
   await seed("Users/fake", { role: "AgencyAdmin", agency_id: "agency-1" });
@@ -299,29 +343,8 @@ test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is all
   await assertSucceeds(setDoc(doc(owner, "Users/owner/properties/prop-9"), {
     id: "prop-9", owner_id: "owner", isPublished: false, tenantName: "T", tenantPhone: "+971", unitNumber: "12",
   }, { merge: true }));
-  // Unpublished: hidden marketplace stub.
-  await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), {
-    owner_id: "owner", is_published: false, status: "unavailable", updated_at: serverTimestamp(),
-  }, { merge: true }));
-  // Published later: every key PropertyItem.toMap() produces, minus the server-managed contact fields.
-  await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), listing("owner", {
-    id: "prop-9",
-    descriptions: { ar: "وصف", en: "Description", hi: "विवरण" },
-    locations: { ar: "دبي", en: "Dubai", hi: "दुबई" },
-    propertyTypeCode: "apartment",
-    cityCode: "dubai",
-    bedrooms: 2,
-    bathrooms: 2,
-    areaSqM: 120,
-    imageUrls: ["assets/images/properties/prop_eg_6_1.jpg"],
-    amenitiesMap: { ar: ["مكيف"], en: ["A/C"], hi: ["एसी"] },
-    isFurnished: true,
-    isFeatured: true,
-    rating: 5,
-    updated_at: serverTimestamp(),
-  }), { merge: true }));
+  await assertSucceeds(setDoc(doc(owner, "Users/owner/properties/prop-9"), { isPublished: true }, { merge: true }));
   await assertSucceeds(deleteDoc(doc(owner, "Users/owner/properties/prop-9")));
-  await assertSucceeds(deleteDoc(doc(owner, "Properties/prop-9")));
 });
 
 // --- TAQ-18: private fields cannot be written to the public catalog ---
@@ -338,19 +361,17 @@ test("TAQ-18: tenant and unit data cannot be written to a public listing", async
 // --- TAQ-47: public listings only accept allowlisted fields ---
 
 test("TAQ-47: contact fields outside the allowlist cannot be written", async () => {
-  await seed("Users/owner", { role: "Owner" });
-  const owner = db("owner");
+  const owner = db("root", { role: "SuperAdmin" });
   for (const field of ["whatsapp", "phone", "email", "ownerWhatsapp", "contactPhone", "website"]) {
     await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { [field]: "+971500000000" })));
   }
   await seed("Properties/prop-2", listing("owner", { id: "prop-2" }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { whatsapp: "+971500000000" }));
-  await assertFails(setDoc(doc(owner, "Properties/prop-2"), { email: "me@example.com", owner_id: "owner" }, { merge: true }));
+  await assertFails(setDoc(doc(owner, "Properties/prop-2"), { email: "me@example.com" }, { merge: true }));
 });
 
 test("TAQ-47: localized maps only carry ar/en/hi", async () => {
-  await seed("Users/owner", { role: "Owner" });
-  const owner = db("owner");
+  const owner = db("root", { role: "SuperAdmin" });
   await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", {
     titles: { ar: "شقة", en: "Apartment", hi: "अपार्टमेंट", phone: "+971500000000" },
   })));
@@ -362,7 +383,6 @@ test("TAQ-47: localized maps only carry ar/en/hi", async () => {
 test("TAQ-47: the platform agency contact is server-managed", async () => {
   await seed("Users/owner", { role: "Owner" });
   const owner = db("owner");
-  await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { agencyPhone: "+971500000000" })));
   await seed("Properties/prop-2", listing("owner", {
     id: "prop-2",
     agencyPhone: "+20 100 123 4567",
@@ -370,13 +390,10 @@ test("TAQ-47: the platform agency contact is server-managed", async () => {
   }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { agencyPhone: "+971500000000" }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { "agencyNames.en": "Call me" }));
-  // Editing other fields keeps working and leaves the managed contact untouched.
-  await assertSucceeds(setDoc(doc(owner, "Properties/prop-2"), { pricePerMonth: 9100, owner_id: "owner" }, { merge: true }));
 });
 
 test("TAQ-47: a listing id must match its document id", async () => {
-  await seed("Users/owner", { role: "Owner" });
-  await assertFails(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner", { id: "someone-elses-id" })));
+  await assertFails(setDoc(doc(db("root", { role: "SuperAdmin" }), "Properties/prop-1"), listing("owner", { id: "someone-elses-id" })));
 });
 
 // --- TAQ-48: only published listings are public ---
@@ -431,12 +448,141 @@ test("TAQ-49: a Tenant cannot republish a listing they hold, but can remove it",
   await assertSucceeds(deleteDoc(doc(tenant, "Properties/prop-1")));
 });
 
-test("TAQ-49: Owner (profile or claim) and AgencyAdmin (claim) can publish", async () => {
+// --- TAQ-51: only the sync trigger writes public listings ---
+
+test("TAQ-51: no client can claim an unused listing id", async () => {
   await seed("Users/owner", { role: "Owner" });
-  await assertSucceeds(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner")));
-  await assertSucceeds(setDoc(doc(db("owner2", { role: "Owner" }), "Properties/prop-2"), listing("owner2", { id: "prop-2" })));
+  const squatters = [
+    ["owner", db("owner")],
+    ["owner2", db("owner2", { role: "Owner" })],
+    ["agent", db("agent", { role: "AgencyAdmin", agency_id: "agency-1" })],
+  ];
+  for (const [uid, client] of squatters) {
+    const ref = doc(client, "Properties/future-id");
+    await assertFails(setDoc(ref, listing(uid, { id: "future-id" })));
+    await assertFails(setDoc(ref, { owner_id: uid, is_published: false, status: "unavailable" }, { merge: true }));
+    await assertFails(setDoc(ref, listing(uid, { id: "future-id", agency_id: "agency-1" })));
+  }
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), "Properties/future-id"));
+    assert.equal(snap.exists(), false);
+  });
+});
+
+test("TAQ-51: owners and agencies cannot edit a listing directly", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await seed("Properties/prop-1", listing("owner", { agency_id: "agency-1" }));
+  const owner = db("owner");
+  await assertFails(updateDoc(doc(owner, "Properties/prop-1"), { pricePerMonth: 9500 }));
+  await assertFails(setDoc(doc(owner, "Properties/prop-1"), { is_published: false, status: "rented" }, { merge: true }));
   const agent = db("agent", { role: "AgencyAdmin", agency_id: "agency-1" });
-  await assertSucceeds(setDoc(doc(agent, "Properties/prop-3"), listing("agent", { id: "prop-3", agency_id: "agency-1" })));
+  await assertFails(updateDoc(doc(agent, "Properties/prop-1"), { pricePerMonth: 9500 }));
+  await assertSucceeds(deleteDoc(doc(agent, "Properties/prop-1")));
+});
+
+test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(setDoc(doc(root, "Properties/prop-1"), listing("owner")));
+  await assertSucceeds(updateDoc(doc(root, "Properties/prop-1"), { is_published: false, status: "unavailable" }));
+  await assertSucceeds(deleteDoc(doc(root, "Properties/prop-1")));
+});
+
+// --- TAQ-52: direct listing writes are value-checked ---
+
+const PROD_IMAGE = "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media&token=t";
+
+test("TAQ-52: a well-formed listing is accepted", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(setDoc(doc(root, "Properties/prop-1"), listing("owner", {
+    descriptions: { ar: "شقة واسعة", en: "Spacious flat, 3 rooms, 15000000 EGP", hi: "विवरण" },
+    locations: { ar: "دبي", en: "Dubai Marina", hi: "दुबई" },
+    buildingName: "Marina Tower 2",
+    bedrooms: 0,
+    bathrooms: 1,
+    areaSqM: 85.5,
+    rating: 4.5,
+    isFeatured: true,
+    isFurnished: false,
+    image: PROD_IMAGE,
+    imageUrls: [
+      PROD_IMAGE,
+      "https://storage.googleapis.com/tashil-proptech-os.appspot.com/listings/b.webp",
+      "assets/images/properties/prop_eg_6_1.jpg",
+      "prop_eg_6_2.jpg",
+      "data:image/jpeg;base64,/9j/AAAA",
+      ...Array(15).fill(PROD_IMAGE),
+    ],
+    amenitiesMap: { ar: Array(30).fill("مسبح"), en: Array(30).fill("Pool"), hi: Array(30).fill("पूल") },
+    updated_at: serverTimestamp(),
+  })));
+});
+
+test("TAQ-52: out-of-range or wrongly typed values are rejected", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const bad = [
+    { rating: 999 },
+    { rating: -1 },
+    { rating: "5" },
+    { isFeatured: "yes" },
+    { is_published: "true" },
+    { pricePerMonth: -500 },
+    { pricePerMonth: 0 },
+    { pricePerMonth: "9000" },
+    { areaSqM: -10 },
+    { areaSqM: 0 },
+    { bedrooms: -1 },
+    { bathrooms: 1000 },
+    { status: "sold" },
+    { status: "" },
+    { countryCode: "US" },
+    { countryCode: "AE", currencyCode: "EGP" },
+    { buildingName: "x".repeat(201) },
+    { titles: { ar: "شقة", en: "x".repeat(201), hi: "अपार्टमेंट" } },
+    { descriptions: { en: 42 } },
+  ];
+  for (const extra of bad) {
+    await assertFails(setDoc(ref, listing("owner", extra)), JSON.stringify(extra));
+  }
+  const { pricePerMonth: _omit, ...noPrice } = listing("owner");
+  await assertFails(setDoc(ref, noPrice));
+});
+
+test("TAQ-52: image references must be from this project's bucket or the app bundle", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const badImages = [
+    "javascript:alert(1)",
+    "http://evil.example.com/a.jpg",
+    "https://images.unsplash.com/photo-1",
+    "https://firebasestorage.googleapis.com/v0/b/other-project.appspot.com/o/a.jpg?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/kyc%2Fpassport.jpg?alt=media",
+    "https://storage.googleapis.com/tashil-proptech-os.appspot.com/users/owner/id.jpg",
+    "assets/../secrets.png",
+    "data:image/svg+xml;base64,PHN2Zz4=",
+    "data:text/html;base64,PGgxPg==",
+  ];
+  for (const image of badImages) {
+    await assertFails(setDoc(ref, listing("owner", { image })), image);
+    await assertFails(setDoc(ref, listing("owner", { imageUrls: [PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, image] })), image);
+  }
+  await assertFails(setDoc(ref, listing("owner", { imageUrls: Array(21).fill(PROD_IMAGE) })));
+});
+
+test("TAQ-52: phone numbers and emails are rejected in free text", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const bad = [
+    { buildingName: "Tower call 0501234567" },
+    { buildingName: "+971 50 123 4567" },
+    { buildingName: "برج ٠١٠٠١٢٣٤٥٦٧" },
+    { titles: { ar: "شقة", en: "Flat (050) 123-4567", hi: "फ्लैट" } },
+    { descriptions: { ar: "وصف", en: "Mail me: owner@example.com", hi: "विवरण" } },
+    { locations: { ar: "دبي", en: "Dubai", hi: "संपर्क ۰۵۰۱۲۳۴۵۶۷۸" } },
+  ];
+  for (const extra of bad) {
+    await assertFails(setDoc(ref, listing("owner", extra)), JSON.stringify(extra));
+  }
 });
 
 // --- TAQ-17: lease documents are the source of truth for party checks ---

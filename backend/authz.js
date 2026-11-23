@@ -3,7 +3,7 @@ const admin = require("firebase-admin");
 
 const SELF_SERVICE_ROLES = ["Owner", "Tenant"];
 const ASSIGNABLE_ROLES = ["Owner", "Tenant", "AgencyAdmin", "SuperAdmin"];
-// Roles allowed to put a listing on the public marketplace. Must match canPublishListing() in firestore.rules.
+// Roles whose private listings the sync trigger publishes to the marketplace.
 const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
 
 function requireAuth(request) {
@@ -29,15 +29,24 @@ async function resolveRole(auth) {
   return SELF_SERVICE_ROLES.includes(profileRole) ? profileRole : "";
 }
 
-/** resolveRole for a uid with no request token (triggers): reads custom claims via the Admin SDK. */
-async function resolveUserRole(uid) {
+/**
+ * resolveRole for a uid with no request token (triggers): reads custom claims via the Admin SDK.
+ * agencyId is only trusted from the claims of an AgencyAdmin.
+ */
+async function resolveUserAuthority(uid) {
   let claims = {};
   try {
     claims = (await admin.auth().getUser(uid)).customClaims || {};
   } catch (err) {
     if (err.code !== "auth/user-not-found") throw err;
   }
-  return resolveRole({ uid, token: claims });
+  const role = await resolveRole({ uid, token: claims });
+  const agencyId = role === "AgencyAdmin" && typeof claims.agency_id === "string" ? claims.agency_id : "";
+  return { role, agencyId };
+}
+
+async function resolveUserRole(uid) {
+  return (await resolveUserAuthority(uid)).role;
 }
 
 async function requireRole(auth, roles) {
@@ -97,6 +106,7 @@ module.exports = {
   requireAuth,
   resolveRole,
   resolveUserRole,
+  resolveUserAuthority,
   requireRole,
   loadLease,
   leaseAmount,
