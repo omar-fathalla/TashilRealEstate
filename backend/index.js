@@ -234,14 +234,72 @@ const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
 
-// Mirrored by contactFree() in firestore.rules. A phone number starts with + or a
-// (Latin, Arabic-Indic, or Persian) zero and has at least 9 digits, so prices do not match.
-// Up to two separators (space, dot, dash, parentheses) may sit between digits.
-const PHONE_PATTERN = /(?<![0-9\u0660-\u0669\u06F0-\u06F9])\(?(?:\+|[0\u0660\u06F0])[\s.()-]{0,2}(?:[0-9\u0660-\u0669\u06F0-\u06F9][\s.()-]{0,2}){8,}/g;
-const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+// Mirrored by contactFree() in firestore.rules. Text is matched after folding look-alike
+// characters (full-width forms, Arabic-Indic and Persian digits, invisible characters) to
+// plain ASCII, so only the matched span is removed and other text is left exactly as written.
+//  - Phone: a run of 10+ digits (the letter O counts as zero) with up to two separators
+//    (space . ( ) / _ \ and dashes) between digits, or a + / leading zero then 9+ digits.
+//    Eight digits such as the price 15000000 are not a phone number.
+//  - Email: @ may be written [at], (at), {at}, or with spaces around it; the dots may be [dot].
+const SEP = String.raw`[\s.()/_\\\u2010-\u2015\u2212-]{0,2}`;
+const DIGITS = `[0-9Oo]${SEP}`;
+const PHONE_PATTERN = new RegExp(
+  `\\(?(?:${DIGITS}){10,}|\\(?\\+${SEP}(?:${DIGITS}){9,}|(?<![0-9])\\(?0${SEP}(?:${DIGITS}){8,}`,
+  "g",
+);
+const EMAIL_AT = String.raw`\s*(?:@|[\[({]\s*at\s*[\])}])\s*`;
+const EMAIL_DOT = String.raw`(?:\.|\s*[\[({]\s*dot\s*[\])}]\s*)`;
+const EMAIL_LABEL = "[A-Za-z0-9-]+";
+const EMAIL_PATTERN = new RegExp(
+  `[A-Za-z0-9._%+-]+${EMAIL_AT}${EMAIL_LABEL}(?:${EMAIL_DOT}${EMAIL_LABEL})*${EMAIL_DOT}[A-Za-z]{2,}`,
+  "gi",
+);
+const INVISIBLE = /[\p{Cf}]/u;
+
+/** Same-length ASCII fold of `text`: the match offsets apply to the original string too. */
+function foldForContactMatching(text) {
+  let folded = "";
+  for (const ch of text) {
+    let mapped = ch;
+    if (INVISIBLE.test(ch)) {
+      mapped = " ";
+    } else if (/[\u0660-\u0669]/.test(ch)) {
+      mapped = String(ch.charCodeAt(0) - 0x0660);
+    } else if (/[\u06F0-\u06F9]/.test(ch)) {
+      mapped = String(ch.charCodeAt(0) - 0x06F0);
+    } else {
+      const normalized = ch.normalize("NFKC");
+      if (normalized.length === ch.length && /^[\x20-\x7E]$/.test(normalized)) mapped = normalized;
+    }
+    folded += mapped;
+  }
+  return folded;
+}
+
+function removeMatches(text, folded, pattern) {
+  const spans = [...folded.matchAll(pattern)].map((m) => [m.index, m.index + m[0].length]);
+  if (spans.length === 0) return text;
+  let result = "";
+  let cursor = 0;
+  for (const [start, end] of spans) {
+    result += text.slice(cursor, start);
+    cursor = end;
+  }
+  return result + text.slice(cursor);
+}
 
 function stripContacts(text) {
-  return text.replace(EMAIL_PATTERN, "").replace(PHONE_PATTERN, "");
+  let current = text;
+  // Removing a contact can join the text around it into a new one, so repeat until stable.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const folded = foldForContactMatching(current);
+    const next = removeMatches(current, folded, PHONE_PATTERN);
+    const nextFolded = next === current ? folded : foldForContactMatching(next);
+    const cleaned = removeMatches(next, nextFolded, EMAIL_PATTERN);
+    if (cleaned === current) break;
+    current = cleaned;
+  }
+  return current;
 }
 
 function cleanText(value, maxLength) {
