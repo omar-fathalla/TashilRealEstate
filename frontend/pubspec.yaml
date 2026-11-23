@@ -5,6 +5,9 @@ version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
+  # firebase_core_web 3.11 calls Object.isA (dart:js_interop), which older SDKs lack, so the
+  # web build fails on Flutter 3.41.x even though pub resolves. Keep in sync with .fvmrc.
+  flutter: '>=3.50.1'
 
 dependencies:
   flutter:

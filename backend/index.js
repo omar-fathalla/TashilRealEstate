@@ -3,6 +3,9 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+// Import these directly: the Functions emulator wraps admin.firestore, which drops its static
+// FieldValue/Timestamp members and made every server-timestamp write crash locally.
+const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -120,7 +123,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
     amount: amount,
     currency: currency,
     status: "delivered",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   };
 
   try {
@@ -130,7 +133,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
       if (lastSentAt && Date.now() - lastSentAt.toMillis() < REMINDER_COOLDOWN_MS) {
         throw new HttpsError("resource-exhausted", "A reminder was already sent for this lease in the last 24 hours.");
       }
-      tx.set(reminderLogRef, { lastSentAt: admin.firestore.Timestamp.now(), sentBy: auth.uid });
+      tx.set(reminderLogRef, { lastSentAt: Timestamp.now(), sentBy: auth.uid });
       tx.set(notifRef, notificationPayload);
       tx.set(db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id), notificationPayload);
     });
@@ -181,7 +184,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
     issuedBy: auth.uid,
     // Paid_Verified is reserved for a verified payment record; issuing alone proves nothing.
     status: "Issued",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   };
 
   try {
@@ -324,7 +327,7 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
     isFeatured: data.isFeatured !== false,
     is_published: true,
     status: "vacant",
-    updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
   };
 }
 
@@ -386,7 +389,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       try {
         await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
           if (current.exists) {
-            tx.set(ref, { is_published: false, updated_at: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            tx.set(ref, { is_published: false, updated_at: FieldValue.serverTimestamp() }, { merge: true });
           }
         });
       } catch (err) {
@@ -415,7 +418,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
           owner_id: ownerId,
           is_published: false,
           status: rentalStatus === "rented" ? "rented" : "unavailable",
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+          updated_at: FieldValue.serverTimestamp(),
         }, { merge: true }));
       } catch (err) {
         logger.error(`Error updating concealed state for property [${propertyId}] in /Properties`, err);

@@ -1,5 +1,6 @@
 const { HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 const { ASSIGNABLE_ROLES } = require("./authz");
 
 /**
@@ -30,7 +31,7 @@ async function applyUserRole({ uid, role, agencyId, actorUid }) {
 
   const profile = {
     role,
-    role_updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    role_updated_at: FieldValue.serverTimestamp(),
     role_updated_by: actorUid || null,
   };
   if (needsAgency) profile.agency_id = agencyId;
