@@ -25,6 +25,10 @@ test.beforeEach(async () => {
   await testEnv.clearFirestore();
 });
 
+function styled(digits, zeroCodePoint) {
+  return [...digits].map((d) => String.fromCodePoint(zeroCodePoint + Number(d))).join("");
+}
+
 // TAQ-56: every entry hides a phone number or an email address.
 const CONTACTS = [
   // Phones: the earlier forms still count.
@@ -57,6 +61,36 @@ const CONTACTS = [
   // Invisible characters inside the number, and numbers on a later line.
   "Call 0100\u200B123\u200B4567",
   "Intro line\nCall 0501234567",
+  // TAQ-56 (N-5): a dash with spaces around it is one separator, and so are similar spaced ones.
+  "Tel: 010 - 1234 - 5678",
+  "Tel: 010 \u2013 1234 \u2013 5678",
+  "Tel: 010 . 1234 . 5678",
+  "Tel: 010 / 1234 / 5678",
+  "Tel: 0100 - 123 - 4567",
+  "Call +971 - 50 - 123 - 4567",
+  "Call 050 - 123 - 4567",
+  "Call 0100 -- 123 -- 4567",
+  "Call ( 050 ) 123 - 4567",
+  // TAQ-59: phone shapes without a trunk zero, and the phone next to ordinary words.
+  "Call 01012345678 or email",
+  "Boo 0501234567 Too",
+  "Call 501234567",
+  "Call 2010 1234 5678",
+  "Call 00971 50 123 4567",
+  "Call 00201012345678",
+  // TAQ-60: digits of other scripts, styled digits, newline separators, circled digits.
+  "संपर्क ०५०१२३४५६७८ अभी",
+  "Call ०५० १२३ ४५६७",
+  `Call ${styled("0501234567", 0x1d7ce)}`,
+  `Call ${styled("0501234567", 0x1d7d8)}`,
+  `Call ${styled("0501234567", 0x1d7e2)}`,
+  `Call ${styled("01012345678", 0x1d7ec)}`,
+  `Call ${styled("01012345678", 0x1d7f6)}`,
+  "Call 0501\n234567",
+  "Call 0100\n123\n4567",
+  "Call 0100\r\n123\r\n4567",
+  "Call ⓪⑤⓪①②③④⑤⑥⑦",
+  "Call ①⓪①②③④⑤⑥⑦⑧",
   // Emails.
   "Mail owner@example.com",
   "Mail owner [at] example.com",
@@ -95,6 +129,24 @@ const CLEAN = [
   "Email us through the platform (at your convenience)",
   "0123456 sqm", // 7 digits
   "Ref 12345678", // 8 digits
+  // TAQ-59: lists of dates, years, and numbers are not one phone number.
+  "Available 2026-01-15 2026-06-30",
+  "Lease 1/1/2026 31/12/2026",
+  "3 2 120 15000",
+  "Year 2015 2016 2017",
+  "Price 1.500.000.000 EGP",
+  "Studio 100 000 000",
+  "Zoo 15000000 EGP",
+  "15,000,000",
+  "15.000.000",
+  "1,500,000,000 AED",
+  "Area 120 130 140 150",
+  "Built 2015, 2016, 2017 and 2018",
+  "Floors 1 2 3 4 5 6 7 8 9",
+  "Rooms 3 4 5 6 and 150 200 250",
+  "२०२६-०१-१५ से उपलब्ध",
+  "Date 15/01/2026 to 30/06/2026",
+  "Tel: 010 - 12",
 ];
 
 function listingWith(extra) {
@@ -131,7 +183,7 @@ test("TAQ-56: the sanitizer removes every obfuscated phone number and email", ()
   for (const text of CONTACTS) {
     const out = sanitized(text);
     assert.notEqual(out, text.trim(), `not stripped: ${JSON.stringify(text)}`);
-    assert.doesNotMatch(out, /[0-9٠-٩۰-۹０-９]{4}|@|\[at\]|\(at\)/i, `left behind: ${JSON.stringify(text)} -> ${JSON.stringify(out)}`);
+    assert.doesNotMatch(out, /\p{N}{4}|@|\[at\]|\(at\)/iu, `left behind: ${JSON.stringify(text)} -> ${JSON.stringify(out)}`);
     assert.ok(out.length < text.length, `not shortened: ${JSON.stringify(text)}`);
   }
 });
@@ -173,4 +225,40 @@ test("TAQ-56: digits in separate fields are not joined into a phone number", asy
     cityCode: "1",
     propertyTypeCode: "23456789",
   })));
+});
+
+test("TAQ-59: only the phone number is removed, never the letters next to it", () => {
+  assert.equal(sanitized("Call 01012345678 or email"), "Call  or email");
+  assert.equal(sanitized("Boo 0501234567 Too"), "Boo  Too");
+  assert.equal(sanitized("Zoo 15000000 EGP"), "Zoo 15000000 EGP");
+  assert.equal(sanitized("Call O1O12345678 now"), "Call O now");
+  assert.equal(sanitized("Tel: 010 - 1234 - 5678"), "Tel:");
+  assert.equal(sanitized("Studio 100 000 000 Zoo"), "Studio 100 000 000 Zoo");
+});
+
+test("TAQ-60: digits of any script are matched like ASCII digits in the sanitizer and the rules", async () => {
+  const ref = doc(root(), "Properties/prop-1");
+  const variants = [
+    "०५०१२३४५६७८",
+    styled("0501234567", 0x1d7ce),
+    styled("0501234567", 0x1d7d8),
+    styled("0501234567", 0x1d7e2),
+    styled("0501234567", 0x1d7ec),
+    styled("0501234567", 0x1d7f6),
+    "০৫০১২৩৪৫৬৭৮",
+    "๐๕๐๑๒๓๔๕๖๗",
+  ];
+  for (const digits of variants) {
+    const text = `Call ${digits} now`;
+    assert.equal(sanitized(text), "Call  now", JSON.stringify(text));
+    await rejected(ref, listingWith({ buildingName: text }), JSON.stringify(text));
+  }
+});
+
+test("TAQ-60: a number split by newlines or circled digits is rejected by the rules too", async () => {
+  const ref = doc(root(), "Properties/prop-1");
+  for (const text of ["Call 0501\n234567", "Call 0100\n123\n4567", "Call ⓪⑤⓪①②③④⑤⑥⑦"]) {
+    assert.notEqual(sanitized(text), text);
+    await rejected(ref, listingWith({ buildingName: text }), JSON.stringify(text));
+  }
 });
