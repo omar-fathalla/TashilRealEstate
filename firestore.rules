@@ -89,7 +89,8 @@ service cloud.firestore {
     }
 
     match /Users/{userId} {
-      allow read: if isAuthenticated();
+      // Profiles hold national ID and bank details, so they are private to their owner.
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
       allow create: if isSuperAdmin() || selfUserCreate(userId);
       allow update: if isSuperAdmin() || selfUserUpdate(userId);
       allow delete: if isSuperAdmin();

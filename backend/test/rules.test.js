@@ -144,3 +144,34 @@ test("TAQ-9: users cannot delete their profile to reset their role", async () =>
   await seed("Users/owner", { role: "Owner" });
   await assertFails(deleteDoc(doc(db("owner"), "Users/owner")));
 });
+
+// --- TAQ-10: profile PII is private ---
+
+test("TAQ-10: a signed-in user cannot read another user's profile", async () => {
+  await seed("Users/bob", { role: "Owner", national_id: "29801011234567", iban: "EG380019000500000000263180002" });
+  await assertFails(getDoc(doc(db("alice", { role: "Owner" }), "Users/bob")));
+  await assertFails(getDoc(doc(db("agent", { role: "AgencyAdmin", agency_id: "agency-1" }), "Users/bob")));
+  await assertFails(getDocs(collection(db("alice"), "Users")));
+  await assertFails(getDoc(doc(anonDb(), "Users/bob")));
+});
+
+test("TAQ-10: a self-assigned SuperAdmin profile cannot read other profiles", async () => {
+  await seed("Users/legacy", { role: "SuperAdmin" });
+  await seed("Users/victim", { role: "Owner", iban: "AE070331234567890123456" });
+  await assertFails(getDoc(doc(db("legacy"), "Users/victim")));
+});
+
+test("TAQ-10: a user can read their own profile", async () => {
+  await seed("Users/bob", { role: "Owner", iban: "EG380019000500000000263180002" });
+  await assertSucceeds(getDoc(doc(db("bob"), "Users/bob")));
+});
+
+test("owner private property tree is private to its owner", async () => {
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner/properties/prop-1"), { tenantName: "Tenant", tenantPhone: "+20100" }));
+  await assertSucceeds(getDoc(doc(owner, "Users/owner/properties/prop-1")));
+  await assertSucceeds(deleteDoc(doc(owner, "Users/owner/properties/prop-1")));
+  await seed("Users/owner/properties/prop-2", { tenantName: "Tenant" });
+  await assertFails(getDoc(doc(db("stranger"), "Users/owner/properties/prop-2")));
+  await assertFails(setDoc(doc(db("stranger"), "Users/owner/properties/prop-3"), { title: "x" }));
+});
