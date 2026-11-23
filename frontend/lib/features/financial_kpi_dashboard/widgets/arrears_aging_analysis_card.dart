@@ -189,6 +189,7 @@ class ArrearsAgingAnalysisCard extends StatelessWidget {
                   child: TashilButton.tonal(
                     onPressed: () {
                       final invoices = RentCollectionService().invoicesNotifier.value;
+                      if (invoices.isEmpty) return;
                       final overdue = invoices.firstWhere(
                         (inv) => inv.status == 'overdue',
                         orElse: () => invoices.first,
