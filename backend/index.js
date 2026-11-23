@@ -9,8 +9,10 @@ if (!admin.apps.length) {
 }
 
 const {
+  PUBLISHER_ROLES,
   requireAuth,
   requireRole,
+  resolveUserRole,
   loadLease,
   leaseAmount,
   leaseCountry,
@@ -374,9 +376,25 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const afterData = event.data.after.data();
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
+    const wantsPublic = isPublished && rentalStatus === "available";
+    const ownerRole = wantsPublic ? await resolveUserRole(ownerId) : "";
+
+    if (wantsPublic && !PUBLISHER_ROLES.includes(ownerRole)) {
+      logger.warn(`Not publishing [${propertyId}]: owner [${ownerId}] has role [${ownerRole || "none"}].`);
+      try {
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
+          if (current.exists) {
+            tx.set(ref, { is_published: false, updated_at: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          }
+        });
+      } catch (err) {
+        logger.error(`Error concealing property [${propertyId}] in /Properties`, err);
+      }
+      return null;
+    }
 
     // 2. Handle active published property
-    if (isPublished && rentalStatus === "available") {
+    if (wantsPublic) {
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {

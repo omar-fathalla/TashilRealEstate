@@ -106,6 +106,52 @@ test("TAQ-46: a listing without an owner (seed or SuperAdmin catalog) cannot be 
   assert.ok(await publicDoc("catalog-1"));
 });
 
+// --- TAQ-49: the trigger only publishes for Owners and AgencyAdmins ---
+
+test("TAQ-49: a Tenant's private listing is never published", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await ownerWrites("tenantT", "tenant-listing", privateListing());
+  assert.equal(await publicDoc("tenant-listing"), null);
+});
+
+test("TAQ-49: a Tenant's existing public listing is concealed on the next sync", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await db.doc("Properties/tenant-listing").set({ id: "tenant-listing", owner_id: "tenantT", is_published: true, status: "vacant" });
+  await ownerWrites("tenantT", "tenant-listing", privateListing());
+  const pub = await publicDoc("tenant-listing");
+  assert.equal(pub.is_published, false);
+  assert.equal(pub.owner_id, "tenantT");
+});
+
+test("TAQ-49: an elevated role written into the profile does not allow publishing", async () => {
+  await db.doc("Users/fakeAgent").set({ role: "AgencyAdmin" });
+  await db.doc("Users/noRole").set({ full_name: "No Role" });
+  await ownerWrites("fakeAgent", "fake-1", privateListing());
+  await ownerWrites("noRole", "norole-1", privateListing());
+  await ownerWrites("ghost", "ghost-1", privateListing());
+  assert.equal(await publicDoc("fake-1"), null);
+  assert.equal(await publicDoc("norole-1"), null);
+  assert.equal(await publicDoc("ghost-1"), null);
+});
+
+test("TAQ-49: Owner and AgencyAdmin custom claims can publish", async () => {
+  await admin.auth().createUser({ uid: "claimOwner" });
+  await admin.auth().setCustomUserClaims("claimOwner", { role: "Owner" });
+  await admin.auth().createUser({ uid: "claimAgent" });
+  await admin.auth().setCustomUserClaims("claimAgent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  // A Tenant claim wins over an Owner profile.
+  await admin.auth().createUser({ uid: "claimTenant" });
+  await admin.auth().setCustomUserClaims("claimTenant", { role: "Tenant" });
+  await db.doc("Users/claimTenant").set({ role: "Owner" });
+
+  await ownerWrites("claimOwner", "c-owner", privateListing());
+  await ownerWrites("claimAgent", "c-agent", privateListing());
+  await ownerWrites("claimTenant", "c-tenant", privateListing());
+  assert.equal((await publicDoc("c-owner")).is_published, true);
+  assert.equal((await publicDoc("c-agent")).is_published, true);
+  assert.equal(await publicDoc("c-tenant"), null);
+});
+
 test("TAQ-46: the owner can still conceal and delete their own listing", async () => {
   await ownerWrites("ownerA", "listing-a", privateListing());
 

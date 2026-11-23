@@ -252,6 +252,7 @@ test("TAQ-11: visitors can still browse published listings", async () => {
 });
 
 test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is allowed", async () => {
+  await seed("Users/owner", { role: "Owner" });
   const owner = db("owner");
   await assertSucceeds(setDoc(doc(owner, "Users/owner"), { user_id: "owner", updated_at: serverTimestamp() }, { merge: true }));
   await assertSucceeds(setDoc(doc(owner, "Users/owner/properties/prop-9"), {
@@ -368,6 +369,33 @@ test("TAQ-48: marketplace search over published listings still works", async () 
     where("countryCode", "==", "AE"),
   )));
   assert.deepEqual(ae.docs.map((d) => d.id), ["pub-1"]);
+});
+
+// --- TAQ-49: only Owners and AgencyAdmins can publish listings ---
+
+test("TAQ-49: a Tenant cannot create a public listing", async () => {
+  await seed("Users/tenant", { role: "Tenant" });
+  await assertFails(setDoc(doc(db("tenant"), "Properties/prop-1"), listing("tenant")));
+  await assertFails(setDoc(doc(db("tenant2", { role: "Tenant" }), "Properties/prop-1"), listing("tenant2")));
+  // A profile with no role is not trusted either.
+  await seed("Users/norole", { full_name: "No Role" });
+  await assertFails(setDoc(doc(db("norole"), "Properties/prop-1"), listing("norole")));
+});
+
+test("TAQ-49: a Tenant cannot republish a listing they hold, but can remove it", async () => {
+  await seed("Users/tenant", { role: "Tenant" });
+  await seed("Properties/prop-1", listing("tenant", { is_published: false, status: "unavailable" }));
+  const tenant = db("tenant");
+  await assertFails(updateDoc(doc(tenant, "Properties/prop-1"), { is_published: true, status: "vacant" }));
+  await assertSucceeds(deleteDoc(doc(tenant, "Properties/prop-1")));
+});
+
+test("TAQ-49: Owner (profile or claim) and AgencyAdmin (claim) can publish", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await assertSucceeds(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner")));
+  await assertSucceeds(setDoc(doc(db("owner2", { role: "Owner" }), "Properties/prop-2"), listing("owner2", { id: "prop-2" })));
+  const agent = db("agent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await assertSucceeds(setDoc(doc(agent, "Properties/prop-3"), listing("agent", { id: "prop-3", agency_id: "agency-1" })));
 });
 
 // --- TAQ-17: lease documents are the source of truth for party checks ---
