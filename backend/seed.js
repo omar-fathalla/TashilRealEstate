@@ -4,6 +4,8 @@ admin.initializeApp({
   projectId: 'tashil-proptech-os'
 });
 
+const { applyUserRole } = require('./roles');
+
 const auth = admin.auth();
 const db = admin.firestore();
 
@@ -41,6 +43,12 @@ async function seed() {
         role: u.role,
         full_name: u.fullName
       }, { merge: true });
+      await applyUserRole({
+        uid: userRecord.uid,
+        role: u.role,
+        agencyId: u.role === 'AgencyAdmin' ? 'agency_test_123' : undefined,
+        actorUid: 'seed.js',
+      });
 
       console.log(`Successfully seeded ${u.email}`);
     } catch (error) {

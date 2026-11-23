@@ -7,48 +7,162 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
+    function selfServiceRoles() {
+      return ['Owner', 'Tenant'];
+    }
+
+    function claimedRole() {
+      return request.auth.token.get('role', '');
+    }
+
+    function profileRole() {
+      let path = /databases/$(database)/documents/Users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
+    }
+
+    // Elevated roles (SuperAdmin, AgencyAdmin) only come from a custom claim set by
+    // the setUserRole callable or the Admin SDK. The profile document can only vouch
+    // for self-service roles, so a role written into Users/{uid} never escalates.
+    function currentRole() {
+      return claimedRole() != ''
+        ? claimedRole()
+        : (profileRole() in selfServiceRoles() ? profileRole() : '');
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && currentRole() == role;
     }
 
     function isSuperAdmin() {
-      return isAuthenticated() && getUserData().role == 'SuperAdmin';
+      return hasRole('SuperAdmin');
     }
 
     function isAgencyAdmin() {
-      return isAuthenticated() && getUserData().role == 'AgencyAdmin';
+      return hasRole('AgencyAdmin');
     }
 
     function isOwner() {
-      return isAuthenticated() && getUserData().role == 'Owner';
+      return hasRole('Owner');
     }
 
     function isTenant() {
-      return isAuthenticated() && getUserData().role == 'Tenant';
+      return hasRole('Tenant');
+    }
+
+    function myAgencyId() {
+      return request.auth.token.get('agency_id', '');
+    }
+
+    function isAgencyAdminOf(agencyId) {
+      return isAgencyAdmin() && myAgencyId() != '' && agencyId == myAgencyId();
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function addedOrChangedKeys() {
+      let d = request.resource.data.diff(resource.data);
+      return d.addedKeys().union(d.changedKeys());
     }
 
     // 1. Users Collection
+    // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
+    function lockedUserFields() {
+      return ['agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims'];
+    }
+
+    function selfUserCreate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.get('role', 'Owner') in selfServiceRoles()
+        && !request.resource.data.keys().hasAny(lockedUserFields());
+    }
+
+    // A self-service role may be set once, only while the profile has none.
+    function selfRoleChangeOk() {
+      return !changedKeys().hasAny(['role'])
+        || (resource.data.get('role', '') == ''
+          && request.resource.data.get('role', '') in selfServiceRoles());
+    }
+
+    function selfUserUpdate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && !changedKeys().hasAny(lockedUserFields())
+        && selfRoleChangeOk();
+    }
+
     match /Users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      // Profiles hold national ID and bank details, so they are private to their owner.
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if isSuperAdmin() || selfUserCreate(userId);
+      allow update: if isSuperAdmin() || selfUserUpdate(userId);
+      allow delete: if isSuperAdmin();
 
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
         allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
       }
+
+      // Written by Cloud Functions only.
+      match /notifications/{notificationId} {
+        allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if false;
+      }
     }
 
     // 2. Properties Collection (Public Marketplace)
+    // Private landlord/tenant data that must never reach the public catalog.
+    function privateListingFields() {
+      return [
+        'tenantName', 'tenantPhone', 'tenantEmail', 'tenant_id', 'tenantId',
+        'installments', 'archivedInstallments', 'unitNumber',
+        'leaseStartDate', 'leaseEndDate', 'notes', 'internalNotes',
+        'nationalId', 'national_id', 'iban', 'bank_name', 'bank_account_number',
+        'ownerPhone', 'ownerEmail', 'owner_phone', 'owner_email'
+      ];
+    }
+
+    function ownsListing() {
+      return isAuthenticated() && resource.data.get('owner_id', '') == request.auth.uid;
+    }
+
+    function agencyManagesResource() {
+      return isAgencyAdminOf(resource.data.get('agency_id', ''));
+    }
+
+    function newListingAgencyOk() {
+      return request.resource.data.get('agency_id', '') == ''
+        || isAgencyAdminOf(request.resource.data.agency_id);
+    }
+
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties
-      allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
-      
-      // Agency admins and Owners can create/update properties
-      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
-      allow update, delete: if isSuperAdmin() || 
-        (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
-        (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+      // Anyone (including unauthenticated visitors) can read vacant or published properties.
+      // Hidden, rented, and draft listings are visible only to their owner, agency, or SuperAdmin.
+      allow read: if resource.data.status == 'vacant'
+        || resource.data.is_published == true
+        || isSuperAdmin()
+        || ownsListing()
+        || agencyManagesResource();
+
+      // A listing is always created in the creator's own name.
+      allow create: if isSuperAdmin() || (
+        isAuthenticated()
+        && request.resource.data.get('owner_id', '') == request.auth.uid
+        && newListingAgencyOk()
+        && !request.resource.data.keys().hasAny(privateListingFields())
+      );
+
+      // Ownership and agency attribution cannot be reassigned by the client.
+      allow update: if isSuperAdmin() || (
+        (ownsListing() || agencyManagesResource())
+        && !changedKeys().hasAny(['owner_id', 'agency_id'])
+        && !addedOrChangedKeys().hasAny(privateListingFields())
+      );
+
+      allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
     }
 
     // 3. Agencies Collection
@@ -58,14 +172,19 @@ service cloud.firestore {
     }
 
     // 4. Leases Collection
+    // Lease documents are the server-side source of truth for reminder and invoice parties.
     match /Leases/{leaseId} {
-      allow read: if isSuperAdmin() || 
+      allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
           resource.data.tenant_id == request.auth.uid ||
           resource.data.owner_id == request.auth.uid ||
-          (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+          agencyManagesResource()
         ));
-      allow write: if isSuperAdmin() || isAgencyAdmin();
+      allow create: if isSuperAdmin() || isAgencyAdminOf(request.resource.data.get('agency_id', ''));
+      allow update: if isSuperAdmin() || (
+        agencyManagesResource() && !changedKeys().hasAny(['agency_id'])
+      );
+      allow delete: if isSuperAdmin() || agencyManagesResource();
     }
 
     // 5. Maintenance Requests

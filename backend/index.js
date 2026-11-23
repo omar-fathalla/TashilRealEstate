@@ -1,4 +1,4 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
@@ -7,6 +7,18 @@ const admin = require("firebase-admin");
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+
+const {
+  requireAuth,
+  requireRole,
+  loadLease,
+  leaseAmount,
+  leaseCountry,
+  assertLeaseParty,
+} = require("./authz");
+const { applyUserRole } = require("./roles");
+
+const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 exports.processRentPayment = onCall(async (request) => {
   const data = request.data;
@@ -53,22 +65,42 @@ exports.processRentPayment = onCall(async (request) => {
   }
 });
 
-exports.sendRentalReminder = onCall(async (request) => {
+function parseDueDate(value) {
+  if (typeof value !== "string" || !value) return new Date().toISOString();
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new HttpsError("invalid-argument", "dueDate must be an ISO date.");
+  }
+  return parsed.toISOString();
+}
+
+// Party, tenant, amount, and currency come from the lease document, never from the caller.
+exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
-  const auth = request.auth;
-  const tenantId = data.tenantId || (auth ? auth.uid : "tenant_guest");
-  const propertyTitle = data.propertyTitle || "وحدة سكنية";
-  const amount = data.amount || 0;
-  const dueDate = data.dueDate || new Date().toISOString();
-  const countryCode = data.countryCode || "EG";
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, role, lease);
+
+  const tenantId = lease.tenant_id;
+  if (!tenantId) {
+    throw new HttpsError("failed-precondition", "The lease has no tenant.");
+  }
+  const propertyTitle = lease.property_title || lease.propertyTitle || "وحدة سكنية";
+  const amount = leaseAmount(lease);
+  const dueDate = parseDueDate(data.dueDate);
+  const countryCode = leaseCountry(lease);
   const currency = countryCode === "AE" ? "AED" : "EGP";
 
   const db = admin.firestore();
   const notifRef = db.collection("Notifications").doc();
+  const reminderLogRef = db.collection("ReminderLog").doc(lease.id);
 
   const notificationPayload = {
     id: notifRef.id,
     recipientId: tenantId,
+    leaseId: lease.id,
+    senderId: auth.uid,
     type: "rental_due_reminder",
     title: {
       ar: "تذكير استحقاق الإيجار الشهري",
@@ -88,25 +120,36 @@ exports.sendRentalReminder = onCall(async (request) => {
   };
 
   try {
-    await notifRef.set(notificationPayload);
-    // Also mirror to user notifications subcollection
-    if (tenantId) {
-      await db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id).set(notificationPayload);
-    }
+    await db.runTransaction(async (tx) => {
+      const log = await tx.get(reminderLogRef);
+      const lastSentAt = log.exists ? log.get("lastSentAt") : null;
+      if (lastSentAt && Date.now() - lastSentAt.toMillis() < REMINDER_COOLDOWN_MS) {
+        throw new HttpsError("resource-exhausted", "A reminder was already sent for this lease in the last 24 hours.");
+      }
+      tx.set(reminderLogRef, { lastSentAt: admin.firestore.Timestamp.now(), sentBy: auth.uid });
+      tx.set(notifRef, notificationPayload);
+      tx.set(db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id), notificationPayload);
+    });
     logger.info(`Rental reminder notification created: ${notifRef.id}`);
-    return { success: true, messageId: notifRef.id, payload: notificationPayload };
+    return { success: true, messageId: notifRef.id };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error("Error creating rental reminder", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to create the reminder.");
   }
 });
 
-exports.generateRentalInvoiceReceipt = onCall(async (request) => {
+exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
-  const leaseId = data.leaseId || "lease_demo";
-  const tenantName = data.tenantName || "عميل تسهيل";
-  const amount = Number(data.amount) || 10000;
-  const currencyCode = data.currencyCode || "EGP";
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, role, lease);
+
+  const leaseId = lease.id;
+  const tenantName = lease.tenant_name || lease.tenantName || "عميل تسهيل";
+  const amount = leaseAmount(lease);
+  const currencyCode = leaseCountry(lease) === "AE" ? "AED" : "EGP";
 
   const platformFee = amount * 0.025; // 2.5% platform fee
   const agencyFee = amount * 0.08;   // 8% agency fee
@@ -128,18 +171,38 @@ exports.generateRentalInvoiceReceipt = onCall(async (request) => {
     vatAmount: vatAmount,
     totalPaid: totalPaid,
     currencyCode: currencyCode,
-    status: "Paid_Verified",
+    tenant_id: lease.tenant_id || null,
+    owner_id: lease.owner_id || null,
+    agency_id: lease.agency_id || null,
+    issuedBy: auth.uid,
+    // Paid_Verified is reserved for a verified payment record; issuing alone proves nothing.
+    status: "Issued",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   try {
-    await invoiceRef.set(invoiceData);
+    await invoiceRef.create(invoiceData);
     logger.info(`Generated digital rental invoice: ${invoiceNumber}`);
     return { success: true, invoiceNumber: invoiceNumber, invoice: invoiceData };
   } catch (error) {
     logger.error("Error generating rental invoice", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to issue the invoice.");
   }
+});
+
+// SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
+exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, ["SuperAdmin"]);
+  const data = request.data || {};
+  const result = await applyUserRole({
+    uid: data.uid,
+    role: data.role,
+    agencyId: data.agencyId,
+    actorUid: auth.uid,
+  });
+  logger.info(`Role ${result.role} assigned to ${result.uid} by ${auth.uid}`);
+  return { success: true, ...result };
 });
 
 
@@ -177,6 +240,12 @@ exports.seedDatabase = onRequest(async (req, res) => {
         role: u.role,
         agency_id: "agency_test_123" // Mock agency ID
       }, { merge: true });
+      await applyUserRole({
+        uid: userRecord.uid,
+        role: u.role,
+        agencyId: u.role === "AgencyAdmin" ? "agency_test_123" : undefined,
+        actorUid: "seedDatabase",
+      });
 
       results.push({ email: u.email, uid: userRecord.uid, status: "Seeded" });
     } catch (error) {
@@ -188,69 +257,120 @@ exports.seedDatabase = onRequest(async (req, res) => {
   res.json({ message: "Seeded Successfully", details: results });
 });
 
+const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
+const MARKETPLACE_MAX_IMAGES = 20;
+const MARKETPLACE_MAX_AMENITIES = 30;
+
+const DEFAULT_AMENITIES = {
+  ar: ["مفروش بالكامل", "تكييف مركزي", "موقف سيارات خاص", "أمن وحراسة 24/7"],
+  en: ["Fully Furnished", "Central A/C", "Private Parking", "24/7 Security"],
+  hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
+};
+
+// Listings from the owner tree are contacted through the platform, never the owner directly.
+const PLATFORM_AGENCY_NAMES = {
+  ar: "شركة تسهيل لإدارة الأملاك",
+  en: "Tashil Property Management",
+  hi: "तशिल संपत्ति प्रबंधन",
+};
+const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
+
+function cleanText(value, maxLength) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+// Keeps only the ar/en/hi string entries; any other nested key is dropped.
+function localizedText(map, flatFallback, maxLength) {
+  const source = map && typeof map === "object" && !Array.isArray(map) ? map : null;
+  const result = {};
+  for (const locale of MARKETPLACE_LOCALES) {
+    result[locale] = cleanText(source ? source[locale] : flatFallback, maxLength);
+  }
+  return result;
+}
+
+function localizedAmenities(map) {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return DEFAULT_AMENITIES;
+  const result = {};
+  for (const locale of MARKETPLACE_LOCALES) {
+    const list = Array.isArray(map[locale]) ? map[locale] : [];
+    result[locale] = list
+      .filter((item) => typeof item === "string" && item.trim())
+      .slice(0, MARKETPLACE_MAX_AMENITIES)
+      .map((item) => cleanText(item, 80));
+  }
+  return result;
+}
+
+const PRIVATE_STORAGE_PREFIX = /\/o\/(users|private|kyc|documents|leases|contracts)\//i;
+
 /**
- * Sanitizes an owner property document for the public marketplace (/Properties).
- * Enforces Zero-Leakage Data Standards by strictly stripping all private landlord,
- * tenant PII, financial installments, and internal notes.
+ * Accepts https URLs outside private Storage folders, bundled assets, and inline
+ * raster images from the web picker. Anything else (http, blob:, PDFs, paths into
+ * users/ or kyc/) is dropped.
+ */
+function isPublicImageRef(value) {
+  if (typeof value !== "string") return false;
+  const ref = value.trim();
+  if (!ref) return false;
+  if (ref.startsWith("data:")) return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(ref);
+  if (ref.startsWith("assets/")) return true;
+  if (/^https:\/\//i.test(ref)) {
+    let decoded = ref;
+    try {
+      decoded = decodeURIComponent(ref);
+    } catch (_) {
+      return false;
+    }
+    return !PRIVATE_STORAGE_PREFIX.test(decoded);
+  }
+  return !ref.includes(":") && !ref.includes("/");
+}
+
+function boundedNumber(value, fallback, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.min(n, max);
+}
+
+/**
+ * Builds the public marketplace (/Properties) document from an owner property using an
+ * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
+ * identity, installments, unit numbers, notes, and owner contact data never do.
  */
 function sanitizeForMarketplace(data, ownerId, propertyId) {
-  const titles = (typeof data.titles === "object" && data.titles !== null)
-    ? data.titles
-    : { ar: data.title || "", en: data.title || "", hi: data.title || "" };
-
-  const descriptions = (typeof data.descriptions === "object" && data.descriptions !== null)
-    ? data.descriptions
-    : { ar: data.description || "", en: data.description || "", hi: data.description || "" };
-
-  const locations = (typeof data.locations === "object" && data.locations !== null)
-    ? data.locations
-    : { ar: data.location || "", en: data.location || "", hi: data.location || "" };
-
-  const images = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
+  const countryCode = data.countryCode === "AE" ? "AE" : "EG";
+  const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
-    : (data.image ? [data.image] : []);
+    : [data.image];
+  const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map((ref) => ref.trim());
 
   return {
-    id: propertyId || data.id,
+    id: propertyId || cleanText(data.id, 200),
     owner_id: ownerId,
-    countryCode: data.countryCode || "EG",
-    currencyCode: data.currencyCode || (data.countryCode === "AE" ? "AED" : "EGP"),
-    titles: titles,
-    descriptions: descriptions,
-    locations: locations,
-    cityCode: data.cityCode || "cairo",
-    propertyTypeCode: data.propertyTypeCode || "apartment",
-    buildingName: data.buildingName || "",
-    pricePerMonth: Number(data.pricePerMonth) || 0,
-    bedrooms: Number(data.bedrooms) || 1,
-    bathrooms: Number(data.bathrooms) || 1,
-    areaSqM: Number(data.areaSqM) || 100,
+    countryCode: countryCode,
+    currencyCode: countryCode === "AE" ? "AED" : "EGP",
+    titles: localizedText(data.titles, data.title, 200),
+    descriptions: localizedText(data.descriptions, data.description, 4000),
+    locations: localizedText(data.locations, data.location, 300),
+    cityCode: cleanText(data.cityCode, 60) || "cairo",
+    propertyTypeCode: cleanText(data.propertyTypeCode, 60) || "apartment",
+    buildingName: cleanText(data.buildingName, 200),
+    pricePerMonth: boundedNumber(data.pricePerMonth, 0, 1e9),
+    bedrooms: boundedNumber(data.bedrooms, 1, 100) || 1,
+    bathrooms: boundedNumber(data.bathrooms, 1, 100) || 1,
+    areaSqM: boundedNumber(data.areaSqM, 100, 1e6) || 100,
     image: images[0] || "",
     imageUrls: images,
-    amenitiesMap: data.amenitiesMap || {
-      ar: ["مفروش بالكامل", "تكييف مركزي", "موقف سيارات خاص", "أمن وحراسة 24/7"],
-      en: ["Fully Furnished", "Central A/C", "Private Parking", "24/7 Security"],
-      hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
-    },
-    agencyNames: data.agencyNames || {
-      ar: "شركة تسهيل لإدارة الأملاك",
-      en: "Tashil Property Management",
-      hi: "तशिल संपत्ति प्रबंधन",
-    },
-    agencyPhone: data.agencyPhone || "+20 100 123 4567",
-    rating: typeof data.rating === "number" ? data.rating : 5.0,
-    isFeatured: Boolean(data.isFeatured !== undefined ? data.isFeatured : true),
+    amenitiesMap: localizedAmenities(data.amenitiesMap),
+    isFurnished: data.isFurnished !== false,
+    agencyNames: PLATFORM_AGENCY_NAMES,
+    agencyPhone: PLATFORM_AGENCY_PHONE,
+    rating: Math.min(boundedNumber(data.rating, 5.0, 5), 5),
+    isFeatured: data.isFeatured !== false,
     is_published: true,
     status: "vacant",
     updated_at: admin.firestore.FieldValue.serverTimestamp(),
-    // Strictly stripped & excluded to ensure zero leakage:
-    // - tenantName
-    // - tenantPhone
-    // - installments
-    // - leaseStartDate
-    // - leaseEndDate
-    // - unitNumber
-    // - notes / internalNotes
   };
 }
 
@@ -287,7 +407,8 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {
-        await marketDocRef.set(sanitized, { merge: true });
+        // Full replace (no merge) so stale or previously leaked fields are purged.
+        await marketDocRef.set(sanitized);
         logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);
@@ -298,6 +419,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       logger.info(`Concealing property [${propertyId}] from /Properties (status: ${rentalStatus}, isPublished: ${isPublished})`);
       try {
         await marketDocRef.set({
+          owner_id: ownerId,
           is_published: false,
           status: rentalStatus === "rented" ? "rented" : "unavailable",
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
