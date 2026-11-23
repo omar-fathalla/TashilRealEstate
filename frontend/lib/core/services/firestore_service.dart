@@ -103,37 +103,9 @@ class FirestoreService {
           .doc(property.id)
           .set(propData, SetOptions(merge: true));
 
-      // 2. Synchronize with Public Marketplace (Properties/{propertyId}).
-      // The private tree is the source of truth and the syncOwnerPropertyToMarketplace
-      // trigger re-syncs this mirror, so a rejected mirror write must not fail the save.
-      final marketDocRef = _db.collection('Properties').doc(property.id);
-      try {
-        if (property.isPublished && property.rentalStatus == PropertyRentalStatus.available) {
-          final marketItem = property.toPropertyItem();
-          final marketData = marketItem.toMap();
-          // Contact details on public listings are server-managed (set by the sync trigger).
-          marketData.remove('agencyNames');
-          marketData.remove('agencyPhone');
-          marketData['owner_id'] = ownerId;
-          marketData['status'] = 'vacant';
-          marketData['is_published'] = true;
-          marketData['updated_at'] = FieldValue.serverTimestamp();
-
-          await marketDocRef.set(marketData, SetOptions(merge: true));
-        } else {
-          // If property is rented or unpublished, hide it from the public marketplace
-          await marketDocRef.set({
-            'owner_id': ownerId,
-            'is_published': false,
-            'status': property.rentalStatus == PropertyRentalStatus.rented ? 'rented' : 'unavailable',
-            'updated_at': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-      } catch (e) {
-        debugPrint('⚠️ Marketplace mirror write for [${property.id}] deferred to server sync: $e');
-      }
-
-      debugPrint('✅ Property [${property.id}] successfully persisted to owner [$ownerId] tree and marketplace.');
+      // The public marketplace copy (Properties/{propertyId}) is written only by the
+      // syncOwnerPropertyToMarketplace trigger; clients cannot create or edit it.
+      debugPrint('✅ Property [${property.id}] successfully persisted to owner [$ownerId] tree.');
       return true;
     } catch (e) {
       debugPrint('❌ Error saving owner property to Firestore: $e');
@@ -202,8 +174,6 @@ class FirestoreService {
             id.startsWith('SIM-');
         if (isMock) {
           batch.delete(doc.reference);
-          final marketRef = _db.collection('Properties').doc(id);
-          batch.delete(marketRef);
           hasDeletions = true;
         }
       }
@@ -236,24 +206,9 @@ class FirestoreService {
           .collection('properties')
           .doc(propertyId)
           .delete();
-
-      await _db.collection('Properties').doc(propertyId).delete();
+      // The sync trigger removes the public listing once the private doc is gone.
     } catch (e) {
       debugPrint('Error deleting property from Firestore: $e');
-    }
-  }
-
-  // --- 3. General Save (for backward compatibility) ---
-
-  Future<void> saveProperty(Map<String, dynamic> propertyData) async {
-    try {
-      final id = propertyData['id'] as String? ?? 'prop-${DateTime.now().millisecondsSinceEpoch}';
-      await _db.collection('Properties').doc(id).set({
-        ...propertyData,
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('Error saving general property to Firestore: $e');
     }
   }
 

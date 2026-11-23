@@ -119,7 +119,7 @@ service cloud.firestore {
     // 2. Properties Collection (Public Marketplace)
     // The only fields a public listing may carry. Must match sanitizeForMarketplace in
     // backend/index.js (plus agency_id attribution); anything else is rejected, so contact
-    // fields such as phone, whatsapp, or email can never be written by a client.
+    // fields such as phone, whatsapp, or email can never be written directly.
     function publicListingFields() {
       return [
         'id', 'owner_id', 'agency_id', 'countryCode', 'currencyCode',
@@ -128,11 +128,6 @@ service cloud.firestore {
         'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
         'is_published', 'status', 'updated_at'
       ];
-    }
-
-    // Contact details shown on the card; set only by the sync trigger or a SuperAdmin.
-    function serverManagedListingFields() {
-      return ['agencyNames', 'agencyPhone'];
     }
 
     function localizedKeysOk(data, field) {
@@ -157,16 +152,6 @@ service cloud.firestore {
       return isAgencyAdminOf(resource.data.get('agency_id', ''));
     }
 
-    // Only landlords and agencies list properties. Must match PUBLISHER_ROLES in backend/authz.js.
-    function canPublishListing() {
-      return isOwner() || isAgencyAdmin();
-    }
-
-    function newListingAgencyOk() {
-      return request.resource.data.get('agency_id', '') == ''
-        || isAgencyAdminOf(request.resource.data.agency_id);
-    }
-
     match /Properties/{propertyId} {
       // Anyone (including unauthenticated visitors) can read published listings. Unpublished
       // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
@@ -175,23 +160,10 @@ service cloud.firestore {
         || ownsListing()
         || agencyManagesResource();
 
-      // A listing is always created in the creator's own name.
-      allow create: if isSuperAdmin() || (
-        canPublishListing()
-        && request.resource.data.get('owner_id', '') == request.auth.uid
-        && newListingAgencyOk()
-        && listingShapeOk(propertyId)
-        && !request.resource.data.keys().hasAny(serverManagedListingFields())
-      );
-
-      // Ownership, agency attribution, and contact details cannot be changed by the client.
-      allow update: if isSuperAdmin() || (
-        canPublishListing()
-        && (ownsListing() || agencyManagesResource())
-        && !changedKeys().hasAny(['owner_id', 'agency_id'])
-        && listingShapeOk(propertyId)
-        && !addedOrChangedKeys().hasAny(serverManagedListingFields())
-      );
+      // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
+      // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
+      // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
+      allow create, update: if isSuperAdmin() && listingShapeOk(propertyId);
 
       allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
     }

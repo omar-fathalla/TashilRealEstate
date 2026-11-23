@@ -15,7 +15,7 @@ const {
   PUBLISHER_ROLES,
   requireAuth,
   requireRole,
-  resolveUserRole,
+  resolveUserAuthority,
   loadLease,
   leaseAmount,
   leaseCountry,
@@ -295,14 +295,14 @@ function boundedNumber(value, fallback, max) {
  * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
  * identity, installments, unit numbers, notes, and owner contact data never do.
  */
-function sanitizeForMarketplace(data, ownerId, propertyId) {
+function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "" } = {}) {
   const countryCode = data.countryCode === "AE" ? "AE" : "EG";
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
     : [data.image];
   const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map((ref) => ref.trim());
 
-  return {
+  const listing = {
     id: propertyId || cleanText(data.id, 200),
     owner_id: ownerId,
     countryCode: countryCode,
@@ -329,6 +329,8 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
   };
+  if (agencyId) listing.agency_id = agencyId;
+  return listing;
 }
 
 /**
@@ -382,7 +384,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
     const wantsPublic = isPublished && rentalStatus === "available";
-    const ownerRole = wantsPublic ? await resolveUserRole(ownerId) : "";
+    const { role: ownerRole, agencyId } = wantsPublic ? await resolveUserAuthority(ownerId) : { role: "", agencyId: "" };
 
     if (wantsPublic && !PUBLISHER_ROLES.includes(ownerRole)) {
       logger.warn(`Not publishing [${propertyId}]: owner [${ownerId}] has role [${ownerRole || "none"}].`);
@@ -401,7 +403,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     // 2. Handle active published property
     if (wantsPublic) {
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
-      const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
+      const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId, { agencyId });
       try {
         // Full replace (no merge) so stale or previously leaked fields are purged.
         const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, sanitized));

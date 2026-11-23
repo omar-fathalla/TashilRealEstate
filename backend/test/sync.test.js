@@ -164,3 +164,22 @@ test("TAQ-46: the owner can still conceal and delete their own listing", async (
   pub = await publicDoc("listing-a");
   assert.equal(pub, null);
 });
+
+// --- TAQ-51: the trigger is the only writer of public listings ---
+
+test("TAQ-51: the trigger publishes a listing id nobody could claim first", async () => {
+  await ownerWrites("ownerA", "fresh-id", privateListing());
+  const pub = await publicDoc("fresh-id");
+  assert.equal(pub.owner_id, "ownerA");
+  assert.equal(pub.is_published, true);
+});
+
+test("TAQ-51: agency attribution comes from the AgencyAdmin's claims, not the private doc", async () => {
+  await admin.auth().createUser({ uid: "agent1" });
+  await admin.auth().setCustomUserClaims("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+
+  await ownerWrites("agent1", "agency-listing", privateListing({ agency_id: "agency-2" }));
+  await ownerWrites("ownerA", "owner-listing", privateListing({ agency_id: "agency-1", agencyId: "agency-1" }));
+  assert.equal((await publicDoc("agency-listing")).agency_id, "agency-1");
+  assert.equal("agency_id" in (await publicDoc("owner-listing")), false);
+});
