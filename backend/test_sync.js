@@ -3,7 +3,11 @@ const assert = require("assert");
 // Test runner for Backend Sanitization & Sync Logic
 console.log("🚀 Starting Backend Zero-Leakage Sanitization Tests...\n");
 
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 const { sanitizeForMarketplace } = require("./index.js");
+
+const storageImage = (name) =>
+  `https://firebasestorage.googleapis.com/v0/b/${process.env.GCLOUD_PROJECT}.appspot.com/o/listings%2F${name}?alt=media`;
 
 // Mock Owner Property Record containing private & sensitive PII
 const rawOwnerProperty = {
@@ -33,10 +37,10 @@ const rawOwnerProperty = {
   bedrooms: 3,
   bathrooms: 4,
   areaSqM: 320,
-  image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+  image: storageImage("penthouse-1.jpg"),
   imageUrls: [
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
-    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9",
+    storageImage("penthouse-1.jpg"),
+    storageImage("penthouse-2.jpg"),
   ],
   isPublished: true,
   rentalStatus: "available",
@@ -95,14 +99,14 @@ const flatProperty = {
   description: "تشطيب سوبر لوكس",
   location: "التجمع الخامس، القاهرة",
   pricePerMonth: "12000",
-  image: "https://example.com/studio.jpg",
+  image: storageImage("studio.jpg"),
 };
 const flatSanitized = sanitizeForMarketplace(flatProperty, "owner-cairo-02", "flat-prop-02");
 assert.strictEqual(flatSanitized.titles.ar, "شقة استوديو في القاهرة الجديدة");
 assert.strictEqual(flatSanitized.titles.en, "شقة استوديو في القاهرة الجديدة");
 assert.strictEqual(flatSanitized.pricePerMonth, 12000);
 assert.strictEqual(flatSanitized.currencyCode, "EGP");
-assert.strictEqual(flatSanitized.imageUrls[0], "https://example.com/studio.jpg");
+assert.strictEqual(flatSanitized.imageUrls[0], storageImage("studio.jpg"));
 console.log("✅ Test 3 Passed: Graceful fallback handled flawlessly.\n");
 
 console.log("🎉 ALL TESTS PASSED SUCCESSFULLY! ZERO DATA LEAKAGE CONFIRMED.");

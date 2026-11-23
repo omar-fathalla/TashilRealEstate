@@ -438,6 +438,104 @@ test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
   await assertSucceeds(deleteDoc(doc(root, "Properties/prop-1")));
 });
 
+// --- TAQ-52: direct listing writes are value-checked ---
+
+const PROD_IMAGE = "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media&token=t";
+
+test("TAQ-52: a well-formed listing is accepted", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(setDoc(doc(root, "Properties/prop-1"), listing("owner", {
+    descriptions: { ar: "شقة واسعة", en: "Spacious flat, 3 rooms, 15000000 EGP", hi: "विवरण" },
+    locations: { ar: "دبي", en: "Dubai Marina", hi: "दुबई" },
+    buildingName: "Marina Tower 2",
+    bedrooms: 0,
+    bathrooms: 1,
+    areaSqM: 85.5,
+    rating: 4.5,
+    isFeatured: true,
+    isFurnished: false,
+    image: PROD_IMAGE,
+    imageUrls: [
+      PROD_IMAGE,
+      "https://storage.googleapis.com/tashil-proptech-os.appspot.com/listings/b.webp",
+      "assets/images/properties/prop_eg_6_1.jpg",
+      "prop_eg_6_2.jpg",
+      "data:image/jpeg;base64,/9j/AAAA",
+      ...Array(15).fill(PROD_IMAGE),
+    ],
+    amenitiesMap: { ar: Array(30).fill("مسبح"), en: Array(30).fill("Pool"), hi: Array(30).fill("पूल") },
+    updated_at: serverTimestamp(),
+  })));
+});
+
+test("TAQ-52: out-of-range or wrongly typed values are rejected", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const bad = [
+    { rating: 999 },
+    { rating: -1 },
+    { rating: "5" },
+    { isFeatured: "yes" },
+    { is_published: "true" },
+    { pricePerMonth: -500 },
+    { pricePerMonth: 0 },
+    { pricePerMonth: "9000" },
+    { areaSqM: -10 },
+    { areaSqM: 0 },
+    { bedrooms: -1 },
+    { bathrooms: 1000 },
+    { status: "sold" },
+    { status: "" },
+    { countryCode: "US" },
+    { countryCode: "AE", currencyCode: "EGP" },
+    { buildingName: "x".repeat(201) },
+    { titles: { ar: "شقة", en: "x".repeat(201), hi: "अपार्टमेंट" } },
+    { descriptions: { en: 42 } },
+  ];
+  for (const extra of bad) {
+    await assertFails(setDoc(ref, listing("owner", extra)), JSON.stringify(extra));
+  }
+  const { pricePerMonth: _omit, ...noPrice } = listing("owner");
+  await assertFails(setDoc(ref, noPrice));
+});
+
+test("TAQ-52: image references must be from this project's bucket or the app bundle", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const badImages = [
+    "javascript:alert(1)",
+    "http://evil.example.com/a.jpg",
+    "https://images.unsplash.com/photo-1",
+    "https://firebasestorage.googleapis.com/v0/b/other-project.appspot.com/o/a.jpg?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/kyc%2Fpassport.jpg?alt=media",
+    "https://storage.googleapis.com/tashil-proptech-os.appspot.com/users/owner/id.jpg",
+    "assets/../secrets.png",
+    "data:image/svg+xml;base64,PHN2Zz4=",
+    "data:text/html;base64,PGgxPg==",
+  ];
+  for (const image of badImages) {
+    await assertFails(setDoc(ref, listing("owner", { image })), image);
+    await assertFails(setDoc(ref, listing("owner", { imageUrls: [PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, image] })), image);
+  }
+  await assertFails(setDoc(ref, listing("owner", { imageUrls: Array(21).fill(PROD_IMAGE) })));
+});
+
+test("TAQ-52: phone numbers and emails are rejected in free text", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  const bad = [
+    { buildingName: "Tower call 0501234567" },
+    { buildingName: "+971 50 123 4567" },
+    { buildingName: "برج ٠١٠٠١٢٣٤٥٦٧" },
+    { titles: { ar: "شقة", en: "Flat (050) 123-4567", hi: "फ्लैट" } },
+    { descriptions: { ar: "وصف", en: "Mail me: owner@example.com", hi: "विवरण" } },
+    { locations: { ar: "دبي", en: "Dubai", hi: "संपर्क ۰۵۰۱۲۳۴۵۶۷۸" } },
+  ];
+  for (const extra of bad) {
+    await assertFails(setDoc(ref, listing("owner", extra)), JSON.stringify(extra));
+  }
+});
+
 // --- TAQ-17: lease documents are the source of truth for party checks ---
 
 test("TAQ-17: lease parties can read; outsiders cannot write leases", async () => {
