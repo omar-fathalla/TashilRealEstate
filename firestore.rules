@@ -166,8 +166,21 @@ service cloud.firestore {
     // Space-separated image references: download URLs from this project's Storage bucket
     // (outside private folders), bundled assets, or inline raster images. Must match
     // isPublicImageRef() in backend/index.js.
+    // The Firebase project id comes from the signed ID token's audience, so the allowed
+    // buckets follow the project the rules are deployed to (prod keeps tashil-proptech-os).
+    function projectId() {
+      return request.auth.token.get('aud', '');
+    }
+
     function imageRefsOk(refs) {
-      return refs.matches('^((https://firebasestorage[.]googleapis[.]com/v0/b/tashil-proptech-os[.](firebasestorage[.]app|appspot[.]com)/o/[^?# ]+([?][^# ]*)?|https://storage[.]googleapis[.]com/tashil-proptech-os[.](firebasestorage[.]app|appspot[.]com)/[^?# ]+|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)( (https://firebasestorage[.]googleapis[.]com/v0/b/tashil-proptech-os[.](firebasestorage[.]app|appspot[.]com)/o/[^?# ]+([?][^# ]*)?|https://storage[.]googleapis[.]com/tashil-proptech-os[.](firebasestorage[.]app|appspot[.]com)/[^?# ]+|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+))*)?$')
+      let bucket = projectId() + '[.](firebasestorage[.]app|appspot[.]com)';
+      let ref = '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?'
+        + '|https://storage[.]googleapis[.]com/' + bucket + '/[^?# ]+'
+        + '|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)'
+        + '|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)'
+        + '|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)';
+      return projectId().matches('[a-z][a-z0-9-]{4,29}')
+        && refs.matches('^(' + ref + '( ' + ref + ')*)?$')
         && !refs.matches('^.*[.][.].*$')
         && !refs.matches('(?i)^.*https://[^ ]*/(o/)?(users|private|kyc|documents|leases|contracts)(/|%2F).*$');
     }
