@@ -257,69 +257,120 @@ exports.seedDatabase = onRequest(async (req, res) => {
   res.json({ message: "Seeded Successfully", details: results });
 });
 
+const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
+const MARKETPLACE_MAX_IMAGES = 20;
+const MARKETPLACE_MAX_AMENITIES = 30;
+
+const DEFAULT_AMENITIES = {
+  ar: ["مفروش بالكامل", "تكييف مركزي", "موقف سيارات خاص", "أمن وحراسة 24/7"],
+  en: ["Fully Furnished", "Central A/C", "Private Parking", "24/7 Security"],
+  hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
+};
+
+// Listings from the owner tree are contacted through the platform, never the owner directly.
+const PLATFORM_AGENCY_NAMES = {
+  ar: "شركة تسهيل لإدارة الأملاك",
+  en: "Tashil Property Management",
+  hi: "तशिल संपत्ति प्रबंधन",
+};
+const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
+
+function cleanText(value, maxLength) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+// Keeps only the ar/en/hi string entries; any other nested key is dropped.
+function localizedText(map, flatFallback, maxLength) {
+  const source = map && typeof map === "object" && !Array.isArray(map) ? map : null;
+  const result = {};
+  for (const locale of MARKETPLACE_LOCALES) {
+    result[locale] = cleanText(source ? source[locale] : flatFallback, maxLength);
+  }
+  return result;
+}
+
+function localizedAmenities(map) {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return DEFAULT_AMENITIES;
+  const result = {};
+  for (const locale of MARKETPLACE_LOCALES) {
+    const list = Array.isArray(map[locale]) ? map[locale] : [];
+    result[locale] = list
+      .filter((item) => typeof item === "string" && item.trim())
+      .slice(0, MARKETPLACE_MAX_AMENITIES)
+      .map((item) => cleanText(item, 80));
+  }
+  return result;
+}
+
+const PRIVATE_STORAGE_PREFIX = /\/o\/(users|private|kyc|documents|leases|contracts)\//i;
+
 /**
- * Sanitizes an owner property document for the public marketplace (/Properties).
- * Enforces Zero-Leakage Data Standards by strictly stripping all private landlord,
- * tenant PII, financial installments, and internal notes.
+ * Accepts https URLs outside private Storage folders, bundled assets, and inline
+ * raster images from the web picker. Anything else (http, blob:, PDFs, paths into
+ * users/ or kyc/) is dropped.
+ */
+function isPublicImageRef(value) {
+  if (typeof value !== "string") return false;
+  const ref = value.trim();
+  if (!ref) return false;
+  if (ref.startsWith("data:")) return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(ref);
+  if (ref.startsWith("assets/")) return true;
+  if (/^https:\/\//i.test(ref)) {
+    let decoded = ref;
+    try {
+      decoded = decodeURIComponent(ref);
+    } catch (_) {
+      return false;
+    }
+    return !PRIVATE_STORAGE_PREFIX.test(decoded);
+  }
+  return !ref.includes(":") && !ref.includes("/");
+}
+
+function boundedNumber(value, fallback, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.min(n, max);
+}
+
+/**
+ * Builds the public marketplace (/Properties) document from an owner property using an
+ * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
+ * identity, installments, unit numbers, notes, and owner contact data never do.
  */
 function sanitizeForMarketplace(data, ownerId, propertyId) {
-  const titles = (typeof data.titles === "object" && data.titles !== null)
-    ? data.titles
-    : { ar: data.title || "", en: data.title || "", hi: data.title || "" };
-
-  const descriptions = (typeof data.descriptions === "object" && data.descriptions !== null)
-    ? data.descriptions
-    : { ar: data.description || "", en: data.description || "", hi: data.description || "" };
-
-  const locations = (typeof data.locations === "object" && data.locations !== null)
-    ? data.locations
-    : { ar: data.location || "", en: data.location || "", hi: data.location || "" };
-
-  const images = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
+  const countryCode = data.countryCode === "AE" ? "AE" : "EG";
+  const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
-    : (data.image ? [data.image] : []);
+    : [data.image];
+  const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map((ref) => ref.trim());
 
   return {
-    id: propertyId || data.id,
+    id: propertyId || cleanText(data.id, 200),
     owner_id: ownerId,
-    countryCode: data.countryCode || "EG",
-    currencyCode: data.currencyCode || (data.countryCode === "AE" ? "AED" : "EGP"),
-    titles: titles,
-    descriptions: descriptions,
-    locations: locations,
-    cityCode: data.cityCode || "cairo",
-    propertyTypeCode: data.propertyTypeCode || "apartment",
-    buildingName: data.buildingName || "",
-    pricePerMonth: Number(data.pricePerMonth) || 0,
-    bedrooms: Number(data.bedrooms) || 1,
-    bathrooms: Number(data.bathrooms) || 1,
-    areaSqM: Number(data.areaSqM) || 100,
+    countryCode: countryCode,
+    currencyCode: countryCode === "AE" ? "AED" : "EGP",
+    titles: localizedText(data.titles, data.title, 200),
+    descriptions: localizedText(data.descriptions, data.description, 4000),
+    locations: localizedText(data.locations, data.location, 300),
+    cityCode: cleanText(data.cityCode, 60) || "cairo",
+    propertyTypeCode: cleanText(data.propertyTypeCode, 60) || "apartment",
+    buildingName: cleanText(data.buildingName, 200),
+    pricePerMonth: boundedNumber(data.pricePerMonth, 0, 1e9),
+    bedrooms: boundedNumber(data.bedrooms, 1, 100) || 1,
+    bathrooms: boundedNumber(data.bathrooms, 1, 100) || 1,
+    areaSqM: boundedNumber(data.areaSqM, 100, 1e6) || 100,
     image: images[0] || "",
     imageUrls: images,
-    amenitiesMap: data.amenitiesMap || {
-      ar: ["مفروش بالكامل", "تكييف مركزي", "موقف سيارات خاص", "أمن وحراسة 24/7"],
-      en: ["Fully Furnished", "Central A/C", "Private Parking", "24/7 Security"],
-      hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
-    },
-    agencyNames: data.agencyNames || {
-      ar: "شركة تسهيل لإدارة الأملاك",
-      en: "Tashil Property Management",
-      hi: "तशिल संपत्ति प्रबंधन",
-    },
-    agencyPhone: data.agencyPhone || "+20 100 123 4567",
-    rating: typeof data.rating === "number" ? data.rating : 5.0,
-    isFeatured: Boolean(data.isFeatured !== undefined ? data.isFeatured : true),
+    amenitiesMap: localizedAmenities(data.amenitiesMap),
+    isFurnished: data.isFurnished !== false,
+    agencyNames: PLATFORM_AGENCY_NAMES,
+    agencyPhone: PLATFORM_AGENCY_PHONE,
+    rating: Math.min(boundedNumber(data.rating, 5.0, 5), 5),
+    isFeatured: data.isFeatured !== false,
     is_published: true,
     status: "vacant",
     updated_at: admin.firestore.FieldValue.serverTimestamp(),
-    // Strictly stripped & excluded to ensure zero leakage:
-    // - tenantName
-    // - tenantPhone
-    // - installments
-    // - leaseStartDate
-    // - leaseEndDate
-    // - unitNumber
-    // - notes / internalNotes
   };
 }
 
@@ -356,7 +407,8 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {
-        await marketDocRef.set(sanitized, { merge: true });
+        // Full replace (no merge) so stale or previously leaked fields are purged.
+        await marketDocRef.set(sanitized);
         logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);

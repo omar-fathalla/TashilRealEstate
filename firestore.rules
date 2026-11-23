@@ -61,6 +61,11 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
+    function addedOrChangedKeys() {
+      let d = request.resource.data.diff(resource.data);
+      return d.addedKeys().union(d.changedKeys());
+    }
+
     // 1. Users Collection
     // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
     function lockedUserFields() {
@@ -109,6 +114,17 @@ service cloud.firestore {
     }
 
     // 2. Properties Collection (Public Marketplace)
+    // Private landlord/tenant data that must never reach the public catalog.
+    function privateListingFields() {
+      return [
+        'tenantName', 'tenantPhone', 'tenantEmail', 'tenant_id', 'tenantId',
+        'installments', 'archivedInstallments', 'unitNumber',
+        'leaseStartDate', 'leaseEndDate', 'notes', 'internalNotes',
+        'nationalId', 'national_id', 'iban', 'bank_name', 'bank_account_number',
+        'ownerPhone', 'ownerEmail', 'owner_phone', 'owner_email'
+      ];
+    }
+
     function ownsListing() {
       return isAuthenticated() && resource.data.get('owner_id', '') == request.auth.uid;
     }
@@ -136,12 +152,14 @@ service cloud.firestore {
         isAuthenticated()
         && request.resource.data.get('owner_id', '') == request.auth.uid
         && newListingAgencyOk()
+        && !request.resource.data.keys().hasAny(privateListingFields())
       );
 
       // Ownership and agency attribution cannot be reassigned by the client.
       allow update: if isSuperAdmin() || (
         (ownsListing() || agencyManagesResource())
         && !changedKeys().hasAny(['owner_id', 'agency_id'])
+        && !addedOrChangedKeys().hasAny(privateListingFields())
       );
 
       allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();

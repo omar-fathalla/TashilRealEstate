@@ -268,6 +268,17 @@ test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is all
   await assertSucceeds(deleteDoc(doc(owner, "Properties/prop-9")));
 });
 
+// --- TAQ-18: private fields cannot be written to the public catalog ---
+
+test("TAQ-18: tenant and unit data cannot be written to a public listing", async () => {
+  const owner = db("owner");
+  await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { tenantPhone: "+971500000000" })));
+  await seed("Properties/prop-2", listing("owner"));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { tenantName: "Tenant" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { unitNumber: "PH-4502" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { installments: [] }));
+});
+
 // --- TAQ-17: lease documents are the source of truth for party checks ---
 
 test("TAQ-17: lease parties can read; outsiders cannot write leases", async () => {
