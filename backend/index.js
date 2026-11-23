@@ -3,22 +3,29 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+// Import these directly: the Functions emulator wraps admin.firestore, which drops its static
+// FieldValue/Timestamp members and made every server-timestamp write crash locally.
+const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const {
+  PUBLISHER_ROLES,
   requireAuth,
   requireRole,
+  resolveUserRole,
   loadLease,
   leaseAmount,
   leaseCountry,
   assertLeaseParty,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
+const { appCheckEnforced } = require("./config");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const ENFORCE_APP_CHECK = appCheckEnforced();
 
 exports.processRentPayment = onCall(async (request) => {
   const data = request.data;
@@ -75,7 +82,7 @@ function parseDueDate(value) {
 }
 
 // Party, tenant, amount, and currency come from the lease document, never from the caller.
-exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = requireAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
@@ -116,7 +123,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 },
     amount: amount,
     currency: currency,
     status: "delivered",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   };
 
   try {
@@ -126,7 +133,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 },
       if (lastSentAt && Date.now() - lastSentAt.toMillis() < REMINDER_COOLDOWN_MS) {
         throw new HttpsError("resource-exhausted", "A reminder was already sent for this lease in the last 24 hours.");
       }
-      tx.set(reminderLogRef, { lastSentAt: admin.firestore.Timestamp.now(), sentBy: auth.uid });
+      tx.set(reminderLogRef, { lastSentAt: Timestamp.now(), sentBy: auth.uid });
       tx.set(notifRef, notificationPayload);
       tx.set(db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id), notificationPayload);
     });
@@ -139,7 +146,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 },
   }
 });
 
-exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = requireAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
@@ -177,7 +184,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstan
     issuedBy: auth.uid,
     // Paid_Verified is reserved for a verified payment record; issuing alone proves nothing.
     status: "Issued",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   };
 
   try {
@@ -191,7 +198,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstan
 });
 
 // SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
-exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (request) => {
+exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
   const auth = requireAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
@@ -205,57 +212,7 @@ exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (
   return { success: true, ...result };
 });
 
-
-exports.seedDatabase = onRequest(async (req, res) => {
-  const users = [
-    { email: "agency@test.com", password: "password123", role: "AgencyAdmin", name: "Test Agency" },
-    { email: "owner@test.com", password: "password123", role: "Owner", name: "Test Owner" },
-    { email: "tenant@test.com", password: "password123", role: "Tenant", name: "Test Tenant" }
-  ];
-
-  const db = admin.firestore();
-  const results = [];
-
-  for (const u of users) {
-    try {
-      let userRecord;
-      try {
-        userRecord = await admin.auth().getUserByEmail(u.email);
-      } catch (e) {
-        if (e.code === 'auth/user-not-found') {
-          userRecord = await admin.auth().createUser({
-            email: u.email,
-            password: u.password,
-            displayName: u.name,
-          });
-        } else {
-          throw e;
-        }
-      }
-
-      await db.collection("Users").doc(userRecord.uid).set({
-        user_id: userRecord.uid,
-        email: u.email,
-        full_name: u.name,
-        role: u.role,
-        agency_id: "agency_test_123" // Mock agency ID
-      }, { merge: true });
-      await applyUserRole({
-        uid: userRecord.uid,
-        role: u.role,
-        agencyId: u.role === "AgencyAdmin" ? "agency_test_123" : undefined,
-        actorUid: "seedDatabase",
-      });
-
-      results.push({ email: u.email, uid: userRecord.uid, status: "Seeded" });
-    } catch (error) {
-      logger.error(`Error seeding ${u.email}`, error);
-      results.push({ email: u.email, error: error.message });
-    }
-  }
-
-  res.json({ message: "Seeded Successfully", details: results });
-});
+// Demo accounts are seeded only by the local admin script (seed.js), never by a deployed endpoint.
 
 const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
 const MARKETPLACE_MAX_IMAGES = 20;
@@ -370,8 +327,30 @@ function sanitizeForMarketplace(data, ownerId, propertyId) {
     isFeatured: data.isFeatured !== false,
     is_published: true,
     status: "vacant",
-    updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
   };
+}
+
+/**
+ * Applies `mutate(tx, marketDocRef)` only when /Properties/{propertyId} is absent or already
+ * belongs to ownerId. Property ids are global, so any owner can create a private doc with
+ * someone else's listing id; without this check that owner could overwrite, conceal, or
+ * delete the other owner's public listing. Returns false when the write was refused.
+ */
+async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate) {
+  const marketDocRef = db.collection("Properties").doc(propertyId);
+  return db.runTransaction(async (tx) => {
+    const current = await tx.get(marketDocRef);
+    if (current.exists && current.get("owner_id") !== ownerId) {
+      logger.warn(
+        `Refusing to sync [${propertyId}] from owner [${ownerId}]: the public listing belongs to ` +
+        `[${current.get("owner_id") || "no owner"}].`
+      );
+      return false;
+    }
+    mutate(tx, marketDocRef, current);
+    return true;
+  });
 }
 
 /**
@@ -385,13 +364,14 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const ownerId = event.params.ownerId;
     const propertyId = event.params.propertyId;
     const db = admin.firestore();
-    const marketDocRef = db.collection("Properties").doc(propertyId);
 
     // 1. Handle document deletion in owner's tree
     if (!event.data || !event.data.after || !event.data.after.exists) {
       logger.info(`Property [${propertyId}] was deleted by owner [${ownerId}]. Removing from /Properties.`);
       try {
-        await marketDocRef.delete();
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
+          if (current.exists) tx.delete(ref);
+        });
       } catch (err) {
         logger.error(`Error deleting property [${propertyId}] from /Properties`, err);
       }
@@ -401,15 +381,31 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const afterData = event.data.after.data();
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
+    const wantsPublic = isPublished && rentalStatus === "available";
+    const ownerRole = wantsPublic ? await resolveUserRole(ownerId) : "";
+
+    if (wantsPublic && !PUBLISHER_ROLES.includes(ownerRole)) {
+      logger.warn(`Not publishing [${propertyId}]: owner [${ownerId}] has role [${ownerRole || "none"}].`);
+      try {
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
+          if (current.exists) {
+            tx.set(ref, { is_published: false, updated_at: FieldValue.serverTimestamp() }, { merge: true });
+          }
+        });
+      } catch (err) {
+        logger.error(`Error concealing property [${propertyId}] in /Properties`, err);
+      }
+      return null;
+    }
 
     // 2. Handle active published property
-    if (isPublished && rentalStatus === "available") {
+    if (wantsPublic) {
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       const sanitized = sanitizeForMarketplace(afterData, ownerId, propertyId);
       try {
         // Full replace (no merge) so stale or previously leaked fields are purged.
-        await marketDocRef.set(sanitized);
-        logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
+        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, sanitized));
+        if (written) logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
         logger.error(`Error syncing property [${propertyId}] to /Properties`, err);
         throw err;
@@ -418,12 +414,12 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       // 3. Handle rented, unpublished, or maintenance properties -> Conceal from public marketplace
       logger.info(`Concealing property [${propertyId}] from /Properties (status: ${rentalStatus}, isPublished: ${isPublished})`);
       try {
-        await marketDocRef.set({
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref) => tx.set(ref, {
           owner_id: ownerId,
           is_published: false,
           status: rentalStatus === "rented" ? "rented" : "unavailable",
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
+          updated_at: FieldValue.serverTimestamp(),
+        }, { merge: true }));
       } catch (err) {
         logger.error(`Error updating concealed state for property [${propertyId}] in /Properties`, err);
       }

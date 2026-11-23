@@ -3,6 +3,8 @@ const admin = require("firebase-admin");
 
 const SELF_SERVICE_ROLES = ["Owner", "Tenant"];
 const ASSIGNABLE_ROLES = ["Owner", "Tenant", "AgencyAdmin", "SuperAdmin"];
+// Roles allowed to put a listing on the public marketplace. Must match canPublishListing() in firestore.rules.
+const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
 
 function requireAuth(request) {
   if (!request.auth || !request.auth.uid) {
@@ -25,6 +27,17 @@ async function resolveRole(auth) {
   const snap = await admin.firestore().collection("Users").doc(auth.uid).get();
   const profileRole = snap.exists ? snap.get("role") : "";
   return SELF_SERVICE_ROLES.includes(profileRole) ? profileRole : "";
+}
+
+/** resolveRole for a uid with no request token (triggers): reads custom claims via the Admin SDK. */
+async function resolveUserRole(uid) {
+  let claims = {};
+  try {
+    claims = (await admin.auth().getUser(uid)).customClaims || {};
+  } catch (err) {
+    if (err.code !== "auth/user-not-found") throw err;
+  }
+  return resolveRole({ uid, token: claims });
 }
 
 async function requireRole(auth, roles) {
@@ -80,8 +93,10 @@ function assertLeaseParty(auth, role, lease, { allowTenant = false } = {}) {
 module.exports = {
   SELF_SERVICE_ROLES,
   ASSIGNABLE_ROLES,
+  PUBLISHER_ROLES,
   requireAuth,
   resolveRole,
+  resolveUserRole,
   requireRole,
   loadLease,
   leaseAmount,

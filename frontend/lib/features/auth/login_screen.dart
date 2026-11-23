@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/config/demo_data.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -346,7 +347,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _loginAsDemo(String email, String pass, String role, AppLocalizations loc) async {
+  Future<void> _loginAsDemo(String email, String role, AppLocalizations loc) async {
+    const pass = DemoData.password;
     setState(() {
       _emailController.text = email;
       _passwordController.text = pass;
@@ -355,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _isSignUpMode = false;
     });
 
-    await _handleEmailAuth(loc);
+    if (pass.isNotEmpty) await _handleEmailAuth(loc);
   }
 
   @override
@@ -528,15 +530,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               ),
 
-                              const SizedBox(height: 18),
-                              TashilDivider.withLabel(
-                                label: loc.tr('demoAccounts'),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                              const SizedBox(height: 10),
+                              if (DemoData.enabled) ...[
+                                const SizedBox(height: 18),
+                                TashilDivider.withLabel(
+                                  label: loc.tr('demoAccounts'),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                const SizedBox(height: 10),
 
-                              // 5. Quick Demo Accounts Suite (Google Icons Only)
-                              _buildDemoAccountsSuite(loc, colorScheme),
+                                // 5. Quick Demo Accounts Suite (Google Icons Only)
+                                _buildDemoAccountsSuite(loc, colorScheme),
+                              ],
 
                               const SizedBox(height: 16),
 
@@ -958,7 +962,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Widget _buildDemoBtn(String email, String role, String label, IconData icon, AppLocalizations loc) {
     return TashilButton.outlined(
-      onPressed: _isLoading ? null : () => _loginAsDemo(email, 'password123', role, loc),
+      onPressed: _isLoading ? null : () => _loginAsDemo(email, role, loc),
       icon: icon,
       label: label,
       height: 38,

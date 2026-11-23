@@ -369,10 +369,11 @@ class UserProfileService {
         if (data['verified'] != null) {
           verified = data['verified'] == true;
         }
-        bool phoneVerified = false;
-        if (data['phone_verified'] != null) {
-          phoneVerified = data['phone_verified'] == true;
-        }
+        final phoneVerified = isPhoneVerifiedFor(
+          serverFlag: data['phone_verified'] == true,
+          authPhone: user.phoneNumber,
+          profilePhone: phone,
+        );
 
         final nationalId = data['national_id']?.toString().trim() ?? '';
         final address = data['address']?.toString().trim() ?? '';
@@ -406,6 +407,19 @@ class UserProfileService {
     } catch (e) {
       debugPrint('UserProfileService.loadProfile fetch error: $e');
     }
+  }
+
+  /// A phone counts as verified when the server says so, or when it is the number linked
+  /// to the Firebase Auth account (set only by a successful SMS verification).
+  static bool isPhoneVerifiedFor({
+    required bool serverFlag,
+    required String? authPhone,
+    required String profilePhone,
+  }) {
+    if (serverFlag) return true;
+    String digits(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
+    final linked = digits(authPhone ?? '');
+    return linked.isNotEmpty && linked == digits(profilePhone);
   }
 
   /// Explicitly re-syncs profile photo and data from Google / Firebase Auth
@@ -488,8 +502,9 @@ class UserProfileService {
           'first_name': resolvedFirstName,
           'surname': resolvedSurname,
         };
+        // phone_verified is server-managed (locked in firestore.rules); verification state is
+        // derived from the phone number linked to the Firebase Auth account instead.
         if (phone != null) updateMap['phone'] = phone.trim();
-        if (isPhoneVerified != null) updateMap['phone_verified'] = isPhoneVerified;
         if (preferredContactMethod != null) {
           updateMap['preferred_contact_method'] = preferredContactMethod;
         }

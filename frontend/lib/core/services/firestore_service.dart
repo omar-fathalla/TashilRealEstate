@@ -111,6 +111,9 @@ class FirestoreService {
         if (property.isPublished && property.rentalStatus == PropertyRentalStatus.available) {
           final marketItem = property.toPropertyItem();
           final marketData = marketItem.toMap();
+          // Contact details on public listings are server-managed (set by the sync trigger).
+          marketData.remove('agencyNames');
+          marketData.remove('agencyPhone');
           marketData['owner_id'] = ownerId;
           marketData['status'] = 'vacant';
           marketData['is_published'] = true;

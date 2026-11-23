@@ -69,7 +69,10 @@ service cloud.firestore {
     // 1. Users Collection
     // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
     function lockedUserFields() {
-      return ['agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims'];
+      return [
+        'agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims',
+        'phone_verified', 'phoneVerified', 'kycStatus', 'kyc_status', 'account_status', 'accountStatus'
+      ];
     }
 
     function selfUserCreate(userId) {
@@ -114,15 +117,36 @@ service cloud.firestore {
     }
 
     // 2. Properties Collection (Public Marketplace)
-    // Private landlord/tenant data that must never reach the public catalog.
-    function privateListingFields() {
+    // The only fields a public listing may carry. Must match sanitizeForMarketplace in
+    // backend/index.js (plus agency_id attribution); anything else is rejected, so contact
+    // fields such as phone, whatsapp, or email can never be written by a client.
+    function publicListingFields() {
       return [
-        'tenantName', 'tenantPhone', 'tenantEmail', 'tenant_id', 'tenantId',
-        'installments', 'archivedInstallments', 'unitNumber',
-        'leaseStartDate', 'leaseEndDate', 'notes', 'internalNotes',
-        'nationalId', 'national_id', 'iban', 'bank_name', 'bank_account_number',
-        'ownerPhone', 'ownerEmail', 'owner_phone', 'owner_email'
+        'id', 'owner_id', 'agency_id', 'countryCode', 'currencyCode',
+        'titles', 'descriptions', 'locations', 'cityCode', 'propertyTypeCode', 'buildingName',
+        'pricePerMonth', 'bedrooms', 'bathrooms', 'areaSqM', 'image', 'imageUrls',
+        'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
+        'is_published', 'status', 'updated_at'
       ];
+    }
+
+    // Contact details shown on the card; set only by the sync trigger or a SuperAdmin.
+    function serverManagedListingFields() {
+      return ['agencyNames', 'agencyPhone'];
+    }
+
+    function localizedKeysOk(data, field) {
+      return !(field in data) || (data[field] is map && data[field].keys().hasOnly(['ar', 'en', 'hi']));
+    }
+
+    function listingShapeOk(propertyId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(publicListingFields())
+        && d.get('id', propertyId) == propertyId
+        && localizedKeysOk(d, 'titles')
+        && localizedKeysOk(d, 'descriptions')
+        && localizedKeysOk(d, 'locations')
+        && localizedKeysOk(d, 'amenitiesMap');
     }
 
     function ownsListing() {
@@ -133,33 +157,40 @@ service cloud.firestore {
       return isAgencyAdminOf(resource.data.get('agency_id', ''));
     }
 
+    // Only landlords and agencies list properties. Must match PUBLISHER_ROLES in backend/authz.js.
+    function canPublishListing() {
+      return isOwner() || isAgencyAdmin();
+    }
+
     function newListingAgencyOk() {
       return request.resource.data.get('agency_id', '') == ''
         || isAgencyAdminOf(request.resource.data.agency_id);
     }
 
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties.
-      // Hidden, rented, and draft listings are visible only to their owner, agency, or SuperAdmin.
-      allow read: if resource.data.status == 'vacant'
-        || resource.data.is_published == true
+      // Anyone (including unauthenticated visitors) can read published listings. Unpublished
+      // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
+      allow read: if resource.data.get('is_published', false) == true
         || isSuperAdmin()
         || ownsListing()
         || agencyManagesResource();
 
       // A listing is always created in the creator's own name.
       allow create: if isSuperAdmin() || (
-        isAuthenticated()
+        canPublishListing()
         && request.resource.data.get('owner_id', '') == request.auth.uid
         && newListingAgencyOk()
-        && !request.resource.data.keys().hasAny(privateListingFields())
+        && listingShapeOk(propertyId)
+        && !request.resource.data.keys().hasAny(serverManagedListingFields())
       );
 
-      // Ownership and agency attribution cannot be reassigned by the client.
+      // Ownership, agency attribution, and contact details cannot be changed by the client.
       allow update: if isSuperAdmin() || (
-        (ownsListing() || agencyManagesResource())
+        canPublishListing()
+        && (ownsListing() || agencyManagesResource())
         && !changedKeys().hasAny(['owner_id', 'agency_id'])
-        && !addedOrChangedKeys().hasAny(privateListingFields())
+        && listingShapeOk(propertyId)
+        && !addedOrChangedKeys().hasAny(serverManagedListingFields())
       );
 
       allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();

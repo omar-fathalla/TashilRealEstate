@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,6 +106,31 @@ void main() {
         ),
         findsNothing,
       );
+    });
+
+    testWidgets('Demo account buttons are hidden unless built with DEMO_DATA', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithApp(child: const LoginScreen()));
+      await tester.pumpAndSettle();
+
+      final loc = AppLocalizations(const Locale('ar'));
+      expect(find.text(loc.tr('demoAccounts')), findsNothing);
+      expect(find.byIcon(Icons.shield_rounded), findsNothing);
+      expect(find.byIcon(Icons.business_rounded), findsNothing);
+    });
+
+    test('No demo password is hard-coded in the app source', () {
+      final offenders = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .where((f) => f.readAsStringSync().contains('password123'))
+          .map((f) => f.path)
+          .toList();
+      expect(offenders, isEmpty);
     });
 
     testWidgets('Switching auth methods transitions smoothly to Google and Phone OTP forms', (tester) async {

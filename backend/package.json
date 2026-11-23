@@ -2,13 +2,16 @@
   "name": "tashil-backend",
   "description": "Cloud Functions for TashilRealEstate",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
+    "serve": "firebase emulators:start --only functions,firestore,auth --project demo-tashil-dev",
+    "shell": "firebase functions:shell --project demo-tashil-dev",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log",
-    "test": "firebase emulators:exec --only firestore,auth --project demo-tashil-test 'npm run test:unit'",
+    "deploy": "firebase deploy --only functions --project prod",
+    "logs": "firebase functions:log --project prod",
+    "test": "npm run test:core && npm run test:emulator",
+    "test:core": "firebase emulators:exec --only firestore,auth --project demo-tashil-test 'npm run test:unit'",
     "test:unit": "node --test --test-concurrency=1 test/*.test.js && node test_sync.js",
+    "test:emulator": "firebase emulators:exec --only functions,firestore,auth --project demo-tashil-test 'node --test --test-concurrency=1 test/emulator/*.smoke.js'",
+    "seed": "node seed.js",
     "audit:roles": "node scripts/role_claims.js"
   },
   "engines": {

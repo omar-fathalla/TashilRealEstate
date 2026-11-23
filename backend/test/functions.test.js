@@ -132,6 +132,17 @@ test("TAQ-17: invoice amounts and VAT are computed from the lease", async () => 
   assert.equal(invoice.tenant_id, "tenant");
 });
 
+// --- TAQ-45: no public endpoint can create accounts or grant claims ---
+
+test("TAQ-45: seedDatabase is no longer a deployed function", () => {
+  assert.equal(fns.seedDatabase, undefined);
+  const publicHttp = Object.keys(fns)
+    .filter((name) => fns[name] && fns[name].__endpoint && fns[name].__endpoint.httpsTrigger)
+    .sort();
+  // syncMarketIndexManual is tracked separately (TAQ-20) and touches no accounts.
+  assert.deepEqual(publicHttp, ["syncMarketIndexManual"]);
+});
+
 // --- TAQ-8 / TAQ-9: setUserRole ---
 
 test("TAQ-8: only a SuperAdmin claim can assign roles", async () => {
