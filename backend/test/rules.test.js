@@ -489,7 +489,9 @@ test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
 
 // --- TAQ-52: direct listing writes are value-checked ---
 
-const PROD_IMAGE = "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media&token=t";
+const PROJECT_ID = process.env.GCLOUD_PROJECT || "demo-tashil-test";
+const PROD_PROJECT = "tashil-proptech-os";
+const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media&token=t`;
 
 test("TAQ-52: a well-formed listing is accepted", async () => {
   const root = db("root", { role: "SuperAdmin" });
@@ -503,14 +505,14 @@ test("TAQ-52: a well-formed listing is accepted", async () => {
     rating: 4.5,
     isFeatured: true,
     isFurnished: false,
-    image: PROD_IMAGE,
+    image: PROJECT_IMAGE,
     imageUrls: [
-      PROD_IMAGE,
-      "https://storage.googleapis.com/tashil-proptech-os.appspot.com/listings/b.webp",
+      PROJECT_IMAGE,
+      `https://storage.googleapis.com/${PROJECT_ID}.appspot.com/listings/b.webp`,
       "assets/images/properties/prop_eg_6_1.jpg",
       "prop_eg_6_2.jpg",
       "data:image/jpeg;base64,/9j/AAAA",
-      ...Array(15).fill(PROD_IMAGE),
+      ...Array(15).fill(PROJECT_IMAGE),
     ],
     amenitiesMap: { ar: Array(30).fill("مسبح"), en: Array(30).fill("Pool"), hi: Array(30).fill("पूल") },
     updated_at: serverTimestamp(),
@@ -556,17 +558,17 @@ test("TAQ-52: image references must be from this project's bucket or the app bun
     "http://evil.example.com/a.jpg",
     "https://images.unsplash.com/photo-1",
     "https://firebasestorage.googleapis.com/v0/b/other-project.appspot.com/o/a.jpg?alt=media",
-    "https://firebasestorage.googleapis.com/v0/b/tashil-proptech-os.firebasestorage.app/o/kyc%2Fpassport.jpg?alt=media",
-    "https://storage.googleapis.com/tashil-proptech-os.appspot.com/users/owner/id.jpg",
+    `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.firebasestorage.app/o/kyc%2Fpassport.jpg?alt=media`,
+    `https://storage.googleapis.com/${PROJECT_ID}.appspot.com/users/owner/id.jpg`,
     "assets/../secrets.png",
     "data:image/svg+xml;base64,PHN2Zz4=",
     "data:text/html;base64,PGgxPg==",
   ];
   for (const image of badImages) {
     await assertFails(setDoc(ref, listing("owner", { image })), image);
-    await assertFails(setDoc(ref, listing("owner", { imageUrls: [PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, PROD_IMAGE, image] })), image);
+    await assertFails(setDoc(ref, listing("owner", { imageUrls: [PROJECT_IMAGE, PROJECT_IMAGE, PROJECT_IMAGE, PROJECT_IMAGE, image] })), image);
   }
-  await assertFails(setDoc(ref, listing("owner", { imageUrls: Array(21).fill(PROD_IMAGE) })));
+  await assertFails(setDoc(ref, listing("owner", { imageUrls: Array(21).fill(PROJECT_IMAGE) })));
 });
 
 test("TAQ-52: phone numbers and emails are rejected in free text", async () => {
@@ -582,6 +584,79 @@ test("TAQ-52: phone numbers and emails are rejected in free text", async () => {
   ];
   for (const extra of bad) {
     await assertFails(setDoc(ref, listing("owner", extra)), JSON.stringify(extra));
+  }
+});
+
+// --- TAQ-57: the allowed Storage bucket follows the project the rules run in ---
+
+const FOREIGN_PROJECT_IMAGE = (project) => `https://firebasestorage.googleapis.com/v0/b/${project}.firebasestorage.app/o/listings%2Fa.jpg?alt=media`;
+
+test("TAQ-57: a listing whose images are in this project's own bucket can be moderated", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  for (const suffix of ["firebasestorage.app", "appspot.com"]) {
+    await assertSucceeds(setDoc(doc(root, "Properties/prop-1"), listing("owner", {
+      image: `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.${suffix}/o/listings%2Fa.jpg?alt=media`,
+      imageUrls: [`https://storage.googleapis.com/${PROJECT_ID}.${suffix}/listings/b.jpg`],
+    })));
+  }
+});
+
+test("TAQ-57: another project's bucket, including the prod one, is rejected outside that project", async () => {
+  const root = db("root", { role: "SuperAdmin" });
+  const ref = doc(root, "Properties/prop-1");
+  for (const project of [PROD_PROJECT, "demo-someone-else", `${PROJECT_ID}-2`, `x${PROJECT_ID}`]) {
+    await assertFails(setDoc(ref, listing("owner", { image: FOREIGN_PROJECT_IMAGE(project) })), project);
+    await assertFails(setDoc(ref, listing("owner", { imageUrls: [FOREIGN_PROJECT_IMAGE(project)] })), project);
+  }
+});
+
+test("TAQ-57: in the prod project the prod bucket is accepted and other buckets are not", async () => {
+  const prodEnv = await initializeTestEnvironment({
+    projectId: PROD_PROJECT,
+    firestore: { rules: fs.readFileSync(path.join(__dirname, "../../firestore.rules"), "utf8") },
+  });
+  try {
+    const root = prodEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
+    const ref = doc(root, "Properties/prop-1");
+    await assertSucceeds(setDoc(ref, listing("owner", {
+      image: FOREIGN_PROJECT_IMAGE(PROD_PROJECT),
+      imageUrls: [
+        FOREIGN_PROJECT_IMAGE(PROD_PROJECT),
+        "https://storage.googleapis.com/tashil-proptech-os.appspot.com/listings/b.webp",
+      ],
+    })));
+    await assertFails(setDoc(ref, listing("owner", { image: FOREIGN_PROJECT_IMAGE(PROJECT_ID) })));
+    await assertFails(setDoc(ref, listing("owner", { imageUrls: [FOREIGN_PROJECT_IMAGE("demo-someone-else")] })));
+  } finally {
+    await prodEnv.cleanup();
+  }
+});
+
+// --- TAQ-58: every client write path to /Properties is denied (TAQ-51), including the ones
+// the older rules suites used to expect to succeed ---
+
+test("TAQ-58: owners, agencies, tenants, and visitors cannot create, update, or merge /Properties", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await seed("Users/tenant", { role: "Tenant" });
+  await seed("Properties/existing", listing("owner", { id: "existing", agency_id: "agency-1" }));
+  const actors = [
+    { label: "owner", uid: "owner", client: db("owner") },
+    { label: "owner (claim)", uid: "owner", client: db("owner", { role: "Owner" }) },
+    { label: "agency admin", uid: "agent", client: db("agent", { role: "AgencyAdmin", agency_id: "agency-1" }), agency_id: "agency-1" },
+    { label: "tenant", uid: "tenant", client: db("tenant") },
+    { label: "signed in, no role", uid: "nobody", client: db("nobody") },
+    { label: "visitor", uid: "anon", client: anonDb() },
+  ];
+  for (const { label, uid, client, agency_id } of actors) {
+    const fresh = doc(client, "Properties/new-id");
+    const existing = doc(client, "Properties/existing");
+    const extra = agency_id ? { agency_id } : {};
+    await assertFails(setDoc(fresh, listing(uid, { id: "new-id", ...extra })), label);
+    await assertFails(setDoc(fresh, { owner_id: uid, is_published: false, status: "unavailable" }, { merge: true }), label);
+    await assertFails(setDoc(existing, listing("owner", { agency_id: "agency-1", pricePerMonth: 9500 })), label);
+    await assertFails(updateDoc(existing, { pricePerMonth: 9500 }), label);
+    await assertFails(updateDoc(existing, { is_published: false, status: "unavailable" }), label);
+    await assertFails(setDoc(existing, { rating: 5, isFeatured: true }, { merge: true }), label);
   }
 });
 

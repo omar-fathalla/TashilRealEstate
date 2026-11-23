@@ -220,3 +220,82 @@ test("TAQ-52: unsafe images and contact details never reach the catalog", async 
   assert.equal(pub.buildingName, "Tower");
   assert.deepEqual(pub.imageUrls, ["assets/images/properties/prop_eg_6_1.jpg"]);
 });
+
+// --- TAQ-55: an unpublished private listing never creates a public doc ---
+
+test("TAQ-55: an unpublished listing from any user does not create /Properties/{id}", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await ownerWrites("tenantT", "squat-1", privateListing({ isPublished: false }));
+  await ownerWrites("ownerB", "squat-2", privateListing({ isPublished: false }));
+  await ownerWrites("ownerB", "squat-3", privateListing({ rentalStatus: "rented" }));
+  await ownerWrites("ghost", "squat-4", privateListing({ isPublished: false }));
+  for (const id of ["squat-1", "squat-2", "squat-3", "squat-4"]) {
+    assert.equal(await publicDoc(id), null, `${id} must not exist`);
+  }
+});
+
+test("TAQ-55: a placeholder attempt does not block the real owner's later publish", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await ownerWrites("tenantT", "contested", privateListing({ isPublished: false }));
+  await ownerWrites("ownerB", "contested", privateListing({ isPublished: false }));
+
+  await ownerWrites("ownerA", "contested", privateListing({ titles: { en: "Real owner" } }));
+  const pub = await publicDoc("contested");
+  assert.equal(pub.owner_id, "ownerA");
+  assert.equal(pub.is_published, true);
+  assert.equal(pub.titles.en, "Real owner");
+});
+
+test("TAQ-55: unpublishing or deleting an unowned id never creates or removes anything", async () => {
+  await ownerWrites("ownerB", "nothing-1", privateListing({ isPublished: false }));
+  await ownerWrites("ownerB", "nothing-1", null);
+  assert.equal(await publicDoc("nothing-1"), null);
+});
+
+test("TAQ-55: legacy placeholders left by non-owners are replaced by a real publish", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await db.doc("Properties/legacy-tenant").set({
+    owner_id: "tenantT", is_published: false, status: "unavailable",
+  });
+  await db.doc("Properties/legacy-owner-stub").set({
+    owner_id: "ownerB", is_published: false, status: "unavailable",
+  });
+  await db.doc("Properties/legacy-tenant-content").set({
+    id: "legacy-tenant-content", owner_id: "tenantT", is_published: false, status: "unavailable", titles: { en: "Junk" },
+  });
+
+  await ownerWrites("ownerA", "legacy-tenant", privateListing());
+  await ownerWrites("ownerA", "legacy-owner-stub", privateListing());
+  await ownerWrites("ownerA", "legacy-tenant-content", privateListing());
+  for (const id of ["legacy-tenant", "legacy-owner-stub", "legacy-tenant-content"]) {
+    const pub = await publicDoc(id);
+    assert.equal(pub.owner_id, "ownerA", id);
+    assert.equal(pub.is_published, true, id);
+  }
+});
+
+test("TAQ-55: a real owner's hidden listing cannot be taken over by another owner", async () => {
+  await ownerWrites("ownerA", "hidden-a", privateListing());
+  await ownerWrites("ownerA", "hidden-a", privateListing({ isPublished: false }));
+  assert.equal((await publicDoc("hidden-a")).is_published, false);
+
+  await ownerWrites("ownerB", "hidden-a", privateListing({ titles: { en: "Takeover" } }));
+  const pub = await publicDoc("hidden-a");
+  assert.equal(pub.owner_id, "ownerA");
+  assert.equal(pub.is_published, false);
+  assert.notEqual(pub.titles.en, "Takeover");
+
+  await ownerWrites("ownerA", "hidden-a", privateListing({ titles: { en: "Back again" } }));
+  const again = await publicDoc("hidden-a");
+  assert.equal(again.is_published, true);
+  assert.equal(again.titles.en, "Back again");
+});
+
+test("TAQ-55: a published listing can never be replaced as a placeholder", async () => {
+  await ownerWrites("ownerA", "live-a", privateListing());
+  await db.doc("Properties/live-bare").set({ owner_id: "ownerB", is_published: true, status: "vacant" });
+  await ownerWrites("ownerA", "live-bare", privateListing());
+  assert.equal((await publicDoc("live-bare")).owner_id, "ownerB");
+  await ownerWrites("ownerB", "live-a", privateListing({ titles: { en: "Scam" } }));
+  assert.equal((await publicDoc("live-a")).owner_id, "ownerA");
+});
