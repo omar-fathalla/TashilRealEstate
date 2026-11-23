@@ -50,25 +50,49 @@ service cloud.firestore {
     }
 
     function myAgencyId() {
-      let path = /databases/$(database)/documents/Users/$(request.auth.uid);
-      return exists(path) ? get(path).data.get('agency_id', '') : '';
+      return request.auth.token.get('agency_id', '');
     }
 
     function isAgencyAdminOf(agencyId) {
       return isAgencyAdmin() && myAgencyId() != '' && agencyId == myAgencyId();
     }
 
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
     // 1. Users Collection
+    // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
+    function lockedUserFields() {
+      return ['agency_id', 'agencyId', 'verified', 'isVerified', 'status', 'isSuperAdmin', 'customClaims', 'claims'];
+    }
+
     function selfUserCreate(userId) {
       return isAuthenticated()
         && request.auth.uid == userId
-        && request.resource.data.get('role', 'Owner') in selfServiceRoles();
+        && request.resource.data.get('role', 'Owner') in selfServiceRoles()
+        && !request.resource.data.keys().hasAny(lockedUserFields());
+    }
+
+    // A self-service role may be set once, only while the profile has none.
+    function selfRoleChangeOk() {
+      return !changedKeys().hasAny(['role'])
+        || (resource.data.get('role', '') == ''
+          && request.resource.data.get('role', '') in selfServiceRoles());
+    }
+
+    function selfUserUpdate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && !changedKeys().hasAny(lockedUserFields())
+        && selfRoleChangeOk();
     }
 
     match /Users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isSuperAdmin() || selfUserCreate(userId);
-      allow update, delete: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow update: if isSuperAdmin() || selfUserUpdate(userId);
+      allow delete: if isSuperAdmin();
 
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {

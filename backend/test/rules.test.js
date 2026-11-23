@@ -94,3 +94,53 @@ test("TAQ-8: a SuperAdmin custom claim is honoured", async () => {
   await seed("Users/victim", { role: "Owner" });
   await assertSucceeds(getDoc(doc(db("admin", { role: "SuperAdmin" }), "Users/victim")));
 });
+
+// --- TAQ-9: role and agency are server-controlled ---
+
+test("TAQ-9: an Owner cannot change their own role or agency", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner" });
+  const owner = db("owner");
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { role: "SuperAdmin" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { role: "AgencyAdmin" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { role: "Tenant" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { agency_id: "agency-1" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { verified: true }));
+});
+
+test("TAQ-9: a new profile cannot carry an agency or verification flag", async () => {
+  await assertFails(setDoc(doc(db("mallory"), "Users/mallory"), { user_id: "mallory", role: "Owner", agency_id: "agency-1" }));
+  await assertFails(setDoc(doc(db("mallory"), "Users/mallory"), { user_id: "mallory", role: "Owner", verified: true }));
+});
+
+test("TAQ-9: an AgencyAdmin cannot move themselves to another agency", async () => {
+  await seed("Users/agent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  const agent = db("agent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await assertFails(updateDoc(doc(agent, "Users/agent"), { agency_id: "agency-2" }));
+});
+
+test("TAQ-9: an Owner can still edit their own profile and bank details", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner" });
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), {
+    full_name: "Owner Demo",
+    phone: "+971500000000",
+    national_id: "784-0000-0000000-0",
+    iban: "AE070331234567890123456",
+    updated_at: serverTimestamp(),
+  }, { merge: true }));
+  // The login flow re-sends the unchanged role; that is not a role change.
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), { role: "Owner", email: "owner@demo.test" }, { merge: true }));
+});
+
+test("TAQ-9: a profile created without a role can take a self-service role once", async () => {
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), { user_id: "owner", updated_at: serverTimestamp() }, { merge: true }));
+  await assertFails(setDoc(doc(owner, "Users/owner"), { role: "SuperAdmin" }, { merge: true }));
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), { role: "Owner" }, { merge: true }));
+  await assertFails(setDoc(doc(owner, "Users/owner"), { role: "Tenant" }, { merge: true }));
+});
+
+test("TAQ-9: users cannot delete their profile to reset their role", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await assertFails(deleteDoc(doc(db("owner"), "Users/owner")));
+});
