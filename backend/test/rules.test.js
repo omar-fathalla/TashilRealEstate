@@ -260,9 +260,22 @@ test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is all
   await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), {
     owner_id: "owner", is_published: false, status: "unavailable", updated_at: serverTimestamp(),
   }, { merge: true }));
-  // Published later.
+  // Published later: every key PropertyItem.toMap() produces, minus the server-managed contact fields.
   await assertSucceeds(setDoc(doc(owner, "Properties/prop-9"), listing("owner", {
-    id: "prop-9", imageUrls: ["assets/images/properties/prop_eg_6_1.jpg"], updated_at: serverTimestamp(),
+    id: "prop-9",
+    descriptions: { ar: "وصف", en: "Description", hi: "विवरण" },
+    locations: { ar: "دبي", en: "Dubai", hi: "दुबई" },
+    propertyTypeCode: "apartment",
+    cityCode: "dubai",
+    bedrooms: 2,
+    bathrooms: 2,
+    areaSqM: 120,
+    imageUrls: ["assets/images/properties/prop_eg_6_1.jpg"],
+    amenitiesMap: { ar: ["مكيف"], en: ["A/C"], hi: ["एसी"] },
+    isFurnished: true,
+    isFeatured: true,
+    rating: 5,
+    updated_at: serverTimestamp(),
   }), { merge: true }));
   await assertSucceeds(deleteDoc(doc(owner, "Users/owner/properties/prop-9")));
   await assertSucceeds(deleteDoc(doc(owner, "Properties/prop-9")));
@@ -273,10 +286,54 @@ test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is all
 test("TAQ-18: tenant and unit data cannot be written to a public listing", async () => {
   const owner = db("owner");
   await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { tenantPhone: "+971500000000" })));
-  await seed("Properties/prop-2", listing("owner"));
+  await seed("Properties/prop-2", listing("owner", { id: "prop-2" }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { tenantName: "Tenant" }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { unitNumber: "PH-4502" }));
   await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { installments: [] }));
+});
+
+// --- TAQ-47: public listings only accept allowlisted fields ---
+
+test("TAQ-47: contact fields outside the allowlist cannot be written", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  const owner = db("owner");
+  for (const field of ["whatsapp", "phone", "email", "ownerWhatsapp", "contactPhone", "website"]) {
+    await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { [field]: "+971500000000" })));
+  }
+  await seed("Properties/prop-2", listing("owner", { id: "prop-2" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { whatsapp: "+971500000000" }));
+  await assertFails(setDoc(doc(owner, "Properties/prop-2"), { email: "me@example.com", owner_id: "owner" }, { merge: true }));
+});
+
+test("TAQ-47: localized maps only carry ar/en/hi", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  const owner = db("owner");
+  await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", {
+    titles: { ar: "شقة", en: "Apartment", hi: "अपार्टमेंट", phone: "+971500000000" },
+  })));
+  await seed("Properties/prop-2", listing("owner", { id: "prop-2" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { "descriptions.whatsapp": "+971500000000" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { locations: "Call +971500000000" }));
+});
+
+test("TAQ-47: the platform agency contact is server-managed", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  const owner = db("owner");
+  await assertFails(setDoc(doc(owner, "Properties/prop-1"), listing("owner", { agencyPhone: "+971500000000" })));
+  await seed("Properties/prop-2", listing("owner", {
+    id: "prop-2",
+    agencyPhone: "+20 100 123 4567",
+    agencyNames: { ar: "تسهيل", en: "Tashil", hi: "तशिल" },
+  }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { agencyPhone: "+971500000000" }));
+  await assertFails(updateDoc(doc(owner, "Properties/prop-2"), { "agencyNames.en": "Call me" }));
+  // Editing other fields keeps working and leaves the managed contact untouched.
+  await assertSucceeds(setDoc(doc(owner, "Properties/prop-2"), { pricePerMonth: 9100, owner_id: "owner" }, { merge: true }));
+});
+
+test("TAQ-47: a listing id must match its document id", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await assertFails(setDoc(doc(db("owner"), "Properties/prop-1"), listing("owner", { id: "someone-elses-id" })));
 });
 
 // --- TAQ-17: lease documents are the source of truth for party checks ---

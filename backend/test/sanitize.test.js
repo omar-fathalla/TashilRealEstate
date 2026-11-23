@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { sanitizeForMarketplace } = require("../index");
@@ -71,6 +73,14 @@ test("TAQ-18: private storage paths and non-image references are dropped", () =>
     "assets/images/properties/prop_eg_6_1.jpg",
   ]);
   assert.equal(out.image, "https://images.unsplash.com/photo-1");
+});
+
+test("TAQ-47: the firestore.rules listing allowlist matches the sanitizer", () => {
+  const rules = fs.readFileSync(path.join(__dirname, "../../firestore.rules"), "utf8");
+  const body = rules.match(/function publicListingFields\(\)\s*\{\s*return \[([\s\S]*?)\];/);
+  assert.ok(body, "publicListingFields() not found in firestore.rules");
+  const allowlist = [...body[1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(allowlist, [...PUBLIC_FIELDS, "agency_id"].sort());
 });
 
 test("TAQ-18: currency always follows the country", () => {
