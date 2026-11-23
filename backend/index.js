@@ -1,4 +1,4 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
@@ -8,8 +8,17 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { requireAuth, requireRole } = require("./authz");
+const {
+  requireAuth,
+  requireRole,
+  loadLease,
+  leaseAmount,
+  leaseCountry,
+  assertLeaseParty,
+} = require("./authz");
 const { applyUserRole } = require("./roles");
+
+const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 exports.processRentPayment = onCall(async (request) => {
   const data = request.data;
@@ -56,22 +65,42 @@ exports.processRentPayment = onCall(async (request) => {
   }
 });
 
-exports.sendRentalReminder = onCall(async (request) => {
+function parseDueDate(value) {
+  if (typeof value !== "string" || !value) return new Date().toISOString();
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new HttpsError("invalid-argument", "dueDate must be an ISO date.");
+  }
+  return parsed.toISOString();
+}
+
+// Party, tenant, amount, and currency come from the lease document, never from the caller.
+exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
-  const auth = request.auth;
-  const tenantId = data.tenantId || (auth ? auth.uid : "tenant_guest");
-  const propertyTitle = data.propertyTitle || "وحدة سكنية";
-  const amount = data.amount || 0;
-  const dueDate = data.dueDate || new Date().toISOString();
-  const countryCode = data.countryCode || "EG";
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, role, lease);
+
+  const tenantId = lease.tenant_id;
+  if (!tenantId) {
+    throw new HttpsError("failed-precondition", "The lease has no tenant.");
+  }
+  const propertyTitle = lease.property_title || lease.propertyTitle || "وحدة سكنية";
+  const amount = leaseAmount(lease);
+  const dueDate = parseDueDate(data.dueDate);
+  const countryCode = leaseCountry(lease);
   const currency = countryCode === "AE" ? "AED" : "EGP";
 
   const db = admin.firestore();
   const notifRef = db.collection("Notifications").doc();
+  const reminderLogRef = db.collection("ReminderLog").doc(lease.id);
 
   const notificationPayload = {
     id: notifRef.id,
     recipientId: tenantId,
+    leaseId: lease.id,
+    senderId: auth.uid,
     type: "rental_due_reminder",
     title: {
       ar: "تذكير استحقاق الإيجار الشهري",
@@ -91,25 +120,36 @@ exports.sendRentalReminder = onCall(async (request) => {
   };
 
   try {
-    await notifRef.set(notificationPayload);
-    // Also mirror to user notifications subcollection
-    if (tenantId) {
-      await db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id).set(notificationPayload);
-    }
+    await db.runTransaction(async (tx) => {
+      const log = await tx.get(reminderLogRef);
+      const lastSentAt = log.exists ? log.get("lastSentAt") : null;
+      if (lastSentAt && Date.now() - lastSentAt.toMillis() < REMINDER_COOLDOWN_MS) {
+        throw new HttpsError("resource-exhausted", "A reminder was already sent for this lease in the last 24 hours.");
+      }
+      tx.set(reminderLogRef, { lastSentAt: admin.firestore.Timestamp.now(), sentBy: auth.uid });
+      tx.set(notifRef, notificationPayload);
+      tx.set(db.collection("Users").doc(tenantId).collection("notifications").doc(notifRef.id), notificationPayload);
+    });
     logger.info(`Rental reminder notification created: ${notifRef.id}`);
-    return { success: true, messageId: notifRef.id, payload: notificationPayload };
+    return { success: true, messageId: notifRef.id };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error("Error creating rental reminder", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to create the reminder.");
   }
 });
 
-exports.generateRentalInvoiceReceipt = onCall(async (request) => {
+exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
-  const leaseId = data.leaseId || "lease_demo";
-  const tenantName = data.tenantName || "عميل تسهيل";
-  const amount = Number(data.amount) || 10000;
-  const currencyCode = data.currencyCode || "EGP";
+  const lease = await loadLease(data.leaseId);
+  assertLeaseParty(auth, role, lease);
+
+  const leaseId = lease.id;
+  const tenantName = lease.tenant_name || lease.tenantName || "عميل تسهيل";
+  const amount = leaseAmount(lease);
+  const currencyCode = leaseCountry(lease) === "AE" ? "AED" : "EGP";
 
   const platformFee = amount * 0.025; // 2.5% platform fee
   const agencyFee = amount * 0.08;   // 8% agency fee
@@ -131,17 +171,22 @@ exports.generateRentalInvoiceReceipt = onCall(async (request) => {
     vatAmount: vatAmount,
     totalPaid: totalPaid,
     currencyCode: currencyCode,
-    status: "Paid_Verified",
+    tenant_id: lease.tenant_id || null,
+    owner_id: lease.owner_id || null,
+    agency_id: lease.agency_id || null,
+    issuedBy: auth.uid,
+    // Paid_Verified is reserved for a verified payment record; issuing alone proves nothing.
+    status: "Issued",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   try {
-    await invoiceRef.set(invoiceData);
+    await invoiceRef.create(invoiceData);
     logger.info(`Generated digital rental invoice: ${invoiceNumber}`);
     return { success: true, invoiceNumber: invoiceNumber, invoice: invoiceData };
   } catch (error) {
     logger.error("Error generating rental invoice", error);
-    return { success: false, error: error.message };
+    throw new HttpsError("internal", "Failed to issue the invoice.");
   }
 });
 

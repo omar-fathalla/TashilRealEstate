@@ -100,6 +100,12 @@ service cloud.firestore {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
         allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
       }
+
+      // Written by Cloud Functions only.
+      match /notifications/{notificationId} {
+        allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if false;
+      }
     }
 
     // 2. Properties Collection (Public Marketplace)
@@ -148,6 +154,7 @@ service cloud.firestore {
     }
 
     // 4. Leases Collection
+    // Lease documents are the server-side source of truth for reminder and invoice parties.
     match /Leases/{leaseId} {
       allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
@@ -155,7 +162,11 @@ service cloud.firestore {
           resource.data.owner_id == request.auth.uid ||
           agencyManagesResource()
         ));
-      allow write: if isSuperAdmin() || isAgencyAdmin();
+      allow create: if isSuperAdmin() || isAgencyAdminOf(request.resource.data.get('agency_id', ''));
+      allow update: if isSuperAdmin() || (
+        agencyManagesResource() && !changedKeys().hasAny(['agency_id'])
+      );
+      allow delete: if isSuperAdmin() || agencyManagesResource();
     }
 
     // 5. Maintenance Requests

@@ -177,6 +177,13 @@ test("owner private property tree is private to its owner", async () => {
   await assertFails(setDoc(doc(db("stranger"), "Users/owner/properties/prop-3"), { title: "x" }));
 });
 
+test("notifications are readable by their recipient and written by the server only", async () => {
+  await seed("Users/tenant/notifications/n1", { recipientId: "tenant" });
+  await assertSucceeds(getDoc(doc(db("tenant"), "Users/tenant/notifications/n1")));
+  await assertFails(getDoc(doc(db("stranger"), "Users/tenant/notifications/n1")));
+  await assertFails(setDoc(doc(db("tenant"), "Users/tenant/notifications/n2"), { recipientId: "tenant" }));
+});
+
 // --- TAQ-11: properties are created in the creator's own name ---
 
 test("TAQ-11: an Owner can create, update, and delete their own listing", async () => {
@@ -259,4 +266,21 @@ test("TAQ-11: the Owner save flow from FirestoreService.saveOwnerProperty is all
   }), { merge: true }));
   await assertSucceeds(deleteDoc(doc(owner, "Users/owner/properties/prop-9")));
   await assertSucceeds(deleteDoc(doc(owner, "Properties/prop-9")));
+});
+
+// --- TAQ-17: lease documents are the source of truth for party checks ---
+
+test("TAQ-17: lease parties can read; outsiders cannot write leases", async () => {
+  await seed("Leases/lease-1", { owner_id: "owner", tenant_id: "tenant", agency_id: "agency-1", monthly_rent: 5000 });
+  await assertSucceeds(getDoc(doc(db("owner"), "Leases/lease-1")));
+  await assertSucceeds(getDoc(doc(db("tenant"), "Leases/lease-1")));
+  await assertFails(getDoc(doc(db("stranger"), "Leases/lease-1")));
+  await assertFails(updateDoc(doc(db("owner"), "Leases/lease-1"), { monthly_rent: 1 }));
+  const otherAgency = db("agent2", { role: "AgencyAdmin", agency_id: "agency-2" });
+  await assertFails(getDoc(doc(otherAgency, "Leases/lease-1")));
+  await assertFails(updateDoc(doc(otherAgency, "Leases/lease-1"), { monthly_rent: 1 }));
+  await assertFails(setDoc(doc(otherAgency, "Leases/lease-2"), { owner_id: "owner", tenant_id: "tenant", agency_id: "agency-1" }));
+  const agency = db("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await assertSucceeds(updateDoc(doc(agency, "Leases/lease-1"), { monthly_rent: 5200 }));
+  await assertFails(updateDoc(doc(agency, "Leases/lease-1"), { agency_id: "agency-2" }));
 });

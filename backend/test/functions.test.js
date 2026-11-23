@@ -48,6 +48,90 @@ test.beforeEach(async () => {
   });
 });
 
+// --- TAQ-17: sendRentalReminder ---
+
+test("TAQ-17: reminder requires sign-in", async () => {
+  await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" } }), "unauthenticated");
+});
+
+test("TAQ-17: a user who is not on the lease cannot send a reminder", async () => {
+  await expectCode(
+    fns.sendRentalReminder.run({ data: { leaseId: "lease-1", tenantId: "tenant" }, auth: caller("stranger") }),
+    "permission-denied",
+  );
+  await expectCode(
+    fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: caller("agent2", { role: "AgencyAdmin", agency_id: "agency-2" }) }),
+    "permission-denied",
+  );
+});
+
+test("TAQ-17: a tenant cannot send reminders", async () => {
+  await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: caller("tenant") }), "permission-denied");
+});
+
+test("TAQ-17: a self-assigned SuperAdmin profile without a claim is rejected", async () => {
+  await db.collection("Users").doc("legacy").set({ role: "SuperAdmin" });
+  await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: caller("legacy") }), "permission-denied");
+});
+
+test("TAQ-17: an unknown lease is rejected", async () => {
+  await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "nope" }, auth: caller("owner") }), "not-found");
+});
+
+test("TAQ-17: the landlord's reminder uses lease data and is rate limited per lease", async () => {
+  const result = await fns.sendRentalReminder.run({
+    data: { leaseId: "lease-1", tenantId: "victim", amount: 1, propertyTitle: "Pay to IBAN X", countryCode: "EG" },
+    auth: caller("owner"),
+  });
+  assert.equal(result.success, true);
+  const notification = (await db.collection("Notifications").doc(result.messageId).get()).data();
+  assert.equal(notification.recipientId, "tenant");
+  assert.equal(notification.amount, 8000);
+  assert.equal(notification.currency, "AED");
+  assert.match(notification.body.en, /Marina Apartment/);
+  assert.doesNotMatch(notification.body.en, /IBAN/);
+  assert.ok((await db.doc(`Users/tenant/notifications/${result.messageId}`).get()).exists);
+  assert.equal((await db.doc("Users/victim/notifications/" + result.messageId).get()).exists, false);
+
+  await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: caller("owner") }), "resource-exhausted");
+});
+
+test("TAQ-17: the managing agency can send a reminder", async () => {
+  const result = await fns.sendRentalReminder.run({
+    data: { leaseId: "lease-1" },
+    auth: caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }),
+  });
+  assert.equal(result.success, true);
+});
+
+// --- TAQ-17: generateRentalInvoiceReceipt ---
+
+test("TAQ-17: a user who is not on the lease cannot issue an invoice", async () => {
+  await expectCode(
+    fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1", amount: 1 }, auth: caller("stranger") }),
+    "permission-denied",
+  );
+  await expectCode(
+    fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" } }),
+    "unauthenticated",
+  );
+});
+
+test("TAQ-17: invoice amounts and VAT are computed from the lease", async () => {
+  const result = await fns.generateRentalInvoiceReceipt.run({
+    data: { leaseId: "lease-1", amount: 1, tenantName: "Fake", currencyCode: "EGP" },
+    auth: caller("owner"),
+  });
+  const invoice = (await db.collection("Invoices").doc(result.invoiceNumber).get()).data();
+  assert.equal(invoice.amount, 8000);
+  assert.equal(invoice.currencyCode, "AED");
+  assert.equal(invoice.tenantName, "Lease Tenant");
+  assert.equal(invoice.status, "Issued");
+  assert.equal(invoice.vatAmount, (8000 * 0.025 + 8000 * 0.08) * 0.05);
+  assert.equal(invoice.owner_id, "owner");
+  assert.equal(invoice.tenant_id, "tenant");
+});
+
 // --- TAQ-8 / TAQ-9: setUserRole ---
 
 test("TAQ-8: only a SuperAdmin claim can assign roles", async () => {
