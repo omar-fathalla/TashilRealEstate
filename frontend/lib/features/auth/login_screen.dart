@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
 import 'package:tashil_real_estate/core/config/demo_data.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -42,7 +43,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   /// Roles a user may pick for themselves. AgencyAdmin and SuperAdmin are assigned
   /// server-side (setUserRole custom claims) and are rejected by Firestore rules.
-  static const selfServiceRoles = {'Owner', 'Tenant'};
+  static const selfServiceRoles = TrustedRole.selfServiceRoles;
 
   AuthMethod _selectedAuthMethod = AuthMethod.email;
   String _selectedRole = 'Owner';
@@ -125,33 +126,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
   }
 
-  Future<String?> _claimedRole(User user) async {
-    try {
-      final token = await user.getIdTokenResult();
-      final role = token.claims?['role'];
-      return role is String && role.isNotEmpty ? role : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> _handlePostAuthNavigation(User user, String role) async {
     final uid = user.uid;
     final photoUrl = UserAvatarUtils.getPhotoUrl(user);
-    String? existingRole = await _claimedRole(user) ?? await _firestoreService.getUserRole(uid);
+    final claimRole = await TrustedRole.claimRole(user);
+    String? profileRole = claimRole == null ? await _firestoreService.getUserRole(uid) : null;
 
-    if (existingRole == null || existingRole.isEmpty) {
-      existingRole = selfServiceRoles.contains(role) ? role : 'Owner';
+    if (claimRole == null && (profileRole == null || profileRole.isEmpty)) {
+      profileRole = selfServiceRoles.contains(role) ? role : 'Owner';
       await _firestoreService.setUserRole(
         uid: uid,
         email: user.email ?? 'user@tashil.com',
-        role: existingRole,
+        role: profileRole,
         fullName: user.displayName,
         photoUrl: photoUrl,
       );
     } else if (photoUrl != null && photoUrl.isNotEmpty) {
       await _firestoreService.updateUserPhoto(uid: uid, photoUrl: photoUrl);
     }
+
+    // An elevated role written into the profile is not trusted without a matching claim.
+    final trustedRole = TrustedRole.fromSources(claimRole: claimRole, profileRole: profileRole);
 
     await UserProfileService().loadProfile();
 
@@ -167,19 +162,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       }
     } catch (_) {}
 
-    switch (existingRole) {
-      case 'SuperAdmin':
+    switch (trustedRole) {
+      case TrustedRole.superAdmin:
         context.go('/super-admin');
         break;
-      case 'AgencyAdmin':
+      case TrustedRole.agencyAdmin:
         context.go('/agency');
         break;
-      case 'Tenant':
+      case TrustedRole.tenant:
         context.go('/tenant');
         break;
-      case 'Owner':
-      default:
+      case TrustedRole.owner:
         context.go('/owner');
+        break;
+      default:
+        context.go('/');
         break;
     }
   }

@@ -183,6 +183,55 @@ test("TAQ-50: a profile save that leaves the locked flags untouched still works"
   await assertSucceeds(updateDoc(doc(root, "Users/owner"), { kycStatus: "rejected", account_status: "suspended" }));
 });
 
+// --- TAQ-53: remaining trust and plan fields are server-managed ---
+
+const TAQ53_FIELDS = {
+  is_verified: true,
+  kyc_verified: true,
+  isPhoneVerified: true,
+  email_verified: true,
+  Role: "SuperAdmin",
+  role_updated_by: "root",
+  role_updated_at: new Date("2026-01-01T00:00:00Z"),
+  plan: "Enterprise",
+};
+
+test("TAQ-53: a user cannot set trust, role audit, or plan fields on their profile", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner" });
+  const owner = db("owner");
+  for (const [field, value] of Object.entries(TAQ53_FIELDS)) {
+    await assertFails(updateDoc(doc(owner, "Users/owner"), { [field]: value }), field);
+    await assertFails(setDoc(doc(owner, "Users/owner"), { [field]: value, full_name: "X" }, { merge: true }), field);
+  }
+});
+
+test("TAQ-53: a user cannot change server-set values of those fields", async () => {
+  await seed("Users/owner", {
+    user_id: "owner", role: "Owner", is_verified: false, kyc_verified: false, isPhoneVerified: false,
+    email_verified: false, role_updated_by: "root", plan: "Free",
+  });
+  const owner = db("owner");
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { is_verified: true }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { plan: "Enterprise" }));
+  await assertFails(updateDoc(doc(owner, "Users/owner"), { role_updated_by: "owner" }));
+});
+
+test("TAQ-53: a new profile cannot carry trust, role audit, or plan fields", async () => {
+  for (const [field, value] of Object.entries(TAQ53_FIELDS)) {
+    await assertFails(setDoc(doc(db("mallory"), "Users/mallory"), { user_id: "mallory", role: "Owner", [field]: value }), field);
+  }
+});
+
+test("TAQ-53: normal profile saves and SuperAdmin updates still work", async () => {
+  await seed("Users/owner", { user_id: "owner", role: "Owner", is_verified: true, plan: "Free", role_updated_by: "root" });
+  const owner = db("owner");
+  await assertSucceeds(setDoc(doc(owner, "Users/owner"), {
+    full_name: "Owner Demo", phone: "+971500000000", updated_at: serverTimestamp(),
+  }, { merge: true }));
+  const root = db("root", { role: "SuperAdmin" });
+  await assertSucceeds(updateDoc(doc(root, "Users/owner"), { is_verified: false, plan: "Enterprise" }));
+});
+
 test("TAQ-9: users cannot delete their profile to reset their role", async () => {
   await seed("Users/owner", { role: "Owner" });
   await assertFails(deleteDoc(doc(db("owner"), "Users/owner")));

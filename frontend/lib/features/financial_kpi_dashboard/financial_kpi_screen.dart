@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
-import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/widgets/public_header_navbar.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/views/financial_kpi_dashboard_view.dart';
@@ -30,12 +30,12 @@ class _FinancialKpiScreenState extends State<FinancialKpiScreen> {
     if (widget.initialRole != null) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final roleStr = await FirestoreService().getUserRole(user.uid);
-      if (mounted && roleStr != null) {
+      final roleStr = await TrustedRole.resolve(user);
+      if (mounted && roleStr.isNotEmpty) {
         setState(() {
-          if (roleStr == 'SuperAdmin') {
+          if (roleStr == TrustedRole.superAdmin) {
             _currentRole = FinancialPortalRole.superAdmin;
-          } else if (roleStr == 'AgencyAdmin') {
+          } else if (roleStr == TrustedRole.agencyAdmin) {
             _currentRole = FinancialPortalRole.agency;
           } else {
             _currentRole = FinancialPortalRole.owner;
