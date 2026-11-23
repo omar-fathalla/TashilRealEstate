@@ -632,6 +632,34 @@ test("TAQ-57: in the prod project the prod bucket is accepted and other buckets 
   }
 });
 
+// --- TAQ-58: every client write path to /Properties is denied (TAQ-51), including the ones
+// the older rules suites used to expect to succeed ---
+
+test("TAQ-58: owners, agencies, tenants, and visitors cannot create, update, or merge /Properties", async () => {
+  await seed("Users/owner", { role: "Owner" });
+  await seed("Users/tenant", { role: "Tenant" });
+  await seed("Properties/existing", listing("owner", { id: "existing", agency_id: "agency-1" }));
+  const actors = [
+    { label: "owner", uid: "owner", client: db("owner") },
+    { label: "owner (claim)", uid: "owner", client: db("owner", { role: "Owner" }) },
+    { label: "agency admin", uid: "agent", client: db("agent", { role: "AgencyAdmin", agency_id: "agency-1" }), agency_id: "agency-1" },
+    { label: "tenant", uid: "tenant", client: db("tenant") },
+    { label: "signed in, no role", uid: "nobody", client: db("nobody") },
+    { label: "visitor", uid: "anon", client: anonDb() },
+  ];
+  for (const { label, uid, client, agency_id } of actors) {
+    const fresh = doc(client, "Properties/new-id");
+    const existing = doc(client, "Properties/existing");
+    const extra = agency_id ? { agency_id } : {};
+    await assertFails(setDoc(fresh, listing(uid, { id: "new-id", ...extra })), label);
+    await assertFails(setDoc(fresh, { owner_id: uid, is_published: false, status: "unavailable" }, { merge: true }), label);
+    await assertFails(setDoc(existing, listing("owner", { agency_id: "agency-1", pricePerMonth: 9500 })), label);
+    await assertFails(updateDoc(existing, { pricePerMonth: 9500 }), label);
+    await assertFails(updateDoc(existing, { is_published: false, status: "unavailable" }), label);
+    await assertFails(setDoc(existing, { rating: 5, isFeatured: true }, { merge: true }), label);
+  }
+});
+
 // --- TAQ-17: lease documents are the source of truth for party checks ---
 
 test("TAQ-17: lease parties can read; outsiders cannot write leases", async () => {
