@@ -19,8 +19,10 @@ const {
   assertLeaseParty,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
+const { appCheckEnforced } = require("./config");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const ENFORCE_APP_CHECK = appCheckEnforced();
 
 exports.processRentPayment = onCall(async (request) => {
   const data = request.data;
@@ -77,7 +79,7 @@ function parseDueDate(value) {
 }
 
 // Party, tenant, amount, and currency come from the lease document, never from the caller.
-exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = requireAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
@@ -141,7 +143,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: true, maxInstances: 10 },
   }
 });
 
-exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstances: 10 }, async (request) => {
+exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = requireAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
@@ -193,7 +195,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: true, maxInstan
 });
 
 // SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
-exports.setUserRole = onCall({ enforceAppCheck: true, maxInstances: 5 }, async (request) => {
+exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
   const auth = requireAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
