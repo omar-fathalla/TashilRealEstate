@@ -1,0 +1,71 @@
+---
+description: Mandatory Linear workflow for Tashil Aqar (TAQ). No work without a ticket; labels, status, test sub-issues, and release gates.
+alwaysApply: true
+---
+
+# Tashil Aqar Linear ticket workflow
+
+Follow this on every task. Canonical process: https://linear.app/sw-point/document/nzam-altyktat-walmrahl-tashil-aqar-28a1cf0574c8
+
+- **Workspace:** `sw-point`
+- **Team:** Tashil Aqar
+- **Issue key:** `TAQ`
+- **Project:** Website — tashilaqar.com
+
+## No ticket, no work
+
+Every idea, proposal, feature, and fix gets a numbered `TAQ` issue before any code, branch, or PR. If none is given, ask for one or flag that it is missing. Do not start silently.
+
+## Labels
+
+Each ticket carries:
+
+- **Type** — exactly one: New Feature, Enhancement, Bug Report, Test Finding, UI/UX, Content/Copy, Security, Performance, Tech Debt, Research, Legal/Compliance.
+- **Stage** — exactly one. Change it at every transition (list below).
+- **Area** — one or more: Web, Mobile iOS, Mobile Android, Backend/Functions, Firestore/Rules, Hosting/Infra, Design System (M3), Localization/RTL.
+- **Source** — exactly one (test findings use the real source, e.g. User Test).
+- **Severity** — required on Bug Report and Test Finding. An open **Critical** or **High** blocks production.
+
+## Status and stage
+
+Move status and the Stage label together. Do not skip gates.
+
+| Status | Stage label |
+| --- | --- |
+| Triage, Backlog | Idea |
+| Proposal, Todo | Proposed |
+| Approved | Approved |
+| In Progress | Building |
+| In Review (PR) | PR Open |
+| On Dev | On Dev |
+| Testing | Testing |
+| Fix Needed | Test Failed |
+| Ready for Prod | Fixed |
+| Done (on prod) | On Prod |
+
+`Canceled` and `Duplicate` close the ticket with no further stage. `Fix Needed` is the testing-failure branch, not a step on the happy path.
+
+## Test findings
+
+Each problem found in testing is a **sub-issue** of the original ticket:
+
+- Title: `[Test] …`
+- Labels: Type = Test Finding, plus Severity and Source (e.g. User Test).
+- Move the parent to **Fix Needed** / Stage **Test Failed**.
+- Close the sub-issue only after the fix is retested on the **new SHA**.
+- Move the parent to **Ready for Prod** only when every sub-issue is closed and the parent passes retest.
+- An open Critical or High blocks production.
+
+## Naming and linking
+
+- Branch names include `taq-<n>` (example: `taq-12-short-name`).
+- PR titles start with `[TAQ-<n>]`.
+- Commit messages start with `TAQ-<n>:`.
+- Link the PR to the Linear issue (issue URL in the PR body). Do not use `Fixes` / `Closes` / `Resolves`; a merge must not mark the issue Done before On Dev, testing, and Mohamed's production OK.
+
+## Release
+
+- Land changes on `dev` first. The User Test agent tests that **exact dev SHA** — record the SHA on the ticket.
+- Do not merge to `main` or `master`, and do not deploy, without Mohamed's explicit OK.
+- This repo is public. Never commit secrets, tokens, or credentials.
+- Do not delete demo or test accounts.
