@@ -23,6 +23,7 @@ const {
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
+const { PHONE_PATTERN, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -234,19 +235,11 @@ const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
 
-// Mirrored by contactFree() in firestore.rules. Text is matched after folding look-alike
-// characters (full-width forms, Arabic-Indic and Persian digits, invisible characters) to
-// plain ASCII, so only the matched span is removed and other text is left exactly as written.
-//  - Phone: a run of 10+ digits (the letter O counts as zero) with up to two separators
-//    (space . ( ) / _ \ and dashes) between digits, or a + / leading zero then 9+ digits.
-//    Eight digits such as the price 15000000 are not a phone number.
-//  - Email: @ may be written [at], (at), {at}, or with spaces around it; the dots may be [dot].
-const SEP = String.raw`[\s.()/_\\\u2010-\u2015\u2212-]{0,2}`;
-const DIGITS = `[0-9Oo]${SEP}`;
-const PHONE_PATTERN = new RegExp(
-  `\\(?(?:${DIGITS}){10,}|\\(?\\+${SEP}(?:${DIGITS}){9,}|(?<![0-9])\\(?0${SEP}(?:${DIGITS}){8,}`,
-  "g",
-);
+// Mirrored by contactFree() in firestore.rules (see contact_patterns.js for the phone shapes).
+// Text is matched after folding look-alike characters (digits of any script, full-width
+// forms, circled and styled digits, invisible characters) so only the matched span is removed
+// and other text is left exactly as written.
+//  - Email: @ may be written [at], (at), {at}, or with spaces around it; dots may be [dot].
 const EMAIL_AT = String.raw`\s*(?:@|[\[({]\s*at\s*[\])}])\s*`;
 const EMAIL_DOT = String.raw`(?:\.|\s*[\[({]\s*dot\s*[\])}]\s*)`;
 const EMAIL_LABEL = "[A-Za-z0-9-]+";
@@ -254,30 +247,49 @@ const EMAIL_PATTERN = new RegExp(
   `[A-Za-z0-9._%+-]+${EMAIL_AT}${EMAIL_LABEL}(?:${EMAIL_DOT}${EMAIL_LABEL})*${EMAIL_DOT}[A-Za-z]{2,}`,
   "gi",
 );
-const INVISIBLE = /[\p{Cf}]/u;
+const INVISIBLE = /^\p{Cf}$/u;
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
 
-/** Same-length ASCII fold of `text`: the match offsets apply to the original string too. */
-function foldForContactMatching(text) {
-  let folded = "";
-  for (const ch of text) {
-    let mapped = ch;
-    if (INVISIBLE.test(ch)) {
-      mapped = " ";
-    } else if (/[\u0660-\u0669]/.test(ch)) {
-      mapped = String(ch.charCodeAt(0) - 0x0660);
-    } else if (/[\u06F0-\u06F9]/.test(ch)) {
-      mapped = String(ch.charCodeAt(0) - 0x06F0);
-    } else {
-      const normalized = ch.normalize("NFKC");
-      if (normalized.length === ch.length && /^[\x20-\x7E]$/.test(normalized)) mapped = normalized;
-    }
-    folded += mapped;
-  }
-  return folded;
+function isDecimalDigit(codePoint) {
+  return codePoint >= 0 && DECIMAL_DIGIT.test(String.fromCodePoint(codePoint));
 }
 
-function removeMatches(text, folded, pattern) {
-  const spans = [...folded.matchAll(pattern)].map((m) => [m.index, m.index + m[0].length]);
+/** The ASCII digit value of any decimal digit (Devanagari, Arabic-Indic, styled, ...), or -1. */
+function digitValue(codePoint) {
+  if (EXTRA_DIGIT_VALUES.has(codePoint)) return EXTRA_DIGIT_VALUES.get(codePoint);
+  if (!isDecimalDigit(codePoint)) return -1;
+  let start = codePoint;
+  while (isDecimalDigit(start - 1)) start -= 1;
+  return (codePoint - start) % 10;
+}
+
+function foldCodePoint(ch) {
+  if (INVISIBLE.test(ch)) return " ";
+  const value = digitValue(ch.codePointAt(0));
+  if (value >= 0) return String(value);
+  const normalized = ch.normalize("NFKC");
+  if (normalized.length === 1 && normalized.charCodeAt(0) < 0x80) return normalized;
+  // One UTF-16 unit per code point keeps folded offsets aligned with `offsets` below.
+  return ch.length === 1 ? ch : "\uFFFD";
+}
+
+/** One folded UTF-16 unit per code point of `text`, plus the original offset of each. */
+function foldForContactMatching(text) {
+  let folded = "";
+  const offsets = [];
+  let index = 0;
+  for (const ch of text) {
+    offsets.push(index);
+    folded += foldCodePoint(ch);
+    index += ch.length;
+  }
+  offsets.push(text.length);
+  return { folded, offsets };
+}
+
+function removeMatches(text, pattern) {
+  const { folded, offsets } = foldForContactMatching(text);
+  const spans = [...folded.matchAll(pattern)].map((m) => [offsets[m.index], offsets[m.index + m[0].length]]);
   if (spans.length === 0) return text;
   let result = "";
   let cursor = 0;
@@ -292,10 +304,7 @@ function stripContacts(text) {
   let current = text;
   // Removing a contact can join the text around it into a new one, so repeat until stable.
   for (let pass = 0; pass < 4; pass += 1) {
-    const folded = foldForContactMatching(current);
-    const next = removeMatches(current, folded, PHONE_PATTERN);
-    const nextFolded = next === current ? folded : foldForContactMatching(next);
-    const cleaned = removeMatches(next, nextFolded, EMAIL_PATTERN);
+    const cleaned = removeMatches(removeMatches(current, PHONE_PATTERN), EMAIL_PATTERN);
     if (cleaned === current) break;
     current = cleaned;
   }

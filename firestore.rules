@@ -137,25 +137,34 @@ service cloud.firestore {
     }
 
     // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number or
-    // an email address once obvious obfuscation is looked through:
-    //  - a run of 10+ digits (Latin, Arabic-Indic, Persian, full-width, or the letter O for
-    //    zero) with at most two separator characters between digits, or
-    //  - a + or a leading zero followed by 9+ digits, or
-    //  - an email where @ may be written [at], (at), {at} or full-width, with spaces around it.
-    // Prices and areas stay free: a run of 8 digits such as 15000000 is not a contact.
-    // `(?s)` lets `.` span newlines, so a number on a later line is still found.
+    // an email address once obvious obfuscation is looked through. Phone shapes (trunk zero,
+    // bare EG/UAE mobiles, country codes, +/00 prefixes; digits of any script; the letter O
+    // between digits; grouped digits) are defined in backend/contact_patterns.js and the
+    // block below is generated from it: run `npm run gen:contact-rules` in backend/.
+    // Runs of spaces, dashes, dots, slashes and similar are collapsed to one separator first.
+    // Prices and areas stay free: 15000000, 15,000,000, 1.500.000.000 and dates are not contacts.
+    // BEGIN GENERATED contact patterns
+    function contactPhone(text) {
+      let t = text.replace('[\\x{20}\\x{9}-\\x{d}\\x{a0}\\x{1680}\\x{2000}-\\x{200f}\\x{2028}\\x{2029}\\x{202f}\\x{205f}\\x{2060}\\x{3000}\\x{feff}\\x{2e}\\x{2d}\\x{2f}\\x{5f}\\x{5c}\\x{28}\\x{29}\\x{7e}\\x{2010}-\\x{2015}\\x{2212}\\x{fe63}\\x{ff0d}\\x{ff0e}\\x{ff0f}\\x{ff3f}\\x{ff3c}\\x{ff08}\\x{ff09}]+', '~');
+      return t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿](?:[\\p{N}OoＯｏ]{7,9}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,7}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵OoＯｏ](?:[\\p{N}OoＯｏ]{7}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{6,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸OoＯｏ](?:[\\p{N}OoＯｏ]{6}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,2}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹]~?(?:\\p{N}[\\p{N}OoＯｏ]{6,7}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,4}\\p{N})|[\\p{N}OoＯｏ]{3}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵]~?(?:(?:[03-9]|[^\\x{0}-\\x{7f}\\P{N}])[\\p{N}OoＯｏ]{2}\\p{N}|1[0-8][\\p{N}OoＯｏ]\\p{N}|2[1-9][\\p{N}OoＯｏ]\\p{N})~?\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[\\x{2b}\\x{ff0b}]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$');
+    }
+    // END GENERATED contact patterns
+
+    // Emails: @ may be written [at], (at), {at} or full-width, with spaces around it, and
+    // the dots as [dot]. `(?s)` lets `.` span newlines, so a later line is still checked.
     function contactFree(text) {
-      let digit = '[0-9٠-٩۰-۹０-９OoＯｏ]';
-      let zero = '[0٠۰０]';
-      let sep = '[ .()/_\\\\\\-\\x{00A0}\\x{2000}-\\x{200F}\\x{202F}\\x{2060}\\x{3000}\\x{2010}-\\x{2015}\\x{2212}\\x{FEFF}\\x{FF08}\\x{FF09}\\x{FF0D}\\x{FF0E}\\x{FF0F}\\x{FF3F}]{0,2}';
       let local = '[A-Za-z0-9._%+Ａ-Ｚａ-ｚ０-９-]';
       let ws = '[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*';
       let at = ws + '([@＠﹫]|[\\[({]' + ws + '[Aa][Tt]' + ws + '[\\])}])' + ws;
       let dot = '([.．]|' + ws + '[\\[({]' + ws + '[Dd][Oo][Tt]' + ws + '[\\])}]' + ws + ')';
       let label = '[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+';
-      return !text.matches('(?s)^.*(' + digit + sep + '){10,}.*$')
-        && !text.matches('(?s)^.*[+]' + sep + '(' + digit + sep + '){9,}.*$')
-        && !text.matches('(?s)^(.*[^0-9٠-٩۰-۹０-９])?' + zero + sep + '(' + digit + sep + '){8,}.*$')
+      return !contactPhone(text)
         && !text.matches('(?s)^.*' + local + at + label + '(' + dot + label + ')*' + dot + '[A-Za-zＡ-Ｚａ-ｚ]{2,}.*$');
     }
 
