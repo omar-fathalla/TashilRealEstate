@@ -290,22 +290,61 @@ service cloud.firestore {
         && (!('updated_at' in d) || d.updated_at is timestamp);
     }
 
-    // Admin moderation: flag a listing verified or hidden, or take it offline. Putting a listing
-    // back online is only allowed together with clearing the hidden flag, and only for a listing
-    // that is still vacant, so an Admin cannot resurrect one its owner took down or rented out.
-    function adminModerationOk() {
+    // Moderation state lives in PropertyModeration/{propertyId}, a document no owner can create,
+    // change or delete, so it survives whatever happens to the public or the private listing doc.
+    // A missing document means "not hidden". The public doc keeps `moderation_hidden` only as a
+    // mirror for the UI; the rules below force it to equal the moderation doc.
+    function moderationPath(propertyId) {
+      return /databases/$(database)/documents/PropertyModeration/$(propertyId);
+    }
+
+    function listingModerationHidden(propertyId) {
+      return exists(moderationPath(propertyId))
+        && get(moderationPath(propertyId)).data.get('hidden', false) == true;
+    }
+
+    // Admin moderation of the public doc: verify it, hide it, or restore it. A hide or restore
+    // must come in the same write batch as its PropertyModeration change (getAfter), so the
+    // moderation doc is always written together with, never after, the public doc. Restoring
+    // brings back the is_published value stored when the listing was hidden, and only for a
+    // listing that is still vacant, so a listing that was never public is never published.
+    function adminModerationOk(propertyId) {
       let d = request.resource.data;
       return changedKeys().hasOnly(['is_published', 'verified', 'moderation_hidden', 'updated_at'])
-        && d.get('verified', false) is bool
-        && d.get('moderation_hidden', false) is bool
-        && d.get('is_published', false) is bool
+        && [d.get('verified', false), d.get('moderation_hidden', false), d.get('is_published', false)].hasOnly([true, false])
         && (!('updated_at' in d) || d.updated_at == request.time)
-        && (d.get('moderation_hidden', false) == false || d.get('is_published', false) == false)
-        && (!changedKeys().hasAny(['is_published'])
-          || d.get('is_published', false) == false
-          || (resource.data.get('moderation_hidden', false) == true
-            && d.get('moderation_hidden', false) == false
-            && resource.data.get('status', '') == 'vacant'));
+        && (!changedKeys().hasAny(['is_published', 'moderation_hidden'])
+          || adminVisibilityOk(propertyId));
+    }
+
+    function adminVisibilityOk(propertyId) {
+      let d = request.resource.data;
+      let m = getAfter(moderationPath(propertyId)).data;
+      return d.get('moderation_hidden', false) == m.get('hidden', false)
+        && (m.get('hidden', false) == true
+          ? d.get('is_published', false) == false
+          : d.get('is_published', false)
+              == (m.get('pre_hide_published', false) == true && resource.data.get('status', '') == 'vacant'));
+    }
+
+    // A moderator writes exactly these four fields. Hiding records whether the public doc is
+    // live right now (pre_hide_published), so a later restore cannot publish anything that was
+    // not published before. Every later change keeps that stored value.
+    function moderationDocShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['hidden', 'pre_hide_published', 'updated_by', 'updated_at'])
+        && d.hidden is bool
+        && d.pre_hide_published is bool
+        && d.updated_by == request.auth.uid
+        && d.updated_at == request.time;
+    }
+
+    function moderationHideOk(propertyId) {
+      let d = request.resource.data;
+      return d.hidden == true
+        && exists(/databases/$(database)/documents/Properties/$(propertyId))
+        && d.pre_hide_published
+          == (get(/databases/$(database)/documents/Properties/$(propertyId)).data.get('is_published', false) == true);
     }
 
     function listingShapeOk(propertyId) {
@@ -339,9 +378,25 @@ service cloud.firestore {
       // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
       // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
       allow create, update: if (isSuperAdmin() && listingShapeOk(propertyId))
-        || (isAdmin() && adminModerationOk());
+        || (isAdmin() && adminModerationOk(propertyId));
 
-      allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
+      // An owner may remove their own listing, except while moderation holds it hidden: deleting
+      // the public doc must not be a way to lose that state.
+      allow delete: if isSuperAdmin()
+        || ((ownsListing() || agencyManagesResource()) && !listingModerationHidden(propertyId));
+    }
+
+    // 2b. Listing moderation state. Platform staff only; no owner, tenant or agency can create,
+    // change or delete it (including creating it first for their own listing). Only SuperAdmin
+    // can delete it. Admin writes stay limited to the four fields above.
+    match /PropertyModeration/{propertyId} {
+      allow read: if isPlatformStaff();
+      allow create: if isPlatformStaff() && moderationDocShapeOk() && moderationHideOk(propertyId);
+      allow update: if isPlatformStaff() && moderationDocShapeOk()
+        && (resource.data.get('hidden', false) == true || request.resource.data.hidden == false
+          ? request.resource.data.pre_hide_published == resource.data.get('pre_hide_published', false)
+          : moderationHideOk(propertyId));
+      allow delete: if isSuperAdmin();
     }
 
     // 3. Agencies Collection
@@ -445,12 +500,30 @@ service cloud.firestore {
       );
     }
 
+    // A new request must name the lease it belongs to, and that lease must link exactly the
+    // tenant, owner and agency the request names. The caller must be that lease's tenant or owner,
+    // so nobody can address a request to a party they have no lease with. One get() on the lease.
+    function maintenanceLinkedToLease() {
+      let d = request.resource.data;
+      let leaseId = d.get('lease_id', '');
+      return leaseId is string && leaseId.size() > 0
+        && exists(/databases/$(database)/documents/Leases/$(leaseId))
+        && maintenanceMatchesLease(d, get(/databases/$(database)/documents/Leases/$(leaseId)).data);
+    }
+
+    function maintenanceMatchesLease(d, lease) {
+      return d.get('tenant_id', '') is string && d.get('tenant_id', '') != ''
+        && d.get('owner_id', '') is string && d.get('owner_id', '') != ''
+        && d.get('tenant_id', '') == lease.get('tenant_id', '')
+        && d.get('owner_id', '') == lease.get('owner_id', '')
+        && d.get('agency_id', '') == lease.get('agency_id', '')
+        && (request.auth.uid == lease.get('tenant_id', '') || request.auth.uid == lease.get('owner_id', ''));
+    }
+
     match /Maintenance/{requestId} {
       allow read: if isPlatformStaff() || maintenanceParty();
       allow create: if isSuperAdmin()
-        || ((isTenant() || isOwner())
-          && (request.resource.data.get('tenant_id', '') == request.auth.uid
-            || request.resource.data.get('owner_id', '') == request.auth.uid));
+        || ((isTenant() || isOwner()) && maintenanceLinkedToLease());
       allow update: if isSuperAdmin()
         || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
         || ((isOwner() || isAgencyAdmin()) && maintenanceParty()

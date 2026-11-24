@@ -366,6 +366,19 @@ test("TAQ-89: maxOutputTokens has a server-side floor of 1024 and keeps the 4096
   }
 });
 
+test("TAQ-91: generationConfig numbers must be real numbers, and maxOutputTokens a strict integer", async () => {
+  const before = calls.length;
+  for (const maxOutputTokens of [true, false, [2000], "2000", 2000.5, null, {}, NaN, Infinity]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } }), "invalid-argument");
+  }
+  for (const [key, value] of [["temperature", true], ["temperature", [0.5]], ["topP", "0.5"], ["topK", [5]]]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { [key]: value } } }), "invalid-argument");
+  }
+  assert.equal(calls.length, before, "no upstream call is made for a rejected config");
+  await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens: 2000, temperature: 0.5, topP: 0.9, topK: 20 } } });
+  assert.equal(calls.length, before + 1);
+});
+
 // --- Rate limits ---
 
 test("TAQ-19: a signed-in user gets 20 calls a minute, then a fresh window the next minute", async () => {

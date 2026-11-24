@@ -30,7 +30,11 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   late final AdminDataSource _data = widget.dataSource ?? FirebaseAdminDataSource();
   _AdminView _view = _AdminView.listings;
-  Future<List<AdminUserRow>>? _users;
+  final List<AdminUserRow> _users = [];
+  String? _usersNext;
+  bool _usersStarted = false;
+  bool _usersLoading = false;
+  bool _usersFailed = false;
   final Set<String> _busy = {};
 
   Future<void> _run(String listingId, Future<void> Function() action, AppLocalizations loc) async {
@@ -94,10 +98,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     TashilConnectedButtonGroup<_AdminView>(
                       isFullWidth: true,
                       selectedValue: _view,
-                      onSelectionChanged: (value) => setState(() {
-                        _view = value;
-                        if (value == _AdminView.users) _users ??= _data.loadUsers();
-                      }),
+                      onSelectionChanged: (value) {
+                        setState(() => _view = value);
+                        if (value == _AdminView.users) _loadUsers();
+                      },
                       segments: [
                         TashilConnectedButtonSegment(
                           value: _AdminView.listings,
@@ -224,14 +228,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   key: Key('admin-restore-${item.id}'),
                   label: loc.tr('adminRestore'),
                   icon: Icons.visibility_outlined,
-                  onPressed: busy || !item.canRestore ? null : () => _run(item.id, () => _data.restore(item.id), loc),
+                  onPressed: busy || !item.canRestore ? null : () => _run(item.id, () => _data.restore(item), loc),
                 )
               else
                 TashilButton.outlined(
                   key: Key('admin-hide-${item.id}'),
                   label: loc.tr('adminHide'),
                   icon: Icons.visibility_off_outlined,
-                  onPressed: busy ? null : () => _run(item.id, () => _data.hide(item.id), loc),
+                  onPressed: busy ? null : () => _run(item.id, () => _data.hide(item), loc),
                 ),
             ],
           ),
@@ -240,39 +244,88 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  /// Loads the first page, or the next one after the last user already shown. Pages are appended,
+  /// so the directory can be read past the server's 100-user page size.
+  Future<void> _loadUsers({bool more = false}) async {
+    if (_usersLoading) return;
+    if (!more && _usersStarted && !_usersFailed) return;
+    final startAfter = more ? _usersNext : null;
+    if (more && startAfter == null) return;
+    setState(() {
+      _usersStarted = true;
+      _usersLoading = true;
+      _usersFailed = false;
+    });
+    try {
+      final page = await _data.loadUsers(startAfter: startAfter);
+      if (!mounted) return;
+      setState(() {
+        _users.addAll(page.users);
+        _usersNext = page.nextPageToken;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _usersFailed = true);
+    } finally {
+      if (mounted) setState(() => _usersLoading = false);
+    }
+  }
+
   Widget _usersList(AppLocalizations loc) {
-    return FutureBuilder<List<AdminUserRow>>(
-      future: _users ??= _data.loadUsers(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return _error(loc);
-        final users = snapshot.data;
-        if (users == null) return _loading();
-        if (users.isEmpty) return _empty(loc, Icons.people_alt_outlined, 'adminNoUsers');
-        return ListView.separated(
-          itemCount: users.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return TashilCard.outlined(
-              key: Key('admin-user-${user.uid}'),
-              padding: const EdgeInsetsDirectional.all(14),
-              child: Row(
+    if (!_usersStarted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadUsers();
+      });
+      return _loading();
+    }
+    if (_usersFailed && _users.isEmpty) return _error(loc);
+    if (_users.isEmpty) return _usersLoading ? _loading() : _empty(loc, Icons.people_alt_outlined, 'adminNoUsers');
+    final hasMore = _usersNext != null;
+    return ListView.separated(
+      itemCount: _users.length + (hasMore || _usersFailed ? 1 : 0),
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        if (index == _users.length) {
+          return Center(
+            child: TashilButton.tonal(
+              key: const Key('admin-users-load-more'),
+              label: _usersFailed ? loc.tr('adminLoadError') : loc.tr('adminLoadMore'),
+              icon: Icons.expand_more_rounded,
+              isLoading: _usersLoading,
+              onPressed: _usersLoading ? null : () => _loadUsers(more: true),
+            ),
+          );
+        }
+        final user = _users[index];
+        return TashilCard.outlined(
+          key: Key('admin-user-${user.uid}'),
+          padding: const EdgeInsetsDirectional.all(14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.fullName.isEmpty ? user.email : user.fullName,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    if (user.fullName.isNotEmpty) Text(user.email, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.fullName.isEmpty ? user.email : user.fullName,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                        if (user.fullName.isNotEmpty) Text(user.email, style: Theme.of(context).textTheme.bodySmall),
-                      ],
+                  if (user.effectiveRole.isNotEmpty)
+                    TashilAssistChip(key: Key('admin-user-role-${user.uid}'), label: _roleLabel(loc, user.effectiveRole)),
+                  if (user.rolesDiffer)
+                    TashilAssistChip(
+                      key: Key('admin-user-profile-role-${user.uid}'),
+                      label: '${loc.tr('adminProfileRole')}: ${_roleLabel(loc, user.role)}',
                     ),
-                  ),
-                  if (user.role.isNotEmpty) TashilAssistChip(label: _roleLabel(loc, user.role)),
                 ],
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );

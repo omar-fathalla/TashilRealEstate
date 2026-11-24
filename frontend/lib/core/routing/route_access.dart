@@ -44,6 +44,12 @@ class RouteAccess {
     return allowed == null || allowed.contains(role);
   }
 
+  /// Whether to offer the "list your property" call to action. Visitors see it (it leads to
+  /// sign-in); a signed-in user sees it only if their role may open the onboarding flow, so an
+  /// Investor, Tenant or Admin never gets a button that would only bounce them.
+  static bool showListPropertyCta({required bool signedIn, required String role}) =>
+      !signedIn || canAccess('/fast-onboarding', role);
+
   /// Where a signed-in user with [role] belongs. Always accessible for that role.
   static String homeFor(String role) {
     switch (role) {

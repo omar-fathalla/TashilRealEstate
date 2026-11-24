@@ -190,15 +190,39 @@ How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91)
 
 ### What each role can do (TAQ-91 decisions)
 
-- **Admin** (`/admin`): hide, restore and verify public listings (`is_published`,
-  `verified`, `moderation_hidden`, `updated_at` only; a hidden listing can be restored only while
-  vacant); read all listings, agencies, crash telemetry; read users only through the
-  `listUsersForAdmin` callable, which returns an allowlist (uid, email, name, role, country and
-  agency) and never the IBAN, national ID, phone or any private field; escalate maintenance requests
-  (`status`, `escalated`, `resolution_note`). It cannot call `setUserRole`, touch roles or claims,
-  create or change a SuperAdmin, write system settings, Remote Config, payments, invoices or
-  secrets, run `seedDatabase` or `syncMarketIndexManual`, or delete users. Its role is never read
-  from the profile document, so it cannot be self-granted.
+- **Admin** (`/admin`): hide, restore and verify public listings, read all listings, agencies and
+  crash telemetry, read users only through the `listUsersForAdmin` callable (an allowlist: uid,
+  email, name, profile role, claim role, country and agency; never the IBAN, national ID, phone or
+  any private field), and escalate maintenance requests (`status`, `escalated`, `resolution_note`).
+  It cannot call `setUserRole`, touch roles or claims, create or change a SuperAdmin, write system
+  settings, Remote Config, payments, invoices or secrets, run `seedDatabase` or
+  `syncMarketIndexManual`, or delete users. Its role is never read from the profile document, so it
+  cannot be self-granted.
+- **Listing moderation** lives in `PropertyModeration/{propertyId}` (`hidden`,
+  `pre_hide_published`, `updated_by`, `updated_at`). Only Admin and SuperAdmin can create or change
+  it, only SuperAdmin can delete it, and no owner, agency or tenant can touch it at all. A missing
+  doc means "not hidden". The Admin dashboard writes it in one batch with the public doc, and the
+  rules require the two to agree (`getAfter`), so the moderation doc is never written after the
+  public doc. `pre_hide_published` records whether the listing was live when hidden; a restore
+  brings back that value (and only for a vacant listing), so a listing that was never public is
+  never published by a restore. The sync trigger reads `PropertyModeration`, so deleting or
+  recreating the public or private doc keeps a hidden listing hidden, and an owner or agency
+  cannot delete the public doc of a hidden listing. `reconcilePropertyModeration` takes the
+  public doc offline if a hide is written without it. An owner who deletes and recreates the
+  private doc under a new id has created a new listing, which needs no moderation.
+  Listings hidden before this change have no moderation doc: run
+  `node scripts/backfill_property_moderation.js --project <id>` (dry run by default, `--apply` to
+  write) once per project. It records `pre_hide_published: false`, so such a listing is not
+  published automatically when restored.
+- **Maintenance requests** must carry `lease_id`, and that lease must link the request's
+  `tenant_id`, `owner_id` and `agency_id` (empty on both sides when the lease has no agency).
+  Only the lease's tenant or owner can create one.
+- **Rent payments** (`processRentPayment`): only the lease's tenant (role `Tenant`) can record a
+  payment. The owner, the managing agency and SuperAdmin cannot: the app has no flow in which they
+  record a payment, so nothing needs it. The amount is the lease's rent (monthly rent, or annual
+  rent divided by 12); the client may omit it or repeat it, and any other value is
+  `invalid-argument`. Errors are clean codes: `unauthenticated`, `permission-denied`,
+  `not-found`, `invalid-argument`, `failed-precondition`.
 - **Investor**: browse, save and compare listings, market index, valuation and the AI features that
   are open to any signed-in user. It cannot publish listings and has no access to leases, tenants
   or maintenance. It is accepted at signup and never escalates: the profile document can only ever
@@ -246,6 +270,8 @@ Passwords exist only in Secret Manager or the shell environment. Do not write th
   but has no screen in `/admin` yet.
 - `/fast-onboarding` is still limited to `Owner` and `AgencyAdmin` in the Flutter route table (as
   before TAQ-91). The gateway already accepts `Admin` and `SuperAdmin` for onboarding and OCR.
+- `processRentPayment` can record the same lease's rent more than once; there is no payment
+  provider or idempotency key yet.
 - App Check for dev: register a dev reCAPTCHA site key before turning on `ENFORCE_APP_CHECK` in
   dev, as described in `docs/SECURITY_SETUP.md`.
 - Mobile: add an Android and an iOS app to `tashil-aqar-dev` and extend

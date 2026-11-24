@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// One public listing as the platform Admin sees it.
@@ -55,20 +56,45 @@ class AdminListing {
 }
 
 /// A user as returned by the `listUsersForAdmin` callable: no IBAN, national ID or phone.
+///
+/// [role] is the profile document's role and [claimRole] the role in the user's custom claim, which
+/// is what the rules and the app actually trust. They differ for staff roles, which only exist as
+/// claims, so the dashboard shows both when they differ.
 class AdminUserRow {
-  const AdminUserRow({required this.uid, required this.email, required this.fullName, required this.role});
+  const AdminUserRow({
+    required this.uid,
+    required this.email,
+    required this.fullName,
+    required this.role,
+    this.claimRole = '',
+  });
 
   final String uid;
   final String email;
   final String fullName;
   final String role;
+  final String claimRole;
+
+  /// The role the platform acts on: the claim when there is one, otherwise the profile role.
+  String get effectiveRole => claimRole.isNotEmpty ? claimRole : role;
+
+  bool get rolesDiffer => claimRole.isNotEmpty && role.isNotEmpty && claimRole != role;
 
   factory AdminUserRow.fromMap(Map<dynamic, dynamic> data) => AdminUserRow(
         uid: '${data['uid'] ?? ''}',
         email: '${data['email'] ?? ''}',
         fullName: '${data['full_name'] ?? ''}',
         role: '${data['role'] ?? ''}',
+        claimRole: '${data['claim_role'] ?? ''}',
       );
+}
+
+/// One page of the user directory. [nextPageToken] is null on the last page.
+class AdminUserPage {
+  const AdminUserPage({required this.users, this.nextPageToken});
+
+  final List<AdminUserRow> users;
+  final String? nextPageToken;
 }
 
 class AdminAgencyRow {
@@ -85,19 +111,33 @@ class AdminAgencyRow {
 abstract class AdminDataSource {
   Stream<List<AdminListing>> watchListings(String langCode);
   Future<void> setVerified(String listingId, bool verified);
-  Future<void> hide(String listingId);
-  Future<void> restore(String listingId);
-  Future<List<AdminUserRow>> loadUsers();
+
+  /// Hides [listing]: writes PropertyModeration and the public doc in one batch, recording whether
+  /// the listing was live so a later restore cannot publish anything that was not.
+  Future<void> hide(AdminListing listing);
+
+  /// Lifts the hold and brings back the pre-hide `is_published` value (never for a rented listing).
+  Future<void> restore(AdminListing listing);
+
+  Future<AdminUserPage> loadUsers({String? startAfter});
   Stream<List<AdminAgencyRow>> watchAgencies(String langCode);
 }
 
 class FirebaseAdminDataSource implements AdminDataSource {
-  FirebaseAdminDataSource({FirebaseFirestore? firestore, FirebaseFunctions? functions})
+  FirebaseAdminDataSource({FirebaseFirestore? firestore, FirebaseFunctions? functions, String? Function()? currentUid})
       : _firestore = firestore,
-        _functions = functions;
+        _functions = functions,
+        _currentUid = currentUid;
 
   FirebaseFirestore? _firestore;
   FirebaseFunctions? _functions;
+  final String? Function()? _currentUid;
+
+  String get _uid {
+    final uid = _currentUid != null ? _currentUid!() : FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) throw StateError('Not signed in');
+    return uid;
+  }
 
   FirebaseFirestore get _db => _firestore ??= FirebaseFirestore.instance;
   FirebaseFunctions get _fn => _functions ??= FirebaseFunctions.instanceFor(region: 'us-central1');
@@ -116,30 +156,56 @@ class FirebaseAdminDataSource implements AdminDataSource {
     return _listing(listingId).update({'verified': verified, 'updated_at': FieldValue.serverTimestamp()});
   }
 
+  DocumentReference<Map<String, dynamic>> _moderation(String id) => _db.collection('PropertyModeration').doc(id);
+
   @override
-  Future<void> hide(String listingId) {
-    return _listing(listingId).update({
+  Future<void> hide(AdminListing listing) {
+    final batch = _db.batch();
+    batch.set(_moderation(listing.id), {
+      'hidden': true,
+      'pre_hide_published': listing.isPublished,
+      'updated_by': _uid,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    batch.update(_listing(listing.id), {
       'is_published': false,
       'moderation_hidden': true,
       'updated_at': FieldValue.serverTimestamp(),
     });
+    return batch.commit();
   }
 
   @override
-  Future<void> restore(String listingId) {
-    return _listing(listingId).update({
-      'is_published': true,
+  Future<void> restore(AdminListing listing) async {
+    final stored = await _moderation(listing.id).get();
+    final preHidePublished = stored.data()?['pre_hide_published'] == true;
+    final batch = _db.batch();
+    batch.set(_moderation(listing.id), {
+      'hidden': false,
+      'pre_hide_published': preHidePublished,
+      'updated_by': _uid,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    batch.update(_listing(listing.id), {
+      'is_published': preHidePublished && listing.status == 'vacant',
       'moderation_hidden': false,
       'updated_at': FieldValue.serverTimestamp(),
     });
+    return batch.commit();
   }
 
   @override
-  Future<List<AdminUserRow>> loadUsers() async {
-    final result = await _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({'limit': 100});
+  Future<AdminUserPage> loadUsers({String? startAfter}) async {
+    final result = await _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({
+      'limit': 100,
+      if (startAfter != null && startAfter.isNotEmpty) 'startAfter': startAfter,
+    });
     final users = result.data['users'];
-    if (users is! List) return const [];
-    return users.whereType<Map>().map(AdminUserRow.fromMap).toList();
+    final next = result.data['nextPageToken'];
+    return AdminUserPage(
+      users: users is List ? users.whereType<Map>().map(AdminUserRow.fromMap).toList() : const [],
+      nextPageToken: next is String && next.isNotEmpty ? next : null,
+    );
   }
 
   @override

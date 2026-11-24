@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/auth/role_session.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/routing/route_access.dart';
 import '../../core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
 import '../../core/localization/country_controller.dart';
@@ -275,28 +277,38 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
                   ],
                 ),
               ),
-              InkWell(
-                onTap: () => context.go('/fast-onboarding'),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+              ListenableBuilder(
+                listenable: RoleSession.instance,
+                builder: (context, _) {
+                  final show = RouteAccess.showListPropertyCta(
+                    signedIn: RoleSession.instance.status == RoleSessionStatus.signedIn,
+                    role: RoleSession.instance.role,
+                  );
+                  if (!show) return const SizedBox.shrink();
+                  return InkWell(
+                    onTap: () => context.go('/fast-onboarding'),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.rocket_launch_rounded, color: Colors.amberAccent, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        loc.tr('listPropertyBtn'),
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
                       ),
-                    ],
-                  ),
-                ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.rocket_launch_rounded, color: Colors.amberAccent, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            loc.tr('listPropertyBtn'),
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
