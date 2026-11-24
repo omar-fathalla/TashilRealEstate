@@ -23,7 +23,7 @@ const {
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
-const { PHONE_PATTERN, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
+const { phoneSpans, LINK_PATTERN, HANDLE_PATTERN, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -235,10 +235,10 @@ const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
 
-// Mirrored by contactFree() in firestore.rules (see contact_patterns.js for the phone shapes).
-// Text is matched after folding look-alike characters (digits of any script, full-width
-// forms, circled and styled digits, invisible characters) so only the matched span is removed
-// and other text is left exactly as written.
+// Mirrored by contactFree() in firestore.rules. Phones, messaging links and @handles use the
+// shared patterns in contact_patterns.js. Emails are matched after folding look-alike
+// characters (full-width forms, invisible characters). Only the matched span is removed and
+// other text is left exactly as written.
 //  - Email: @ may be written [at], (at), {at}, or with spaces around it; dots may be [dot].
 const EMAIL_AT = String.raw`\s*(?:@|[\[({]\s*at\s*[\])}])\s*`;
 const EMAIL_DOT = String.raw`(?:\.|\s*[\[({]\s*dot\s*[\])}]\s*)`;
@@ -287,24 +287,37 @@ function foldForContactMatching(text) {
   return { folded, offsets };
 }
 
-function removeMatches(text, pattern) {
-  const { folded, offsets } = foldForContactMatching(text);
-  const spans = [...folded.matchAll(pattern)].map((m) => [offsets[m.index], offsets[m.index + m[0].length]]);
+function removeSpans(text, spans) {
   if (spans.length === 0) return text;
   let result = "";
   let cursor = 0;
-  for (const [start, end] of spans) {
-    result += text.slice(cursor, start);
+  for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
+    if (end <= cursor) continue;
+    result += text.slice(cursor, Math.max(cursor, start));
     cursor = end;
   }
   return result + text.slice(cursor);
+}
+
+function matchSpans(text, pattern) {
+  return [...text.matchAll(pattern)].map((m) => [m.index, m.index + m[0].length]);
+}
+
+function removeEmails(text) {
+  const { folded, offsets } = foldForContactMatching(text);
+  return removeSpans(text, matchSpans(folded, EMAIL_PATTERN).map(([start, end]) => [offsets[start], offsets[end]]));
+}
+
+function removeLinks(text) {
+  const withoutLinks = removeSpans(text, matchSpans(text, LINK_PATTERN));
+  return removeSpans(withoutLinks, matchSpans(withoutLinks, HANDLE_PATTERN));
 }
 
 function stripContacts(text) {
   let current = text;
   // Removing a contact can join the text around it into a new one, so repeat until stable.
   for (let pass = 0; pass < 4; pass += 1) {
-    const cleaned = removeMatches(removeMatches(current, PHONE_PATTERN), EMAIL_PATTERN);
+    const cleaned = removeLinks(removeEmails(removeSpans(current, phoneSpans(current))));
     if (cleaned === current) break;
     current = cleaned;
   }
