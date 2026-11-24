@@ -89,3 +89,14 @@ Use a Firebase project you own that is **not** `tashil-proptech-os`.
 5. From a second network (for example a phone hotspot) one call must succeed and create a
    second `ip_…` document. If it is rejected instead, every visitor shares one bucket (the hop
    count is too high, or a proxy IP is being counted).
+
+## Client AI key check
+
+`npm test` (in `backend/`) fails if `frontend/lib` or `frontend/web` holds a Gemini key, a base64
+form of one, or a direct Gemini/Vertex URL. Before shipping a web build, scan the compiled output
+too; only the public Firebase `apiKey` values from `firebase_options.dart` may appear in it:
+
+```bash
+cd frontend && flutter build web --release
+cd ../backend && npm run check:client-keys:build
+```

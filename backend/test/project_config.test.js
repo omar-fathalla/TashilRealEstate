@@ -185,3 +185,34 @@ test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never 
     assert.doesNotMatch(origin, /\*\.googleapis\.com|generativelanguage|aiplatform/, origin);
   }
 });
+
+test("TAQ-79: the --build scan allows only the firebase_options keys in compiled web output", () => {
+  const os = require("os");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "client-keys-"));
+  const firebaseKey = "AIza" + "F".repeat(35);
+  const otherKey = "AIza" + "G".repeat(35);
+  const write = (rel, text) => {
+    fs.mkdirSync(path.dirname(path.join(tmp, rel)), { recursive: true });
+    fs.writeFileSync(path.join(tmp, rel), text);
+  };
+  try {
+    write(clientKeys.FIREBASE_OPTIONS, `  static const FirebaseOptions web = FirebaseOptions(\n    apiKey: '${firebaseKey}',\n  );\n`);
+    assert.throws(() => clientKeys.scanClient(tmp, { build: true }), /flutter build web/);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js`, `a={apiKey:"${firebaseKey}",authDomain:"x"};b="${firebaseKey}"\n`);
+    assert.deepEqual(clientKeys.scanClient(tmp, { build: true }), []);
+
+    write(`${clientKeys.BUILD_DIR}/main.dart.js`, `a={apiKey:"${firebaseKey}"};k="${otherKey}"\n`);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js.map`, `{"x":"https://generativelanguage.googleapis.com/v1beta/models/m:generateContent"}`);
+    write(`${clientKeys.BUILD_DIR}/assets/env.json`, `{"k":"${Buffer.from("AQ." + "h".repeat(30)).toString("base64")}"}`);
+    const rules = clientKeys.scanClient(tmp, { build: true }).map((f) => `${f.file}: ${f.rule}`).sort();
+    assert.deepEqual(rules, [
+      `${clientKeys.BUILD_DIR}/assets/env.json: base64 of an AQ. key`,
+      `${clientKeys.BUILD_DIR}/main.dart.js.map: Gemini REST method`,
+      `${clientKeys.BUILD_DIR}/main.dart.js.map: direct Gemini API URL`,
+      `${clientKeys.BUILD_DIR}/main.dart.js: Google API key (AIza…)`,
+    ]);
+    assert.deepEqual(clientKeys.scanClient(tmp), [], "without --build the compiled output is not scanned");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});

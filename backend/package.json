@@ -14,7 +14,8 @@
     "seed": "node seed.js",
     "audit:roles": "node scripts/role_claims.js",
     "gen:contact-rules": "node scripts/generate_contact_rules.js",
-    "check:client-keys": "node scripts/check_client_ai_keys.js"
+    "check:client-keys": "node scripts/check_client_ai_keys.js",
+    "check:client-keys:build": "node scripts/check_client_ai_keys.js --build"
   },
   "engines": {
     "node": "20"
