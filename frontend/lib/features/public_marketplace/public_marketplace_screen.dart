@@ -407,6 +407,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               },
               onSelectSuggestion: (suggestion) {
                 _searchController.text = suggestion;
+                _semanticDebounce?.cancel();
                 if (_isSemanticSearchActive) {
                   _performSemanticSearch(suggestion, currentCountry);
                 } else {

@@ -48,17 +48,39 @@ class GeminiGateway {
     return result.data;
   }
 
+  // Identical requests that overlap share one server call, so a double tap or two handlers
+  // firing for one action cost a single rate-limited request.
+  static final Map<String, Future<http.Response>> _inFlight = {};
+
+  @visibleForTesting
+  static int get inFlightCount => _inFlight.length;
+
   static Future<http.Response> generate({
     required GeminiFeature feature,
     required Map<String, dynamic> request,
     String? model,
     Duration timeout = const Duration(seconds: 55),
-  }) async {
+  }) {
     final payload = <String, dynamic>{
       'feature': feature.wireName,
       if (model != null) 'model': model,
       'request': request,
     };
+    final String key;
+    try {
+      key = jsonEncode(payload);
+    } catch (_) {
+      return _send(feature, payload, timeout);
+    }
+    final pending = _inFlight[key];
+    if (pending != null) return pending;
+    final call = _send(feature, payload, timeout);
+    _inFlight[key] = call;
+    call.whenComplete(() => _inFlight.remove(key));
+    return call;
+  }
+
+  static Future<http.Response> _send(GeminiFeature feature, Map<String, dynamic> payload, Duration timeout) async {
     try {
       final data = await _invoke(payload, timeout).timeout(timeout);
       return http.Response(jsonEncode(data), 200, headers: _jsonHeaders);
