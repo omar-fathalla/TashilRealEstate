@@ -6,6 +6,8 @@
  *
  * Text is first normalized by a fixed list of replace() steps (NORMALIZE_STEPS):
  *  - keycap and emoji joiners (U+FE0F, U+20E3, U+200D) are dropped,
+ *  - a comma followed by a space, a " | " with spaces around it, and the edges of a
+ *    comma-grouped amount (1,500,000 or 1,50,00,000) become `§`, which no phone crosses,
  *  - " x " between numbers, "+" after a digit, and one ASCII letter between digits act as
  *    separators,
  *  - every run of separator characters (spaces, dashes, dots, slashes, commas, colons, |, *,
@@ -128,11 +130,14 @@ function buildPhoneSource() {
   };
 
   // Trunk zero, then 8-10 digits: one run, or a short first group (area/operator code)
-  // followed by groups of 3+ digits.
+  // followed by groups of 3+ digits. No EG/UAE operator or area code starts with 0, so the
+  // digit after the trunk zero is never a real 0 (the trailing zeros of 1 500 000 never
+  // start a number).
   const zero = digitSet(0);
-  const trunkForms = [`${X}{7,9}${D}`];
-  for (let a = 1; a <= 3; a += 1) trunkForms.push(`${tail(a)}${rest(1 + a, 8 - a, 10 - a)}`);
-  const trunkSource = `${zero}(?:${trunkForms.join("|")})`;
+  const afterTrunk = set([...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)), ...ZERO_LETTERS, ...ONE_LETTERS]);
+  const trunkForms = [`${X}{6,8}${D}`];
+  for (let a = 1; a <= 3; a += 1) trunkForms.push(`${tail(a - 1)}${rest(1 + a, 8 - a, 10 - a)}`);
+  const trunkSource = `${zero}${afterTrunk}(?:${trunkForms.join("|")})`;
 
   // Mobile numbers written without a trunk zero or country code: a two-digit operator
   // prefix, `total - 2` more digits, grouped after the first 2-5 digits.
@@ -160,7 +165,9 @@ function buildPhoneSource() {
   const cc20Source = `${digitSet(2)}${digitSet(0)}${digitSet(1)}${set([...zeroOrO, ...ONE_LETTERS, ...digitCodePoints(1), ...digitCodePoints(2), ...digitCodePoints(5)])}${S}?(?:${nonYear4})${S}?${group(4)}`;
 
   const plusSource = `${PLUS}${S}?(?:${X}${S}?){8,14}${D}`;
-  const doubleZeroSource = `${zero}${set(zeroOrO)}${S}?(?:${X}${S}?){8,14}${D}`;
+  // 00 + country code: country codes never start with 0, so "000 10 12" is not a number.
+  const countryStart = set([...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)), ...ONE_LETTERS]);
+  const doubleZeroSource = `${zero}${set(zeroOrO)}${S}?${countryStart}${S}?(?:${X}${S}?){7,13}${D}`;
 
   const alternatives = [
     trunkSource,
@@ -174,12 +181,32 @@ function buildPhoneSource() {
   return alternatives;
 }
 
-const RE2 = { set: makeSet("re2"), ch: makeCh("re2") };
+const RE2 = { set: makeSet("re2"), ch: makeCh("re2"), literalSet: makeSet("re2", true) };
 const N = "\\p{N}";
+
+// Ends a phone candidate: list items are never one number.
+const BREAK = "\u00a7";
+const COMMAS = [0x2c, 0x66c, 0xff0c];
+const NONZERO_DIGIT = RE2.literalSet([1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)));
+// 1,500,000 and the Indian 1,50,00,000: one token, fenced off from the numbers around it.
+const THOUSANDS_STEP = (() => {
+  const comma = RE2.set(COMMAS);
+  const notDigitOrComma = `[^${N}${COMMAS.map(RE2.ch).join("")}]`;
+  const token = `${NONZERO_DIGIT}(?:${N}{0,2}(?:${comma}${N}{3})+|${N}?(?:${comma}${N}{2})+${comma}${N}{3})`;
+  return [
+    `(^|${notDigitOrComma}|[^${N}]${comma})(${token})(${notDigitOrComma}|${comma}[^${N}]|${comma}$|$)`,
+    `$1${BREAK}$2${BREAK}$3`,
+  ];
+})();
 
 /** replace() steps, in order: [RE2 pattern, replacement]. `$n` refers to capture group n. */
 const NORMALIZE_STEPS = [
   [RE2.set(IGNORABLE_CODE_POINTS), ""],
+  [`${RE2.set(SPACE_CODE_POINTS)}*${RE2.set(COMMAS)}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
+  [`${RE2.set(SPACE_CODE_POINTS)}+${RE2.set([0x7c, 0xff5c])}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
+  // Twice: replace() never overlaps, and neighbouring tokens share the character between them.
+  THOUSANDS_STEP,
+  THOUSANDS_STEP,
   [`${RE2.set(SPACE_CODE_POINTS)}+[xX${RE2.ch(0xd7)}]${RE2.set(SPACE_CODE_POINTS)}+`, " "],
   [`(${N})${RE2.set(SPACE_CODE_POINTS)}*${RE2.set([0x2b, 0xff0b])}`, "$1~"],
   // Any ASCII letter except O/o and l/I, which read as digits instead.

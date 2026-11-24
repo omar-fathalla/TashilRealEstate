@@ -425,6 +425,49 @@ test("TAQ-65: domains, prices with @ and the word email stay free", async () => 
   ]);
 });
 
+// TAQ-69 (F-A): lists of prices, sizes and times were read as one long number.
+const COMBINED_NUMBERS = [
+  "Price 1,500,000 | 10 x 12 | 10:30",
+  "Price 1,500,000 | 10x12 | 10:30",
+  "Prices 100,000, 120,000, 150,000",
+  "From 750,000, 900,000, 1,100,000",
+  "1,500,000 | 2,000,000 | 2,500,000",
+  "Units 10, 12, 34, 56, 78",
+  "Price 1,500,000 | Apt #1203 | 3 BR",
+];
+
+test("TAQ-69: free text that combines several numbers stays unchanged in the sanitizer and the rules", async () => {
+  await expectFree([...COMBINED_NUMBERS, ...COMBINED_NUMBERS.map(arabicIndic)]);
+  const ref = doc(root(), "Properties/prop-1");
+  for (const text of COMBINED_NUMBERS) {
+    const descriptions = { ar: `شقة ${text}`, en: text, hi: `फ्लैट ${text}` };
+    const out = sanitizeForMarketplace({ pricePerMonth: 9000, descriptions, titles: descriptions }, "owner", "prop-1");
+    assert.deepEqual(out.descriptions, descriptions, JSON.stringify(text));
+    assert.deepEqual(out.titles, descriptions, JSON.stringify(text));
+    await assertSucceeds(setDoc(ref, listingWith({ descriptions, titles: descriptions })), JSON.stringify(text));
+  }
+});
+
+test("TAQ-69: thousands groups are one token, and list separators end a number", async () => {
+  await expectFree([
+    "1,500,000|2,000,000|2,500,000",
+    "Price 1 500 000 10 x 12 10:30",
+    "Price ₹10,00,00,000",
+    "₹1,50,00,000 to ₹2,00,00,000",
+    "Rent 15,000,000 EGP; deposit 50,000!",
+    "Units 10, 12, 34, 56, 78, 90",
+    "Floors 3 | 4 | 5 | 6",
+  ]);
+  await expectCaught(variants([
+    "Prices 100,000, 0501234567",
+    "Units 10, 010 1234 5678",
+    "1,500,000 | 050 123 4567",
+    "10,12,34,56,78",
+    "01,01,23,45,678",
+  ]));
+  assert.equal(sanitized("Price 1,500,000 | call 050 123 4567"), "Price 1,500,000 | call");
+});
+
 test("TAQ-63: a max-size listing (4000-character descriptions) is evaluated within the rules' limits", async () => {
   const ref = doc(root(), "Properties/prop-1");
   const sentence = "Spacious flat of 120 m2 on floor 12, price 1.500.000 EGP, built 2015, ready 2026-01-15. ";
