@@ -15,16 +15,27 @@ const moderationFields = {'is_published', 'verified', 'moderation_hidden', 'upda
 void main() {
   test('the Admin moderation source writes only the moderation fields', () {
     final source = File(adminModerationSource).readAsStringSync();
-    final writes = RegExp(r'\.update\(\{([^}]*)\}\)', dotAll: true).allMatches(source).toList();
+    final writes = RegExp(r'\.update\((?:_listing\([^)]*\),\s*)?\{([^}]*)\}\)', dotAll: true).allMatches(source).toList();
     expect(writes, isNotEmpty);
     for (final write in writes) {
       final keys = RegExp(r"'([a-z_]+)'\s*:").allMatches(write.group(1)!).map((m) => m.group(1)!);
       expect(keys, isNotEmpty);
       expect(moderationFields.containsAll(keys), isTrue, reason: write.group(0));
     }
-    expect(source.contains('.set('), isFalse);
     expect(source.contains('.delete('), isFalse);
     expect(source.contains('.add('), isFalse);
+  });
+
+  test('the Admin moderation source writes PropertyModeration only with the four moderation-doc fields', () {
+    final source = File(adminModerationSource).readAsStringSync();
+    final sets = RegExp(r'batch\.set\(_moderation\([^)]*\),\s*\{([^}]*)\}\)', dotAll: true).allMatches(source).toList();
+    expect(sets.length, 2, reason: 'one batch.set for hide and one for restore');
+    for (final write in sets) {
+      final keys = RegExp(r"'([a-z_]+)'\s*:").allMatches(write.group(1)!).map((m) => m.group(1)!).toSet();
+      expect(keys, {'hidden', 'pre_hide_published', 'updated_by', 'updated_at'});
+    }
+    expect(RegExp(r'\.set\(').allMatches(source).length, 2, reason: 'no other .set() in the Admin source');
+    expect(source.contains("collection('Properties').doc(id).set"), isFalse);
   });
 
   test('client code only queries the public Properties collection', () {

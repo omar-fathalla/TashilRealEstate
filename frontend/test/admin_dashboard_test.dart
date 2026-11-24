@@ -18,6 +18,7 @@ class _FakeAdminData implements AdminDataSource {
   final calls = <String>[];
   final _controller = StreamController<List<AdminListing>>.broadcast();
   bool failWrites = false;
+  bool failUsers = false;
 
   static List<AdminListing> _defaultListings() => const [
         AdminListing(
@@ -70,18 +71,25 @@ class _FakeAdminData implements AdminDataSource {
   Future<void> setVerified(String listingId, bool verified) => _write('verify:$listingId:$verified');
 
   @override
-  Future<void> hide(String listingId) => _write('hide:$listingId');
+  Future<void> hide(AdminListing listing) => _write('hide:${listing.id}:wasPublished=${listing.isPublished}');
 
   @override
-  Future<void> restore(String listingId) => _write('restore:$listingId');
+  Future<void> restore(AdminListing listing) => _write('restore:${listing.id}');
 
+  /// Two pages: u1..u2 then u3 (token 'u2'). A third request would be a bug.
   @override
-  Future<List<AdminUserRow>> loadUsers() async {
-    calls.add('loadUsers');
-    return const [
-      AdminUserRow(uid: 'u1', email: 'owner@test.tashilaqar.com', fullName: 'Demo Owner', role: 'Owner'),
-      AdminUserRow(uid: 'u2', email: 'investor@test.tashilaqar.com', fullName: '', role: 'Investor'),
-    ];
+  Future<AdminUserPage> loadUsers({String? startAfter}) async {
+    calls.add('loadUsers:${startAfter ?? 'first'}');
+    if (failUsers) throw Exception('unavailable');
+    if (startAfter == null) {
+      return const AdminUserPage(users: [
+        AdminUserRow(uid: 'u1', email: 'owner@test.tashilaqar.com', fullName: 'Demo Owner', role: 'Owner', claimRole: 'Owner'),
+        AdminUserRow(uid: 'u2', email: 'investor@test.tashilaqar.com', fullName: '', role: 'Owner', claimRole: 'Admin'),
+      ], nextPageToken: 'u2');
+    }
+    return const AdminUserPage(users: [
+      AdminUserRow(uid: 'u3', email: 'third@test.tashilaqar.com', fullName: 'Third User', role: 'Investor'),
+    ]);
   }
 
   @override
@@ -142,7 +150,7 @@ void main() {
       await tester.tap(find.byKey(const Key('admin-restore-p2')));
       await tester.pump();
 
-      expect(data.calls, ['hide:p1', 'verify:p1:true', 'restore:p2']);
+      expect(data.calls, ['hide:p1:wasPublished=true', 'verify:p1:true', 'restore:p2']);
     });
 
     testWidgets('a hidden listing that is no longer vacant cannot be restored', (tester) async {
@@ -171,13 +179,57 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(data.calls, contains('loadUsers'));
+      expect(data.calls, contains('loadUsers:first'));
       expect(find.byKey(const Key('admin-user-u1')), findsOneWidget);
       expect(find.text('Demo Owner'), findsOneWidget);
       expect(find.text('investor@test.tashilaqar.com'), findsOneWidget);
       expect(find.byKey(const Key('admin-read-only-note')), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(find.text('Hide listing'), findsNothing);
+    });
+
+    testWidgets('the users tab shows the claim role, and the profile role too when they differ', (tester) async {
+      await _pump(tester, _FakeAdminData());
+      await tester.tap(find.text('Users'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.descendant(of: find.byKey(const Key('admin-user-role-u1')), matching: find.text('Property Owner')), findsOneWidget);
+      expect(find.byKey(const Key('admin-user-profile-role-u1')), findsNothing);
+      expect(find.descendant(of: find.byKey(const Key('admin-user-role-u2')), matching: find.text('Platform Admin')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('admin-user-profile-role-u2')), matching: find.text('Profile role: Property Owner')), findsOneWidget);
+    });
+
+    testWidgets('the users tab pages past the first page with startAfter', (tester) async {
+      final data = _FakeAdminData();
+      await _pump(tester, data);
+      await tester.tap(find.text('Users'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byKey(const Key('admin-user-u3')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('admin-users-load-more')));
+      await tester.tap(find.byKey(const Key('admin-users-load-more')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(data.calls.where((c) => c.startsWith('loadUsers')), ['loadUsers:first', 'loadUsers:u2']);
+      expect(find.byKey(const Key('admin-user-u1')), findsOneWidget);
+      expect(find.byKey(const Key('admin-user-u3')), findsOneWidget);
+      expect(find.byKey(const Key('admin-users-load-more')), findsNothing, reason: 'the last page has no token');
+    });
+
+    testWidgets('a failed first page shows an error, not an empty list', (tester) async {
+      await _pump(tester, _FakeAdminData()..failUsers = true);
+      await tester.tap(find.text('Users'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Could not load the data'), findsOneWidget);
+      expect(find.text('No users'), findsNothing);
     });
 
     testWidgets('agencies are listed read-only', (tester) async {
