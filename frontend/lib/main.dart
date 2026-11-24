@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -70,10 +71,12 @@ void main() async {
   CrashReportingService().initialize();
   await AppCheckService().initialize();
   await RemoteConfigService().initialize();
-  await FcmNotificationService().initialize();
   await PerformanceMonitoringService().initialize();
 
   runApp(const TashilRealEstateApp());
+
+  // Listeners only. The permission prompt waits for a tap (Settings > Notifications).
+  unawaited(FcmNotificationService().initialize());
 }
 
 
