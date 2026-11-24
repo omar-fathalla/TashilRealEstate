@@ -7,6 +7,7 @@ const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 const { appCheckEnforced } = require("./config");
+const { requireRole } = require("./authz");
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
@@ -31,8 +32,13 @@ const MODEL_ALIASES = {
   "gemini-3.8-creative": DEFAULT_MODEL,
 };
 
+// Listing a property and reading lease/ID documents belong to the owner and agency portals.
+// Investor is not a backend role yet; add it here once setUserRole can assign it.
+const PORTAL_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
+
 // `visitor`: reachable from public pages, so signed-out callers may use it under the
-// per-IP limit. `inline`: may carry base64 images or PDFs.
+// per-IP limit. `inline`: may carry base64 images or PDFs. `roles`: signed-in callers must
+// hold one of these roles (custom claim, or the profile document for self-service roles).
 const FEATURES = {
   valuation: { visitor: true, inline: false },
   geocoding: { visitor: true, inline: false },
@@ -41,8 +47,8 @@ const FEATURES = {
   voice_broker: { visitor: true, inline: false },
   semantic_search: { visitor: true, inline: false },
   legal_advisor: { visitor: true, inline: false },
-  onboarding: { visitor: false, inline: false },
-  document_ocr: { visitor: false, inline: true },
+  onboarding: { visitor: false, inline: false, roles: PORTAL_ROLES },
+  document_ocr: { visitor: false, inline: true, roles: PORTAL_ROLES },
 };
 
 const LIMITS = {
@@ -351,6 +357,7 @@ async function handleGeminiGenerate(request) {
   if (!uid && !FEATURES[feature].visitor) {
     throw new HttpsError("unauthenticated", "Sign in to use this feature.");
   }
+  if (FEATURES[feature].roles) await requireRole(request.auth, FEATURES[feature].roles);
 
   const model = resolveModel(data.model);
   const { body, totals } = sanitizeRequest(feature, data.request);

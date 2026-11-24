@@ -38,10 +38,10 @@ function textRequest(text = "Estimate the rent for a 2 bedroom flat.") {
   return { contents: [{ parts: [{ text }] }] };
 }
 
-function call({ feature = "valuation", model, request = textRequest(), uid = null, ip = "203.0.113.7", rawRequest } = {}) {
+function call({ feature = "valuation", model, request = textRequest(), uid = null, role, ip = "203.0.113.7", rawRequest } = {}) {
   return fns.geminiGenerate.run({
     data: { feature, model, request },
-    auth: uid ? { uid, token: { uid } } : undefined,
+    auth: uid ? { uid, token: role ? { uid, role } : { uid } } : undefined,
     rawRequest: rawRequest || { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
   });
 }
@@ -98,9 +98,44 @@ test("TAQ-19: every visitor feature works signed out; sign-in-only features work
     assert.equal(result.candidates[0].content.parts[0].text, "{\"ok\":true}");
   }
   for (const feature of ["onboarding", "document_ocr"]) {
-    await call({ feature, uid: "owner-1" });
+    await call({ feature, uid: "owner-1", role: "Owner" });
   }
   assert.equal(calls.length, visitorFeatures.length + 2);
+});
+
+test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () => {
+  const portalFeatures = Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].roles);
+  assert.deepEqual(portalFeatures.sort(), ["document_ocr", "onboarding"]);
+  await db.collection("Users").doc("profile-owner").set({ role: "Owner" });
+  await db.collection("Users").doc("profile-tenant").set({ role: "Tenant" });
+  await db.collection("Users").doc("profile-agency").set({ role: "AgencyAdmin" });
+  for (const feature of portalFeatures) {
+    for (const denied of [
+      { uid: "no-role" },
+      { uid: "tenant-claim", role: "Tenant" },
+      { uid: "profile-tenant" },
+      { uid: "investor-claim", role: "Investor" },
+      // The profile document cannot vouch for an elevated role.
+      { uid: "profile-agency" },
+    ]) {
+      await expectCode(call({ feature, ...denied }), "permission-denied");
+    }
+    for (const allowed of [
+      { uid: "owner-claim", role: "Owner" },
+      { uid: "profile-owner" },
+      { uid: "agency-claim", role: "AgencyAdmin" },
+      { uid: "admin-claim", role: "SuperAdmin" },
+    ]) {
+      await call({ feature, ...allowed });
+    }
+  }
+  assert.equal(calls.length, portalFeatures.length * 4);
+  const buckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.map((d) => d.id);
+  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-agency"]) {
+    assert.ok(!buckets.includes(`uid_${uid}`), `a denied ${uid} must not use quota`);
+  }
+  // Tenants keep the public AI features.
+  await call({ uid: "tenant-claim", role: "Tenant" });
 });
 
 test("TAQ-19: an unknown feature is rejected", async () => {
@@ -151,7 +186,7 @@ test("TAQ-19: oversized prompts and files are rejected before Gemini or the quot
   const bigFile = {
     contents: [{ parts: [{ text: "Read this ID" }, { inline_data: { mime_type: "image/jpeg", data: "A".repeat(gw.CAPS.inlineBase64Chars + 1) } }] }],
   };
-  await expectCode(call({ uid: "u1", feature: "document_ocr", request: bigFile }), "invalid-argument");
+  await expectCode(call({ uid: "u1", role: "Owner", feature: "document_ocr", request: bigFile }), "invalid-argument");
   assert.equal(calls.length, 0);
   const bucket = await db.collection(gw.RATE_LIMIT_COLLECTION).doc("uid_u1").get();
   assert.equal(bucket.exists, false, "rejected requests must not use quota");
