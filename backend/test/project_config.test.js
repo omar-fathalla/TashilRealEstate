@@ -51,3 +51,46 @@ test("TAQ-54: analysis_options.yaml already excludes build and every platform fo
 test("TAQ-54: the material_ui deprecation infos do not fail flutter analyze", () => {
   assert.match(read("frontend/analysis_options.yaml"), /^\s+deprecated_member_use:\s+ignore\s*$/m);
 });
+
+// --- TAQ-35: Firebase Hosting security headers ---
+
+function hostingHeaders(source) {
+  const { hosting } = JSON.parse(read("firebase.json"));
+  const entry = (hosting.headers || []).find((h) => h.source === source);
+  assert.ok(entry, `no hosting.headers entry for ${source}`);
+  return Object.fromEntries(entry.headers.map(({ key, value }) => [key, value]));
+}
+
+test("TAQ-35: every hosting response carries the security headers", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains");
+  assert.equal(headers["X-Content-Type-Options"], "nosniff");
+  assert.equal(headers["X-Frame-Options"], "DENY");
+  assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
+  assert.equal(headers["Permissions-Policy"], "camera=(self), microphone=(self), geolocation=(self), payment=()");
+});
+
+test("TAQ-35: the CSP ships report-only and covers the Flutter web and Firebase origins", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined, "enforce the CSP only after the report-only run is clean");
+  const csp = Object.fromEntries(headers["Content-Security-Policy-Report-Only"].split(";").map((d) => {
+    const [name, ...values] = d.trim().split(/\s+/);
+    return [name, values];
+  }));
+  assert.deepEqual(csp["default-src"], ["'self'"]);
+  assert.ok(csp["script-src"].includes("'wasm-unsafe-eval'"));
+  assert.ok(!csp["script-src"].includes("'unsafe-eval'"));
+  assert.ok(!csp["script-src"].includes("'unsafe-inline'"));
+  for (const origin of ["https://*.googleapis.com", "https://*.firebaseio.com", "https://*.cloudfunctions.net", "https://fonts.gstatic.com"]) {
+    assert.ok(csp["connect-src"].includes(origin), origin);
+  }
+  assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
+  assert.deepEqual(csp["object-src"], ["'none'"]);
+  assert.deepEqual(csp["base-uri"], ["'self'"]);
+});
+
+test("TAQ-35: index.html is revalidated on every load, including SPA routes that rewrite to it", () => {
+  assert.equal(hostingHeaders("/index.html")["Cache-Control"], "no-cache");
+  // The ** -> /index.html rewrite keeps the request path, so "/" and app routes need their own entry.
+  assert.equal(hostingHeaders("{/,**/!(*.*)}")["Cache-Control"], "no-cache");
+});
