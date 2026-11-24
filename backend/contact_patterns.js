@@ -5,7 +5,8 @@
  * the two drift apart. The sanitizer runs the very same RE2 sources, translated to JS.
  *
  * Text is first normalized by a fixed list of replace() steps (NORMALIZE_STEPS):
- *  - keycap and emoji joiners (U+FE0F, U+20E3, U+200D) are dropped,
+ *  - keycap and emoji joiners (U+FE0F, U+20E3, U+200D) are dropped, and typed § ¶ ¦ ¤ ` ´
+ *    become separators,
  *  - a comma followed by a space, a " | " with spaces around it, and the edges of a
  *    comma-grouped amount (1,500,000 or 1,50,00,000) become `§`, which no phone crosses,
  *  - " x " between numbers, "+" after a digit, and one ASCII letter between digits act as
@@ -69,6 +70,11 @@ function compositions(sumMin, sumMax) {
 }
 
 const IGNORABLE_CODE_POINTS = [0xfe0e, 0xfe0f, 0x20e3, 0x200d];
+
+// § ¦ ¤ are the internal BREAK/PROTECT/MARK characters below, and ¶ ` ´ look like them.
+// Typed in the text they are ordinary separators, so they become `~` before any marker is
+// inserted; otherwise "010§1234§5678" would read as a list of three numbers.
+const TYPED_MARKER_CODE_POINTS = [0xa7, 0xa6, 0xa4, 0xb6, 0x60, 0xb4];
 
 const SEPARATOR_CODE_POINTS = [
   0x20, [9, 13], 0xa0, 0xad, 0x61c, 0x1680, 0x180e, [0x2000, 0x200f], 0x2028, 0x2029, [0x202a, 0x202f],
@@ -209,6 +215,7 @@ const THOUSANDS_STEP = (() => {
 /** replace() steps, in order: [RE2 pattern, replacement]. `$n` refers to capture group n. */
 const NORMALIZE_STEPS = [
   [RE2.set(IGNORABLE_CODE_POINTS), ""],
+  [RE2.set(TYPED_MARKER_CODE_POINTS), "~"],
   [`${RE2.set(SPACE_CODE_POINTS)}*${RE2.set(COMMAS)}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
   [`${RE2.set(SPACE_CODE_POINTS)}+${RE2.set([0x7c, 0xff5c])}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
   // Twice: replace() never overlaps, and neighbouring tokens share the character between them.
