@@ -5,7 +5,28 @@ import 'package:flutter_test/flutter_test.dart';
 /// TAQ-51: public listings (/Properties) are written only by the
 /// syncOwnerPropertyToMarketplace trigger. Client code may query the catalog
 /// but must never hold a reference it could write through.
+///
+/// TAQ-91: the one exception is the platform Admin moderation data source. firestore.rules let an
+/// Admin change only is_published, verified, moderation_hidden and updated_at, and this test
+/// pins the client to that same set.
+const adminModerationSource = 'lib/features/admin/admin_data_source.dart';
+const moderationFields = {'is_published', 'verified', 'moderation_hidden', 'updated_at'};
+
 void main() {
+  test('the Admin moderation source writes only the moderation fields', () {
+    final source = File(adminModerationSource).readAsStringSync();
+    final writes = RegExp(r'\.update\(\{([^}]*)\}\)', dotAll: true).allMatches(source).toList();
+    expect(writes, isNotEmpty);
+    for (final write in writes) {
+      final keys = RegExp(r"'([a-z_]+)'\s*:").allMatches(write.group(1)!).map((m) => m.group(1)!);
+      expect(keys, isNotEmpty);
+      expect(moderationFields.containsAll(keys), isTrue, reason: write.group(0));
+    }
+    expect(source.contains('.set('), isFalse);
+    expect(source.contains('.delete('), isFalse);
+    expect(source.contains('.add('), isFalse);
+  });
+
   test('client code only queries the public Properties collection', () {
     final propertiesRef = RegExp(r'''collection\(\s*['"]Properties['"]\s*\)''');
     final propertiesPath = RegExp(r'''['"]Properties/''');
@@ -13,6 +34,7 @@ void main() {
 
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (entity.path == adminModerationSource) continue;
       final source = entity.readAsStringSync();
 
       for (final match in propertiesRef.allMatches(source)) {

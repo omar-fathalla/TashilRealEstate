@@ -58,6 +58,30 @@ void main() {
     });
   }
 
+  for (final role in ['Admin', 'SuperAdmin']) {
+    testWidgets('TAQ-91: $role may open the /admin workspace', (tester) async {
+      session.debugSet(RoleSessionStatus.signedIn, role);
+      await pumpGate(tester, '/admin');
+      expect(find.text('dashboard'), findsOneWidget);
+    });
+  }
+
+  for (final role in ['Investor', 'Owner', 'Tenant', 'AgencyAdmin', '']) {
+    testWidgets('TAQ-91: ${role.isEmpty ? 'a user without a role' : role} cannot open /admin', (tester) async {
+      session.debugSet(RoleSessionStatus.signedIn, role);
+      await pumpGate(tester, '/admin');
+      expect(find.text('dashboard'), findsNothing);
+      expect(find.byType(AccessDeniedView), findsOneWidget);
+    });
+  }
+
+  testWidgets('TAQ-91: an Admin cannot open the SuperAdmin dashboard', (tester) async {
+    session.debugSet(RoleSessionStatus.signedIn, 'Admin');
+    await pumpGate(tester, '/super-admin');
+    expect(find.text('dashboard'), findsNothing);
+    expect(find.byType(AccessDeniedView), findsOneWidget);
+  });
+
   testWidgets('blocks signed-out users', (tester) async {
     session.debugSet(RoleSessionStatus.signedOut);
     await pumpGate(tester, '/tenant');

@@ -219,3 +219,128 @@ test("TAQ-9: setUserRole writes the role and agency as custom claims", async () 
   user = await admin.auth().getUser("target");
   assert.deepEqual(user.customClaims, { role: "Owner" });
 });
+
+// --- TAQ-91: Admin and Investor roles ---
+
+async function claimsOf(uid) {
+  return (await admin.auth().getUser(uid)).customClaims || {};
+}
+
+test("TAQ-91: a SuperAdmin can grant Admin and Investor; the claim and profile carry the role and no agency", async () => {
+  const root = caller("root", { role: "SuperAdmin" });
+  await admin.auth().createUser({ uid: "staff" });
+  await admin.auth().setCustomUserClaims("staff", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await fns.setUserRole.run({ data: { uid: "staff", role: "Admin" }, auth: root });
+  assert.deepEqual(await claimsOf("staff"), { role: "Admin" });
+  const profile = (await db.collection("Users").doc("staff").get()).data();
+  assert.equal(profile.role, "Admin");
+  assert.equal(profile.role_updated_by, "root");
+
+  await admin.auth().createUser({ uid: "inv" });
+  await fns.setUserRole.run({ data: { uid: "inv", role: "Investor" }, auth: root });
+  assert.deepEqual(await claimsOf("inv"), { role: "Investor" });
+});
+
+test("TAQ-91: an Admin cannot assign or change any role, for itself or anyone else", async () => {
+  const staff = caller("staff", { role: "Admin" });
+  await admin.auth().createUser({ uid: "staff" });
+  await admin.auth().setCustomUserClaims("staff", { role: "Admin" });
+  await admin.auth().createUser({ uid: "victim" });
+  await admin.auth().createUser({ uid: "root" });
+  await admin.auth().setCustomUserClaims("root", { role: "SuperAdmin" });
+  for (const data of [
+    { uid: "staff", role: "SuperAdmin" },
+    { uid: "staff", role: "Admin" },
+    { uid: "staff", role: "Owner" },
+    { uid: "victim", role: "SuperAdmin" },
+    { uid: "victim", role: "Admin" },
+    { uid: "victim", role: "Investor" },
+    { uid: "victim", role: "AgencyAdmin", agencyId: "agency-1" },
+    { uid: "root", role: "Owner" },
+    { uid: "root", role: "Admin" },
+  ]) {
+    await expectCode(fns.setUserRole.run({ data, auth: staff }), "permission-denied");
+  }
+  assert.deepEqual(await claimsOf("staff"), { role: "Admin" });
+  assert.deepEqual(await claimsOf("victim"), {});
+  assert.deepEqual(await claimsOf("root"), { role: "SuperAdmin" });
+});
+
+test("TAQ-91: Investor, Tenant, Owner and a profile that says Admin cannot assign roles either", async () => {
+  await admin.auth().createUser({ uid: "victim" });
+  await db.collection("Users").doc("fake-admin").set({ role: "Admin" });
+  for (const who of [caller("inv", { role: "Investor" }), caller("tenant"), caller("owner"), caller("fake-admin"), caller("nobody")]) {
+    await expectCode(fns.setUserRole.run({ data: { uid: "victim", role: "Owner" }, auth: who }), "permission-denied");
+  }
+  await expectCode(fns.setUserRole.run({ data: { uid: "victim", role: "Owner" } }), "unauthenticated");
+});
+
+test("TAQ-91: an Investor profile is trusted as a self-service role, Admin and SuperAdmin profiles are not", async () => {
+  const authz = require("../authz");
+  await db.collection("Users").doc("inv-profile").set({ role: "Investor" });
+  await db.collection("Users").doc("admin-profile").set({ role: "Admin" });
+  await db.collection("Users").doc("root-profile").set({ role: "SuperAdmin" });
+  assert.equal(await authz.resolveRole(caller("inv-profile")), "Investor");
+  assert.equal(await authz.resolveRole(caller("admin-profile")), "");
+  assert.equal(await authz.resolveRole(caller("root-profile")), "");
+  assert.equal(await authz.resolveRole(caller("admin-profile", { role: "Admin" })), "Admin");
+  assert.deepEqual(authz.SELF_SERVICE_ROLES, ["Owner", "Tenant", "Investor"]);
+  assert.ok(!authz.PUBLISHER_ROLES.includes("Investor") && !authz.PUBLISHER_ROLES.includes("Admin"));
+});
+
+test("TAQ-91: only Admin and SuperAdmin can read the user directory, and it never carries IBAN or national ID", async () => {
+  await db.collection("Users").doc("rich").set({
+    user_id: "rich",
+    role: "Owner",
+    email: "rich@test.tashilaqar.com",
+    full_name: "Rich Owner",
+    iban: "AE070331234567890123456",
+    national_id: "784-1990-1234567-1",
+    nationalId: "784199012345671",
+    phone: "+971500000001",
+    bank_details: { iban: "AE07" },
+    kyc_status: "approved",
+    created_at: admin.firestore.Timestamp.fromDate(new Date("2026-01-01T00:00:00Z")),
+  });
+  for (const who of [caller("a", { role: "Admin" }), caller("r", { role: "SuperAdmin" })]) {
+    const out = await fns.listUsersForAdmin.run({ data: { limit: 100 }, auth: who });
+    const row = out.users.find((u) => u.uid === "rich");
+    assert.deepEqual(row, {
+      uid: "rich",
+      user_id: "rich",
+      email: "rich@test.tashilaqar.com",
+      full_name: "Rich Owner",
+      role: "Owner",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    assert.doesNotMatch(JSON.stringify(out), /AE07|784|iban|national|phone|bank|kyc/i);
+  }
+  for (const who of [caller("inv", { role: "Investor" }), caller("o", { role: "Owner" }), caller("t", { role: "Tenant" }),
+    caller("ag", { role: "AgencyAdmin", agency_id: "agency-1" }), caller("none"), caller("tenant"), caller("owner")]) {
+    await expectCode(fns.listUsersForAdmin.run({ data: {}, auth: who }), "permission-denied");
+  }
+  await expectCode(fns.listUsersForAdmin.run({ data: {} }), "unauthenticated");
+});
+
+test("TAQ-91: the user directory is paged", async () => {
+  for (let i = 0; i < 5; i += 1) await db.collection("Users").doc(`p${i}`).set({ role: "Owner", email: `p${i}@x.test` });
+  const staff = caller("a", { role: "Admin" });
+  const first = await fns.listUsersForAdmin.run({ data: { limit: 2 }, auth: staff });
+  assert.equal(first.users.length, 2);
+  assert.ok(first.nextPageToken);
+  const second = await fns.listUsersForAdmin.run({ data: { limit: 2, startAfter: first.nextPageToken }, auth: staff });
+  assert.equal(second.users.length, 2);
+  assert.notEqual(second.users[0].uid, first.users[0].uid);
+  const huge = await fns.listUsersForAdmin.run({ data: { limit: 100000 }, auth: staff });
+  assert.ok(huge.users.length <= 100);
+});
+
+test("TAQ-91: Admin and Investor cannot touch payments or the market index refresh", async () => {
+  for (const who of [caller("a", { role: "Admin" }), caller("inv", { role: "Investor" }), caller("nobody")]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 100 }, auth: who }), "permission-denied");
+    await expectCode(fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: who }), "permission-denied");
+    await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: who }), "permission-denied");
+    await expectCode(fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: who }), "permission-denied");
+  }
+});
+

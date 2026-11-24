@@ -190,3 +190,48 @@ test("TAQ-14: Firestore imageRefsOk accepts public/listings download URLs and re
   const sanitized = sanitizeForMarketplace({ ...listing([publicUrl, privateUrl]), image: privateUrl }, "ownerA", "propA");
   assert.deepEqual(sanitized.imageUrls, [publicUrl]);
 });
+
+// --- TAQ-91: Admin and Investor ---
+
+test("TAQ-91: an Admin can list and remove public listing photos to moderate them", async () => {
+  const admin = as("admin1", { role: "Admin" });
+  const folder = "public/listings/ownerA/propA";
+  const listed = await assertSucceeds(admin.ref(folder).listAll());
+  assert.deepEqual(listed.items.map((item) => item.name), ["front.jpg"]);
+  await assertSucceeds(admin.ref(`${folder}/front.jpg`).getDownloadURL());
+  await assertSucceeds(admin.ref(`${folder}/front.jpg`).delete());
+});
+
+test("TAQ-91: an Admin cannot read, list, change or delete private files, or upload listing photos", async () => {
+  const admin = as("admin1", { role: "Admin" });
+  await assertFails(admin.ref("users/ownerA/kyc/id.jpg").getDownloadURL());
+  await assertFails(admin.ref("users/ownerA/kyc/id.jpg").getMetadata());
+  await assertFails(admin.ref("users/ownerA/kyc/id.jpg").delete());
+  await assertFails(admin.ref("users/ownerA").listAll());
+  await assertFails(admin.ref("users/ownerA/kyc/new.jpg").put(bytes(16), jpeg));
+  await assertFails(admin.ref("users/admin1/kyc/mine.jpg").put(bytes(16), { contentType: "text/html" }));
+  await assertFails(admin.ref("public/listings/ownerA/propA/extra.jpg").put(bytes(16), jpeg));
+  await assertFails(admin.ref("root.jpg").getDownloadURL());
+});
+
+test("TAQ-91: a profile that says Admin without the claim cannot moderate photos", async () => {
+  await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "Users/legacy"), { role: "Admin" }));
+  const legacy = as("legacy");
+  await assertFails(legacy.ref("public/listings/ownerA/propA").listAll());
+  await assertFails(legacy.ref("public/listings/ownerA/propA/front.jpg").delete());
+});
+
+test("TAQ-91: an Investor keeps public photos, but cannot list, upload, delete or read private files", async () => {
+  for (const claims of [{ role: "Investor" }, {}]) {
+    const investor = as("investor1", claims);
+    await assertSucceeds(investor.ref("public/listings/ownerA/propA/front.jpg").getDownloadURL());
+    await assertFails(investor.ref("public/listings/ownerA/propA").listAll());
+    await assertFails(investor.ref("public/listings/ownerA/propA/front.jpg").delete());
+    await assertFails(investor.ref("public/listings/investor1/propX/a.jpg").put(bytes(16), jpeg));
+    await assertFails(investor.ref("users/ownerA/kyc/id.jpg").getDownloadURL());
+  }
+});
+
+test("TAQ-91: an Investor can store their own private files like any user", async () => {
+  await assertSucceeds(as("investor1", { role: "Investor" }).ref("users/investor1/kyc/id.png").put(bytes(16), { contentType: "image/png" }));
+});

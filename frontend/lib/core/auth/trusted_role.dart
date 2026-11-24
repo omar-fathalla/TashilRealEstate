@@ -9,12 +9,20 @@ class TrustedRole {
   TrustedRole._();
 
   static const String superAdmin = 'SuperAdmin';
+
+  /// Platform staff with fewer permissions than [superAdmin]: moderates listings and handles
+  /// escalations. Only ever granted as a custom claim by a SuperAdmin.
+  static const String admin = 'Admin';
   static const String agencyAdmin = 'AgencyAdmin';
   static const String owner = 'Owner';
   static const String tenant = 'Tenant';
 
-  static const Set<String> selfServiceRoles = {owner, tenant};
-  static const Set<String> all = {superAdmin, agencyAdmin, owner, tenant};
+  /// Browses, saves and compares listings and uses the market and AI tools. Self-service at
+  /// signup like [owner] and [tenant]; it never grants publishing or lease access.
+  static const String investor = 'Investor';
+
+  static const Set<String> selfServiceRoles = {owner, tenant, investor};
+  static const Set<String> all = {superAdmin, admin, agencyAdmin, owner, tenant, investor};
 
   /// Returns one of [all], or '' when neither source grants a role.
   static String fromSources({Object? claimRole, Object? profileRole}) {

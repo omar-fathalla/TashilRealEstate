@@ -23,6 +23,7 @@ class RouteAccess {
     '/market-index': null,
     '/financial-dashboard': null,
     '/super-admin': {TrustedRole.superAdmin},
+    '/admin': {TrustedRole.admin, TrustedRole.superAdmin},
     '/agency': {TrustedRole.agencyAdmin},
     '/owner': {TrustedRole.owner},
     '/tenant': {TrustedRole.tenant},
@@ -48,12 +49,18 @@ class RouteAccess {
     switch (role) {
       case TrustedRole.superAdmin:
         return '/super-admin';
+      case TrustedRole.admin:
+        return '/admin';
       case TrustedRole.agencyAdmin:
         return '/agency';
       case TrustedRole.owner:
         return '/owner';
       case TrustedRole.tenant:
         return '/tenant';
+      case TrustedRole.investor:
+        // Investors work from the marketplace, market index and valuation tools; they have no
+        // portal of their own.
+        return '/';
       default:
         return '/';
     }

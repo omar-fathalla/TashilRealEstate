@@ -7,8 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Roles a user may pick for themselves at signup; the profile can vouch for these only.
+    // Admin, AgencyAdmin and SuperAdmin come from custom claims set by setUserRole.
     function selfServiceRoles() {
-      return ['Owner', 'Tenant'];
+      return ['Owner', 'Tenant', 'Investor'];
     }
 
     function claimedRole() {
@@ -39,6 +41,17 @@ service cloud.firestore {
 
     function isAgencyAdmin() {
       return hasRole('AgencyAdmin');
+    }
+
+    // Platform Admin: moderates listings and handles escalations. Everything it may do is
+    // listed explicitly below; it has no access to Users documents (IBAN, national ID), leases,
+    // invoices, agency private data, roles or settings.
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+
+    function isPlatformStaff() {
+      return isSuperAdmin() || isAdmin();
     }
 
     function isOwner() {
@@ -108,7 +121,9 @@ service cloud.firestore {
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
-        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        // Investors do not list properties, so they cannot create the private drafts that
+        // listing photos and the marketplace sync hang off.
+        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor'));
       }
 
       // Written by Cloud Functions only.
@@ -128,7 +143,7 @@ service cloud.firestore {
         'titles', 'descriptions', 'locations', 'cityCode', 'propertyTypeCode', 'buildingName',
         'pricePerMonth', 'bedrooms', 'bathrooms', 'areaSqM', 'image', 'imageUrls',
         'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
-        'is_published', 'status', 'updated_at'
+        'is_published', 'status', 'updated_at', 'verified', 'moderation_hidden'
       ];
     }
 
@@ -253,8 +268,8 @@ service cloud.firestore {
         && country in ['EG', 'AE']
         && d.get('currencyCode', currency) == currency
         && d.get('is_published', false) is bool
-        && d.get('isFeatured', false) is bool
-        && d.get('isFurnished', false) is bool
+        && [d.get('isFeatured', false), d.get('isFurnished', false), d.get('verified', false),
+          d.get('moderation_hidden', false)].hasOnly([true, false])
         && inRange(d.get('rating', 0), 0, 5)
         && (d.get('is_published', false) == false || 'pricePerMonth' in d)
         && inRange(d.get('pricePerMonth', 1), 0.01, 1000000000)
@@ -273,6 +288,24 @@ service cloud.firestore {
         && images is list && imageListOk(images)
         && d.get('agencyPhone', '').size() <= 30
         && (!('updated_at' in d) || d.updated_at is timestamp);
+    }
+
+    // Admin moderation: flag a listing verified or hidden, or take it offline. Putting a listing
+    // back online is only allowed together with clearing the hidden flag, and only for a listing
+    // that is still vacant, so an Admin cannot resurrect one its owner took down or rented out.
+    function adminModerationOk() {
+      let d = request.resource.data;
+      return changedKeys().hasOnly(['is_published', 'verified', 'moderation_hidden', 'updated_at'])
+        && d.get('verified', false) is bool
+        && d.get('moderation_hidden', false) is bool
+        && d.get('is_published', false) is bool
+        && (!('updated_at' in d) || d.updated_at == request.time)
+        && (d.get('moderation_hidden', false) == false || d.get('is_published', false) == false)
+        && (!changedKeys().hasAny(['is_published'])
+          || d.get('is_published', false) == false
+          || (resource.data.get('moderation_hidden', false) == true
+            && d.get('moderation_hidden', false) == false
+            && resource.data.get('status', '') == 'vacant'));
     }
 
     function listingShapeOk(propertyId) {
@@ -298,14 +331,15 @@ service cloud.firestore {
       // Anyone (including unauthenticated visitors) can read published listings. Unpublished
       // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
       allow read: if resource.data.get('is_published', false) == true
-        || isSuperAdmin()
+        || isPlatformStaff()
         || ownsListing()
         || agencyManagesResource();
 
       // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
       // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
       // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
-      allow create, update: if isSuperAdmin() && listingShapeOk(propertyId);
+      allow create, update: if (isSuperAdmin() && listingShapeOk(propertyId))
+        || (isAdmin() && adminModerationOk());
 
       allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
     }
@@ -372,7 +406,7 @@ service cloud.firestore {
 
     // 4c. Telemetry_Crashes
     // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
-    // beyond the caller's own uid. Only a SuperAdmin can read them back.
+    // beyond the caller's own uid. Only platform staff (SuperAdmin, Admin) can read them back.
     function crashReportOk(d) {
       return d.keys().hasOnly(['message', 'stack', 'context', 'isFatal', 'platform', 'uid', 'createdAt'])
         && d.keys().hasAll(['message', 'isFatal', 'platform', 'createdAt'])
@@ -388,7 +422,7 @@ service cloud.firestore {
 
     match /Telemetry_Crashes/{crashId} {
       allow create: if crashId.size() <= 64 && crashReportOk(request.resource.data);
-      allow get, list: if isSuperAdmin();
+      allow get, list: if isPlatformStaff();
       allow update, delete: if false;
     }
 
@@ -400,8 +434,28 @@ service cloud.firestore {
     }
 
     // 5. Maintenance Requests
+    // Requests name their tenant, owner and agency. Parties and platform staff only; an
+    // Investor (or any other signed-in user) has no access. Admin handles escalations by
+    // changing the status or escalation fields, nothing else.
+    function maintenanceParty() {
+      return isAuthenticated() && (
+        resource.data.get('tenant_id', '') == request.auth.uid ||
+        resource.data.get('owner_id', '') == request.auth.uid ||
+        agencyManagesResource()
+      );
+    }
+
     match /Maintenance/{requestId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isPlatformStaff() || maintenanceParty();
+      allow create: if isSuperAdmin()
+        || ((isTenant() || isOwner())
+          && (request.resource.data.get('tenant_id', '') == request.auth.uid
+            || request.resource.data.get('owner_id', '') == request.auth.uid));
+      allow update: if isSuperAdmin()
+        || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
+        || ((isOwner() || isAgencyAdmin()) && maintenanceParty()
+          && !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id']));
+      allow delete: if isSuperAdmin() || (isAgencyAdmin() && agencyManagesResource());
     }
   }
 }

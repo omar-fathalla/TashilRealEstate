@@ -61,7 +61,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  /// Roles a user may pick for themselves. AgencyAdmin and SuperAdmin are assigned
+  /// Roles a user may pick for themselves. AgencyAdmin, Admin and SuperAdmin are assigned
   /// server-side (setUserRole custom claims) and are rejected by Firestore rules.
   static const selfServiceRoles = TrustedRole.selfServiceRoles;
 
@@ -592,6 +592,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               value: 'Tenant',
               label: loc.tr('roleTenant'),
               icon: Icons.home_rounded,
+            ),
+            TashilConnectedButtonSegment(
+              value: 'Investor',
+              label: loc.tr('roleInvestor'),
+              icon: Icons.trending_up_rounded,
             ),
           ],
         );

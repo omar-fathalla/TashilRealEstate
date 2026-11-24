@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/fast_onboarding/fast_onboarding_scre
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/financial_kpi_screen.dart';
 import 'package:tashil_real_estate/features/rent_collection/tenant_checkout_screen.dart';
+import 'package:tashil_real_estate/features/admin/admin_dashboard.dart';
 import 'package:tashil_real_estate/features/owner_portal/payment_schedule_screen.dart';
 
 /// Decides where a navigation to [uri] should go, using [RouteAccess]:
@@ -93,6 +94,7 @@ GoRouter buildAppRouter({
       route(RouteAccess.login, (_) => const LoginScreen()),
       route(RouteAccess.authCheck, (_) => const RoleCheckingView()),
       route('/super-admin', (_) => const SuperAdminDashboard()),
+      route('/admin', (_) => const AdminDashboard()),
       route('/agency', (_) => const AgencyDashboard()),
       route('/owner', (_) => const OwnerDashboard()),
       route('/tenant', (_) => const TenantDashboard()),
