@@ -13,6 +13,7 @@ import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart'
 import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
+import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
 
 /// Minimalist, Icon-First Material Design 3 Settings Dialog for Tashil Real Estate.
 /// Integrates Country, Language, Dark Mode, Color Themes, and Font Themes with zero clutter.
@@ -116,6 +117,13 @@ class AppSettingsDialog extends StatelessWidget {
 
                   // Section 5: محركات ونماذج الذكاء الاصطناعي (AI Models & Engine Hub)
                   _buildAiEngineSection(context, loc, colorScheme, isMobile),
+
+                  const SizedBox(height: 20),
+                  const TashilDivider.middleInset(),
+                  const SizedBox(height: 20),
+
+                  // Section 6: Notifications. The permission prompt only ever follows this tap.
+                  const _NotificationsSection(),
                 ],
               ),
             ),
@@ -880,6 +888,107 @@ class _PaletteCircleItemState extends State<_PaletteCircleItem> {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+/// "Turn on notifications": the only place that asks the browser for notification permission.
+class _NotificationsSection extends StatefulWidget {
+  const _NotificationsSection();
+
+  @override
+  State<_NotificationsSection> createState() => _NotificationsSectionState();
+}
+
+class _NotificationsSectionState extends State<_NotificationsSection> {
+  bool _busy = false;
+
+  Future<void> _turnOn() async {
+    setState(() => _busy = true);
+    await FcmNotificationService().requestPermissionAndRegister();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  String? _message(AppLocalizations loc, NotificationEnableResult? result) {
+    switch (result) {
+      case null:
+        return null;
+      case NotificationEnableResult.granted:
+        return loc.tr('notificationsEnabled');
+      case NotificationEnableResult.denied:
+        return loc.tr('notificationsDenied');
+      case NotificationEnableResult.unsupported:
+        return loc.tr('notificationsUnsupported');
+      case NotificationEnableResult.timedOut:
+      case NotificationEnableResult.failed:
+        return loc.tr('notificationsFailed');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.notifications_none_rounded, size: 20, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                loc.tr('appSettingsNotificationsTitle'),
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        TashilCard.outlined(
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: ValueListenableBuilder<NotificationEnableResult?>(
+              valueListenable: FcmNotificationService().enableResultNotifier,
+              builder: (context, result, _) {
+                final message = _message(loc, result);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loc.tr('appSettingsNotificationsDesc'),
+                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                    ),
+                    if (message != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        message,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: result == NotificationEnableResult.granted ? Colors.teal : colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TashilButton.tonal(
+                        icon: Icons.notifications_active_outlined,
+                        label: loc.tr('turnOnNotificationsBtn'),
+                        onPressed: _busy || result == NotificationEnableResult.granted ? null : _turnOn,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
