@@ -94,3 +94,12 @@ test("TAQ-35: index.html is revalidated on every load, including SPA routes that
   // The ** -> /index.html rewrite keeps the request path, so "/" and app routes need their own entry.
   assert.equal(hostingHeaders("{/,**/!(*.*)}")["Cache-Control"], "no-cache");
 });
+
+test("TAQ-71: listing deep links with a dot and the fixed-name Flutter scripts are revalidated", () => {
+  assert.equal(hostingHeaders("/listing/**")["Cache-Control"], "no-cache");
+  assert.equal(hostingHeaders("/{main.dart.js,flutter_bootstrap.js,flutter_service_worker.js}")["Cache-Control"], "no-cache");
+  const { hosting } = JSON.parse(read("firebase.json"));
+  const noCache = hosting.headers.filter((h) => h.headers.some(({ key }) => key === "Cache-Control")).map((h) => h.source);
+  assert.ok(!noCache.includes("**"), "hashed assets and CanvasKit stay cacheable");
+  assert.equal(hostingHeaders("**")["Content-Security-Policy"], undefined, "the CSP stays report-only");
+});
