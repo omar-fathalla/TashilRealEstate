@@ -154,11 +154,12 @@ test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; exampl
     "backend/.env.local",
     "backend/.env.tashil-proptech-os.local",
     "frontend/.env.local",
-    "backend/.env",
   ]) {
     assert.equal(ignored(file), true, `${file} must be ignored`);
   }
   assert.equal(ignored("backend/.secret.local.example"), false);
+  // TAQ-89: backend/.env is committed on purpose (non-secret function params only).
+  assert.equal(ignored("backend/.env"), false);
 });
 
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
