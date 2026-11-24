@@ -61,6 +61,13 @@ class AiQuotaManager {
     return false;
   }
 
+  @visibleForTesting
+  void resetForTesting() {
+    _usedToday = 0;
+    _lastResetDate = DateTime.now();
+    _updateNotifier();
+  }
+
   void _updateNotifier() {
     remainingQuotaNotifier.value = remainingQuota;
   }
