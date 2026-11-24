@@ -134,3 +134,29 @@ test("TAQ-19: Firebase config keys are allowed only as apiKey entries in firebas
   assert.equal(clientKeys.scanText("frontend/lib/other.dart", line).length, 1);
   assert.equal(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS, `final k = '${"AI" + "za"}${"y".repeat(35)}';`).length, 1);
 });
+
+// --- TAQ-78: local secret files never get committed ---
+
+test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; example templates are not", () => {
+  const { execFileSync } = require("child_process");
+  const ignored = (file) => {
+    try {
+      execFileSync("git", ["check-ignore", "-q", file], { cwd: root });
+      return true;
+    } catch (err) {
+      if (err.status === 1) return false;
+      throw err;
+    }
+  };
+  for (const file of [
+    "backend/.secret.local",
+    "backend/.secret.prod.local",
+    "backend/.env.local",
+    "backend/.env.tashil-proptech-os.local",
+    "frontend/.env.local",
+    "backend/.env",
+  ]) {
+    assert.equal(ignored(file), true, `${file} must be ignored`);
+  }
+  assert.equal(ignored("backend/.secret.local.example"), false);
+});

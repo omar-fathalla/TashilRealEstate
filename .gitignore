@@ -3,6 +3,12 @@ backend/node_modules/
 backend/npm-debug.log
 backend/.env
 
+# Local secrets for the Functions emulator and per-environment overrides
+.secret.local
+.secret.*.local
+.env*.local
+!*.example
+
 # Firebase
 .firebase/
 firebase-debug.log
