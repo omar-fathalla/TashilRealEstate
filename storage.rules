@@ -30,8 +30,11 @@ service firebase.storage {
     // Public listing photos. The owner may only write under a property that exists in their
     // private Users/{ownerUid}/properties tree. Cross-service rules need the Storage service
     // agent to have Firestore read access in the deployed project.
+    // Anyone may fetch a photo by its name; only the owner or a SuperAdmin may list a folder,
+    // so file names of unpublished properties are not enumerable.
     match /public/listings/{ownerUid}/{propertyId}/{fileName} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if isSelf(ownerUid) || isSuperAdmin();
       allow create, update: if isSelf(ownerUid)
         && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId))
         && under10MB()
