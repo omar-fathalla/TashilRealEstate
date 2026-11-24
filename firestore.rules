@@ -136,23 +136,56 @@ service cloud.firestore {
       return !(field in data) || (data[field] is map && data[field].keys().hasOnly(['ar', 'en', 'hi']));
     }
 
-    // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number or
-    // an email address once obvious obfuscation is looked through. Phone shapes (trunk zero,
-    // bare EG/UAE mobiles, country codes, +/00 prefixes; digits of any script; the letter O
-    // between digits; grouped digits) are defined in backend/contact_patterns.js and the
-    // block below is generated from it: run `npm run gen:contact-rules` in backend/.
-    // Runs of spaces, dashes, dots, slashes and similar are collapsed to one separator first.
-    // Prices and areas stay free: 15000000, 15,000,000, 1.500.000.000 and dates are not contacts.
+    // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number, a
+    // messaging/social link or @handle, or an email address once obvious obfuscation is looked
+    // through. Phone shapes (trunk zero, bare EG/UAE mobiles, country codes, +/00 prefixes;
+    // digits of any script; O/l/I between digits; grouped digits) and the link patterns are
+    // defined in backend/contact_patterns.js and the block below is generated from it: run
+    // `npm run gen:contact-rules` in backend/. Runs of separators are collapsed to one `~`
+    // first, and 1-2 digit groups are joined to their neighbours for a second check.
+    // Prices, areas and dates stay free: 15000000, 15,000,000, 1.500.000.000, 2026-01-15.
     // BEGIN GENERATED contact patterns
     function contactPhone(text) {
-      let t = text.replace('[\\x{20}\\x{9}-\\x{d}\\x{a0}\\x{1680}\\x{2000}-\\x{200f}\\x{2028}\\x{2029}\\x{202f}\\x{205f}\\x{2060}\\x{3000}\\x{feff}\\x{2e}\\x{2d}\\x{2f}\\x{5f}\\x{5c}\\x{28}\\x{29}\\x{7e}\\x{2010}-\\x{2015}\\x{2212}\\x{fe63}\\x{ff0d}\\x{ff0e}\\x{ff0f}\\x{ff3f}\\x{ff3c}\\x{ff08}\\x{ff09}]+', '~');
-      return t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿](?:[\\p{N}OoＯｏ]{7,9}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,7}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}))(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵OoＯｏ](?:[\\p{N}OoＯｏ]{7}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{6,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N}))(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸OoＯｏ](?:[\\p{N}OoＯｏ]{6}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,2}\\p{N}))(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹]~?(?:\\p{N}[\\p{N}OoＯｏ]{6,7}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,4}\\p{N})|[\\p{N}OoＯｏ]{3}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,3}\\p{N}))(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵]~?(?:(?:[03-9]|[^\\x{0}-\\x{7f}\\P{N}])[\\p{N}OoＯｏ]{2}\\p{N}|1[0-8][\\p{N}OoＯｏ]\\p{N}|2[1-9][\\p{N}OoＯｏ]\\p{N})~?\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[\\x{2b}\\x{ff0b}]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$')
-        || t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$');
+      let t = text
+        .replace('[\\x{fe0e}\\x{fe0f}\\x{20e3}\\x{200d}]', '')
+        .replace('[\\x{a7}\\x{a6}\\x{a4}\\x{b6}\\x{60}\\x{b4}]', '~')
+        .replace('[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[\\x{2c}\\x{66c}\\x{ff0c}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', '§')
+        .replace('[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+[\\x{7c}\\x{ff5c}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', '§')
+        .replace('(^|[^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[^\\p{N}][\\x{2c}\\x{66c}\\x{ff0c}])([1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹](?:\\p{N}{0,2}(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3})+|\\p{N}?(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{2})+[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3}))([^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[\\x{2c}\\x{66c}\\x{ff0c}][^\\p{N}]|[\\x{2c}\\x{66c}\\x{ff0c}]$|$)', '$1§$2§$3')
+        .replace('(^|[^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[^\\p{N}][\\x{2c}\\x{66c}\\x{ff0c}])([1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹](?:\\p{N}{0,2}(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3})+|\\p{N}?(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{2})+[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3}))([^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[\\x{2c}\\x{66c}\\x{ff0c}][^\\p{N}]|[\\x{2c}\\x{66c}\\x{ff0c}]$|$)', '$1§$2§$3')
+        .replace('[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+[xX\\x{d7}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', ' ')
+        .replace('(\\p{N})[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[\\x{2b}\\x{ff0b}]', '$1~')
+        .replace('(\\p{N})[A-HJ-NP-Za-km-np-z](\\p{N})', '$1~$2')
+        .replace('[\\x{20}\\x{9}-\\x{d}\\x{a0}\\x{ad}\\x{61c}\\x{1680}\\x{180e}\\x{2000}-\\x{200f}\\x{2028}\\x{2029}\\x{202a}-\\x{202f}\\x{205f}\\x{2060}-\\x{2064}\\x{2066}-\\x{206f}\\x{3000}\\x{feff}\\x{2e}\\x{2d}\\x{2f}\\x{5f}\\x{5c}\\x{28}\\x{29}\\x{7e}\\x{2010}-\\x{2015}\\x{2212}\\x{fe63}\\x{2c}\\x{7c}\\x{3a}\\x{2a}\\x{23}\\x{27}\\x{b7}\\x{2022}\\x{66b}\\x{66c}\\x{3b}\\x{3d}\\x{5e}\\x{21}\\x{26}\\x{25}\\x{24}\\x{22}\\x{5b}\\x{5d}\\x{7b}\\x{7d}\\x{3c}\\x{3e}\\x{3f}\\x{ff0d}\\x{ff0e}\\x{ff0f}\\x{ff3f}\\x{ff3c}\\x{ff08}\\x{ff09}\\x{ff0c}\\x{ff1a}\\x{ff5c}]+', '~');
+      let m = t
+        .replace('(^~?|[^~\\p{N}]~?)(\\p{N}{1,2})~(\\p{N}{3}(?:[^\\p{N}]|$))', '$1$2¦$3')
+        .replace('(^|[^\\p{N}¤])(\\p{N}{1,2})([^\\p{N}]|$)', '$1¤$2$3')
+        .replace('(^|[^\\p{N}¤])(\\p{N}{1,2})([^\\p{N}]|$)', '$1¤$2$3')
+        .replace('~?¤(\\p{N}{1,2})~?', '$1');
+      return t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹OoＯｏlIｌＩ](?:[\\p{N}OoＯｏlIｌＩ]{6,8}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,7}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ](?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{3}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{4}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{1,3}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{5}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{0,2}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{6}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{0,1}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵OoＯｏlIｌＩ](?:[\\p{N}OoＯｏlIｌＩ]{7}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{6,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸OoＯｏ](?:[\\p{N}OoＯｏlIｌＩ]{6}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,4}\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,3}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,2}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹]~?(?:\\p{N}[\\p{N}OoＯｏlIｌＩ]{6,7}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,4}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏlIｌＩ1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵]~?(?:[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸][\\p{N}OoＯｏlIｌＩ]\\p{N}|[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][\\p{N}OoＯｏlIｌＩ]\\p{N})~?\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[\\x{2b}\\x{ff0b}]~?(?:[\\p{N}OoＯｏlIｌＩ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ]~?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹lIｌＩ]~?(?:[\\p{N}OoＯｏlIｌＩ]~?){7,13}\\p{N}(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹OoＯｏlIｌＩ](?:[\\p{N}OoＯｏlIｌＩ]{6,8}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,7}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ](?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{3}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{4}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{1,3}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{5}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{0,2}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{6}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{0,1}\\p{N}))(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵OoＯｏlIｌＩ](?:[\\p{N}OoＯｏlIｌＩ]{7}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{6,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸OoＯｏ](?:[\\p{N}OoＯｏlIｌＩ]{6}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,4}\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,3}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,2}\\p{N}))(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹]~?(?:\\p{N}[\\p{N}OoＯｏlIｌＩ]{6,7}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{5,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{4,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏlIｌＩ]\\p{N})|[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{3,4}\\p{N})|[\\p{N}OoＯｏlIｌＩ]{3}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏlIｌＩ]{2,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏlIｌＩ1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵]~?(?:[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][\\p{N}OoＯｏlIｌＩ]{2}\\p{N}|[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸][\\p{N}OoＯｏlIｌＩ]\\p{N}|[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][\\p{N}OoＯｏlIｌＩ]\\p{N})~?\\p{N}[\\p{N}OoＯｏlIｌＩ]{2}\\p{N}(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[\\x{2b}\\x{ff0b}]~?(?:[\\p{N}OoＯｏlIｌＩ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$')
+        || m.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ]~?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹lIｌＩ]~?(?:[\\p{N}OoＯｏlIｌＩ]~?){7,13}\\p{N}(?:[^\\p{N}].*)?$');
+    }
+
+    function contactLinkFree(text) {
+      let l = text.replace('[\\x{fe0e}\\x{fe0f}\\x{20e3}\\x{200d}\\x{ad}\\x{61c}\\x{180e}\\x{200b}-\\x{200f}\\x{202a}-\\x{202e}\\x{2060}-\\x{2064}\\x{2066}-\\x{206f}\\x{feff}]', '');
+      return !l.matches('(?si)^(?:.*[^A-Za-z0-9.@-])?(?:https?://)?(?:www[.])?(?:t[.]me|telegram[.]me|telegram[.]dog|wa[.]me|api[.]whatsapp[.]com|chat[.]whatsapp[.]com|whatsapp[.]com/send|instagram[.]com|instagr[.]am|facebook[.]com|fb[.]me|fb[.]com|m[.]me|snapchat[.]com|tiktok[.]com|x[.]com|twitter[.]com|linkedin[.]com/in|threads[.]net|threads[.]com|(?:m[.])?youtube[.]com/(?:@|c/|channel/|user/)[A-Za-z0-9._-]+)(?:[^A-Za-z0-9-].*)?$')
+        && !l.matches('(?s)^.*(?:^|[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}\\x{28}\\x{5b}\\x{7b}\\x{22}\\x{27}])@[A-Za-z](?:[A-Za-z0-9]*[0-9]|[A-Za-z0-9._]*[._][A-Za-z0-9])[A-Za-z0-9._]*.*$')
+        && !l.matches('(?s)^.*[\\x{28}\\x{5b}\\x{7b}\\x{22}\\x{27}]@[A-Za-z][A-Za-z0-9._]{2,}.*$')
+        && !l.matches('(?s)^.*(?:\\b(?:[iI][gG]|[iI][nN][sS][tT][aA]|[iI][nN][sS][tT][aA][gG][rR][aA][mM]|[tT][eE][lL][eE][gG][rR][aA][mM]|[tT][gG]|[wW][hH][aA][tT][sS][aA][pP][pP]|[wW][aA]|[sS][nN][aA][pP]|[sS][nN][aA][pP][cC][hH][aA][tT]|[tT][iI][kK][tT][oO][kK]|[tT][wW][iI][tT][tT][eE][rR]|[fF][bB]|[fF][aA][cC][eE][bB][oO][oO][kK]|[tT][hH][rR][eE][aA][dD][sS]|[yY][oO][uU][tT][uU][bB][eE]|[yY][tT]|[fF][oO][lL][lL][oO][wW]|[dD][mM]|[xX])\\b|تابعنا|تابعونا|انستا|انستجرام|انستغرام|تليجرام|تيليجرام|تلجرام|واتساب|سناب|تيك توك|تويتر|فيسبوك)[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}\\x{3a}\\x{ff1a}\\x{2d}]*@[A-Za-z][A-Za-z0-9._]*.*$')
+        && !l.matches('(?s)^.*(?:\\b(?:[iI][gG]|[iI][nN][sS][tT][aA]|[iI][nN][sS][tT][aA][gG][rR][aA][mM]|[tT][eE][lL][eE][gG][rR][aA][mM]|[tT][gG]|[wW][hH][aA][tT][sS][aA][pP][pP]|[wW][aA]|[sS][nN][aA][pP]|[sS][nN][aA][pP][cC][hH][aA][tT]|[tT][iI][kK][tT][oO][kK]|[tT][wW][iI][tT][tT][eE][rR]|[fF][bB]|[fF][aA][cC][eE][bB][oO][oO][kK]|[tT][hH][rR][eE][aA][dD][sS]|[yY][oO][uU][tT][uU][bB][eE]|[yY][tT]|[fF][oO][lL][lL][oO][wW]|[dD][mM])\\b|تابعنا|تابعونا|انستا|انستجرام|انستغرام|تليجرام|تيليجرام|تلجرام|واتساب|سناب|تيك توك|تويتر|فيسبوك)[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[\\x{3a}\\x{ff1a}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[A-Za-z][A-Za-z0-9._]*.*$')
+        && !l.matches('(?s)^.*(?:\\b(?:[iI][gG]|[iI][nN][sS][tT][aA]|[iI][nN][sS][tT][aA][gG][rR][aA][mM]|[tT][eE][lL][eE][gG][rR][aA][mM]|[tT][gG]|[wW][hH][aA][tT][sS][aA][pP][pP]|[wW][aA]|[sS][nN][aA][pP]|[sS][nN][aA][pP][cC][hH][aA][tT]|[tT][iI][kK][tT][oO][kK]|[tT][wW][iI][tT][tT][eE][rR]|[fF][bB]|[fF][aA][cC][eE][bB][oO][oO][kK]|[tT][hH][rR][eE][aA][dD][sS]|[yY][oO][uU][tT][uU][bB][eE]|[yY][tT]|[fF][oO][lL][lL][oO][wW]|[dD][mM])\\b|تابعنا|تابعونا|انستا|انستجرام|انستغرام|تليجرام|تيليجرام|تلجرام|واتساب|سناب|تيك توك|تويتر|فيسبوك)[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+[A-Za-z](?:[A-Za-z0-9]*[0-9]|[A-Za-z0-9._]*[._][A-Za-z0-9])[A-Za-z0-9._]*.*$');
     }
     // END GENERATED contact patterns
 
@@ -165,6 +198,7 @@ service cloud.firestore {
       let dot = '([.．]|' + ws + '[\\[({]' + ws + '[Dd][Oo][Tt]' + ws + '[\\])}]' + ws + ')';
       let label = '[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+';
       return !contactPhone(text)
+        && contactLinkFree(text)
         && !text.matches('(?s)^.*' + local + at + label + '(' + dot + label + ')*' + dot + '[A-Za-zＡ-Ｚａ-ｚ]{2,}.*$');
     }
 
@@ -209,7 +243,8 @@ service cloud.firestore {
       let amenities = d.get('amenitiesMap', {});
       let images = d.get('imageUrls', []);
       let image = d.get('image', '');
-      // join() fails on non-string entries, which denies the write.
+      // join() fails on non-string entries, which denies the write. A spaced " | " is a list
+      // break for the phone patterns, so digits in neighbouring fields never read as one number.
       let freeText = titles.values().concat(descriptions.values()).concat(locations.values())
         .concat(amenities.get('ar', [])).concat(amenities.get('en', [])).concat(amenities.get('hi', []))
         .concat([d.get('buildingName', ''), d.get('cityCode', ''), d.get('propertyTypeCode', '')])
@@ -276,9 +311,34 @@ service cloud.firestore {
     }
 
     // 3. Agencies Collection
+    // The agency document is a public profile. Contact details, licence, bank and staff data
+    // belong in Agencies/{agencyId}/private/*.
+    function publicAgencyFields() {
+      return [
+        'name', 'names', 'logo', 'logoUrl', 'orn', 'rera', 'city', 'cityCode', 'countryCode',
+        'area', 'about', 'website', 'verified_badge', 'updated_at'
+      ];
+    }
+
+    function canManageAgency(agencyId) {
+      return isSuperAdmin() || isAgencyAdminOf(agencyId);
+    }
+
     match /Agencies/{agencyId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || (isAgencyAdmin() && request.auth.uid == agencyId);
+      allow create: if canManageAgency(agencyId)
+        && request.resource.data.keys().hasOnly(publicAgencyFields())
+        && (isSuperAdmin() || !('verified_badge' in request.resource.data))
+        && request.resource.data.get('verified_badge', false) is bool;
+      allow update: if canManageAgency(agencyId)
+        && request.resource.data.keys().hasOnly(publicAgencyFields())
+        && (isSuperAdmin() || !changedKeys().hasAny(['verified_badge']))
+        && request.resource.data.get('verified_badge', false) is bool;
+      allow delete: if canManageAgency(agencyId);
+
+      match /private/{docId} {
+        allow read, write: if canManageAgency(agencyId);
+      }
     }
 
     // 4. Leases Collection
@@ -295,6 +355,48 @@ service cloud.firestore {
         agencyManagesResource() && !changedKeys().hasAny(['agency_id'])
       );
       allow delete: if isSuperAdmin() || agencyManagesResource();
+    }
+
+    // 4b. Invoices
+    // Written only by generateRentalInvoiceReceipt (Admin SDK), copying the lease parties.
+    // Read only by those parties; clients never write, so a client cannot mint a receipt.
+    match /Invoices/{invoiceId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('tenant_id', '') == request.auth.uid ||
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          agencyManagesResource()
+        ));
+      allow write: if false;
+    }
+
+    // 4c. Telemetry_Crashes
+    // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
+    // beyond the caller's own uid. Only a SuperAdmin can read them back.
+    function crashReportOk(d) {
+      return d.keys().hasOnly(['message', 'stack', 'context', 'isFatal', 'platform', 'uid', 'createdAt'])
+        && d.keys().hasAll(['message', 'isFatal', 'platform', 'createdAt'])
+        && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
+        && d.get('stack', '') is string && d.get('stack', '').size() <= 8000
+        && d.get('context', '') is string && d.get('context', '').size() <= 500
+        && d.isFatal is bool
+        && d.platform in ['web', 'android', 'iOS', 'macOS', 'windows', 'linux', 'fuchsia']
+        && d.createdAt == request.time
+        && (d.get('uid', null) == null
+          || (isAuthenticated() && d.get('uid', null) is string && d.get('uid', null) == request.auth.uid));
+    }
+
+    match /Telemetry_Crashes/{crashId} {
+      allow create: if crashId.size() <= 64 && crashReportOk(request.resource.data);
+      allow get, list: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    // 4d. AiRateLimits
+    // Counters the geminiGenerate function keeps per signed-in user and per hashed visitor IP.
+    // Only the Admin SDK writes them; no client may read or change its own quota.
+    match /AiRateLimits/{bucketId} {
+      allow read, write: if false;
     }
 
     // 5. Maintenance Requests

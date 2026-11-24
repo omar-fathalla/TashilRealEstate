@@ -340,6 +340,22 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                         ),
                       ],
                     ),
+                    if (!widget.property.isPublished) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.shield_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              loc.tr('publicDescriptionContactNotice'),
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ] else ...[
                     // Mode 2: Certified Lease Wizard OR Quick Tenant Entry
                     Container(

@@ -108,3 +108,24 @@ test("TAQ-44: reminder, invoice, and setUserRole callables run in the Functions 
   assert.equal(role.status, 200, JSON.stringify(role.body));
   assert.deepEqual((await admin.auth().getUser(target.uid)).customClaims, { role: "Tenant" });
 });
+
+// --- TAQ-20: the market index callable runs in the Functions emulator ---
+
+test("TAQ-20: syncMarketIndexManual is SuperAdmin-only and writes a server timestamp", async () => {
+  const owner = await signUp("smoke-owner@example.com");
+  await db.doc(`Users/${owner.uid}`).set({ role: "Owner" });
+  const denied = await callable("syncMarketIndexManual", owner.idToken, { country: "EG" });
+  assert.equal(denied.status, 403, JSON.stringify(denied.body));
+
+  const root = await signUp("smoke-root@example.com", { role: "SuperAdmin" });
+  const ok = await callable("syncMarketIndexManual", root.idToken, { country: "EG" });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const index = await db.doc("MarketIndices/EG").get();
+  assert.ok(index.get("updatedAt"), "server timestamp missing");
+
+  const again = await callable("syncMarketIndexManual", root.idToken, { country: "EG" });
+  assert.equal(again.status, 429, JSON.stringify(again.body));
+
+  const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/syncMarketIndexManual?country=EG`);
+  assert.notEqual(res.status, 200);
+});

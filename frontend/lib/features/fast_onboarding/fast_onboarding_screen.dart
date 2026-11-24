@@ -1880,6 +1880,8 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: loc.tr('detailedDescriptionHint'),
+              helperText: loc.tr('publicDescriptionContactNotice'),
+              helperMaxLines: 3,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding: const EdgeInsets.all(12),
             ),

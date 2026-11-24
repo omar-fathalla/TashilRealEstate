@@ -1,9 +1,49 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Elevated roles only come from the custom claim set by setUserRole / the Admin SDK.
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.get('role', '') == 'SuperAdmin';
+    }
+
+    function under10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Private files: KYC documents, contracts, voice notes. Never public.
+    match /users/{uid}/{path=**} {
+      allow read, delete: if isSelf(uid) || isSuperAdmin();
+      allow create, update: if isSelf(uid)
+        && under10MB()
+        && request.resource.contentType.matches('image/.*|application/pdf|audio/.*');
+    }
+
+    // Public listing photos. The owner may only write under a property that exists in their
+    // private Users/{ownerUid}/properties tree. Cross-service rules need the Storage service
+    // agent to have Firestore read access in the deployed project.
+    // Anyone may fetch a photo by its name; only the owner or a SuperAdmin may list a folder,
+    // so file names of unpublished properties are not enumerable.
+    match /public/listings/{ownerUid}/{propertyId}/{fileName} {
+      allow get: if true;
+      allow list: if isSelf(ownerUid) || isSuperAdmin();
+      allow create, update: if isSelf(ownerUid)
+        && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId))
+        && under10MB()
+        && request.resource.contentType.matches('image/(png|jpe?g|webp|gif)');
+      allow delete: if isSuperAdmin()
+        || (isSelf(ownerUid)
+          && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId)));
+    }
+
+    // Everything else is denied by default.
   }
 }

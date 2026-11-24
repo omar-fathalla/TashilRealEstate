@@ -3,16 +3,40 @@
 //   node scripts/generate_contact_rules.js --check  -> exit 1 if the file is out of date
 const fs = require("fs");
 const path = require("path");
-const { rulesPhoneLiterals, rulesSeparatorLiteral } = require("../contact_patterns");
+const {
+  NORMALIZE_STEPS,
+  MERGE_STEPS,
+  rulesPhonePatterns,
+  rulesLinkPatterns,
+  LINK_INVISIBLE,
+  escapeRulesLiteral,
+} = require("../contact_patterns");
 
 const RULES_PATH = path.join(__dirname, "../../firestore.rules");
 const BEGIN = "    // BEGIN GENERATED contact patterns\n";
 const END = "    // END GENERATED contact patterns\n";
 
+const literal = (text) => `'${escapeRulesLiteral(text)}'`;
+const replaces = (steps) => steps.map(([pattern, replacement]) => `.replace(${literal(pattern)}, ${literal(replacement)})`);
+
 function generatedBlock() {
+  const phones = rulesPhonePatterns();
+  const checks = [
+    ...phones.map((pattern) => `t.matches(${literal(pattern)})`),
+    ...phones.map((pattern) => `m.matches(${literal(pattern)})`),
+  ];
+  const linkChecks = rulesLinkPatterns().map((pattern) => `!l.matches(${literal(pattern)})`);
   return `${BEGIN}    function contactPhone(text) {
-      let t = text.replace('${rulesSeparatorLiteral()}', '~');
-      return ${rulesPhoneLiterals().map((l) => `t.matches('${l}')`).join("\n        || ")};
+      let t = text
+        ${replaces(NORMALIZE_STEPS).join("\n        ")};
+      let m = t
+        ${replaces(MERGE_STEPS).join("\n        ")};
+      return ${checks.join("\n        || ")};
+    }
+
+    function contactLinkFree(text) {
+      let l = text.replace(${literal(LINK_INVISIBLE)}, '');
+      return ${linkChecks.join("\n        && ")};
     }
 ${END}`;
 }

@@ -429,6 +429,124 @@ test("TAQ-48: marketplace search over published listings still works", async () 
   assert.deepEqual(ae.docs.map((d) => d.id), ["pub-1"]);
 });
 
+// --- TAQ-21: signed-in users cannot read every listing ---
+
+const ownerB = () => db("ownerB", { role: "Owner" });
+const nonAdminReaders = () => [
+  ["visitor", anonDb()],
+  ["owner B", ownerB()],
+  ["tenant", db("tenant", { role: "Tenant" })],
+  ["agency 2 admin", db("agent2", { role: "AgencyAdmin", agency_id: "agency-2" })],
+];
+
+async function seedTaq21Listings() {
+  await seed("Properties/a-vacant", listing("ownerA", { id: "a-vacant", status: "vacant", is_published: false, agency_id: "agency-1" }));
+  await seed("Properties/a-rented", listing("ownerA", { id: "a-rented", status: "rented", is_published: false }));
+  await seed("Properties/a-unavailable", listing("ownerA", { id: "a-unavailable", status: "unavailable", is_published: false }));
+  await seed("Properties/a-published", listing("ownerA", { id: "a-published" }));
+}
+
+test("TAQ-21: owner B cannot get owner A's unpublished listing in any status", async () => {
+  await seedTaq21Listings();
+  for (const id of ["a-vacant", "a-rented", "a-unavailable"]) {
+    await assertFails(getDoc(doc(ownerB(), `Properties/${id}`)), id);
+  }
+  await assertSucceeds(getDoc(doc(ownerB(), "Properties/a-published")));
+});
+
+test("TAQ-21: an unfiltered Properties query is denied for every non-admin", async () => {
+  await seedTaq21Listings();
+  for (const [label, reader] of nonAdminReaders()) {
+    await assertFails(getDocs(collection(reader, "Properties")), label);
+    await assertFails(getDocs(query(collection(reader, "Properties"), where("status", "in", ["vacant", "rented", "unavailable"]))), label);
+  }
+  await assertFails(getDocs(collection(db("ownerA", { role: "Owner" }), "Properties")));
+  await assertSucceeds(getDocs(collection(db("root", { role: "SuperAdmin" }), "Properties")));
+});
+
+test("TAQ-21: visitors and signed-in users can query published listings", async () => {
+  await seedTaq21Listings();
+  for (const [label, reader] of nonAdminReaders()) {
+    const snap = await assertSucceeds(getDocs(query(collection(reader, "Properties"), where("is_published", "==", true))));
+    assert.deepEqual(snap.docs.map((d) => d.id), ["a-published"], label);
+  }
+});
+
+test("TAQ-21: the owner and the managing agency admin can read the unpublished listing", async () => {
+  await seedTaq21Listings();
+  const ownerA = db("ownerA", { role: "Owner" });
+  for (const id of ["a-vacant", "a-rented", "a-unavailable"]) {
+    await assertSucceeds(getDoc(doc(ownerA, `Properties/${id}`)), id);
+  }
+  await assertSucceeds(getDoc(doc(db("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }), "Properties/a-vacant")));
+  const mine = await assertSucceeds(getDocs(query(collection(ownerA, "Properties"), where("owner_id", "==", "ownerA"))));
+  assert.equal(mine.size, 4);
+});
+
+// --- TAQ-22: agency documents are public profiles; private data lives in a subcollection ---
+
+const agency1Admin = () => db("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+const agency2Admin = () => db("agent2", { role: "AgencyAdmin", agency_id: "agency-2" });
+const publicAgency = {
+  name: "Tashil Realty",
+  names: { ar: "تسهيل العقارية", en: "Tashil Realty", hi: "तशिल रियल्टी" },
+  logoUrl: "assets/images/agency.png",
+  orn: "12345",
+  countryCode: "AE",
+  cityCode: "dubai",
+  verified_badge: false,
+};
+
+async function seedAgency() {
+  await seed("Agencies/agency-1", publicAgency);
+  await seed("Agencies/agency-1/private/profile", { email: "office@agency.test", phone: "+971500000001", iban: "AE070331234567890123456" });
+}
+
+test("TAQ-22: anyone can read the public agency profile", async () => {
+  await seedAgency();
+  for (const reader of [anonDb(), db("stranger"), agency2Admin()]) {
+    await assertSucceeds(getDoc(doc(reader, "Agencies/agency-1")));
+  }
+});
+
+test("TAQ-22: private agency data is readable only by its admin and SuperAdmin", async () => {
+  await seedAgency();
+  for (const reader of [anonDb(), db("stranger"), db("tenant", { role: "Tenant" }), agency2Admin()]) {
+    await assertFails(getDoc(doc(reader, "Agencies/agency-1/private/profile")));
+    await assertFails(getDocs(collection(reader, "Agencies/agency-1/private")));
+    await assertFails(setDoc(doc(reader, "Agencies/agency-1/private/profile"), { iban: "x" }));
+  }
+  await assertSucceeds(getDoc(doc(agency1Admin(), "Agencies/agency-1/private/profile")));
+  await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1/private/profile"), { phone: "+971500000002" }));
+  await assertSucceeds(getDoc(doc(db("root", { role: "SuperAdmin" }), "Agencies/agency-1/private/profile")));
+});
+
+test("TAQ-22: private fields cannot be written to the public agency document", async () => {
+  await seedAgency();
+  for (const field of ["email", "phone", "iban", "bankName", "license", "licenseDocUrl", "staff"]) {
+    await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { [field]: "x" }), field);
+    await assertFails(setDoc(doc(db("root", { role: "SuperAdmin" }), "Agencies/agency-new"), { ...publicAgency, [field]: "x" }), field);
+  }
+  await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { about: "Dubai Marina specialists", updated_at: serverTimestamp() }));
+});
+
+test("TAQ-22: only a SuperAdmin can change verified_badge", async () => {
+  await seedAgency();
+  await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { verified_badge: true }));
+  await assertFails(setDoc(doc(db("agent3", { role: "AgencyAdmin", agency_id: "agency-3" }), "Agencies/agency-3"), { name: "New", verified_badge: true }));
+  await assertSucceeds(setDoc(doc(db("agent3", { role: "AgencyAdmin", agency_id: "agency-3" }), "Agencies/agency-3"), { name: "New" }));
+  await assertSucceeds(updateDoc(doc(db("root", { role: "SuperAdmin" }), "Agencies/agency-1"), { verified_badge: true }));
+  await assertFails(updateDoc(doc(db("root", { role: "SuperAdmin" }), "Agencies/agency-1"), { verified_badge: "yes" }));
+});
+
+test("TAQ-22: other agencies, visitors, owners and uid-named admins cannot write an agency", async () => {
+  await seedAgency();
+  for (const writer of [anonDb(), db("stranger", { role: "Owner" }), agency2Admin(), db("agency-1", { role: "AgencyAdmin" })]) {
+    await assertFails(updateDoc(doc(writer, "Agencies/agency-1"), { about: "hijacked" }));
+    await assertFails(deleteDoc(doc(writer, "Agencies/agency-1")));
+  }
+});
+
 // --- TAQ-49: only Owners and AgencyAdmins can publish listings ---
 
 test("TAQ-49: a Tenant cannot create a public listing", async () => {

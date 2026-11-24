@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import '../../../core/services/gemini_gateway.dart';
 import '../../../core/services/ai_quota_manager.dart';
 import '../../../core/services/user_profile_service.dart';
 import '../models/document_ocr_result_model.dart';
@@ -9,11 +9,6 @@ class AiDocumentOcrService {
   static final AiDocumentOcrService _instance = AiDocumentOcrService._internal();
   factory AiDocumentOcrService() => _instance;
   AiDocumentOcrService._internal();
-
-  static const String _geminiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
   /// Sample pre-loaded official documents for instant testing & demonstration
   static final List<Map<String, dynamic>> sampleTemplates = [
@@ -98,7 +93,7 @@ class AiDocumentOcrService {
     String? sampleId,
   }) async {
     // Check quota
-    if (_apiKey.isNotEmpty && AiQuotaManager().hasAvailableQuota) {
+    if (AiQuotaManager().hasAvailableQuota) {
       try {
         final result = await _callGeminiOcr(
           docType: docType,
@@ -196,11 +191,9 @@ Extract all official fields and return ONLY a valid JSON object with the followi
       }
     }
 
-    final url = Uri.parse('$_geminiEndpoint?key=$_apiKey');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await GeminiGateway.generate(
+      feature: GeminiFeature.documentOcr,
+      request: {
         'contents': [
           {
             'parts': parts,
@@ -210,7 +203,7 @@ Extract all official fields and return ONLY a valid JSON object with the followi
           'temperature': 0.1,
           'maxOutputTokens': 1000,
         },
-      }),
+      },
     ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {

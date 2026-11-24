@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,7 +10,7 @@ import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/font_theme_controller.dart';
-import 'package:tashil_real_estate/firebase_options.dart';
+import 'package:tashil_real_estate/app_firebase_options.dart';
 import 'package:tashil_real_estate/core/services/app_check_service.dart';
 import 'package:tashil_real_estate/core/services/remote_config_service.dart';
 import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
@@ -62,7 +63,7 @@ void main() async {
   };
 
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options: AppFirebaseOptions.currentPlatform,
   );
   RoleSession.instance.bindToFirebaseAuth();
 
@@ -70,10 +71,12 @@ void main() async {
   CrashReportingService().initialize();
   await AppCheckService().initialize();
   await RemoteConfigService().initialize();
-  await FcmNotificationService().initialize();
   await PerformanceMonitoringService().initialize();
 
   runApp(const TashilRealEstateApp());
+
+  // Listeners only. The permission prompt waits for a tap (Settings > Notifications).
+  unawaited(FcmNotificationService().initialize());
 }
 
 

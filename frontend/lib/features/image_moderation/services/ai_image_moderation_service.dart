@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/image_moderation/models/image_moderation_model.dart';
 
@@ -11,11 +10,6 @@ class AiImageModerationService {
   AiImageModerationService._internal() {
     _initializeSeedInspectionItems();
   }
-
-  static String get _apiKey => AiConfig.geminiApiKey;
-  static const String _modelName = 'gemini-1.5-flash';
-  static String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1beta/models/$_modelName:generateContent?key=$_apiKey';
 
   final ValueNotifier<List<ImageModerationItem>> moderatedItemsNotifier = ValueNotifier<List<ImageModerationItem>>([]);
 
@@ -172,10 +166,9 @@ Respond with a JSON object ONLY adhering to this exact schema:
 }
 ''';
 
-    final response = await http.post(
-      Uri.parse(_endpoint),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await GeminiGateway.generate(
+      feature: GeminiFeature.imageModeration,
+      request: {
         'contents': [
           {
             'parts': [
@@ -194,7 +187,7 @@ Respond with a JSON object ONLY adhering to this exact schema:
           'maxOutputTokens': 512,
           'responseMimeType': 'application/json',
         }
-      }),
+      },
     );
 
     if (response.statusCode == 200) {

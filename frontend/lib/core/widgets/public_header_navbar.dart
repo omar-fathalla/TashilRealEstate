@@ -690,6 +690,15 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
       );
   }
 
+  @visibleForTesting
+  static ({String displayName, String roleTitle, String dashboardRoute}) debugResolveUserInfo(
+    User user,
+    AppLocalizations loc,
+  ) {
+    final info = _resolveUserInfo(user, loc);
+    return (displayName: info.displayName, roleTitle: info.roleTitle, dashboardRoute: info.dashboardRoute);
+  }
+
   /// Role title and dashboard come from the trusted role (ID-token claim first), never
   /// from the email address or a self-written profile field.
   static _UserRoleInfo _resolveUserInfo(User user, AppLocalizations loc) {

@@ -1,4 +1,4 @@
-const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
@@ -23,7 +23,7 @@ const {
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
-const { PHONE_PATTERN, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
+const { phoneSpans, linkSpans, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -235,10 +235,10 @@ const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
 
-// Mirrored by contactFree() in firestore.rules (see contact_patterns.js for the phone shapes).
-// Text is matched after folding look-alike characters (digits of any script, full-width
-// forms, circled and styled digits, invisible characters) so only the matched span is removed
-// and other text is left exactly as written.
+// Mirrored by contactFree() in firestore.rules. Phones, messaging links and @handles use the
+// shared patterns in contact_patterns.js. Emails are matched after folding look-alike
+// characters (full-width forms, invisible characters). Only the matched span is removed and
+// other text is left exactly as written.
 //  - Email: @ may be written [at], (at), {at}, or with spaces around it; dots may be [dot].
 const EMAIL_AT = String.raw`\s*(?:@|[\[({]\s*at\s*[\])}])\s*`;
 const EMAIL_DOT = String.raw`(?:\.|\s*[\[({]\s*dot\s*[\])}]\s*)`;
@@ -287,24 +287,36 @@ function foldForContactMatching(text) {
   return { folded, offsets };
 }
 
-function removeMatches(text, pattern) {
-  const { folded, offsets } = foldForContactMatching(text);
-  const spans = [...folded.matchAll(pattern)].map((m) => [offsets[m.index], offsets[m.index + m[0].length]]);
+function removeSpans(text, spans) {
   if (spans.length === 0) return text;
   let result = "";
   let cursor = 0;
-  for (const [start, end] of spans) {
-    result += text.slice(cursor, start);
+  for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
+    if (end <= cursor) continue;
+    result += text.slice(cursor, Math.max(cursor, start));
     cursor = end;
   }
   return result + text.slice(cursor);
+}
+
+function matchSpans(text, pattern) {
+  return [...text.matchAll(pattern)].map((m) => [m.index, m.index + m[0].length]);
+}
+
+function removeEmails(text) {
+  const { folded, offsets } = foldForContactMatching(text);
+  return removeSpans(text, matchSpans(folded, EMAIL_PATTERN).map(([start, end]) => [offsets[start], offsets[end]]));
+}
+
+function removeLinks(text) {
+  return removeSpans(text, linkSpans(text));
 }
 
 function stripContacts(text) {
   let current = text;
   // Removing a contact can join the text around it into a new one, so repeat until stable.
   for (let pass = 0; pass < 4; pass += 1) {
-    const cleaned = removeMatches(removeMatches(current, PHONE_PATTERN), EMAIL_PATTERN);
+    const cleaned = removeLinks(removeEmails(removeSpans(current, phoneSpans(current))));
     if (cleaned === current) break;
     current = cleaned;
   }
@@ -679,7 +691,7 @@ function generateMarketIndexData(countryCode) {
         "Google Search Grounding Real-Time Market Feed",
         "بيانات الصفقات الموثقة عبر منصة تسهيل",
       ],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
   } else {
     return {
@@ -754,7 +766,7 @@ function generateMarketIndexData(countryCode) {
         "Google Search Grounding Real-Time Market Intelligence",
         "بيانات منصة إيجاري (Ejari) المعتمدة",
       ],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
   }
 }
@@ -785,23 +797,34 @@ exports.syncMarketIndexDaily = onSchedule(
   }
 );
 
+const MARKET_INDEX_COUNTRIES = ["EG", "AE"];
+const MARKET_INDEX_COOLDOWN_MS = 10 * 60 * 1000;
+
 /**
- * On-demand HTTP Endpoint: Allows manual/admin trigger of the market index pipeline.
+ * SuperAdmin-only callable that refreshes one country's market index outside the daily
+ * schedule. A country can be refreshed at most once every 10 minutes.
  */
-exports.syncMarketIndexManual = onRequest(async (req, res) => {
-  const db = admin.firestore();
-  const country = (req.query.country || "EG").toUpperCase();
-  try {
-    const payload = generateMarketIndexData(country);
-    await db.collection("MarketIndices").doc(country).set(payload, { merge: true });
-    res.json({
-      success: true,
-      message: `Daily market index updated for ${country}`,
-      data: payload,
-    });
-  } catch (err) {
-    logger.error("Error in syncMarketIndexManual", err);
-    res.status(500).json({ success: false, error: err.message });
+exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, ["SuperAdmin"]);
+  const data = request.data || {};
+  const country = typeof data.country === "string" ? data.country.trim().toUpperCase() : "";
+  if (!MARKET_INDEX_COUNTRIES.includes(country)) {
+    throw new HttpsError("invalid-argument", "country must be EG or AE.");
   }
+
+  const db = admin.firestore();
+  const ref = db.collection("MarketIndices").doc(country);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const updatedAt = snap.exists ? snap.get("updatedAt") : null;
+    if (updatedAt instanceof Timestamp && Date.now() - updatedAt.toMillis() < MARKET_INDEX_COOLDOWN_MS) {
+      throw new HttpsError("resource-exhausted", "This market index was refreshed less than 10 minutes ago.");
+    }
+    tx.set(ref, generateMarketIndexData(country), { merge: true });
+  });
+  logger.info(`Manual market index refresh for [${country}] by ${auth.uid}`);
+  return { success: true, country };
 });
 
+exports.geminiGenerate = require("./gemini_gateway").geminiGenerate;
