@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
@@ -213,17 +214,53 @@ function sanitizeRequest(feature, request) {
 }
 
 /**
- * The caller's IP. Google's front end appends the address it saw to X-Forwarded-For, so the
- * last entry is the one a client cannot forge; earlier entries are client-supplied.
+ * How many proxies in front of the function append to X-Forwarded-For. A proxy appends the
+ * address it received the request from, so the client's IP is this many entries from the
+ * right; everything to its left is whatever the client sent and is never trusted.
+ *  - 1 (default): the callable is reached on its own cloudfunctions.net / run.app URL, and
+ *    Google's front end appends the caller's IP as the last entry.
+ *  - 2: an external Application Load Balancer (or another trusted proxy) sits in front and
+ *    appends its own entry after the client's.
+ * Set VISITOR_IP_TRUSTED_HOPS in the functions environment if the deployment differs, and
+ * check it on a non-prod deploy first (docs/SECURITY_SETUP.md, "Visitor rate limits").
  */
-function clientIp(rawRequest) {
-  const header = rawRequest && rawRequest.headers ? rawRequest.headers["x-forwarded-for"] : undefined;
+function trustedHops(env = process.env) {
+  const hops = Number(env.VISITOR_IP_TRUSTED_HOPS || 1);
+  return Number.isInteger(hops) && hops >= 1 && hops <= 5 ? hops : 1;
+}
+
+function normalizeIp(value) {
+  if (typeof value !== "string") return null;
+  let ip = value.trim();
+  const bracketed = ip.match(/^\[([^\]]+)\](?::\d+)?$/);
+  if (bracketed) ip = bracketed[1];
+  else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(ip)) ip = ip.replace(/:\d+$/, "");
+  if (/^::ffff:/i.test(ip) && net.isIPv4(ip.slice(7))) ip = ip.slice(7);
+  return net.isIP(ip) ? ip.toLowerCase() : null;
+}
+
+/**
+ * The visitor's IP and where it came from. Express's `req.ip` is not used: under
+ * `trust proxy` it returns the left-most X-Forwarded-For entry, which the client chose.
+ * Without enough trusted entries the TCP peer address is used instead.
+ */
+function clientAddress(rawRequest, hops = trustedHops()) {
+  const headers = (rawRequest && rawRequest.headers) || {};
+  const header = headers["x-forwarded-for"];
   const value = Array.isArray(header) ? header.join(",") : header;
-  if (typeof value === "string" && value.trim()) {
-    const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
-    if (entries.length) return entries[entries.length - 1];
+  const entries = typeof value === "string" ? value.split(",").map((entry) => entry.trim()).filter(Boolean) : [];
+  if (entries.length >= hops) {
+    const ip = normalizeIp(entries[entries.length - hops]);
+    if (ip) return { ip, source: "x-forwarded-for" };
   }
-  return (rawRequest && (rawRequest.ip || (rawRequest.socket && rawRequest.socket.remoteAddress))) || "unknown";
+  const socket = rawRequest && (rawRequest.socket || rawRequest.connection);
+  const peer = normalizeIp(socket && socket.remoteAddress);
+  if (peer) return { ip: peer, source: "socket" };
+  return { ip: "unknown", source: "unknown" };
+}
+
+function clientIp(rawRequest, hops) {
+  return clientAddress(rawRequest, hops).ip;
 }
 
 // Rate-limit documents never store a raw IP: the id is an HMAC keyed with the server secret.
@@ -321,7 +358,8 @@ async function handleGeminiGenerate(request) {
   const key = GEMINI_API_KEY.value();
   if (!key) throw new HttpsError("failed-precondition", "AI is not configured.");
 
-  await consumeQuota({ uid, ip: uid ? null : clientIp(request.rawRequest), secret: key });
+  const address = uid ? null : clientAddress(request.rawRequest);
+  await consumeQuota({ uid, ip: address ? address.ip : null, secret: key });
 
   const started = deps.now();
   const result = await callGemini({ model, body, key });
@@ -330,6 +368,7 @@ async function handleGeminiGenerate(request) {
     feature,
     model,
     caller: uid ? "user" : "visitor",
+    ipSource: address ? address.source : undefined,
     appCheck: Boolean(request.app),
     textChars: totals.textChars,
     inlineChars: totals.inlineChars,
@@ -370,6 +409,9 @@ module.exports = {
     resolveModel,
     sanitizeRequest,
     clientIp,
+    clientAddress,
+    normalizeIp,
+    trustedHops,
     visitorBucket,
   },
 };

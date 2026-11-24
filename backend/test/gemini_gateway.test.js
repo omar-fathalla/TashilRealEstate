@@ -38,11 +38,11 @@ function textRequest(text = "Estimate the rent for a 2 bedroom flat.") {
   return { contents: [{ parts: [{ text }] }] };
 }
 
-function call({ feature = "valuation", model, request = textRequest(), uid = null, ip = "203.0.113.7" } = {}) {
+function call({ feature = "valuation", model, request = textRequest(), uid = null, ip = "203.0.113.7", rawRequest } = {}) {
   return fns.geminiGenerate.run({
     data: { feature, model, request },
     auth: uid ? { uid, token: { uid } } : undefined,
-    rawRequest: { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
+    rawRequest: rawRequest || { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
   });
 }
 
@@ -230,11 +230,69 @@ test("TAQ-19: visitors are limited per IP, and the stored bucket id is not the r
   assert.equal(global.dayCount, gw.LIMITS.visitor.perMinute + 1);
 });
 
-test("TAQ-19: a forged X-Forwarded-For prefix does not give a visitor a new bucket", async () => {
+test("TAQ-77: the visitor IP is the entry Google's front end appended, never a client-chosen one", () => {
   assert.equal(gw.clientIp({ headers: { "x-forwarded-for": "1.1.1.1, 2.2.2.2, 203.0.113.7" } }), "203.0.113.7");
-  assert.equal(gw.clientIp({ headers: {}, ip: "203.0.113.9" }), "203.0.113.9");
+  assert.equal(gw.clientIp({ headers: { "x-forwarded-for": ["1.1.1.1", "203.0.113.7"] } }), "203.0.113.7");
+  // Express's req.ip is the left-most entry under `trust proxy`; it is ignored.
+  assert.deepEqual(
+    gw.clientAddress({ headers: {}, ip: "1.1.1.1", socket: { remoteAddress: "::ffff:203.0.113.9" } }),
+    { ip: "203.0.113.9", source: "socket" },
+  );
+  // A malformed last entry falls back to the TCP peer instead of becoming its own bucket.
+  assert.deepEqual(
+    gw.clientAddress({ headers: { "x-forwarded-for": "1.1.1.1, not-an-ip" }, socket: { remoteAddress: "203.0.113.9" } }),
+    { ip: "203.0.113.9", source: "socket" },
+  );
+  assert.equal(gw.clientIp({ headers: {} }), "unknown");
+  assert.equal(gw.normalizeIp("203.0.113.7:51234"), "203.0.113.7");
+  assert.equal(gw.normalizeIp("[2001:DB8::1]:443"), "2001:db8::1");
   assert.equal(gw.visitorBucket("203.0.113.7", "k"), gw.visitorBucket("203.0.113.7", "k"));
   assert.notEqual(gw.visitorBucket("203.0.113.7", "k"), gw.visitorBucket("203.0.113.8", "k"));
+});
+
+test("TAQ-77: behind one more trusted proxy the client is the second entry from the right", () => {
+  assert.equal(gw.trustedHops({}), 1);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "2" }), 2);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "0" }), 1);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "abc" }), 1);
+  const lb = { headers: { "x-forwarded-for": "1.1.1.1, 203.0.113.7, 35.191.0.1" }, socket: { remoteAddress: "35.191.0.1" } };
+  assert.equal(gw.clientIp(lb, 2), "203.0.113.7");
+  // Only a client-set entry: too few trusted entries, so the peer address is used.
+  assert.deepEqual(gw.clientAddress({ headers: { "x-forwarded-for": "1.1.1.1" }, socket: { remoteAddress: "35.191.0.1" } }, 2), {
+    ip: "35.191.0.1",
+    source: "socket",
+  });
+});
+
+test("TAQ-77: a forged X-Forwarded-For cannot buy a visitor fresh quota on its own", async () => {
+  gw.deps.now = () => Date.UTC(2026, 10, 24, 11, 0, 0);
+  const forged = (i) => ({
+    headers: { "x-forwarded-for": `10.${i}.${i}.${i}, 198.51.100.${i}, 203.0.113.7` },
+    ip: `10.${i}.${i}.${i}`,
+    socket: { remoteAddress: "169.254.1.1" },
+  });
+  for (let i = 1; i <= gw.LIMITS.visitor.perMinute; i += 1) await call({ rawRequest: forged(i) });
+  await expectCode(call({ rawRequest: forged(99) }), "resource-exhausted");
+  await expectCode(call({ rawRequest: { headers: {}, ip: "10.9.9.9", socket: { remoteAddress: "203.0.113.7" } } }), "resource-exhausted");
+  const visitorBuckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.filter((d) => d.id.startsWith("ip_"));
+  assert.equal(visitorBuckets.length, 1, "every forged header landed in the same bucket");
+  const global = (await db.collection(gw.RATE_LIMIT_COLLECTION).doc("visitors_global").get()).data();
+  assert.equal(global.dayCount, gw.LIMITS.visitor.perMinute);
+  assert.equal(gw.LIMITS.visitorsPerDay, 3000);
+});
+
+test("TAQ-77: logs say where the visitor IP came from but never the IP", async () => {
+  const lines = [];
+  const original = logger.info;
+  logger.info = (...args) => lines.push(JSON.stringify(args));
+  try {
+    await call({ ip: "203.0.113.42" });
+  } finally {
+    logger.info = original;
+  }
+  const logged = lines.join("\n");
+  assert.match(logged, /"ipSource":"x-forwarded-for"/);
+  assert.ok(!logged.includes("203.0.113.42"));
 });
 
 test("TAQ-19: the shared visitor ceiling stops signed-out calls but not signed-in ones", async () => {
