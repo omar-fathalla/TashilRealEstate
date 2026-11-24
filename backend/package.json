@@ -13,7 +13,8 @@
     "test:emulator": "firebase emulators:exec --only functions,firestore,auth --project demo-tashil-test 'node --test --test-concurrency=1 test/emulator/*.smoke.js'",
     "seed": "node seed.js",
     "audit:roles": "node scripts/role_claims.js",
-    "gen:contact-rules": "node scripts/generate_contact_rules.js"
+    "gen:contact-rules": "node scripts/generate_contact_rules.js",
+    "check:client-keys": "node scripts/check_client_ai_keys.js"
   },
   "engines": {
     "node": "20"

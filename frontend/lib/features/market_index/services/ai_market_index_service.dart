@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/market_index/models/market_index_model.dart';
@@ -10,10 +9,6 @@ class AiMarketIndexService {
   static final AiMarketIndexService _instance = AiMarketIndexService._internal();
   factory AiMarketIndexService() => _instance;
   AiMarketIndexService._internal();
-
-  static String get _apiKey => AiConfig.geminiApiKey;
-  static String get _endpoint =>
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey';
 
   final ValueNotifier<MarketIndexSummary> _egSummaryNotifier =
       ValueNotifier<MarketIndexSummary>(_initialEGMarketIndex);
@@ -58,10 +53,9 @@ Provide a concise, highly insightful, authoritative, 2-3 paragraph analysis.
 Do not mix languages.
 ''';
 
-        final response = await http.post(
-          Uri.parse(_endpoint),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        final response = await GeminiGateway.generate(
+          feature: GeminiFeature.marketIndex,
+          request: {
             'contents': [
               {
                 'parts': [
@@ -73,7 +67,7 @@ Do not mix languages.
               'temperature': 0.3,
               'maxOutputTokens': 600,
             }
-          }),
+          },
         ).timeout(const Duration(seconds: 12));
 
         if (response.statusCode == 200) {

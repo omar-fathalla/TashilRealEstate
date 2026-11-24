@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:tashil_real_estate/core/config/ai_config.dart';
+import 'package:tashil_real_estate/core/services/gemini_gateway.dart';
 import 'package:tashil_real_estate/core/services/ai_quota_manager.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/models/ai_model_definition.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/services/ai_engine_config_controller.dart';
@@ -11,11 +10,6 @@ class GeminiOnboardingService {
   static final GeminiOnboardingService _instance = GeminiOnboardingService._internal();
   factory GeminiOnboardingService() => _instance;
   GeminiOnboardingService._internal();
-
-  static String get _apiKey => AiConfig.geminiApiKey;
-
-  String _buildEndpoint(String model) =>
-      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_apiKey';
 
   String get _propertyIngestionModel =>
       AiEngineConfigController().getModelName(AiServiceType.propertyIngestion);
@@ -115,10 +109,10 @@ Output STRICT JSON matching this 5-section schema:
 Only output the raw JSON object without markdown fences.
 ''';
 
-        final response = await http.post(
-          Uri.parse(_buildEndpoint(_propertyIngestionModel)),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        final response = await GeminiGateway.generate(
+          feature: GeminiFeature.onboarding,
+          model: _propertyIngestionModel,
+          request: {
             'contents': [
               {
                 'parts': [
@@ -130,7 +124,7 @@ Only output the raw JSON object without markdown fences.
               'temperature': 0.1,
               'responseMimeType': 'application/json',
             }
-          }),
+          },
         ).timeout(const Duration(seconds: 8));
 
         if (response.statusCode == 200) {
@@ -213,10 +207,10 @@ Output STRICT JSON:
 Do not mix languages inside each field.
 ''';
 
-        final response = await http.post(
-          Uri.parse(_buildEndpoint(_copywritingModel)),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        final response = await GeminiGateway.generate(
+          feature: GeminiFeature.onboarding,
+          model: _copywritingModel,
+          request: {
             'contents': [
               {
                 'parts': [
@@ -228,7 +222,7 @@ Do not mix languages inside each field.
               'temperature': 0.3,
               'responseMimeType': 'application/json',
             }
-          }),
+          },
         ).timeout(const Duration(milliseconds: 4000));
 
         if (response.statusCode == 200) {
