@@ -81,7 +81,7 @@ test("TAQ-35: the CSP ships report-only and covers the Flutter web and Firebase 
   assert.ok(csp["script-src"].includes("'wasm-unsafe-eval'"));
   assert.ok(!csp["script-src"].includes("'unsafe-eval'"));
   assert.ok(!csp["script-src"].includes("'unsafe-inline'"));
-  for (const origin of ["https://*.googleapis.com", "https://*.firebaseio.com", "https://*.cloudfunctions.net", "https://fonts.gstatic.com"]) {
+  for (const origin of ["https://firestore.googleapis.com", "https://*.firebaseio.com", "https://*.cloudfunctions.net", "https://fonts.gstatic.com"]) {
     assert.ok(csp["connect-src"].includes(origin), origin);
   }
   assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
@@ -159,4 +159,29 @@ test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; exampl
     assert.equal(ignored(file), true, `${file} must be ignored`);
   }
   assert.equal(ignored("backend/.secret.local.example"), false);
+});
+
+// --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
+
+test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined, "the CSP stays report-only");
+  const connect = headers["Content-Security-Policy-Report-Only"].match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
+  const googleapis = connect.filter((origin) => origin.includes("googleapis.com"));
+  assert.deepEqual(googleapis.sort(), [
+    "https://content-firebaseappcheck.googleapis.com",
+    "https://fcmregistrations.googleapis.com",
+    "https://firebaseinstallations.googleapis.com",
+    "https://firebaselogging.googleapis.com",
+    "https://firebaseremoteconfig.googleapis.com",
+    "https://firebaseremoteconfigrealtime.googleapis.com",
+    "https://firebasestorage.googleapis.com",
+    "https://firestore.googleapis.com",
+    "https://identitytoolkit.googleapis.com",
+    "https://securetoken.googleapis.com",
+    "https://storage.googleapis.com",
+  ]);
+  for (const origin of connect) {
+    assert.doesNotMatch(origin, /\*\.googleapis\.com|generativelanguage|aiplatform/, origin);
+  }
 });
