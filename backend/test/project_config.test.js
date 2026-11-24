@@ -282,3 +282,21 @@ test("TAQ-7: the key guard allows the dev firebase config like prod's, and only 
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test("TAQ-7: docs/DEV_ENVIRONMENT.md documents the dev build and deploy and holds no secret", () => {
+  const doc = read("docs/DEV_ENVIRONMENT.md");
+  for (const needle of [
+    "--dart-define=FIREBASE_ENV=dev",
+    "DEV_FIREBASE_WEB_API_KEY",
+    "firebase deploy --project dev",
+    "GEMINI_API_KEY",
+    "X-Forwarded-For",
+    "visitor@test.tashilaqar.com",
+    "superadmin@test.tashilaqar.com",
+    "Investor",
+  ]) {
+    assert.ok(doc.includes(needle), needle);
+  }
+  assert.doesNotMatch(doc, /AIza[0-9A-Za-z_-]{20,}/);
+  assert.doesNotMatch(doc, /(password|passwd)\s*[:=]\s*\S{6,}/i);
+});
