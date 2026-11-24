@@ -8,6 +8,7 @@ const {
   MERGE_STEPS,
   rulesPhonePatterns,
   rulesLinkPatterns,
+  LINK_INVISIBLE,
   escapeRulesLiteral,
 } = require("../contact_patterns");
 
@@ -24,7 +25,7 @@ function generatedBlock() {
     ...phones.map((pattern) => `t.matches(${literal(pattern)})`),
     ...phones.map((pattern) => `m.matches(${literal(pattern)})`),
   ];
-  const [link, handle] = rulesLinkPatterns();
+  const linkChecks = rulesLinkPatterns().map((pattern) => `!l.matches(${literal(pattern)})`);
   return `${BEGIN}    function contactPhone(text) {
       let t = text
         ${replaces(NORMALIZE_STEPS).join("\n        ")};
@@ -34,8 +35,8 @@ function generatedBlock() {
     }
 
     function contactLinkFree(text) {
-      return !text.matches(${literal(link)})
-        && !text.matches(${literal(handle)});
+      let l = text.replace(${literal(LINK_INVISIBLE)}, '');
+      return ${linkChecks.join("\n        && ")};
     }
 ${END}`;
 }

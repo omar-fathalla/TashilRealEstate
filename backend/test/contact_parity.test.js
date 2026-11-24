@@ -474,6 +474,50 @@ test("TAQ-66: 010 12 345 678 and 01 012 345 678 are caught, in any digits", asyn
   assert.equal(sanitized("اتصل ٠١ ٠١٢ ٣٤٥ ٦٧٨ الآن"), "اتصل  الآن");
 });
 
+test("TAQ-69: a plain @word is text; real-looking handles and handles after a messaging keyword are caught", async () => {
+  await expectFree([
+    "Stay @home",
+    "Stay @home.",
+    "meet @ 5pm",
+    "Work @office, relax @home",
+    "Size X: Large",
+    "WhatsApp group available",
+    "Follow the signs to the lobby",
+  ]);
+  await expectCaught([
+    "Stay @home2",
+    "IG @home",
+    "Telegram @tashil",
+    "DM @owner",
+    "X @tashil",
+    "IG: x",
+    "Insta: tashil",
+    "Telegram tashil_deals",
+    "تابعنا @tashil",
+  ]);
+  assert.equal(sanitized("Stay @home with IG @tashil"), "Stay @home with IG");
+});
+
+test("TAQ-69: extra separators, letter O after l, zero-width links and YouTube/Threads profiles are caught", async () => {
+  await expectCaught([
+    ..."; = ^ ! & % $ \" [ ] { } < > ?".split(" ").map((sep) => `010${sep}1234${sep}5678`),
+    "0lO 1234 5678",
+    "t\u200B.me/tashil",
+    "t.\u200Dme/tashil",
+    "wa\u2060.me/201012345678",
+    "youtube.com/@tashil",
+    "https://m.youtube.com/channel/UC123",
+    "threads.net/@tashil",
+    "www.threads.com/@tashil",
+  ]);
+  await expectFree([
+    "Discount 10% for 12 months",
+    "Price $1,500,000 (negotiable)?",
+    "Units [10] [12] [34]",
+    "Tour on youtube.com/watch?v=abc",
+  ]);
+});
+
 test("TAQ-63: a max-size listing (4000-character descriptions) is evaluated within the rules' limits", async () => {
   const ref = doc(root(), "Properties/prop-1");
   const sentence = "Spacious flat of 120 m2 on floor 12, price 1.500.000 EGP, built 2015, ready 2026-01-15. ";
