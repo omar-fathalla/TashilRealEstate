@@ -72,6 +72,25 @@ test("TAQ-14: a visitor cannot read private files, the bucket root, or list fold
   await assertFails(anon().ref("users/x").listAll());
 });
 
+test("TAQ-70: only the owner or a SuperAdmin can list a property's listing photos", async () => {
+  const folder = "public/listings/ownerA/propA";
+  await assertFails(anon().ref(folder).listAll());
+  await assertFails(anon().ref(folder).list({ maxResults: 10 }));
+  await assertFails(anon().ref("public/listings/ownerA").listAll());
+  await assertFails(as("ownerB").ref(folder).listAll());
+  await assertFails(as("ownerB", { role: "AgencyAdmin" }).ref(folder).listAll());
+  const own = await assertSucceeds(as("ownerA").ref(folder).listAll());
+  assert.deepEqual(own.items.map((item) => item.name), ["front.jpg"]);
+  await assertSucceeds(superAdmin().ref(folder).listAll());
+});
+
+test("TAQ-70: a signed-out visitor still gets a published listing photo", async () => {
+  const photo = anon().ref("public/listings/ownerA/propA/front.jpg");
+  await assertSucceeds(photo.getDownloadURL());
+  await assertSucceeds(photo.getMetadata());
+  await assertSucceeds(as("ownerB").ref("public/listings/ownerA/propA/front.jpg").getDownloadURL());
+});
+
 test("TAQ-14: a signed-in user reads only their own private files", async () => {
   await assertSucceeds(as("ownerA").ref("users/ownerA/kyc/id.jpg").getDownloadURL());
   await assertFails(as("ownerB").ref("users/ownerA/kyc/id.jpg").getDownloadURL());

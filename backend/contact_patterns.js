@@ -6,6 +6,8 @@
  *
  * Text is first normalized by a fixed list of replace() steps (NORMALIZE_STEPS):
  *  - keycap and emoji joiners (U+FE0F, U+20E3, U+200D) are dropped,
+ *  - a comma followed by a space, a " | " with spaces around it, and the edges of a
+ *    comma-grouped amount (1,500,000 or 1,50,00,000) become `§`, which no phone crosses,
  *  - " x " between numbers, "+" after a digit, and one ASCII letter between digits act as
  *    separators,
  *  - every run of separator characters (spaces, dashes, dots, slashes, commas, colons, |, *,
@@ -73,6 +75,7 @@ const SEPARATOR_CODE_POINTS = [
   0x205f, [0x2060, 0x2064], [0x2066, 0x206f], 0x3000, 0xfeff,
   0x2e, 0x2d, 0x2f, 0x5f, 0x5c, 0x28, 0x29, 0x7e, [0x2010, 0x2015], 0x2212, 0xfe63,
   0x2c, 0x7c, 0x3a, 0x2a, 0x23, 0x27, 0xb7, 0x2022, 0x66b, 0x66c,
+  0x3b, 0x3d, 0x5e, 0x21, 0x26, 0x25, 0x24, 0x22, 0x5b, 0x5d, 0x7b, 0x7d, 0x3c, 0x3e, 0x3f,
   0xff0d, 0xff0e, 0xff0f, 0xff3f, 0xff3c, 0xff08, 0xff09, 0xff0c, 0xff1a, 0xff5c,
 ];
 
@@ -118,21 +121,30 @@ function buildPhoneSource() {
   const tail = (m) => (m === 0 ? "" : m === 1 ? D : `${quant(X, m - 1)}${D}`);
 
   // Rest of a number after its first group: one group of lo..hi digits, or 2-3 groups.
-  const rest = (firstLength, lo, hi) => {
+  // `keepThousands` lists group counts for which all-3-digit groups still read as a phone.
+  const rest = (firstLength, lo, hi, keepThousands = []) => {
     const options = [`${S}${groupRange(Math.max(lo, 2), hi)}`];
     for (const parts of compositions(lo, hi)) {
-      const thousands = firstLength <= THOUSANDS_GROUP_LIMIT && parts.every((p) => p === MIN_PART);
+      const thousands = firstLength <= THOUSANDS_GROUP_LIMIT && parts.every((p) => p === MIN_PART)
+        && !keepThousands.includes(parts.length);
       if (!thousands) options.push(parts.map((p) => `${S}${group(p)}`).join(""));
     }
     return `(?:${options.join("|")})`;
   };
 
-  // Trunk zero, then 8-10 digits: one run, or a short first group (area/operator code)
-  // followed by groups of 3+ digits.
+  // Trunk zero, then 8-10 digits: one run, or a first group of up to 7 digits (010 12 345 678
+  // once short groups are merged) followed by groups. No EG/UAE operator or area code starts
+  // with 0, so the digit after the trunk zero is never a real 0 (the trailing zeros of
+  // 1 500 000 never start a number). The first group may end on a letter read as a digit
+  // (0lO 1234 5678). 0X DDD DDD DDD is an 11-digit EG mobile, not a thousands grouping,
+  // because no amount starts with 0.
   const zero = digitSet(0);
-  const trunkForms = [`${X}{7,9}${D}`];
-  for (let a = 1; a <= 3; a += 1) trunkForms.push(`${tail(a)}${rest(1 + a, 8 - a, 10 - a)}`);
-  const trunkSource = `${zero}(?:${trunkForms.join("|")})`;
+  const afterTrunk = set([...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)), ...ZERO_LETTERS, ...ONE_LETTERS]);
+  const trunkForms = [`${X}{6,8}${D}`];
+  for (let a = 1; a <= 7; a += 1) {
+    trunkForms.push(`${a === 1 ? "" : quant(X, a - 1)}${rest(1 + a, 8 - a, 10 - a, a === 1 ? [3] : [])}`);
+  }
+  const trunkSource = `${zero}${afterTrunk}(?:${trunkForms.join("|")})`;
 
   // Mobile numbers written without a trunk zero or country code: a two-digit operator
   // prefix, `total - 2` more digits, grouped after the first 2-5 digits.
@@ -160,7 +172,9 @@ function buildPhoneSource() {
   const cc20Source = `${digitSet(2)}${digitSet(0)}${digitSet(1)}${set([...zeroOrO, ...ONE_LETTERS, ...digitCodePoints(1), ...digitCodePoints(2), ...digitCodePoints(5)])}${S}?(?:${nonYear4})${S}?${group(4)}`;
 
   const plusSource = `${PLUS}${S}?(?:${X}${S}?){8,14}${D}`;
-  const doubleZeroSource = `${zero}${set(zeroOrO)}${S}?(?:${X}${S}?){8,14}${D}`;
+  // 00 + country code: country codes never start with 0, so "000 10 12" is not a number.
+  const countryStart = set([...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)), ...ONE_LETTERS]);
+  const doubleZeroSource = `${zero}${set(zeroOrO)}${S}?${countryStart}${S}?(?:${X}${S}?){7,13}${D}`;
 
   const alternatives = [
     trunkSource,
@@ -174,12 +188,32 @@ function buildPhoneSource() {
   return alternatives;
 }
 
-const RE2 = { set: makeSet("re2"), ch: makeCh("re2") };
+const RE2 = { set: makeSet("re2"), ch: makeCh("re2"), literalSet: makeSet("re2", true) };
 const N = "\\p{N}";
+
+// Ends a phone candidate: list items are never one number.
+const BREAK = "\u00a7";
+const COMMAS = [0x2c, 0x66c, 0xff0c];
+const NONZERO_DIGIT = RE2.literalSet([1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)));
+// 1,500,000 and the Indian 1,50,00,000: one token, fenced off from the numbers around it.
+const THOUSANDS_STEP = (() => {
+  const comma = RE2.set(COMMAS);
+  const notDigitOrComma = `[^${N}${COMMAS.map(RE2.ch).join("")}]`;
+  const token = `${NONZERO_DIGIT}(?:${N}{0,2}(?:${comma}${N}{3})+|${N}?(?:${comma}${N}{2})+${comma}${N}{3})`;
+  return [
+    `(^|${notDigitOrComma}|[^${N}]${comma})(${token})(${notDigitOrComma}|${comma}[^${N}]|${comma}$|$)`,
+    `$1${BREAK}$2${BREAK}$3`,
+  ];
+})();
 
 /** replace() steps, in order: [RE2 pattern, replacement]. `$n` refers to capture group n. */
 const NORMALIZE_STEPS = [
   [RE2.set(IGNORABLE_CODE_POINTS), ""],
+  [`${RE2.set(SPACE_CODE_POINTS)}*${RE2.set(COMMAS)}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
+  [`${RE2.set(SPACE_CODE_POINTS)}+${RE2.set([0x7c, 0xff5c])}${RE2.set(SPACE_CODE_POINTS)}+`, BREAK],
+  // Twice: replace() never overlaps, and neighbouring tokens share the character between them.
+  THOUSANDS_STEP,
+  THOUSANDS_STEP,
   [`${RE2.set(SPACE_CODE_POINTS)}+[xX${RE2.ch(0xd7)}]${RE2.set(SPACE_CODE_POINTS)}+`, " "],
   [`(${N})${RE2.set(SPACE_CODE_POINTS)}*${RE2.set([0x2b, 0xff0b])}`, "$1~"],
   // Any ASCII letter except O/o and l/I, which read as digits instead.
@@ -212,18 +246,52 @@ const LINK_DOMAINS = [
   "t.me", "telegram.me", "telegram.dog", "wa.me", "api.whatsapp.com", "chat.whatsapp.com",
   "whatsapp.com/send", "instagram.com", "instagr.am", "facebook.com", "fb.me", "fb.com", "m.me",
   "snapchat.com", "tiktok.com", "x.com", "twitter.com", "linkedin.com/in",
+  "threads.net", "threads.com",
 ];
-const LINK_SOURCE = `(?:https?://)?(?:www[.])?(?:${LINK_DOMAINS.map((d) => d.replace(/\./g, "[.]")).join("|")})`;
+// Sites that are only a contact on their profile paths.
+const LINK_PROFILE_SOURCES = ["(?:m[.])?youtube[.]com/(?:@|c/|channel/|user/)[A-Za-z0-9._-]+"];
+const LINK_SOURCE = `(?:https?://)?(?:www[.])?(?:${[...LINK_DOMAINS.map((d) => d.replace(/\./g, "[.]")), ...LINK_PROFILE_SOURCES].join("|")})`;
 const LINK_BEFORE_CHARS = "A-Za-z0-9.@-";
 const LINK_AFTER_CHARS = "A-Za-z0-9-";
-// @handle at the start of the text or after a space or opening bracket/quote (not an email).
+
+// Removed before links and handles are matched, so "t\u200B.me" reads as "t.me".
+const LINK_INVISIBLE = RE2.set([
+  ...IGNORABLE_CODE_POINTS, 0xad, 0x61c, 0x180e, [0x200b, 0x200f], [0x202a, 0x202e], [0x2060, 0x2064], [0x2066, 0x206f], 0xfeff,
+]);
+
+// Handles. A plain @word after a space ("Stay @home") is ordinary text; an @word is a handle
+// when it looks like one (a digit, or an inner `.` or `_`), sits right after an opening
+// bracket or quote, or follows a messaging keyword. After a keyword the @ may be left out:
+// "IG: name", or a name that looks like a handle ("Telegram tashil_deals").
+const caseless = (word) => word.replace(/[a-z]/g, (c) => `[${c}${c.toUpperCase()}]`);
+const MESSAGING_WORDS = [
+  "ig", "insta", "instagram", "telegram", "tg", "whatsapp", "wa", "snap", "snapchat", "tiktok", "twitter",
+  "fb", "facebook", "threads", "youtube", "yt", "follow", "dm",
+];
+const ARABIC_MESSAGING_WORDS = ["تابعنا", "تابعونا", "انستا", "انستجرام", "انستغرام", "تليجرام", "تيليجرام", "تلجرام", "واتساب", "سناب", "تيك توك", "تويتر", "فيسبوك"];
+const MESSAGING_KEYWORD = `(?:\\b(?:${[...MESSAGING_WORDS, "x"].map(caseless).join("|")})\\b|${ARABIC_MESSAGING_WORDS.join("|")})`;
+const MESSAGING_KEYWORD_NO_X = `(?:\\b(?:${MESSAGING_WORDS.map(caseless).join("|")})\\b|${ARABIC_MESSAGING_WORDS.join("|")})`;
+const HANDLE_SPACE = RE2.set(SPACE_CODE_POINTS);
 const HANDLE_BEFORE = RE2.set([...SPACE_CODE_POINTS, 0x28, 0x5b, 0x7b, 0x22, 0x27]);
-const HANDLE_SOURCE = "@[A-Za-z][A-Za-z0-9._]{2,}";
+const HANDLE_OPENERS = RE2.set([0x28, 0x5b, 0x7b, 0x22, 0x27]);
+const HANDLE_NAME_REAL = "[A-Za-z](?:[A-Za-z0-9]*[0-9]|[A-Za-z0-9._]*[._][A-Za-z0-9])[A-Za-z0-9._]*";
+const HANDLE_REAL = `@${HANDLE_NAME_REAL}`;
+const HANDLE_ANY = "@[A-Za-z][A-Za-z0-9._]{2,}";
+const KEYWORD_GAP = `${RE2.set([...SPACE_CODE_POINTS, 0x3a, 0xff1a, 0x2d])}*`;
+const COLON_GAP = `${HANDLE_SPACE}*${RE2.set([0x3a, 0xff1a])}${HANDLE_SPACE}*`;
+// [text before the handle (RE2, also a JS lookbehind), the handle itself].
+const HANDLE_FORMS = [
+  [`(?:^|${HANDLE_BEFORE})`, HANDLE_REAL],
+  [HANDLE_OPENERS, HANDLE_ANY],
+  [`${MESSAGING_KEYWORD}${KEYWORD_GAP}`, "@[A-Za-z][A-Za-z0-9._]*"],
+  [`${MESSAGING_KEYWORD_NO_X}${COLON_GAP}`, "[A-Za-z][A-Za-z0-9._]*"],
+  [`${MESSAGING_KEYWORD_NO_X}${HANDLE_SPACE}+`, HANDLE_NAME_REAL],
+];
 
 function rulesLinkPatterns() {
   return [
     `(?si)^(?:.*[^${LINK_BEFORE_CHARS}])?${LINK_SOURCE}(?:[^${LINK_AFTER_CHARS}].*)?$`,
-    `(?s)^(?:.*${HANDLE_BEFORE})?${HANDLE_SOURCE}.*$`,
+    ...HANDLE_FORMS.map(([before, handle]) => `(?s)^.*${before}${handle}.*$`),
   ];
 }
 
@@ -236,7 +304,8 @@ const JS_NORMALIZE_STEPS = NORMALIZE_STEPS.map(([pattern, replacement]) => [new 
 const JS_MERGE_STEPS = MERGE_STEPS.map(([pattern, replacement]) => [new RegExp(toJs(pattern), "gud"), replacement]);
 const PHONE_PATTERN = new RegExp(`(?<!\\p{N})(?:${PHONE_ALTERNATIVES.map(toJs).join("|")})(?!\\p{N})`, "gu");
 const LINK_PATTERN = new RegExp(`(?<![${LINK_BEFORE_CHARS}])${LINK_SOURCE}(?![${LINK_AFTER_CHARS}])\\S*`, "giu");
-const HANDLE_PATTERN = new RegExp(`(?<=^|${toJs(HANDLE_BEFORE)})${HANDLE_SOURCE}`, "gu");
+const HANDLE_PATTERN = new RegExp(HANDLE_FORMS.map(([before, handle]) => `(?<=${toJs(before)})${toJs(handle)}`).join("|"), "gu");
+const JS_LINK_INVISIBLE = new RegExp(toJs(LINK_INVISIBLE), "gud");
 
 /**
  * Text with the original [start, end) span behind each UTF-16 unit, so a match found after
@@ -309,10 +378,25 @@ function phoneSpans(text) {
   return spans;
 }
 
+/** [start, end) spans of `text` that hold a messaging link or handle, as the rules would see it. */
+function linkSpans(text) {
+  const view = mappedReplace(mappedText(text), JS_LINK_INVISIBLE, "");
+  const spans = [];
+  for (const pattern of [LINK_PATTERN, HANDLE_PATTERN]) {
+    for (const match of view.text.matchAll(pattern)) {
+      if (match[0].length === 0) continue;
+      spans.push([view.starts[match.index], view.ends[match.index + match[0].length - 1]]);
+    }
+  }
+  return spans;
+}
+
 module.exports = {
   PHONE_PATTERN,
   LINK_PATTERN,
   HANDLE_PATTERN,
+  LINK_INVISIBLE,
+  linkSpans,
   EXTRA_DIGIT_VALUES,
   NORMALIZE_STEPS,
   MERGE_STEPS,

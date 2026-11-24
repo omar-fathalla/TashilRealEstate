@@ -23,7 +23,7 @@ const {
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
-const { phoneSpans, LINK_PATTERN, HANDLE_PATTERN, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
+const { phoneSpans, linkSpans, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -309,8 +309,7 @@ function removeEmails(text) {
 }
 
 function removeLinks(text) {
-  const withoutLinks = removeSpans(text, matchSpans(text, LINK_PATTERN));
-  return removeSpans(withoutLinks, matchSpans(withoutLinks, HANDLE_PATTERN));
+  return removeSpans(text, linkSpans(text));
 }
 
 function stripContacts(text) {
