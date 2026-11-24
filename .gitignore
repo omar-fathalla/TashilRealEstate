@@ -1,7 +1,7 @@
 # Node
 backend/node_modules/
 backend/npm-debug.log
-backend/.env
+# backend/.env is committed on purpose: non-secret function params only (docs/SECURITY_SETUP.md)
 
 # Local secrets for the Functions emulator and per-environment overrides
 .secret.local

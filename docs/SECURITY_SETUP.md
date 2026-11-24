@@ -93,7 +93,8 @@ Use a Firebase project you own that is **not** `tashil-proptech-os`.
 ## Gemini model (`geminiGenerate`)
 
 The model is chosen on the server, never by the client. `GEMINI_MODEL` is a string param
-(default `gemini-3.5-flash`); set it in `backend/.env.<project id>` and redeploy
+(default `gemini-3.5-flash`); set it in `backend/.env` (or a per-project
+`backend/.env.<project id>`) and redeploy
 `functions:geminiGenerate`. Allowed: `gemini-3.5-flash`, `gemini-3.8-flash`,
 `gemini-flash-latest`, `gemini-flash-lite-latest`; any other value falls back to the default.
 Retired names the app still sends (all `gemini-2.x`, `gemini-1.5-flash`, `gemini-3.8-pro`, and
@@ -106,6 +107,15 @@ added to every request as `generationConfig.thinkingConfig.thinkingBudget`; `-1`
 client's own `thinkingConfig` is always dropped. `maxOutputTokens` from the client is clamped to
 1024-4096, so thinking tokens cannot use up a small limit and cut the answer off. See
 `docs/DEV_ENVIRONMENT.md`.
+
+## Committed function params (`backend/.env`)
+
+`backend/.env` is tracked on purpose so non-interactive deploys have a value for every
+`defineString`/`defineInt` param. It holds `GEMINI_MODEL` and `GEMINI_THINKING_BUDGET` only.
+It must never hold a secret: `GEMINI_API_KEY` stays in Secret Manager, and `.secret.local`,
+`.secret.*.local` and `.env*.local` stay gitignored. `npm test` in `backend/` fails if `.env` is
+missing a param, holds an undeclared name or a credential-looking value, or is ignored by git.
+`check:client-keys` scans only `frontend/lib` and `frontend/web`, so it does not read this file.
 
 ## Client AI key check
 
