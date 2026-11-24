@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const { defineSecret, defineString } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
@@ -10,26 +10,36 @@ const { appCheckEnforced } = require("./config");
 const { requireRole } = require("./authz");
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+// Server-side model setting. Change it with the GEMINI_MODEL param (backend/.env.<project>
+// or the environment) and redeploy; the client never picks the model.
+const GEMINI_MODEL = defineString("GEMINI_MODEL", { default: "gemini-3.5-flash" });
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const RATE_LIMIT_COLLECTION = "AiRateLimits";
 
-const ALLOWED_MODELS = new Set(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash";
+const ALLOWED_MODELS = new Set([
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+]);
 
-// Model ids the app's AI Engine Hub and older services still send. They all run on the
-// default model; anything not listed here or in ALLOWED_MODELS is rejected.
+// Model ids the app's AI Engine Hub and older services still send, including retired ones.
+// They all run on the configured default model; anything not listed here or in
+// ALLOWED_MODELS is rejected.
 const MODEL_ALIASES = {
-  "gemini-1.5-flash": DEFAULT_MODEL,
-  "gemini-2.0-flash": DEFAULT_MODEL,
-  "gemini-2.0-flash-vision": DEFAULT_MODEL,
-  "gemini-2.5-embed": DEFAULT_MODEL,
-  "gemini-3.6-flash": DEFAULT_MODEL,
-  "gemini-3.8-flash": DEFAULT_MODEL,
-  "gemini-3.8-pro": DEFAULT_MODEL,
-  "gemini-3.8-flagship": DEFAULT_MODEL,
-  "gemini-3.8-analyst": DEFAULT_MODEL,
-  "gemini-3.8-creative": DEFAULT_MODEL,
+  "gemini-1.5-flash": true,
+  "gemini-2.0-flash": true,
+  "gemini-2.0-flash-vision": true,
+  "gemini-2.5-flash": true,
+  "gemini-2.5-flash-lite": true,
+  "gemini-2.5-embed": true,
+  "gemini-3.6-flash": true,
+  "gemini-3.8-pro": true,
+  "gemini-3.8-flagship": true,
+  "gemini-3.8-analyst": true,
+  "gemini-3.8-creative": true,
 };
 
 // Listing a property and reading lease/ID documents belong to the owner and agency portals.
@@ -93,13 +103,30 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/** The server-configured model; an unset or non-allowlisted value falls back to the built-in default. */
+function configuredModel() {
+  let value;
+  try {
+    value = String(GEMINI_MODEL.value() || "").trim();
+  } catch (error) {
+    value = "";
+  }
+  if (ALLOWED_MODELS.has(value)) return value;
+  if (value) logger.warn("GEMINI_MODEL is not an allowed model; using the default", { configured: value, fallback: DEFAULT_MODEL });
+  return DEFAULT_MODEL;
+}
+
 function resolveModel(requested) {
-  if (requested === undefined || requested === null || requested === "") return DEFAULT_MODEL;
+  if (requested === undefined || requested === null || requested === "") return configuredModel();
   if (typeof requested !== "string") throw invalid("model must be a string.");
   const name = requested.trim();
   if (ALLOWED_MODELS.has(name)) return name;
-  if (Object.prototype.hasOwnProperty.call(MODEL_ALIASES, name)) return MODEL_ALIASES[name];
+  if (Object.prototype.hasOwnProperty.call(MODEL_ALIASES, name)) return configuredModel();
   throw invalid("This model is not allowed.");
+}
+
+function isModelNotFound(result) {
+  return result.status === 404;
 }
 
 function sanitizePart(part, feature, totals) {
@@ -383,6 +410,10 @@ async function handleGeminiGenerate(request) {
     ms: deps.now() - started,
   };
   if (!result.ok || !isPlainObject(result.payload)) {
+    if (!result.ok && isModelNotFound(result)) {
+      logger.error("geminiGenerate model not found or retired; set GEMINI_MODEL to an available model", logEntry);
+      throw new HttpsError("unavailable", "The AI service is unavailable.");
+    }
     logger.warn("geminiGenerate upstream error", logEntry);
     throw upstreamError(result.ok ? 502 : result.status);
   }
@@ -412,6 +443,8 @@ module.exports = {
     CAPS,
     ALLOWED_MODELS,
     MODEL_ALIASES,
+    DEFAULT_MODEL,
+    configuredModel,
     RATE_LIMIT_COLLECTION,
     resolveModel,
     sanitizeRequest,

@@ -300,3 +300,30 @@ test("TAQ-7: docs/DEV_ENVIRONMENT.md documents the dev build and deploy and hold
   assert.doesNotMatch(doc, /AIza[0-9A-Za-z_-]{20,}/);
   assert.doesNotMatch(doc, /(password|passwd)\s*[:=]\s*\S{6,}/i);
 });
+
+// --- TAQ-88: Cloud Functions run on a supported Node runtime ---
+
+const MIN_NODE_MAJOR = 22;
+
+function minMajor(range) {
+  const match = String(range).match(/\d+/);
+  assert.ok(match, `engines.node "${range}" has no version number`);
+  return Number(match[0]);
+}
+
+test("TAQ-88: backend engines.node is at least 22 (Node 20 is decommissioned on Firebase)", () => {
+  const { engines } = JSON.parse(read("backend/package.json"));
+  assert.ok(engines && engines.node, "backend/package.json must set engines.node");
+  assert.ok(minMajor(engines.node) >= MIN_NODE_MAJOR, `engines.node is ${engines.node}; need >= ${MIN_NODE_MAJOR}`);
+});
+
+test("TAQ-88: the lockfile and firebase.json runtime agree with engines.node", () => {
+  const lock = JSON.parse(read("backend/package-lock.json"));
+  assert.ok(minMajor(lock.packages[""].engines.node) >= MIN_NODE_MAJOR);
+  const functions = JSON.parse(read("firebase.json")).functions;
+  for (const entry of Array.isArray(functions) ? functions : [functions]) {
+    if (entry.runtime === undefined) continue;
+    const major = Number(String(entry.runtime).replace(/^nodejs/, ""));
+    assert.ok(major >= MIN_NODE_MAJOR, `firebase.json runtime ${entry.runtime} is too old`);
+  }
+});
