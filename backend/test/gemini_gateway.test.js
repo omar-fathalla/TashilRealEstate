@@ -31,7 +31,7 @@ function geminiReply(status, payload) {
 const OK_PAYLOAD = {
   candidates: [{ content: { parts: [{ text: "{\"ok\":true}" }] } }],
   usageMetadata: { totalTokenCount: 12 },
-  modelVersion: "gemini-2.5-flash",
+  modelVersion: "gemini-3.5-flash",
 };
 
 function textRequest(text = "Estimate the rent for a 2 bedroom flat.") {
@@ -149,7 +149,7 @@ test("TAQ-19: the key is sent in a header, never in the URL or the response", as
   const result = await call({ uid: "owner-1" });
   assert.equal(calls.length, 1);
   assert.doesNotMatch(calls[0].url, /key=/);
-  assert.equal(calls[0].url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+  assert.equal(calls[0].url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent");
   assert.equal(calls[0].init.headers["x-goog-api-key"], TEST_KEY);
   assert.doesNotMatch(JSON.stringify(result), new RegExp(TEST_KEY));
 });
@@ -162,19 +162,81 @@ test("TAQ-19: a missing secret fails closed without calling Gemini", async () =>
 
 // --- Model allowlist ---
 
-test("TAQ-19: only allowlisted models run; legacy app ids map to the default model", async () => {
+const modelsCalled = () => calls.map((c) => c.url.match(/models\/([^:]+):/)[1]);
+
+test("TAQ-19/TAQ-89: allowlisted models run as asked; retired and legacy app ids map to the default", async () => {
+  for (const model of ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]) {
+    await call({ uid: "u1", model });
+  }
+  await call({ uid: "u1", model: "gemini-2.5-flash" });
   await call({ uid: "u1", model: "gemini-2.5-flash-lite" });
   await call({ uid: "u1", model: "gemini-3.8-pro" });
   await call({ uid: "u1", model: "gemini-1.5-flash" });
   await call({ uid: "u1" });
-  assert.deepEqual(
-    calls.map((c) => c.url.match(/models\/([^:]+):/)[1]),
-    ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.5-flash"],
-  );
+  assert.deepEqual(modelsCalled(), [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+  ]);
   for (const model of ["gemini-2.5-pro", "gemini-ultra", "../../v1/files", 42]) {
     await expectCode(call({ uid: "u1", model }), "invalid-argument");
   }
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 9);
+});
+
+test("TAQ-89: GEMINI_MODEL sets the server-side default; an unknown value falls back safely", async () => {
+  const original = process.env.GEMINI_MODEL;
+  const warnings = [];
+  const warn = logger.warn;
+  logger.warn = (...args) => warnings.push(JSON.stringify(args));
+  try {
+    process.env.GEMINI_MODEL = "gemini-3.8-flash";
+    await call({ uid: "u1", model: "gemini-2.5-flash" });
+    await call({ uid: "u1" });
+    process.env.GEMINI_MODEL = "gemini-retired-1";
+    await call({ uid: "u1", model: "gemini-2.0-flash" });
+  } finally {
+    logger.warn = warn;
+    if (original === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = original;
+  }
+  assert.deepEqual(modelsCalled(), ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.5-flash"]);
+  assert.match(warnings.join("\n"), /gemini-retired-1/);
+});
+
+test("TAQ-89: the model setting is a deployable string param defaulting to gemini-3.5-flash", () => {
+  assert.equal(gw.DEFAULT_MODEL, "gemini-3.5-flash");
+  assert.equal(gw.configuredModel(), "gemini-3.5-flash");
+  for (const alias of ["gemini-2.5-flash", "gemini-2.5-flash-lite"]) {
+    assert.ok(Object.prototype.hasOwnProperty.call(gw.MODEL_ALIASES, alias), alias);
+    assert.ok(!gw.ALLOWED_MODELS.has(alias), alias);
+  }
+});
+
+test("TAQ-89: an upstream 404 (model retired) is logged by model name only and returned as UNAVAILABLE", async () => {
+  reply = geminiReply(404, {
+    error: { code: 404, status: "NOT_FOUND", message: "models/gemini-3.5-flash is no longer available to new users." },
+  });
+  const lines = [];
+  const original = { info: logger.info, warn: logger.warn, error: logger.error };
+  for (const level of Object.keys(original)) logger[level] = (...args) => lines.push({ level, text: JSON.stringify(args) });
+  try {
+    await expectCode(call({ uid: "u1" }), "unavailable");
+  } finally {
+    Object.assign(logger, original);
+  }
+  const entry = lines.find((line) => line.level === "error");
+  assert.ok(entry, "a 404 must be logged at error level");
+  assert.match(entry.text, /GEMINI_MODEL/);
+  assert.match(entry.text, /"model":"gemini-3.5-flash"/);
+  assert.match(entry.text, /"status":404/);
+  assert.doesNotMatch(lines.map((line) => line.text).join("\n"), new RegExp(TEST_KEY));
 });
 
 // --- Size caps and body shape ---

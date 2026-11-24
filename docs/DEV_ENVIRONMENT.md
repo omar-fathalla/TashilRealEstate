@@ -69,6 +69,28 @@ defines.
   redeploy `functions:geminiGenerate`.
 - Test-account passwords are kept in dev Secret Manager too (see below).
 
+### Gemini model (TAQ-89)
+
+The model is a server-side setting, the string param `GEMINI_MODEL` (default
+`gemini-3.5-flash`). The app never chooses it: every old model name the app sends
+(`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-*`, `gemini-3.8-pro`, and so on) runs
+on the configured model. To change it, put the value in the git-ignored
+`backend/.env.<project id>` (for example `backend/.env.tashil-aqar-dev`, or `.env.local` for the
+emulator):
+
+```
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+then redeploy `functions:geminiGenerate`. Allowed values: `gemini-3.5-flash`,
+`gemini-3.8-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`. Anything else is ignored
+with a warning and the default is used. To allow a new model, add it to `ALLOWED_MODELS` in
+`backend/gemini_gateway.js`.
+
+If Gemini answers 404 ("no longer available"), `functions:log --only geminiGenerate` shows an
+error entry naming the model (never the key) and callers get the normal "AI service is
+unavailable" error. Set `GEMINI_MODEL` to an available model and redeploy.
+
 ## Verify the visitor IP rule on dev (TAQ-77)
 
 This is the check described in `docs/SECURITY_SETUP.md` ("Visitor rate limits"), run against
