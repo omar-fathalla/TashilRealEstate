@@ -262,3 +262,187 @@ test("TAQ-60: a number split by newlines or circled digits is rejected by the ru
     await rejected(ref, listingWith({ buildingName: text }), JSON.stringify(text));
   }
 });
+
+const arabicIndic = (text) => text.replace(/[0-9]/g, (d) => String.fromCharCode(0x660 + Number(d)));
+
+// Each entry is checked as written, inside Arabic text, and with Arabic-Indic digits.
+function variants(texts) {
+  return texts.flatMap((text) => [text, `اتصل ${text} الآن`, arabicIndic(text)]);
+}
+
+async function expectCaught(texts) {
+  const ref = doc(root(), "Properties/prop-1");
+  for (const text of texts) {
+    const out = sanitized(text);
+    assert.notEqual(out, text.trim(), `not stripped: ${JSON.stringify(text)}`);
+    await rejected(ref, listingWith({ buildingName: text }), JSON.stringify(text));
+    await assertSucceeds(setDoc(ref, listingWith({ buildingName: out })), `sanitized ${JSON.stringify(text)} -> ${JSON.stringify(out)}`);
+  }
+}
+
+async function expectFree(texts) {
+  const ref = doc(root(), "Properties/prop-1");
+  for (const text of texts) {
+    assert.equal(sanitized(text), text.trim(), `changed: ${JSON.stringify(text)}`);
+    await assertSucceeds(setDoc(ref, listingWith({ buildingName: text })), JSON.stringify(text));
+  }
+}
+
+test("TAQ-63: phone numbers split into 1-2 digit groups are caught", async () => {
+  await expectCaught(variants([
+    "0 1 0 1 2 3 4 5 6 7 8",
+    "010 12 34 56 78",
+    "01 01 23 45 67 8",
+    "10 12 34 56 78",
+    "050 123 456 7",
+    "5 0 1 2 3 4 5 6 7",
+    "0 0 2 0 1 0 1 2 3 4 5 6 7 8",
+  ]));
+  assert.equal(sanitized("Call 010 12 34 56 78 now"), "Call  now");
+  assert.equal(sanitized("Call 0 1 0 1 2 3 4 5 6 7 8 now"), "Call  now");
+});
+
+test("TAQ-63: prices, dates, years and UAE 3-3-3 groups stay free", async () => {
+  await expectFree([
+    ...variants([
+      "501 234 567",
+      "1.500.000.000",
+      "100 000 000",
+      "15,000,000",
+      "15000000",
+      "2026-01-15",
+      "1/1/2026",
+      "15 01 2026",
+      "01/01/2026 10:30",
+      "2015 2016 2017",
+      "3 2 150",
+    ]),
+    "شقة بسعر ١٥٠٠٠٠٠٠ جنيه",
+    "الإيجار ١٬٥٠٠٬٠٠٠ جنيه",
+    "السعر ١٫٥ مليون",
+  ]);
+});
+
+test("TAQ-64: long reference numbers are treated as contacts (no keyword exemption)", async () => {
+  await expectCaught([
+    "RERA 1234567890",
+    "Serial 1234567890",
+    "Permit 0501234567",
+    "Permit No. 501234567",
+    "رقم القطعة ١٠١٢٣٤٥٦٧٨",
+    "رقم ٥٠١٢٣٤٥٦٧",
+  ]);
+});
+
+test("TAQ-64: short reference numbers, prices and areas stay free", async () => {
+  await expectFree([
+    "رقم القطعة 1234",
+    "Permit 7134-2025",
+    "صك 4567891",
+    "Price 15,000,000 EGP, area 250 m2",
+    "السعر ١٥٬٠٠٠٬٠٠٠ جنيه، المساحة ٢٥٠ متر",
+  ]);
+});
+
+test("TAQ-65: punctuation separators, keycap emoji and l/I for one are caught", async () => {
+  await expectCaught([
+    "010,1234,5678",
+    "050|123|4567",
+    "010:1234:5678",
+    "+20*10*1234*5678",
+    "050·123·4567",
+    "050•123•4567",
+    "010#1234#5678",
+    "010'1234'5678",
+    "٠١٠٬١٢٣٤٬٥٦٧٨",
+    "010 x 1234 x 5678",
+    "010 + 1234 + 5678",
+    "0\uFE0F\u20E35\uFE0F\u20E30\uFE0F\u20E31\uFE0F\u20E32\uFE0F\u20E33\uFE0F\u20E34\uFE0F\u20E35\uFE0F\u20E36\uFE0F\u20E37\uFE0F\u20E3",
+    "0l0l2345678",
+    "0I012345678",
+    "0ｌ0ｌ2345678",
+    "010a1234b5678",
+  ]);
+  assert.equal(sanitized("Call 0l0l2345678 now"), "Call  now");
+});
+
+test("TAQ-65: ordinary punctuation, multiplication and sums stay free", async () => {
+  await expectFree([
+    "1,500,000",
+    "15,000,000 AED",
+    "10 x 12",
+    "3x4",
+    "10:30",
+    "#12",
+    "Apt #1203",
+    "2 + 1 rooms",
+    "5 * 4",
+    "Hello world",
+    "Ilala Towers, level 10",
+  ]);
+});
+
+test("TAQ-65: messaging and social links and @handles are caught", async () => {
+  await expectCaught([
+    "Join t.me/tashil_deals",
+    "https://t.me/tashil",
+    "telegram.me/tashil",
+    "telegram.dog/tashil",
+    "Chat on wa.me/201012345678x",
+    "WA.ME/abc",
+    "https://api.whatsapp.com/send?phone=x",
+    "chat.whatsapp.com/AbCdEf",
+    "whatsapp.com/send?phone=x",
+    "www.instagram.com/tashil",
+    "instagr.am/p/x",
+    "facebook.com/tashil",
+    "fb.me/tashil",
+    "fb.com/tashil",
+    "m.me/tashil",
+    "snapchat.com/add/tashil",
+    "tiktok.com/@tashil",
+    "x.com/tashil",
+    "Twitter.com/tashil",
+    "linkedin.com/in/tashil",
+    "Follow @tashil.homes",
+    "@tashil_homes",
+    "(@tashil)",
+    "تابعنا @tashil_eg",
+  ]);
+  assert.equal(sanitized("Join t.me/tashil_deals now"), "Join  now");
+  assert.equal(sanitized("Follow @tashil_homes today"), "Follow  today");
+});
+
+test("TAQ-65: domains, prices with @ and the word email stay free", async () => {
+  await expectFree([
+    "example.com",
+    "@ 5000 AED",
+    "price@5000",
+    "email me",
+    "Visit tashilaqar.com",
+    "Inbox.com and box.com",
+    "Meet @ the entrance",
+  ]);
+});
+
+test("TAQ-63: a max-size listing (4000-character descriptions) is evaluated within the rules' limits", async () => {
+  const ref = doc(root(), "Properties/prop-1");
+  const sentence = "Spacious flat of 120 m2 on floor 12, price 1.500.000 EGP, built 2015, ready 2026-01-15. ";
+  const description = sentence.repeat(Math.ceil(4000 / sentence.length)).slice(0, 4000);
+  assert.equal(description.length, 4000);
+  const sanitizedDescription = sanitizeForMarketplace({ pricePerMonth: 9000, descriptions: { en: description } }, "owner", "prop-1").descriptions.en;
+  assert.equal(sanitizedDescription, description.trim());
+  const full = {
+    titles: { ar: "ش".repeat(200), en: "T".repeat(200), hi: "ह".repeat(200) },
+    descriptions: { ar: description, en: description, hi: description },
+    locations: { ar: "م".repeat(300), en: "L".repeat(300), hi: "स".repeat(300) },
+    amenitiesMap: {
+      ar: Array.from({ length: 30 }, (_, i) => `ميزة ${i}`),
+      en: Array.from({ length: 30 }, (_, i) => `Feature ${i}`),
+      hi: Array.from({ length: 30 }, (_, i) => `सुविधा ${i}`),
+    },
+    buildingName: "B".repeat(200),
+  };
+  await assertSucceeds(setDoc(ref, listingWith(full)));
+  await rejected(ref, listingWith({ ...full, descriptions: { ...full.descriptions, en: `${description.slice(0, 3980)} 010 12 34 56 78` } }), "phone at the end of a 4000-character description");
+});
