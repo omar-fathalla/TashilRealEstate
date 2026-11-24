@@ -391,6 +391,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 4d. AiRateLimits
+    // Counters the geminiGenerate function keeps per signed-in user and per hashed visitor IP.
+    // Only the Admin SDK writes them; no client may read or change its own quota.
+    match /AiRateLimits/{bucketId} {
+      allow read, write: if false;
+    }
+
     // 5. Maintenance Requests
     match /Maintenance/{requestId} {
       allow read, write: if isAuthenticated();

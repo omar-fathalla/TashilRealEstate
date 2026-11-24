@@ -827,3 +827,4 @@ exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
   return { success: true, country };
 });
 
+exports.geminiGenerate = require("./gemini_gateway").geminiGenerate;
