@@ -679,7 +679,7 @@ function generateMarketIndexData(countryCode) {
         "Google Search Grounding Real-Time Market Feed",
         "بيانات الصفقات الموثقة عبر منصة تسهيل",
       ],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
   } else {
     return {
@@ -754,7 +754,7 @@ function generateMarketIndexData(countryCode) {
         "Google Search Grounding Real-Time Market Intelligence",
         "بيانات منصة إيجاري (Ejari) المعتمدة",
       ],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
   }
 }
