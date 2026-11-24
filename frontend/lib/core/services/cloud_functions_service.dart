@@ -39,21 +39,16 @@ class CloudFunctionsService {
   }
 
   /// Sends a localized rental payment reminder push notification via backend Cloud Function.
+  /// The server reads the tenant, amount, and currency from the lease document.
   Future<Map<String, dynamic>> sendRentalReminder({
-    required String tenantId,
-    required String propertyTitle,
-    required double amount,
+    required String leaseId,
     required String dueDate,
-    required String countryCode,
   }) async {
     try {
       final callable = functions.httpsCallable('sendRentalReminder');
       final response = await callable.call<Map<String, dynamic>>({
-        'tenantId': tenantId,
-        'propertyTitle': propertyTitle,
-        'amount': amount,
+        'leaseId': leaseId,
         'dueDate': dueDate,
-        'countryCode': countryCode,
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {

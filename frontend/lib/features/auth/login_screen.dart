@@ -2,9 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/auth/role_session.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
+import 'package:tashil_real_estate/core/config/demo_data.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
@@ -16,6 +20,24 @@ import 'package:tashil_real_estate/core/services/storage/property_draft_cache_se
 import 'package:tashil_real_estate/core/services/user_profile_service.dart';
 import 'package:tashil_real_estate/core/utils/user_avatar_utils.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+
+/// Where to go after sign-in: the requested route when [role] may open it, a pending
+/// listing draft for roles that can list, otherwise the role's home.
+String postLoginDestination({required String role, String? redirect, bool hasDraft = false}) {
+  final target = redirect == null ? null : Uri.tryParse(redirect);
+  if (target != null &&
+      !target.hasScheme &&
+      !target.hasAuthority &&
+      target.path.startsWith('/') &&
+      target.path != RouteAccess.login &&
+      target.path != RouteAccess.authCheck &&
+      RouteAccess.table.containsKey(target.path) &&
+      RouteAccess.canAccess(target.path, role)) {
+    return target.toString();
+  }
+  if (hasDraft && RouteAccess.canAccess('/fast-onboarding', role)) return '/fast-onboarding';
+  return RouteAccess.homeFor(role);
+}
 
 enum AuthMethod {
   google,
@@ -39,8 +61,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  /// Roles a user may pick for themselves. AgencyAdmin and SuperAdmin are assigned
+  /// server-side (setUserRole custom claims) and are rejected by Firestore rules.
+  static const selfServiceRoles = TrustedRole.selfServiceRoles;
+
   AuthMethod _selectedAuthMethod = AuthMethod.email;
-  String _selectedRole = 'Owner'; // 'Owner', 'AgencyAdmin', 'Tenant', 'SuperAdmin'
+  String _selectedRole = 'Owner';
   bool _isSignUpMode = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -123,14 +149,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _handlePostAuthNavigation(User user, String role) async {
     final uid = user.uid;
     final photoUrl = UserAvatarUtils.getPhotoUrl(user);
-    String? existingRole = await _firestoreService.getUserRole(uid);
+    final claimRole = await TrustedRole.claimRole(user);
+    String? profileRole = claimRole == null ? await _firestoreService.getUserRole(uid) : null;
 
-    if (existingRole == null || existingRole.isEmpty) {
-      existingRole = role;
+    if (claimRole == null && (profileRole == null || profileRole.isEmpty)) {
+      profileRole = selfServiceRoles.contains(role) ? role : 'Owner';
       await _firestoreService.setUserRole(
         uid: uid,
         email: user.email ?? 'user@tashil.com',
-        role: existingRole,
+        role: profileRole,
         fullName: user.displayName,
         photoUrl: photoUrl,
       );
@@ -138,35 +165,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       await _firestoreService.updateUserPhoto(uid: uid, photoUrl: photoUrl);
     }
 
+    // An elevated role written into the profile is not trusted without a matching claim.
+    final trustedRole = TrustedRole.fromSources(claimRole: claimRole, profileRole: profileRole);
+    // The router guards read the session, which may have resolved before the profile existed.
+    await RoleSession.instance.refresh();
+
     await UserProfileService().loadProfile();
 
     if (!mounted) return;
 
-    // Check if user has a pending property onboarding draft or requested redirect
+    String? redirect;
     try {
-      final uri = GoRouterState.of(context).uri;
-      final redirect = uri.queryParameters['redirect'];
-      if (redirect == '/fast-onboarding' || PropertyDraftCacheService().hasDraft()) {
-        context.go('/fast-onboarding');
-        return;
-      }
+      redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
     } catch (_) {}
-
-    switch (existingRole) {
-      case 'SuperAdmin':
-        context.go('/super-admin');
-        break;
-      case 'AgencyAdmin':
-        context.go('/agency');
-        break;
-      case 'Tenant':
-        context.go('/tenant');
-        break;
-      case 'Owner':
-      default:
-        context.go('/owner');
-        break;
-    }
+    context.go(postLoginDestination(
+      role: trustedRole,
+      redirect: redirect,
+      hasDraft: PropertyDraftCacheService().hasDraft(),
+    ));
   }
 
   Future<void> _handleEmailAuth(AppLocalizations loc) async {
@@ -332,16 +348,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _loginAsDemo(String email, String pass, String role, AppLocalizations loc) async {
+  Future<void> _loginAsDemo(String email, String role, AppLocalizations loc) async {
+    const pass = DemoData.password;
     setState(() {
       _emailController.text = email;
       _passwordController.text = pass;
-      _selectedRole = role;
+      if (selfServiceRoles.contains(role)) _selectedRole = role;
       _selectedAuthMethod = AuthMethod.email;
       _isSignUpMode = false;
     });
 
-    await _handleEmailAuth(loc);
+    if (pass.isNotEmpty) await _handleEmailAuth(loc);
   }
 
   @override
@@ -514,15 +531,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               ),
 
-                              const SizedBox(height: 18),
-                              TashilDivider.withLabel(
-                                label: loc.tr('demoAccounts'),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                              const SizedBox(height: 10),
+                              if (DemoData.enabled) ...[
+                                const SizedBox(height: 18),
+                                TashilDivider.withLabel(
+                                  label: loc.tr('demoAccounts'),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                const SizedBox(height: 10),
 
-                              // 5. Quick Demo Accounts Suite (Google Icons Only)
-                              _buildDemoAccountsSuite(loc, colorScheme),
+                                // 5. Quick Demo Accounts Suite (Google Icons Only)
+                                _buildDemoAccountsSuite(loc, colorScheme),
+                              ],
 
                               const SizedBox(height: 16),
 
@@ -570,19 +589,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               icon: Icons.person_rounded,
             ),
             TashilConnectedButtonSegment(
-              value: 'AgencyAdmin',
-              label: loc.tr('roleAgency'),
-              icon: Icons.business_rounded,
-            ),
-            TashilConnectedButtonSegment(
               value: 'Tenant',
               label: loc.tr('roleTenant'),
               icon: Icons.home_rounded,
-            ),
-            TashilConnectedButtonSegment(
-              value: 'SuperAdmin',
-              label: loc.tr('roleSuperAdmin'),
-              icon: Icons.shield_rounded,
             ),
           ],
         );
@@ -954,7 +963,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Widget _buildDemoBtn(String email, String role, String label, IconData icon, AppLocalizations loc) {
     return TashilButton.outlined(
-      onPressed: _isLoading ? null : () => _loginAsDemo(email, 'password123', role, loc),
+      onPressed: _isLoading ? null : () => _loginAsDemo(email, role, loc),
       icon: icon,
       label: label,
       height: 38,

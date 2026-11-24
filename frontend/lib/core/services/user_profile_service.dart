@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
@@ -37,7 +38,7 @@ class UserProfileData {
     this.phone = '',
     this.role = 'Owner',
     this.preferredContactMethod = 'phone',
-    this.isVerified = true,
+    this.isVerified = false,
     this.isPhoneVerified = false,
     this.memberSince,
     this.nationalId = '',
@@ -117,7 +118,7 @@ class UserProfileData {
       phone: (map['phone'] ?? '').toString(),
       role: (map['role'] ?? 'Owner').toString(),
       preferredContactMethod: (map['preferredContactMethod'] ?? 'phone').toString(),
-      isVerified: map['isVerified'] != false,
+      isVerified: map['isVerified'] == true,
       isPhoneVerified: map['isPhoneVerified'] == true,
       memberSince: parseDate(map['memberSince']),
       nationalId: (map['nationalId'] ?? '').toString(),
@@ -296,7 +297,8 @@ class UserProfileService {
     String phone = user.phoneNumber ?? '';
     String role = 'Owner';
     String preferredMethod = 'phone';
-    bool verified = true;
+    // Only the server-managed `verified` flag (locked in firestore.rules) earns the badge.
+    bool verified = false;
     DateTime? memberSince = user.metadata.creationTime;
 
     // Populate initial state before remote fetch
@@ -360,19 +362,20 @@ class UserProfileService {
         if (data['phone'] != null && data['phone'].toString().trim().isNotEmpty) {
           phone = data['phone'].toString().trim();
         }
-        if (data['role'] != null && data['role'].toString().trim().isNotEmpty) {
-          role = data['role'].toString().trim();
-        }
+        final trustedRole = TrustedRole.fromSources(
+          claimRole: await TrustedRole.claimRole(user),
+          profileRole: data['role'],
+        );
+        if (trustedRole.isNotEmpty) role = trustedRole;
         if (data['preferred_contact_method'] != null) {
           preferredMethod = data['preferred_contact_method'].toString().trim();
         }
-        if (data['verified'] != null) {
-          verified = data['verified'] == true;
-        }
-        bool phoneVerified = false;
-        if (data['phone_verified'] != null) {
-          phoneVerified = data['phone_verified'] == true;
-        }
+        verified = data['verified'] == true;
+        final phoneVerified = isPhoneVerifiedFor(
+          serverFlag: data['phone_verified'] == true,
+          authPhone: user.phoneNumber,
+          profilePhone: phone,
+        );
 
         final nationalId = data['national_id']?.toString().trim() ?? '';
         final address = data['address']?.toString().trim() ?? '';
@@ -406,6 +409,19 @@ class UserProfileService {
     } catch (e) {
       debugPrint('UserProfileService.loadProfile fetch error: $e');
     }
+  }
+
+  /// A phone counts as verified when the server says so, or when it is the number linked
+  /// to the Firebase Auth account (set only by a successful SMS verification).
+  static bool isPhoneVerifiedFor({
+    required bool serverFlag,
+    required String? authPhone,
+    required String profilePhone,
+  }) {
+    if (serverFlag) return true;
+    String digits(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
+    final linked = digits(authPhone ?? '');
+    return linked.isNotEmpty && linked == digits(profilePhone);
   }
 
   /// Explicitly re-syncs profile photo and data from Google / Firebase Auth
@@ -488,8 +504,9 @@ class UserProfileService {
           'first_name': resolvedFirstName,
           'surname': resolvedSurname,
         };
+        // phone_verified is server-managed (locked in firestore.rules); verification state is
+        // derived from the phone number linked to the Firebase Auth account instead.
         if (phone != null) updateMap['phone'] = phone.trim();
-        if (isPhoneVerified != null) updateMap['phone_verified'] = isPhoneVerified;
         if (preferredContactMethod != null) {
           updateMap['preferred_contact_method'] = preferredContactMethod;
         }

@@ -246,6 +246,7 @@ Return ONLY valid JSON array with objects in this structure:
         final results = <SemanticSearchResultItem>[];
         for (final item in list) {
           final pId = item['propertyId'] as String;
+          if (allProperties.isEmpty) continue;
           final prop = allProperties.firstWhere(
             (p) => p.id == pId,
             orElse: () => allProperties.first,

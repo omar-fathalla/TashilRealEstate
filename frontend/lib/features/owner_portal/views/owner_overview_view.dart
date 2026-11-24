@@ -791,6 +791,7 @@ class _OwnerOverviewViewState extends State<OwnerOverviewView> {
                       iconSize: 16,
                       onPressed: () {
                         final properties = PropertyLifecycleService().propertiesNotifier.value;
+                        if (properties.isEmpty) return;
                         final prop = properties.firstWhere(
                           (p) => p.countryCode == (isUAE ? 'AE' : 'EG') && (isOccupied ? p.isOccupied : true),
                           orElse: () => properties.first,

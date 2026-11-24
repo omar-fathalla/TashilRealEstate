@@ -12,6 +12,12 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'ar': {
+      // Route access
+      'checkingAccess': 'جارٍ التحقق من صلاحيات الوصول…',
+      'accessDeniedTitle': 'لا تملك صلاحية الوصول إلى هذه الصفحة',
+      'accessDeniedMessage': 'هذه الصفحة مخصصة لدور آخر في المنصة. يمكنك العودة إلى صفحتك الرئيسية.',
+      'goToMyHome': 'الذهاب إلى صفحتي الرئيسية',
+      'roleSignedInUser': 'مستخدم مسجّل',
       // Branding
       'appName': 'Tashil Real Estate',
       'appSlogan': 'تسهيل لإدارة وعرض العقارات',
@@ -647,6 +653,14 @@ class AppLocalizations {
       'remindersSentCount': 'تنبيهات مرسلة',
       'noInvoicesFound': 'لا توجد فواتير مطابقة',
       'noInvoicesSubtitle': 'جميع الالتزامات الإيجارية مسددة بالكامل في الوقت الحالي',
+      'checkoutEmptyTitle': 'لا توجد فاتورة للدفع',
+      'checkoutEmptyMessage': 'لم تصدر أي فاتورة إيجار لحسابك حتى الآن. ستظهر هنا فور إصدارها.',
+      'checkoutInvoiceNotFoundTitle': 'الفاتورة غير موجودة',
+      'checkoutInvoiceNotFoundMessage': 'تعذر العثور على الفاتورة المطلوبة. ربما حُذفت أو أن الرابط غير صحيح.',
+      'scheduleEmptyTitle': 'لا توجد عقارات بعد',
+      'scheduleEmptyMessage': 'أضف عقارك الأول لتظهر هنا جداول الدفعات الشهرية.',
+      'schedulePropertyNotFoundTitle': 'العقار غير موجود',
+      'schedulePropertyNotFoundMessage': 'تعذر العثور على العقار المطلوب. ربما حُذف أو أن الرابط غير صحيح.',
       'automatedRentCheckoutTitle': 'سداد الإيجار والتحويل الفوري',
       'invoiceNo': 'رقم الفاتورة',
       'totalDueToPay': 'إجمالي المبلغ المطلوب سداده',
@@ -1939,6 +1953,12 @@ class AppLocalizations {
       'firebaseSecurityTier': 'مستوى الحماية',
     },
     'en': {
+      // Route access
+      'checkingAccess': 'Checking your access…',
+      'accessDeniedTitle': "You don't have access to this page",
+      'accessDeniedMessage': 'This page belongs to a different role on the platform. You can go back to your home page.',
+      'goToMyHome': 'Go to my home page',
+      'roleSignedInUser': 'Signed-in user',
       // Branding
       'appName': 'Tashil Real Estate',
       'appSlogan': 'Smart PropTech Rental Management',
@@ -2574,6 +2594,14 @@ class AppLocalizations {
       'remindersSentCount': 'Reminders Sent',
       'noInvoicesFound': 'No Invoices Found',
       'noInvoicesSubtitle': 'All rental dues and invoices are currently up to date',
+      'checkoutEmptyTitle': 'No invoice to pay yet',
+      'checkoutEmptyMessage': 'No rent invoice has been issued for your account yet. It will appear here as soon as one is issued.',
+      'checkoutInvoiceNotFoundTitle': 'Invoice not found',
+      'checkoutInvoiceNotFoundMessage': 'We could not find the requested invoice. It may have been removed, or the link is incorrect.',
+      'scheduleEmptyTitle': 'No properties yet',
+      'scheduleEmptyMessage': 'Add your first property to see its monthly payment schedule here.',
+      'schedulePropertyNotFoundTitle': 'Property not found',
+      'schedulePropertyNotFoundMessage': 'We could not find the requested property. It may have been removed, or the link is incorrect.',
       'automatedRentCheckoutTitle': 'Automated Rent Checkout',
       'invoiceNo': 'Invoice No',
       'totalDueToPay': 'Total Amount Due',
@@ -3866,6 +3894,12 @@ class AppLocalizations {
       'firebaseSecurityTier': 'Security Tier',
     },
     'hi': {
+      // Route access
+      'checkingAccess': 'आपकी पहुँच की जाँच हो रही है…',
+      'accessDeniedTitle': 'आपके पास इस पेज की पहुँच नहीं है',
+      'accessDeniedMessage': 'यह पेज प्लेटफ़ॉर्म पर किसी अन्य भूमिका के लिए है। आप अपने होम पेज पर लौट सकते हैं।',
+      'goToMyHome': 'मेरे होम पेज पर जाएँ',
+      'roleSignedInUser': 'साइन-इन उपयोगकर्ता',
       // Branding
       'appName': 'ताशिल रियल एस्टेट',
       'appSlogan': 'स्मार्ट रेंटल और प्रॉपर्टी मैनेजमेंट',
@@ -4524,6 +4558,14 @@ class AppLocalizations {
       'remindersSentCount': 'भेजे गए रिमाइंडर',
       'noInvoicesFound': 'कोई चालान नहीं मिला',
       'noInvoicesSubtitle': 'वर्तमान में सभी किराया भुगतान अद्यतित हैं',
+      'checkoutEmptyTitle': 'अभी भुगतान के लिए कोई चालान नहीं',
+      'checkoutEmptyMessage': 'आपके खाते के लिए अभी तक कोई किराया चालान जारी नहीं हुआ है। जारी होते ही वह यहाँ दिखाई देगा।',
+      'checkoutInvoiceNotFoundTitle': 'चालान नहीं मिला',
+      'checkoutInvoiceNotFoundMessage': 'अनुरोधित चालान नहीं मिला। हो सकता है उसे हटा दिया गया हो, या लिंक गलत हो।',
+      'scheduleEmptyTitle': 'अभी कोई संपत्ति नहीं',
+      'scheduleEmptyMessage': 'अपनी पहली संपत्ति जोड़ें, ताकि उसका मासिक भुगतान कार्यक्रम यहाँ दिखाई दे।',
+      'schedulePropertyNotFoundTitle': 'संपत्ति नहीं मिली',
+      'schedulePropertyNotFoundMessage': 'अनुरोधित संपत्ति नहीं मिली। हो सकता है उसे हटा दिया गया हो, या लिंक गलत हो।',
       'automatedRentCheckoutTitle': 'स्वचालित किराया चेकआउट',
       'invoiceNo': 'चालान संख्या',
       'totalDueToPay': 'कुल देय राशि',

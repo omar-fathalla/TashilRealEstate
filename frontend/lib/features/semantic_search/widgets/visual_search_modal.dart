@@ -398,7 +398,7 @@ class _VisualSearchModalState extends State<VisualSearchModal> with SingleTicker
                           child: AspectRatio(
                             aspectRatio: 16 / 10,
                             child: ImageUtils.cachedImage(
-                              imageUrl: p.imageUrls.first,
+                              imageUrl: p.imageUrls.isNotEmpty ? p.imageUrls.first : '',
                               fit: BoxFit.cover,
                             ),
                           ),

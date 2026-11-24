@@ -10,6 +10,29 @@ import 'package:tashil_real_estate/features/owner_portal/owner_dashboard.dart';
 
 void main() {
   group('UserProfileData & Service Tests', () {
+    test('Phone verification comes from the server flag or the Auth-linked number, not the profile', () {
+      expect(
+        UserProfileService.isPhoneVerifiedFor(serverFlag: false, authPhone: null, profilePhone: '+20 100 123 4567'),
+        isFalse,
+      );
+      expect(
+        UserProfileService.isPhoneVerifiedFor(serverFlag: false, authPhone: '+201001234567', profilePhone: '+20 100 123 4567'),
+        isTrue,
+      );
+      expect(
+        UserProfileService.isPhoneVerifiedFor(serverFlag: false, authPhone: '+201001234567', profilePhone: '+971 50 000 0000'),
+        isFalse,
+      );
+      expect(
+        UserProfileService.isPhoneVerifiedFor(serverFlag: false, authPhone: '', profilePhone: ''),
+        isFalse,
+      );
+      expect(
+        UserProfileService.isPhoneVerifiedFor(serverFlag: true, authPhone: null, profilePhone: '+20 100 123 4567'),
+        isTrue,
+      );
+    });
+
     test('Calculates completeness percentage accurately across all official identity points (Email, Name, Phone, National ID, Address, Bank)', () {
       // 1. Only email: 1/6 = 17%
       const p1 = UserProfileData(

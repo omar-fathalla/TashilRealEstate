@@ -7,48 +7,272 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data;
+    function selfServiceRoles() {
+      return ['Owner', 'Tenant'];
+    }
+
+    function claimedRole() {
+      return request.auth.token.get('role', '');
+    }
+
+    function profileRole() {
+      let path = /databases/$(database)/documents/Users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('role', '') : '';
+    }
+
+    // Elevated roles (SuperAdmin, AgencyAdmin) only come from a custom claim set by
+    // the setUserRole callable or the Admin SDK. The profile document can only vouch
+    // for self-service roles, so a role written into Users/{uid} never escalates.
+    function currentRole() {
+      return claimedRole() != ''
+        ? claimedRole()
+        : (profileRole() in selfServiceRoles() ? profileRole() : '');
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && currentRole() == role;
     }
 
     function isSuperAdmin() {
-      return isAuthenticated() && getUserData().role == 'SuperAdmin';
+      return hasRole('SuperAdmin');
     }
 
     function isAgencyAdmin() {
-      return isAuthenticated() && getUserData().role == 'AgencyAdmin';
+      return hasRole('AgencyAdmin');
     }
 
     function isOwner() {
-      return isAuthenticated() && getUserData().role == 'Owner';
+      return hasRole('Owner');
     }
 
     function isTenant() {
-      return isAuthenticated() && getUserData().role == 'Tenant';
+      return hasRole('Tenant');
+    }
+
+    function myAgencyId() {
+      return request.auth.token.get('agency_id', '');
+    }
+
+    function isAgencyAdminOf(agencyId) {
+      return isAgencyAdmin() && myAgencyId() != '' && agencyId == myAgencyId();
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function addedOrChangedKeys() {
+      let d = request.resource.data.diff(resource.data);
+      return d.addedKeys().union(d.changedKeys());
     }
 
     // 1. Users Collection
+    // Fields only the server (Admin SDK / setUserRole) may write. `role` is handled separately.
+    function lockedUserFields() {
+      return [
+        'agency_id', 'agencyId', 'verified', 'isVerified', 'is_verified', 'status', 'isSuperAdmin',
+        'customClaims', 'claims', 'phone_verified', 'phoneVerified', 'isPhoneVerified',
+        'email_verified', 'emailVerified', 'kycStatus', 'kyc_status', 'kyc_verified', 'kycVerified',
+        'account_status', 'accountStatus', 'Role', 'role_updated_by', 'role_updated_at', 'plan'
+      ];
+    }
+
+    function selfUserCreate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.get('role', 'Owner') in selfServiceRoles()
+        && !request.resource.data.keys().hasAny(lockedUserFields());
+    }
+
+    // A self-service role may be set once, only while the profile has none.
+    function selfRoleChangeOk() {
+      return !changedKeys().hasAny(['role'])
+        || (resource.data.get('role', '') == ''
+          && request.resource.data.get('role', '') in selfServiceRoles());
+    }
+
+    function selfUserUpdate(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && !changedKeys().hasAny(lockedUserFields())
+        && selfRoleChangeOk();
+    }
+
     match /Users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      // Profiles hold national ID and bank details, so they are private to their owner.
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if isSuperAdmin() || selfUserCreate(userId);
+      allow update: if isSuperAdmin() || selfUserUpdate(userId);
+      allow delete: if isSuperAdmin();
 
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
         allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
       }
+
+      // Written by Cloud Functions only.
+      match /notifications/{notificationId} {
+        allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        allow write: if false;
+      }
     }
 
     // 2. Properties Collection (Public Marketplace)
+    // The only fields a public listing may carry. Must match sanitizeForMarketplace in
+    // backend/index.js (plus agency_id attribution); anything else is rejected, so contact
+    // fields such as phone, whatsapp, or email can never be written directly.
+    function publicListingFields() {
+      return [
+        'id', 'owner_id', 'agency_id', 'countryCode', 'currencyCode',
+        'titles', 'descriptions', 'locations', 'cityCode', 'propertyTypeCode', 'buildingName',
+        'pricePerMonth', 'bedrooms', 'bathrooms', 'areaSqM', 'image', 'imageUrls',
+        'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
+        'is_published', 'status', 'updated_at'
+      ];
+    }
+
+    function localizedKeysOk(data, field) {
+      return !(field in data) || (data[field] is map && data[field].keys().hasOnly(['ar', 'en', 'hi']));
+    }
+
+    // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number or
+    // an email address once obvious obfuscation is looked through. Phone shapes (trunk zero,
+    // bare EG/UAE mobiles, country codes, +/00 prefixes; digits of any script; the letter O
+    // between digits; grouped digits) are defined in backend/contact_patterns.js and the
+    // block below is generated from it: run `npm run gen:contact-rules` in backend/.
+    // Runs of spaces, dashes, dots, slashes and similar are collapsed to one separator first.
+    // Prices and areas stay free: 15000000, 15,000,000, 1.500.000.000 and dates are not contacts.
+    // BEGIN GENERATED contact patterns
+    function contactPhone(text) {
+      let t = text.replace('[\\x{20}\\x{9}-\\x{d}\\x{a0}\\x{1680}\\x{2000}-\\x{200f}\\x{2028}\\x{2029}\\x{202f}\\x{205f}\\x{2060}\\x{3000}\\x{feff}\\x{2e}\\x{2d}\\x{2f}\\x{5f}\\x{5c}\\x{28}\\x{29}\\x{7e}\\x{2010}-\\x{2015}\\x{2212}\\x{fe63}\\x{ff0d}\\x{ff0e}\\x{ff0f}\\x{ff3f}\\x{ff3c}\\x{ff08}\\x{ff09}]+', '~');
+      return t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿](?:[\\p{N}OoＯｏ]{7,9}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,7}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{4}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵OoＯｏ](?:[\\p{N}OoＯｏ]{7}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{6,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸OoＯｏ](?:[\\p{N}OoＯｏ]{6}\\p{N}|(?:~\\p{N}[\\p{N}OoＯｏ]{5,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,4}\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,3}\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,2}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹][7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹]~?(?:\\p{N}[\\p{N}OoＯｏ]{6,7}\\p{N}|\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{5,6}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{3}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{4,5}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]\\p{N}~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}|~\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}~\\p{N}[\\p{N}OoＯｏ]\\p{N})|[\\p{N}OoＯｏ]{2}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{3,4}\\p{N})|[\\p{N}OoＯｏ]{3}\\p{N}(?:~\\p{N}[\\p{N}OoＯｏ]{2,3}\\p{N}))(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵]~?(?:(?:[03-9]|[^\\x{0}-\\x{7f}\\P{N}])[\\p{N}OoＯｏ]{2}\\p{N}|1[0-8][\\p{N}OoＯｏ]\\p{N}|2[1-9][\\p{N}OoＯｏ]\\p{N})~?\\p{N}[\\p{N}OoＯｏ]{2}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[\\x{2b}\\x{ff0b}]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$')
+        || t.matches('(?s)^(?:.*[^\\p{N}])?[0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿][0٠۰߀०০੦૦୦௦౦೦൦෦๐໐༠၀០᠐０𝟎𝟘𝟢𝟬𝟶⁰₀⓪⓿OoＯｏ]~?(?:[\\p{N}OoＯｏ]~?){8,14}\\p{N}(?:[^\\p{N}].*)?$');
+    }
+    // END GENERATED contact patterns
+
+    // Emails: @ may be written [at], (at), {at} or full-width, with spaces around it, and
+    // the dots as [dot]. `(?s)` lets `.` span newlines, so a later line is still checked.
+    function contactFree(text) {
+      let local = '[A-Za-z0-9._%+Ａ-Ｚａ-ｚ０-９-]';
+      let ws = '[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*';
+      let at = ws + '([@＠﹫]|[\\[({]' + ws + '[Aa][Tt]' + ws + '[\\])}])' + ws;
+      let dot = '([.．]|' + ws + '[\\[({]' + ws + '[Dd][Oo][Tt]' + ws + '[\\])}]' + ws + ')';
+      let label = '[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+';
+      return !contactPhone(text)
+        && !text.matches('(?s)^.*' + local + at + label + '(' + dot + label + ')*' + dot + '[A-Za-zＡ-Ｚａ-ｚ]{2,}.*$');
+    }
+
+    function inRange(value, min, max) {
+      return value is number && value >= min && value <= max;
+    }
+
+    // Space-separated image references: download URLs from this project's Storage bucket
+    // (outside private folders), bundled assets, or inline raster images. Must match
+    // isPublicImageRef() in backend/index.js.
+    // The Firebase project id comes from the signed ID token's audience, so the allowed
+    // buckets follow the project the rules are deployed to (prod keeps tashil-proptech-os).
+    function projectId() {
+      return request.auth.token.get('aud', '');
+    }
+
+    function imageRefsOk(refs) {
+      let bucket = projectId() + '[.](firebasestorage[.]app|appspot[.]com)';
+      let ref = '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?'
+        + '|https://storage[.]googleapis[.]com/' + bucket + '/[^?# ]+'
+        + '|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)'
+        + '|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)'
+        + '|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)';
+      return projectId().matches('[a-z][a-z0-9-]{4,29}')
+        && refs.matches('^(' + ref + '( ' + ref + ')*)?$')
+        && !refs.matches('^.*[.][.].*$')
+        && !refs.matches('(?i)^.*https://[^ ]*/(o/)?(users|private|kyc|documents|leases|contracts)(/|%2F).*$');
+    }
+
+    function imageListOk(list) {
+      return list.size() <= 20 && imageRefsOk(list.join(' '));
+    }
+
+    // Value checks that match what sanitizeForMarketplace produces. Kept compact because a
+    // request may evaluate at most 1000 rule expressions.
+    function listingValuesOk(d) {
+      let country = d.get('countryCode', 'EG');
+      let currency = country == 'AE' ? 'AED' : 'EGP';
+      let titles = d.get('titles', {});
+      let descriptions = d.get('descriptions', {});
+      let locations = d.get('locations', {});
+      let amenities = d.get('amenitiesMap', {});
+      let images = d.get('imageUrls', []);
+      let image = d.get('image', '');
+      // join() fails on non-string entries, which denies the write.
+      let freeText = titles.values().concat(descriptions.values()).concat(locations.values())
+        .concat(amenities.get('ar', [])).concat(amenities.get('en', [])).concat(amenities.get('hi', []))
+        .concat([d.get('buildingName', ''), d.get('cityCode', ''), d.get('propertyTypeCode', '')])
+        .join(' | ');
+      return d.get('status', 'unavailable') in ['vacant', 'rented', 'unavailable']
+        && country in ['EG', 'AE']
+        && d.get('currencyCode', currency) == currency
+        && d.get('is_published', false) is bool
+        && d.get('isFeatured', false) is bool
+        && d.get('isFurnished', false) is bool
+        && inRange(d.get('rating', 0), 0, 5)
+        && (d.get('is_published', false) == false || 'pricePerMonth' in d)
+        && inRange(d.get('pricePerMonth', 1), 0.01, 1000000000)
+        && inRange(d.get('areaSqM', 1), 0.01, 1000000)
+        && inRange(d.get('bedrooms', 0), 0, 100)
+        && inRange(d.get('bathrooms', 0), 0, 100)
+        && titles.get('ar', '').size() <= 200 && titles.get('en', '').size() <= 200 && titles.get('hi', '').size() <= 200
+        && descriptions.get('ar', '').size() <= 4000 && descriptions.get('en', '').size() <= 4000
+        && descriptions.get('hi', '').size() <= 4000
+        && locations.get('ar', '').size() <= 300 && locations.get('en', '').size() <= 300 && locations.get('hi', '').size() <= 300
+        && d.get('buildingName', '').size() <= 200
+        && d.get('cityCode', '').size() <= 60 && d.get('propertyTypeCode', '').size() <= 60
+        && amenities.get('ar', []).size() <= 30 && amenities.get('en', []).size() <= 30 && amenities.get('hi', []).size() <= 30
+        && contactFree(freeText)
+        && image is string && !image.matches('^.* .*$') && imageRefsOk(image)
+        && images is list && imageListOk(images)
+        && d.get('agencyPhone', '').size() <= 30
+        && (!('updated_at' in d) || d.updated_at is timestamp);
+    }
+
+    function listingShapeOk(propertyId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(publicListingFields())
+        && d.get('id', propertyId) == propertyId
+        && localizedKeysOk(d, 'titles')
+        && localizedKeysOk(d, 'descriptions')
+        && localizedKeysOk(d, 'locations')
+        && localizedKeysOk(d, 'amenitiesMap')
+        && listingValuesOk(d);
+    }
+
+    function ownsListing() {
+      return isAuthenticated() && resource.data.get('owner_id', '') == request.auth.uid;
+    }
+
+    function agencyManagesResource() {
+      return isAgencyAdminOf(resource.data.get('agency_id', ''));
+    }
+
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read vacant or published properties
-      allow read: if resource.data.status == 'vacant' || resource.data.is_published == true || isAuthenticated();
-      
-      // Agency admins and Owners can create/update properties
-      allow create: if isSuperAdmin() || isAgencyAdmin() || isAuthenticated();
-      allow update, delete: if isSuperAdmin() || 
-        (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id) ||
-        (isAuthenticated() && resource.data.owner_id == request.auth.uid);
+      // Anyone (including unauthenticated visitors) can read published listings. Unpublished
+      // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
+      allow read: if resource.data.get('is_published', false) == true
+        || isSuperAdmin()
+        || ownsListing()
+        || agencyManagesResource();
+
+      // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
+      // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
+      // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
+      allow create, update: if isSuperAdmin() && listingShapeOk(propertyId);
+
+      allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
     }
 
     // 3. Agencies Collection
@@ -58,14 +282,19 @@ service cloud.firestore {
     }
 
     // 4. Leases Collection
+    // Lease documents are the server-side source of truth for reminder and invoice parties.
     match /Leases/{leaseId} {
-      allow read: if isSuperAdmin() || 
+      allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
           resource.data.tenant_id == request.auth.uid ||
           resource.data.owner_id == request.auth.uid ||
-          (isAgencyAdmin() && resource.data.agency_id == getUserData().agency_id)
+          agencyManagesResource()
         ));
-      allow write: if isSuperAdmin() || isAgencyAdmin();
+      allow create: if isSuperAdmin() || isAgencyAdminOf(request.resource.data.get('agency_id', ''));
+      allow update: if isSuperAdmin() || (
+        agencyManagesResource() && !changedKeys().hasAny(['agency_id'])
+      );
+      allow delete: if isSuperAdmin() || agencyManagesResource();
     }
 
     // 5. Maintenance Requests

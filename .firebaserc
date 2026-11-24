@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "tashil-proptech-os"
+    "default": "demo-tashil-dev",
+    "prod": "tashil-proptech-os"
   }
 }
