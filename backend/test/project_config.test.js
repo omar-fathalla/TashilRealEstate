@@ -162,6 +162,26 @@ test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; exampl
   assert.equal(ignored("backend/.env"), false);
 });
 
+test("TAQ-91: the repo-root .env and .secret* are ignored, and the ignore does not reach backend/.env", () => {
+  const { execFileSync } = require("child_process");
+  const check = (file) => {
+    try {
+      return execFileSync("git", ["check-ignore", "-v", file], { cwd: root, encoding: "utf8" }).trim();
+    } catch (err) {
+      if (err.status === 1) return "";
+      throw err;
+    }
+  };
+  for (const file of [".env", ".secret", ".secret.json", ".secret.prod"]) {
+    assert.match(check(file), /^\.gitignore:\d+:\/\.(env|secret\*)\t/, `${file} must be ignored by an anchored root rule`);
+  }
+  // `git check-ignore -v backend/.env` prints nothing: no rule matches, and the file is tracked.
+  assert.equal(check("backend/.env"), "");
+  const tracked = execFileSync("git", ["ls-files", "--error-unmatch", "backend/.env"], { cwd: root, encoding: "utf8" });
+  assert.equal(tracked.trim(), "backend/.env");
+  assert.equal(check("backend/.secret.local") !== "", true);
+});
+
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
 
 test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {

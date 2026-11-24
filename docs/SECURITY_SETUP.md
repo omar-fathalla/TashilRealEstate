@@ -112,9 +112,11 @@ client's own `thinkingConfig` is always dropped. `maxOutputTokens` from the clie
 
 `backend/.env` is tracked on purpose so non-interactive deploys have a value for every
 `defineString`/`defineInt` param. It holds `GEMINI_MODEL` and `GEMINI_THINKING_BUDGET` only.
-It must never hold a secret: `GEMINI_API_KEY` stays in Secret Manager, and `.secret.local`,
-`.secret.*.local` and `.env*.local` stay gitignored. `npm test` in `backend/` fails if `.env` is
-missing a param, holds an undeclared name or a credential-looking value, or is ignored by git.
+It must never hold a secret: `GEMINI_API_KEY` stays in Secret Manager. Git ignores the repo-root
+`/.env` and `/.secret*` (anchored with a leading slash, because a bare `.env` pattern would also
+ignore `backend/.env`), plus `.secret.local`, `.secret.*.local` and `.env*.local` anywhere.
+`npm test` in `backend/` fails if `backend/.env` is missing a param, holds an undeclared name or a
+credential-looking value, is ignored by git, or is not tracked.
 `check:client-keys` scans only `frontend/lib` and `frontend/web`, so it does not read this file.
 
 ## Client AI key check

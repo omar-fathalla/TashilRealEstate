@@ -14,6 +14,7 @@ const {
   where,
   getDocs,
   serverTimestamp,
+  writeBatch,
 } = require("firebase/firestore");
 
 // TAQ-91: the Admin (platform staff) and Investor roles in firestore.rules.
@@ -68,7 +69,11 @@ test.beforeEach(async () => {
   await seed("Users/admin1", { user_id: "admin1", role: "Admin" });
   await seed("Properties/live", live);
   await seed("Properties/hidden", { ...live, id: "hidden", is_published: false, moderation_hidden: true });
+  await seed("PropertyModeration/hidden", { hidden: true, pre_hide_published: true, updated_by: "admin1" });
   await seed("Properties/rented", { ...live, id: "rented", is_published: false, moderation_hidden: true, status: "rented" });
+  await seed("PropertyModeration/rented", { hidden: true, pre_hide_published: true, updated_by: "admin1" });
+  await seed("Properties/hiddenDraft", { ...live, id: "hiddenDraft", is_published: false, moderation_hidden: true });
+  await seed("PropertyModeration/hiddenDraft", { hidden: true, pre_hide_published: false, updated_by: "admin1" });
   await seed("Properties/draft", { ...live, id: "draft", is_published: false, status: "unavailable" });
   await seed("Agencies/agency-1", { name: "Agency One", verified_badge: false });
   await seed("Agencies/agency-1/private/bank", { iban: "AE070331234567890123456" });
@@ -168,26 +173,159 @@ test("TAQ-91: an Admin can see every listing, including unpublished and hidden o
   await assertSucceeds(getDocs(query(collection(me, "Properties"), where("is_published", "==", false))));
 });
 
-test("TAQ-91: an Admin can verify, unverify, hide and unpublish a listing", async () => {
+const stamp = () => serverTimestamp();
+
+/** What the app's Admin dashboard writes: the moderation doc and the public doc in one batch. */
+function moderate(ctx, id, { hidden, preHidePublished, isPublished }) {
+  const batch = writeBatch(ctx);
+  batch.set(doc(ctx, `PropertyModeration/${id}`), {
+    hidden,
+    pre_hide_published: preHidePublished,
+    updated_by: ctx._uid,
+    updated_at: stamp(),
+  });
+  batch.update(doc(ctx, `Properties/${id}`), { is_published: isPublished, moderation_hidden: hidden, updated_at: stamp() });
+  return batch.commit();
+}
+
+function admin(uid = "admin1") {
+  const ctx = as(uid, CLAIMS.admin);
+  ctx._uid = uid;
+  return ctx;
+}
+
+test("TAQ-91: an Admin can verify and unverify a listing", async () => {
   const me = as("admin1", CLAIMS.admin);
   await assertSucceeds(updateDoc(doc(me, "Properties/live"), { verified: true, updated_at: serverTimestamp() }));
   await assertSucceeds(updateDoc(doc(me, "Properties/live"), { verified: false, updated_at: serverTimestamp() }));
-  await assertSucceeds(updateDoc(doc(me, "Properties/live"), { is_published: false, updated_at: serverTimestamp() }));
-  await seed("Properties/live", live);
-  await assertSucceeds(updateDoc(doc(me, "Properties/live"), { is_published: false, moderation_hidden: true, updated_at: serverTimestamp() }));
 });
 
-test("TAQ-91: an Admin can restore a hidden vacant listing, but only by clearing the hidden flag", async () => {
-  const me = as("admin1", CLAIMS.admin);
-  await assertFails(updateDoc(doc(me, "Properties/hidden"), { is_published: true, updated_at: serverTimestamp() }));
-  await assertSucceeds(updateDoc(doc(me, "Properties/hidden"), { is_published: true, moderation_hidden: false, updated_at: serverTimestamp() }));
+test("TAQ-91 (UT a/c): a hide writes the moderation doc together with the public doc and records is_published", async () => {
+  const me = admin();
+  await assertSucceeds(moderate(me, "live", { hidden: true, preHidePublished: true, isPublished: false }));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const mod = (await getDoc(doc(ctx.firestore(), "PropertyModeration/live"))).data();
+    assert.equal(mod.hidden, true);
+    assert.equal(mod.pre_hide_published, true);
+    assert.equal(mod.updated_by, "admin1");
+    const pub = (await getDoc(doc(ctx.firestore(), "Properties/live"))).data();
+    assert.equal(pub.is_published, false);
+    assert.equal(pub.moderation_hidden, true);
+    assert.equal("pre_hide_published" in pub, false, "the pre-hide value is not stored on the public doc");
+  });
 });
 
-test("TAQ-91: an Admin cannot resurrect a listing its owner took down, rented out or never published", async () => {
-  const me = as("admin1", CLAIMS.admin);
-  await assertFails(updateDoc(doc(me, "Properties/rented"), { is_published: true, moderation_hidden: false, updated_at: serverTimestamp() }));
-  await assertFails(updateDoc(doc(me, "Properties/draft"), { is_published: true, moderation_hidden: false, updated_at: serverTimestamp() }));
-  await assertFails(updateDoc(doc(me, "Properties/live"), { moderation_hidden: true, updated_at: serverTimestamp() }));
+test("TAQ-91 (UT c): hiding a never-published listing records false, and restoring cannot publish it", async () => {
+  await seed("Properties/offline", { ...live, id: "offline", is_published: false });
+  const me = admin();
+  await assertFails(moderate(me, "offline", { hidden: true, preHidePublished: true, isPublished: false }));
+  await assertSucceeds(moderate(me, "offline", { hidden: true, preHidePublished: false, isPublished: false }));
+  await assertFails(moderate(me, "offline", { hidden: false, preHidePublished: false, isPublished: true }));
+  await assertSucceeds(moderate(me, "offline", { hidden: false, preHidePublished: false, isPublished: false }));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    assert.equal((await getDoc(doc(ctx.firestore(), "Properties/offline"))).data().is_published, false);
+  });
+});
+
+test("TAQ-91 (UT c): restoring a listing that was live brings back is_published, only while vacant", async () => {
+  const me = admin();
+  await assertFails(moderate(me, "hidden", { hidden: false, preHidePublished: true, isPublished: false }));
+  await assertSucceeds(moderate(me, "hidden", { hidden: false, preHidePublished: true, isPublished: true }));
+  await assertFails(moderate(admin(), "rented", { hidden: false, preHidePublished: true, isPublished: true }));
+  await assertSucceeds(moderate(admin(), "rented", { hidden: false, preHidePublished: true, isPublished: false }));
+});
+
+test("TAQ-91 (UT c): a restore cannot rewrite the stored pre-hide value to publish a never-live listing", async () => {
+  const me = admin();
+  await assertFails(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: true, isPublished: true }));
+  await assertFails(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: false, isPublished: true }));
+  await assertSucceeds(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: false, isPublished: false }));
+});
+
+test("TAQ-91 (QA a): the public doc cannot be hidden or restored without the matching moderation doc", async () => {
+  const me = admin();
+  await assertFails(updateDoc(doc(me, "Properties/live"), { is_published: false, moderation_hidden: true, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/live"), { is_published: false, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/hidden"), { is_published: true, moderation_hidden: false, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/hidden"), { is_published: true, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/live"), { moderation_hidden: true, updated_at: stamp() }));
+  // a hide recorded without the public doc change is allowed by the rules; reconcilePropertyModeration
+  // (tested in sync.test.js) then takes the public doc offline
+  const batch = writeBatch(me);
+  batch.set(doc(me, "PropertyModeration/live"), { hidden: true, pre_hide_published: true, updated_by: "admin1", updated_at: stamp() });
+  batch.update(doc(me, "Properties/live"), { verified: true, updated_at: stamp() });
+  await assertSucceeds(batch.commit());
+});
+
+test("TAQ-91 (QA a): Admin writes to the moderation doc are limited to its four fields, and only SuperAdmin deletes", async () => {
+  const me = admin();
+  const base = { hidden: true, pre_hide_published: true, updated_by: "admin1", updated_at: stamp() };
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, note: "x" }));
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, hidden: "yes" }));
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, updated_by: "someone-else" }));
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, updated_at: new Date(0) }));
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, pre_hide_published: false }), "must match the live public doc");
+  await assertFails(setDoc(doc(me, "PropertyModeration/ghost"), base), "no public doc to hide");
+  await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, hidden: false }), "a first write must be a hide");
+  await assertSucceeds(setDoc(doc(me, "PropertyModeration/live"), base));
+  await assertFails(updateDoc(doc(me, "PropertyModeration/live"), { pre_hide_published: false, updated_by: "admin1", updated_at: stamp() }));
+  await assertFails(deleteDoc(doc(me, "PropertyModeration/live")));
+  await assertSucceeds(getDoc(doc(me, "PropertyModeration/live")));
+  await assertSucceeds(deleteDoc(doc(as("root", CLAIMS.superAdmin), "PropertyModeration/hidden")));
+});
+
+test("TAQ-91 (QA a): owners, agencies, tenants, investors and visitors cannot touch PropertyModeration", async () => {
+  const base = { hidden: false, pre_hide_published: false, updated_by: "ownerA", updated_at: stamp() };
+  const actors = [
+    as("ownerA", CLAIMS.owner),
+    as("agent", CLAIMS.agency),
+    as("tenantA", { role: "Tenant" }),
+    as("investor1", CLAIMS.investor),
+    as("stranger"),
+    testEnv.unauthenticatedContext().firestore(),
+  ];
+  for (const me of actors) {
+    await assertFails(getDoc(doc(me, "PropertyModeration/hidden")));
+    await assertFails(getDocs(collection(me, "PropertyModeration")));
+    // creating it first for their own listing, to pre-empt a moderator
+    await assertFails(setDoc(doc(me, "PropertyModeration/live"), base));
+    await assertFails(setDoc(doc(me, "PropertyModeration/live"), { ...base, hidden: true, pre_hide_published: true }));
+    await assertFails(setDoc(doc(me, "PropertyModeration/new-id"), base));
+    // lifting or rewriting the hold
+    await assertFails(updateDoc(doc(me, "PropertyModeration/hidden"), { hidden: false }));
+    await assertFails(setDoc(doc(me, "PropertyModeration/hidden"), base));
+    await assertFails(deleteDoc(doc(me, "PropertyModeration/hidden")));
+  }
+});
+
+test("TAQ-91 (UT a): an owner or agency cannot delete the public doc of a moderation-hidden listing", async () => {
+  const owner = as("ownerA", CLAIMS.owner);
+  const agency = as("agent", CLAIMS.agency);
+  await seed("Properties/hidden", { ...live, id: "hidden", is_published: false, moderation_hidden: true, agency_id: "agency-1" });
+  await assertFails(deleteDoc(doc(owner, "Properties/hidden")));
+  await assertFails(deleteDoc(doc(agency, "Properties/hidden")));
+  await assertFails(deleteDoc(doc(owner, "Properties/hiddenDraft")));
+  // the mirror flag on the public doc is not what protects it: the moderation doc is
+  await seed("Properties/hiddenMirrorOnly", { ...live, id: "hiddenMirrorOnly", is_published: false, moderation_hidden: true });
+  await assertSucceeds(deleteDoc(doc(owner, "Properties/hiddenMirrorOnly")));
+  // an ordinary listing can still be removed by its owner and by the platform
+  await assertSucceeds(deleteDoc(doc(owner, "Properties/live")));
+  await assertSucceeds(deleteDoc(doc(as("root", CLAIMS.superAdmin), "Properties/hidden")));
+});
+
+test("TAQ-91 (UT a): lifting the hold makes the owner's delete possible again", async () => {
+  await assertSucceeds(moderate(admin(), "hidden", { hidden: false, preHidePublished: true, isPublished: true }));
+  await assertSucceeds(deleteDoc(doc(as("ownerA", CLAIMS.owner), "Properties/hidden")));
+});
+
+test("TAQ-91 (QA a): an owner recreating the private doc under a NEW id is a new listing, with no moderation", async () => {
+  const owner = as("ownerA", CLAIMS.owner);
+  await assertSucceeds(setDoc(doc(owner, "Users/ownerA/properties/brand-new"), { owner_id: "ownerA", isPublished: true }));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    assert.equal((await getDoc(doc(ctx.firestore(), "PropertyModeration/brand-new"))).exists(), false);
+  });
+  // ...but an owner can only create the private doc; the public doc is written by the sync trigger.
+  await assertFails(setDoc(doc(owner, "Properties/brand-new"), { ...live, id: "brand-new" }));
 });
 
 test("TAQ-91: an Admin cannot edit listing content, ownership or ratings, create or delete listings", async () => {
@@ -315,8 +453,50 @@ test("TAQ-91: maintenance requests stay with their parties and staff", async () 
   await assertFails(getDoc(doc(as("stranger", CLAIMS.owner), "Maintenance/m-1")));
   await assertFails(getDoc(doc(as("stranger", { role: "Tenant" }), "Maintenance/m-1")));
   await assertFails(getDoc(doc(as("stranger"), "Maintenance/m-1")));
-  await assertSucceeds(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m2"), { tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
-  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m3"), { tenant_id: "someoneElse", status: "open" }));
+  const request = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  await assertSucceeds(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m2"), request));
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m3"), { ...request, tenant_id: "someoneElse" }));
+});
+
+// --- TAQ-91 UT (b): a maintenance request must match a lease that links its parties ---
+
+test("TAQ-91 (UT b): a maintenance create must match the lease's tenant, owner and agency", async () => {
+  const tenant = as("tenantA", { role: "Tenant" });
+  const owner = as("ownerA", CLAIMS.owner);
+  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  await assertSucceeds(setDoc(doc(tenant, "Maintenance/ok-t"), ok));
+  await assertSucceeds(setDoc(doc(owner, "Maintenance/ok-o"), ok));
+
+  // tenant mismatched: the caller names some other tenant
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-t"), { ...ok, tenant_id: "tenantB" }));
+  await assertFails(setDoc(doc(owner, "Maintenance/bad-t2"), { ...ok, tenant_id: "tenantB" }));
+  // owner mismatched: the tenant addresses a request to an unrelated owner
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-o"), { ...ok, owner_id: "ownerB" }));
+  await assertFails(setDoc(doc(owner, "Maintenance/bad-o2"), { ...ok, owner_id: "ownerB" }));
+  // agency mismatched, missing or invented
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a"), { ...ok, agency_id: "agency-2" }));
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a2"), { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
+  await seed("Leases/lease-noagency", { owner_id: "ownerA", tenant_id: "tenantA" });
+  await assertSucceeds(setDoc(doc(tenant, "Maintenance/ok-na"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a3"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" }));
+});
+
+test("TAQ-91 (UT b): a maintenance create needs a real lease and a caller who is its tenant or owner", async () => {
+  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n1"), { ...ok, lease_id: "no-such-lease" }));
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n3"), { ...ok, lease_id: "" }));
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n4"), { ...ok, lease_id: 5 }));
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n5"), { tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
+  // someone who is neither party names the real parties of a real lease
+  await assertFails(setDoc(doc(as("stranger", { role: "Tenant" }), "Maintenance/n6"), ok));
+  await assertFails(setDoc(doc(as("stranger", CLAIMS.owner), "Maintenance/n7"), ok));
+  await assertFails(setDoc(doc(as("agent", CLAIMS.agency), "Maintenance/n8"), ok));
+  // roles without maintenance access, and the Investor posing as the lease's tenant
+  await seed("Leases/lease-inv", { owner_id: "ownerA", tenant_id: "investor1" });
+  await assertFails(setDoc(doc(as("investor1", CLAIMS.investor), "Maintenance/n9"), { lease_id: "lease-inv", tenant_id: "investor1", owner_id: "ownerA", status: "open" }));
+  await assertFails(setDoc(doc(as("admin1", CLAIMS.admin), "Maintenance/n10"), ok));
+  await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), "Maintenance/n11"), ok));
+  await assertSucceeds(setDoc(doc(as("root", CLAIMS.superAdmin), "Maintenance/n12"), { tenant_id: "x", owner_id: "y" }));
 });
 
 // --- SuperAdmin keeps full access ---

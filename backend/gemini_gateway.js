@@ -218,16 +218,19 @@ function sanitizeGenerationConfig(config) {
   const out = {};
   const number = (key, min, max) => {
     if (config[key] === undefined) return;
-    const value = Number(config[key]);
-    if (!Number.isFinite(value) || value < min || value > max) throw invalid(`${key} is out of range.`);
+    const value = config[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) throw invalid(`${key} is out of range.`);
     out[key] = value;
   };
   number("temperature", 0, 2);
   number("topP", 0, 1);
   number("topK", 1, 100);
   if (config.maxOutputTokens !== undefined) {
-    const tokens = Math.floor(Number(config.maxOutputTokens));
-    if (!Number.isFinite(tokens) || tokens < 1) throw invalid("maxOutputTokens is out of range.");
+    const tokens = config.maxOutputTokens;
+    // A real integer only: true, [2000], "2000" and 2000.5 all coerce to a number in JS.
+    if (typeof tokens !== "number" || !Number.isInteger(tokens) || tokens < 1) {
+      throw invalid("maxOutputTokens must be a positive integer.");
+    }
     out.maxOutputTokens = Math.min(Math.max(tokens, CAPS.minOutputTokens), CAPS.maxOutputTokens);
   }
   if (config.responseMimeType !== undefined) {

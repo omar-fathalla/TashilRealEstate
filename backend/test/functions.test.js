@@ -311,6 +311,7 @@ test("TAQ-91: only Admin and SuperAdmin can read the user directory, and it neve
       email: "rich@test.tashilaqar.com",
       full_name: "Rich Owner",
       role: "Owner",
+      claim_role: "",
       created_at: "2026-01-01T00:00:00.000Z",
     });
     assert.doesNotMatch(JSON.stringify(out), /AE07|784|iban|national|phone|bank|kyc/i);
@@ -344,3 +345,131 @@ test("TAQ-91: Admin and Investor cannot touch payments or the market index refre
   }
 });
 
+
+// --- TAQ-91 UT (e): processRentPayment ---
+
+const tenantCaller = () => caller("tenant");
+
+async function transactions() {
+  return (await db.collection("Transactions").get()).docs.map((d) => d.data());
+}
+
+test("TAQ-91 (UT e): a signed-out caller gets UNAUTHENTICATED, not INTERNAL", async () => {
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 } }), "unauthenticated");
+  await expectCode(fns.processRentPayment.run({ data: undefined }), "unauthenticated");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): the lease's tenant pays the lease's rent and the server writes the record", async () => {
+  const result = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(result.success, true);
+  const [tx] = await transactions();
+  assert.equal(tx.leaseId, "lease-1");
+  assert.equal(tx.amount, 8000);
+  assert.equal(tx.currencyCode, "AED");
+  assert.equal(tx.tenant_id, "tenant");
+  assert.equal(tx.owner_id, "owner");
+  assert.equal(tx.agency_id, "agency-1");
+  assert.equal(tx.userId, "tenant");
+  assert.deepEqual(tx.splits, { platformFee: 160, agencyFee: 640, ownerPayout: 7200 });
+  assert.ok(tx.createdAt && typeof tx.createdAt.toDate === "function", "createdAt is a server timestamp (no FieldValue crash)");
+});
+
+test("TAQ-91 (UT e): the amount may be left out, and then the lease's rent is used", async () => {
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: tenantCaller() });
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: null }, auth: tenantCaller() });
+  assert.deepEqual((await transactions()).map((t) => t.amount), [8000, 8000]);
+});
+
+test("TAQ-91 (UT e): negative, non-numeric, non-finite and mismatching amounts are INVALID_ARGUMENT", async () => {
+  for (const amount of [-999999, 0, -0.01, "abc", "8000", true, [8000], {}, NaN, Infinity, -Infinity, 1, 7999.5, 8000.5, 80000]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): a missing or malformed lease id is INVALID_ARGUMENT and an unknown lease is NOT_FOUND", async () => {
+  for (const leaseId of [undefined, "", 7, null, {}, ["lease-1"]]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId, amount: 8000 }, auth: tenantCaller() }), "invalid-argument");
+  }
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "does-not-exist", amount: 8000 }, auth: tenantCaller() }), "not-found");
+  await expectCode(fns.processRentPayment.run({ data: undefined, auth: tenantCaller() }), "invalid-argument");
+});
+
+test("TAQ-91 (UT e): only the lease's tenant can pay: other tenants, owner, agency, SuperAdmin and other roles are denied", async () => {
+  await db.collection("Users").doc("tenant2").set({ role: "Tenant" });
+  await db.collection("Users").doc("inv").set({ role: "Investor" });
+  const denied = [
+    caller("tenant2"),
+    caller("owner"),
+    caller("stranger"),
+    caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }),
+    caller("root", { role: "SuperAdmin" }),
+    caller("adm", { role: "Admin" }),
+    caller("inv"),
+    caller("nobody"),
+  ];
+  for (const who of denied) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: who }), "permission-denied");
+  }
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): a lease without a tenant or without a server-side rent cannot be paid", async () => {
+  await db.collection("Leases").doc("no-tenant").set({ owner_id: "owner", country_code: "AE", financialTerms: { monthlyRent: 100 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-tenant", amount: 100 }, auth: tenantCaller() }), "permission-denied");
+  await db.collection("Leases").doc("no-rent").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE" });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-rent", amount: 100 }, auth: tenantCaller() }), "failed-precondition");
+  await db.collection("Leases").doc("no-country").set({ owner_id: "owner", tenant_id: "tenant", financialTerms: { monthlyRent: 100 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-country" }, auth: tenantCaller() }), "failed-precondition");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): an annual-rent lease is compared against one twelfth, rounded to cents", async () => {
+  await db.collection("Leases").doc("annual").set({ owner_id: "owner", tenant_id: "tenant", country_code: "EG", financialTerms: { annualRent: 100000 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "annual", amount: 100000 }, auth: tenantCaller() }), "invalid-argument");
+  await fns.processRentPayment.run({ data: { leaseId: "annual", amount: 8333.33 }, auth: tenantCaller() });
+  const [tx] = await transactions();
+  assert.equal(tx.amount, 8333.33);
+  assert.equal(tx.currencyCode, "EGP");
+  const { platformFee, agencyFee, ownerPayout } = tx.splits;
+  assert.equal(Math.round((platformFee + agencyFee + ownerPayout) * 100) / 100, 8333.33);
+});
+
+// --- TAQ-91 UT (d): listUsersForAdmin page tokens ---
+
+test("TAQ-91 (UT d): invalid startAfter values are INVALID_ARGUMENT, never INTERNAL", async () => {
+  const staff = caller("a", { role: "Admin" });
+  for (const startAfter of ["../x", "a/b", "x/", "/", "__x__", "____", "a b", "x".repeat(129), "a/../b", "..", ".", 5, true, ["p1"], {}]) {
+    await expectCode(fns.listUsersForAdmin.run({ data: { startAfter }, auth: staff }), "invalid-argument");
+  }
+});
+
+test("TAQ-91 (UT d): plain ids, empty and missing tokens still work", async () => {
+  for (const id of ["p1", "p2", "user_3", "User-4"]) await db.collection("Users").doc(id).set({ role: "Owner" });
+  const staff = caller("a", { role: "Admin" });
+  const noToken = await fns.listUsersForAdmin.run({ data: {}, auth: staff });
+  const emptyToken = await fns.listUsersForAdmin.run({ data: { startAfter: "" }, auth: staff });
+  const nullToken = await fns.listUsersForAdmin.run({ data: { startAfter: null }, auth: staff });
+  assert.equal(noToken.users.length, emptyToken.users.length);
+  assert.equal(noToken.users.length, nullToken.users.length);
+  const after = await fns.listUsersForAdmin.run({ data: { startAfter: "p1", limit: 100 }, auth: staff });
+  assert.ok(after.users.every((u) => u.uid > "p1"));
+  const unknown = await fns.listUsersForAdmin.run({ data: { startAfter: "zzz-not-a-user" }, auth: staff });
+  assert.deepEqual(unknown.users, []);
+  assert.equal(unknown.nextPageToken, null);
+});
+
+test("TAQ-91: the user directory carries the claim role next to the profile role", async () => {
+  await db.collection("Users").doc("claimed").set({ role: "Owner", email: "c@x.test", iban: "AE07", national_id: "784" });
+  await admin.auth().createUser({ uid: "claimed" });
+  await admin.auth().setCustomUserClaims("claimed", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await db.collection("Users").doc("plain").set({ role: "Tenant" });
+  const result = await fns.listUsersForAdmin.run({ data: { limit: 100 }, auth: caller("a", { role: "Admin" }) });
+  const byId = Object.fromEntries(result.users.map((u) => [u.uid, u]));
+  assert.equal(byId.claimed.role, "Owner");
+  assert.equal(byId.claimed.claim_role, "AgencyAdmin");
+  assert.equal(byId.plain.claim_role, "");
+  assert.equal("iban" in byId.claimed, false);
+  assert.equal("national_id" in byId.claimed, false);
+});
