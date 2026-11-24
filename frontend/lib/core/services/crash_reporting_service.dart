@@ -20,18 +20,22 @@ class TelemetryErrorItem {
     this.context,
   });
 
-  Map<String, dynamic> toMap() {
+  /// The Firestore document for `Telemetry_Crashes`. The keys, types and caps match
+  /// firestore.rules: no PII beyond the signed-in uid, createdAt set by the server.
+  Map<String, dynamic> toMap({String? uid}) {
+    final cleanMessage = _cap(message, CrashReportingService.maxMessageLength);
     return {
-      'id': id,
-      'message': message,
-      'stackTrace': stackTrace,
-      'timestamp': timestamp.toIso8601String(),
+      'message': cleanMessage.isEmpty ? 'Unknown error' : cleanMessage,
+      'stack': _cap(stackTrace, CrashReportingService.maxStackLength),
+      if (context != null) 'context': _cap(context!, CrashReportingService.maxContextLength),
       'isFatal': isFatal,
-      'context': context,
       'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
-      'userId': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
+      'uid': uid,
+      'createdAt': FieldValue.serverTimestamp(),
     };
   }
+
+  static String _cap(String value, int max) => value.length <= max ? value : value.substring(0, max);
 }
 
 /// Enterprise crash reporting and error telemetry service.
@@ -41,7 +45,46 @@ class CrashReportingService {
   factory CrashReportingService() => _instance;
   CrashReportingService._internal();
 
+  static const int maxMessageLength = 2000;
+  static const int maxStackLength = 8000;
+  static const int maxContextLength = 500;
+  static const int maxReportsPerSession = 5;
+  static const Duration writeTimeout = Duration(seconds: 5);
+
   final ValueNotifier<List<TelemetryErrorItem>> recentErrors = ValueNotifier<List<TelemetryErrorItem>>([]);
+
+  final Set<String> _sentMessages = <String>{};
+  int _sentCount = 0;
+
+  /// Replaces the Firestore write (tests). Receives the document id and map.
+  @visibleForTesting
+  Future<void> Function(String id, Map<String, dynamic> data)? writeOverride;
+
+  @visibleForTesting
+  String? Function()? uidOverride;
+
+  @visibleForTesting
+  void resetSession() {
+    _sentMessages.clear();
+    _sentCount = 0;
+  }
+
+  /// A report is sent at most [maxReportsPerSession] times per session, and a message that was
+  /// already sent is not sent again, so a crash loop cannot spam Firestore.
+  bool _claimReportSlot(String message) {
+    if (_sentCount >= maxReportsPerSession || _sentMessages.contains(message)) return false;
+    _sentMessages.add(message);
+    _sentCount += 1;
+    return true;
+  }
+
+  String? _currentUid() {
+    try {
+      return uidOverride != null ? uidOverride!() : FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Initializes error boundary and hooks into Flutter's platform dispatchers.
   void initialize() {
@@ -55,8 +98,21 @@ class CrashReportingService {
     String? reason,
     bool fatal = false,
   }) async {
+    try {
+      await _record(error, stack, reason: reason, fatal: fatal);
+    } catch (e) {
+      debugPrint('[CrashReportingService] Notice: could not record error ($e)');
+    }
+  }
+
+  Future<void> _record(
+    dynamic error,
+    StackTrace? stack, {
+    String? reason,
+    bool fatal = false,
+  }) async {
     final errorItem = TelemetryErrorItem(
-      id: 'err_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'err_${DateTime.now().millisecondsSinceEpoch}_$_sentCount',
       message: error.toString(),
       stackTrace: stack?.toString() ?? '',
       timestamp: DateTime.now(),
@@ -73,15 +129,14 @@ class CrashReportingService {
 
     debugPrint('[CrashReportingService] Telemetry error captured: ${errorItem.message}');
 
-    // Persist to Cloud Firestore telemetry collection safely
+    if (!_claimReportSlot(errorItem.message)) return;
     try {
-      await FirebaseFirestore.instance
-          .collection('Telemetry_Crashes')
-          .doc(errorItem.id)
-          .set(errorItem.toMap());
+      final data = errorItem.toMap(uid: _currentUid());
+      final write = writeOverride ??
+          (id, map) => FirebaseFirestore.instance.collection('Telemetry_Crashes').doc(id).set(map);
+      await write(errorItem.id, data).timeout(writeTimeout);
     } catch (e) {
-      // Non-blocking telemetry fallback
-      debugPrint('[CrashReportingService] Notice: Could not send telemetry to Firestore ($e)');
+      debugPrint('[CrashReportingService] Notice: Could not send telemetry ($e)');
     }
   }
 

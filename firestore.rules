@@ -356,6 +356,41 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || agencyManagesResource();
     }
 
+    // 4b. Invoices
+    // Written only by generateRentalInvoiceReceipt (Admin SDK), copying the lease parties.
+    // Read only by those parties; clients never write, so a client cannot mint a receipt.
+    match /Invoices/{invoiceId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('tenant_id', '') == request.auth.uid ||
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          agencyManagesResource()
+        ));
+      allow write: if false;
+    }
+
+    // 4c. Telemetry_Crashes
+    // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
+    // beyond the caller's own uid. Only a SuperAdmin can read them back.
+    function crashReportOk(d) {
+      return d.keys().hasOnly(['message', 'stack', 'context', 'isFatal', 'platform', 'uid', 'createdAt'])
+        && d.keys().hasAll(['message', 'isFatal', 'platform', 'createdAt'])
+        && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
+        && d.get('stack', '') is string && d.get('stack', '').size() <= 8000
+        && d.get('context', '') is string && d.get('context', '').size() <= 500
+        && d.isFatal is bool
+        && d.platform in ['web', 'android', 'iOS', 'macOS', 'windows', 'linux', 'fuchsia']
+        && d.createdAt == request.time
+        && (d.get('uid', null) == null
+          || (isAuthenticated() && d.get('uid', null) is string && d.get('uid', null) == request.auth.uid));
+    }
+
+    match /Telemetry_Crashes/{crashId} {
+      allow create: if crashId.size() <= 64 && crashReportOk(request.resource.data);
+      allow get, list: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
     // 5. Maintenance Requests
     match /Maintenance/{requestId} {
       allow read, write: if isAuthenticated();
