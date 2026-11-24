@@ -103,3 +103,34 @@ test("TAQ-71: listing deep links with a dot and the fixed-name Flutter scripts a
   assert.ok(!noCache.includes("**"), "hashed assets and CanvasKit stay cacheable");
   assert.equal(hostingHeaders("**")["Content-Security-Policy"], undefined, "the CSP stays report-only");
 });
+
+// --- TAQ-19: the client ships no Gemini key and never calls Gemini directly ---
+
+const clientKeys = require("../scripts/check_client_ai_keys");
+
+test("TAQ-19: frontend/lib and frontend/web hold no Gemini key, key define or direct Gemini URL", () => {
+  assert.deepEqual(clientKeys.scanClient(), []);
+});
+
+test("TAQ-19: the client key check catches keys, their base64 forms and direct Gemini calls", () => {
+  const fake = (prefix) => prefix + "x".repeat(36);
+  const samples = [
+    `const k = '${fake("AI" + "za")}';`,
+    `const k = '${fake("AQ" + ".")}';`,
+    `base64.decode('${Buffer.from(fake("AI" + "za")).toString("base64")}')`,
+    `base64.decode('${Buffer.from(fake("AQ" + ".")).toString("base64")}')`,
+    "Uri.parse('https://generative" + "language.googleapis.com/v1beta/models/m')",
+    "String.fromEnvironment('GEMINI" + "_API_KEY')",
+    "'models/$m:generate" + "Content'",
+  ];
+  for (const line of samples) {
+    assert.equal(clientKeys.scanText("frontend/lib/x.dart", line).length > 0, true, line);
+  }
+});
+
+test("TAQ-19: Firebase config keys are allowed only as apiKey entries in firebase_options.dart", () => {
+  const line = `    apiKey: '${"AI" + "za"}${"y".repeat(35)}',`;
+  assert.deepEqual(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS, line), []);
+  assert.equal(clientKeys.scanText("frontend/lib/other.dart", line).length, 1);
+  assert.equal(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS, `final k = '${"AI" + "za"}${"y".repeat(35)}';`).length, 1);
+});
