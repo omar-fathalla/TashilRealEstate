@@ -101,6 +101,12 @@ similar) run on the configured model. An upstream 404 is logged at error level w
 name only and returned to the caller as the usual unavailable error. Details and steps are in
 `docs/DEV_ENVIRONMENT.md`.
 
+Thinking is also capped on the server. `GEMINI_THINKING_BUDGET` (int param, default `0`) is
+added to every request as `generationConfig.thinkingConfig.thinkingBudget`; `-1` sends none; the
+client's own `thinkingConfig` is always dropped. `maxOutputTokens` from the client is clamped to
+1024-4096, so thinking tokens cannot use up a small limit and cut the answer off. See
+`docs/DEV_ENVIRONMENT.md`.
+
 ## Client AI key check
 
 `npm test` (in `backend/`) fails if `frontend/lib` or `frontend/web` holds a Gemini key, a base64

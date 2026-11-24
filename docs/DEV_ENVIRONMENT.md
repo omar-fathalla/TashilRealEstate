@@ -87,6 +87,25 @@ then redeploy `functions:geminiGenerate`. Allowed values: `gemini-3.5-flash`,
 with a warning and the default is used. To allow a new model, add it to `ALLOWED_MODELS` in
 `backend/gemini_gateway.js`.
 
+### Thinking budget and output tokens (TAQ-89)
+
+Gemini 3.x models think before answering, and thinking tokens count against `maxOutputTokens`.
+A small limit (a call with 200 used 188 on thinking) returns a cut-off answer. The server
+therefore owns both settings:
+
+- `GEMINI_THINKING_BUDGET` (int param, default `0`) is sent as
+  `generationConfig.thinkingConfig.thinkingBudget` on every call. `0` turns thinking off, a
+  positive number (up to 24576) caps it, `-1` sends no `thinkingConfig` at all (the model's own
+  default). An invalid value is ignored and `0` is used. Any `thinkingConfig` from the client is
+  dropped. Set it in `backend/.env.<project id>` like `GEMINI_MODEL`, then redeploy
+  `functions:geminiGenerate`. When you raise it, keep the budget well below the 4096 output cap.
+- `maxOutputTokens` from the app is clamped to between 1024 and 4096. The floor is
+  `CAPS.minOutputTokens` in `backend/gemini_gateway.js`.
+
+Google's docs describe `thinking_level` as the control for Gemini 3 and later, so check a live
+call after any model change. If Gemini rejects `thinkingBudget` for a model, set
+`GEMINI_THINKING_BUDGET=-1` as a stopgap (the 1024 floor still limits truncation).
+
 If Gemini answers 404 ("no longer available"), `functions:log --only geminiGenerate` shows an
 error entry naming the model (never the key) and callers get the normal "AI service is
 unavailable" error. Set `GEMINI_MODEL` to an available model and redeploy.
