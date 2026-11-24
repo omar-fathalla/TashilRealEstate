@@ -3,17 +3,20 @@
  * Fails when the Flutter client ships a Gemini key or calls Gemini directly.
  * Gemini runs only through the geminiGenerate Cloud Function (TAQ-19).
  *
- * Usage: node backend/scripts/check_client_ai_keys.js
+ * Usage: node backend/scripts/check_client_ai_keys.js [--build]
+ *   --build  also scans the compiled frontend/build/web output (run `flutter build web` first).
  */
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..", "..");
 const SCAN_DIRS = ["frontend/lib", "frontend/web"];
-const SCAN_EXTENSIONS = new Set([".dart", ".js", ".html", ".json", ".yaml", ".txt"]);
+const BUILD_DIR = "frontend/build/web";
+const SCAN_EXTENSIONS = new Set([".dart", ".js", ".mjs", ".map", ".html", ".json", ".yaml", ".txt"]);
 
-// Firebase client config keys are public identifiers, not Gemini keys. They may appear only
-// as `apiKey:` entries in the generated firebase_options.dart.
+// Firebase client config keys are public identifiers, not Gemini keys. In source they may appear
+// only as `apiKey:` entries in the generated firebase_options.dart; compiled output may contain
+// exactly those values and no other key.
 const FIREBASE_OPTIONS = "frontend/lib/firebase_options.dart";
 
 const RULES = [
@@ -37,39 +40,61 @@ function walk(dir, out = []) {
   return out;
 }
 
-function scanText(relPath, text) {
+function firebaseApiKeys(root = ROOT) {
+  const file = path.join(root, FIREBASE_OPTIONS);
+  if (!fs.existsSync(file)) return new Set();
+  return new Set([...fs.readFileSync(file, "utf8").matchAll(/^\s*apiKey:\s*'([^']+)',\s*$/gm)].map((m) => m[1]));
+}
+
+function scanText(relPath, text, { allowedKeys = new Set() } = {}) {
   const findings = [];
   const lines = text.split("\n");
   lines.forEach((line, index) => {
     for (const rule of RULES) {
       rule.pattern.lastIndex = 0;
       if (!rule.pattern.test(line)) continue;
-      if (rule.firebaseConfigAllowed && relPath === FIREBASE_OPTIONS && /^\s*apiKey:\s*'[^']+',\s*$/.test(line)) continue;
+      if (rule.firebaseConfigAllowed) {
+        if (relPath === FIREBASE_OPTIONS && /^\s*apiKey:\s*'[^']+',\s*$/.test(line)) continue;
+        if (relPath.startsWith(`${BUILD_DIR}/`) && line.match(rule.pattern).every((key) => allowedKeys.has(key))) continue;
+      }
       findings.push({ file: relPath, line: index + 1, rule: rule.name });
     }
   });
   return findings;
 }
 
-function scanClient(root = ROOT) {
+function scanClient(root = ROOT, { build = false } = {}) {
+  const dirs = build ? [...SCAN_DIRS, BUILD_DIR] : SCAN_DIRS;
+  if (build && !fs.existsSync(path.join(root, BUILD_DIR))) {
+    throw new Error(`${BUILD_DIR} does not exist; run \`flutter build web\` in frontend/ first.`);
+  }
+  const allowedKeys = build ? firebaseApiKeys(root) : new Set();
   const findings = [];
-  for (const dir of SCAN_DIRS) {
+  for (const dir of dirs) {
     for (const file of walk(path.join(root, dir))) {
       const relPath = path.relative(root, file).split(path.sep).join("/");
-      findings.push(...scanText(relPath, fs.readFileSync(file, "utf8")));
+      findings.push(...scanText(relPath, fs.readFileSync(file, "utf8"), { allowedKeys }));
     }
   }
   return findings;
 }
 
-module.exports = { scanClient, scanText, RULES, FIREBASE_OPTIONS };
+module.exports = { scanClient, scanText, firebaseApiKeys, RULES, FIREBASE_OPTIONS, BUILD_DIR };
 
 if (require.main === module) {
-  const findings = scanClient();
+  const build = process.argv.includes("--build");
+  let findings;
+  try {
+    findings = scanClient(ROOT, { build });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const scanned = (build ? [...SCAN_DIRS, BUILD_DIR] : SCAN_DIRS).join(", ");
   if (findings.length) {
     for (const f of findings) console.error(`${f.file}:${f.line}: ${f.rule}`);
-    console.error(`\n${findings.length} client AI key finding(s). Gemini must go through geminiGenerate.`);
+    console.error(`\n${findings.length} client AI key finding(s) in ${scanned}. Gemini must go through geminiGenerate.`);
     process.exit(1);
   }
-  console.log(`No Gemini keys or direct Gemini URLs in ${SCAN_DIRS.join(", ")}.`);
+  console.log(`No Gemini keys or direct Gemini URLs in ${scanned}.`);
 }

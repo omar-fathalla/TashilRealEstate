@@ -539,3 +539,38 @@ test("TAQ-63: a max-size listing (4000-character descriptions) is evaluated with
   await assertSucceeds(setDoc(ref, listingWith(full)));
   await rejected(ref, listingWith({ ...full, descriptions: { ...full.descriptions, en: `${description.slice(0, 3980)} 010 12 34 56 78` } }), "phone at the end of a 4000-character description");
 });
+
+// TAQ-72: § ¦ ¤ are the filter's own markers and ¶ ` ´ look like them; typed in a listing
+// they are separators like any other.
+test("TAQ-72: phones split by § ¶ ¦ ¤ ` or ´ are caught in the sanitizer and the rules, in any digits", async () => {
+  const seps = ["\u00a7", "\u00b6", "\u00a6", "\u00a4", "`", "\u00b4"];
+  await expectCaught(variants([
+    "010§1234§5678",
+    "050§123§4567",
+    "+20§10§1234§5678",
+    "+971§50§123§4567",
+    ...seps.map((sep) => `010${sep}1234${sep}5678`),
+    ...seps.map((sep) => `050${sep}123${sep}4567`),
+    "010 § 1234 § 5678",
+    "010§§1234``5678",
+  ]));
+  assert.equal(sanitized("Call 010§1234§5678 now"), "Call  now");
+  assert.equal(sanitized("اتصل ٠٥٠¶١٢٣¶٤٥٦٧ الآن"), "اتصل  الآن");
+});
+
+test("TAQ-72: prices, handles, dates, permits and clause marks with § or ¶ stay free", async () => {
+  await expectFree([
+    "Price 1,500,000 | Apt #1203 | 3 BR",
+    "Stay @home",
+    "meet @ 5pm",
+    "Lease 1/1/2026 31/12/2026",
+    "Available 2026-01-15 2026-06-30",
+    "Permit 7134-2025",
+    "RERA permit 7134",
+    "Section §12 of the lease",
+    "Clause §3.2, ¶4",
+    "Units 10§12§34",
+    "Use the `Book viewing` button",
+    "Price 1,500,000 § 2,000,000",
+  ]);
+});

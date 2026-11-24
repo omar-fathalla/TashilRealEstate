@@ -26,6 +26,9 @@ class TashilSearchBar extends StatefulWidget {
   final VoidCallback? onToggleSemantic;
   final VoidCallback? onVisualSearch;
   final List<String> suggestions;
+
+  /// Called when a suggestion is tapped. When it is null, the tap is reported through
+  /// [onSubmitted] instead; never both, so a tap runs the search once.
   final ValueChanged<String>? onSelectSuggestion;
   final double height;
   final FocusNode? focusNode;
@@ -218,8 +221,12 @@ class _TashilSearchBarState extends State<TashilSearchBar> with SingleTickerProv
                               ),
                               onTap: () {
                                 widget.controller.text = suggestion;
-                                widget.onSelectSuggestion?.call(suggestion);
-                                widget.onSubmitted?.call(suggestion);
+                                final onSelect = widget.onSelectSuggestion;
+                                if (onSelect != null) {
+                                  onSelect(suggestion);
+                                } else {
+                                  widget.onSubmitted?.call(suggestion);
+                                }
                                 _focusNode.unfocus();
                                 _hideSuggestionsOverlay();
                               },

@@ -38,11 +38,11 @@ function textRequest(text = "Estimate the rent for a 2 bedroom flat.") {
   return { contents: [{ parts: [{ text }] }] };
 }
 
-function call({ feature = "valuation", model, request = textRequest(), uid = null, ip = "203.0.113.7" } = {}) {
+function call({ feature = "valuation", model, request = textRequest(), uid = null, role, ip = "203.0.113.7", rawRequest } = {}) {
   return fns.geminiGenerate.run({
     data: { feature, model, request },
-    auth: uid ? { uid, token: { uid } } : undefined,
-    rawRequest: { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
+    auth: uid ? { uid, token: role ? { uid, role } : { uid } } : undefined,
+    rawRequest: rawRequest || { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
   });
 }
 
@@ -98,9 +98,44 @@ test("TAQ-19: every visitor feature works signed out; sign-in-only features work
     assert.equal(result.candidates[0].content.parts[0].text, "{\"ok\":true}");
   }
   for (const feature of ["onboarding", "document_ocr"]) {
-    await call({ feature, uid: "owner-1" });
+    await call({ feature, uid: "owner-1", role: "Owner" });
   }
   assert.equal(calls.length, visitorFeatures.length + 2);
+});
+
+test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () => {
+  const portalFeatures = Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].roles);
+  assert.deepEqual(portalFeatures.sort(), ["document_ocr", "onboarding"]);
+  await db.collection("Users").doc("profile-owner").set({ role: "Owner" });
+  await db.collection("Users").doc("profile-tenant").set({ role: "Tenant" });
+  await db.collection("Users").doc("profile-agency").set({ role: "AgencyAdmin" });
+  for (const feature of portalFeatures) {
+    for (const denied of [
+      { uid: "no-role" },
+      { uid: "tenant-claim", role: "Tenant" },
+      { uid: "profile-tenant" },
+      { uid: "investor-claim", role: "Investor" },
+      // The profile document cannot vouch for an elevated role.
+      { uid: "profile-agency" },
+    ]) {
+      await expectCode(call({ feature, ...denied }), "permission-denied");
+    }
+    for (const allowed of [
+      { uid: "owner-claim", role: "Owner" },
+      { uid: "profile-owner" },
+      { uid: "agency-claim", role: "AgencyAdmin" },
+      { uid: "admin-claim", role: "SuperAdmin" },
+    ]) {
+      await call({ feature, ...allowed });
+    }
+  }
+  assert.equal(calls.length, portalFeatures.length * 4);
+  const buckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.map((d) => d.id);
+  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-agency"]) {
+    assert.ok(!buckets.includes(`uid_${uid}`), `a denied ${uid} must not use quota`);
+  }
+  // Tenants keep the public AI features.
+  await call({ uid: "tenant-claim", role: "Tenant" });
 });
 
 test("TAQ-19: an unknown feature is rejected", async () => {
@@ -151,7 +186,7 @@ test("TAQ-19: oversized prompts and files are rejected before Gemini or the quot
   const bigFile = {
     contents: [{ parts: [{ text: "Read this ID" }, { inline_data: { mime_type: "image/jpeg", data: "A".repeat(gw.CAPS.inlineBase64Chars + 1) } }] }],
   };
-  await expectCode(call({ uid: "u1", feature: "document_ocr", request: bigFile }), "invalid-argument");
+  await expectCode(call({ uid: "u1", role: "Owner", feature: "document_ocr", request: bigFile }), "invalid-argument");
   assert.equal(calls.length, 0);
   const bucket = await db.collection(gw.RATE_LIMIT_COLLECTION).doc("uid_u1").get();
   assert.equal(bucket.exists, false, "rejected requests must not use quota");
@@ -230,11 +265,69 @@ test("TAQ-19: visitors are limited per IP, and the stored bucket id is not the r
   assert.equal(global.dayCount, gw.LIMITS.visitor.perMinute + 1);
 });
 
-test("TAQ-19: a forged X-Forwarded-For prefix does not give a visitor a new bucket", async () => {
+test("TAQ-77: the visitor IP is the entry Google's front end appended, never a client-chosen one", () => {
   assert.equal(gw.clientIp({ headers: { "x-forwarded-for": "1.1.1.1, 2.2.2.2, 203.0.113.7" } }), "203.0.113.7");
-  assert.equal(gw.clientIp({ headers: {}, ip: "203.0.113.9" }), "203.0.113.9");
+  assert.equal(gw.clientIp({ headers: { "x-forwarded-for": ["1.1.1.1", "203.0.113.7"] } }), "203.0.113.7");
+  // Express's req.ip is the left-most entry under `trust proxy`; it is ignored.
+  assert.deepEqual(
+    gw.clientAddress({ headers: {}, ip: "1.1.1.1", socket: { remoteAddress: "::ffff:203.0.113.9" } }),
+    { ip: "203.0.113.9", source: "socket" },
+  );
+  // A malformed last entry falls back to the TCP peer instead of becoming its own bucket.
+  assert.deepEqual(
+    gw.clientAddress({ headers: { "x-forwarded-for": "1.1.1.1, not-an-ip" }, socket: { remoteAddress: "203.0.113.9" } }),
+    { ip: "203.0.113.9", source: "socket" },
+  );
+  assert.equal(gw.clientIp({ headers: {} }), "unknown");
+  assert.equal(gw.normalizeIp("203.0.113.7:51234"), "203.0.113.7");
+  assert.equal(gw.normalizeIp("[2001:DB8::1]:443"), "2001:db8::1");
   assert.equal(gw.visitorBucket("203.0.113.7", "k"), gw.visitorBucket("203.0.113.7", "k"));
   assert.notEqual(gw.visitorBucket("203.0.113.7", "k"), gw.visitorBucket("203.0.113.8", "k"));
+});
+
+test("TAQ-77: behind one more trusted proxy the client is the second entry from the right", () => {
+  assert.equal(gw.trustedHops({}), 1);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "2" }), 2);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "0" }), 1);
+  assert.equal(gw.trustedHops({ VISITOR_IP_TRUSTED_HOPS: "abc" }), 1);
+  const lb = { headers: { "x-forwarded-for": "1.1.1.1, 203.0.113.7, 35.191.0.1" }, socket: { remoteAddress: "35.191.0.1" } };
+  assert.equal(gw.clientIp(lb, 2), "203.0.113.7");
+  // Only a client-set entry: too few trusted entries, so the peer address is used.
+  assert.deepEqual(gw.clientAddress({ headers: { "x-forwarded-for": "1.1.1.1" }, socket: { remoteAddress: "35.191.0.1" } }, 2), {
+    ip: "35.191.0.1",
+    source: "socket",
+  });
+});
+
+test("TAQ-77: a forged X-Forwarded-For cannot buy a visitor fresh quota on its own", async () => {
+  gw.deps.now = () => Date.UTC(2026, 10, 24, 11, 0, 0);
+  const forged = (i) => ({
+    headers: { "x-forwarded-for": `10.${i}.${i}.${i}, 198.51.100.${i}, 203.0.113.7` },
+    ip: `10.${i}.${i}.${i}`,
+    socket: { remoteAddress: "169.254.1.1" },
+  });
+  for (let i = 1; i <= gw.LIMITS.visitor.perMinute; i += 1) await call({ rawRequest: forged(i) });
+  await expectCode(call({ rawRequest: forged(99) }), "resource-exhausted");
+  await expectCode(call({ rawRequest: { headers: {}, ip: "10.9.9.9", socket: { remoteAddress: "203.0.113.7" } } }), "resource-exhausted");
+  const visitorBuckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.filter((d) => d.id.startsWith("ip_"));
+  assert.equal(visitorBuckets.length, 1, "every forged header landed in the same bucket");
+  const global = (await db.collection(gw.RATE_LIMIT_COLLECTION).doc("visitors_global").get()).data();
+  assert.equal(global.dayCount, gw.LIMITS.visitor.perMinute);
+  assert.equal(gw.LIMITS.visitorsPerDay, 3000);
+});
+
+test("TAQ-77: logs say where the visitor IP came from but never the IP", async () => {
+  const lines = [];
+  const original = logger.info;
+  logger.info = (...args) => lines.push(JSON.stringify(args));
+  try {
+    await call({ ip: "203.0.113.42" });
+  } finally {
+    logger.info = original;
+  }
+  const logged = lines.join("\n");
+  assert.match(logged, /"ipSource":"x-forwarded-for"/);
+  assert.ok(!logged.includes("203.0.113.42"));
 });
 
 test("TAQ-19: the shared visitor ceiling stops signed-out calls but not signed-in ones", async () => {

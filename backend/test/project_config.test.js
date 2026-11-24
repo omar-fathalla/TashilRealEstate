@@ -81,7 +81,7 @@ test("TAQ-35: the CSP ships report-only and covers the Flutter web and Firebase 
   assert.ok(csp["script-src"].includes("'wasm-unsafe-eval'"));
   assert.ok(!csp["script-src"].includes("'unsafe-eval'"));
   assert.ok(!csp["script-src"].includes("'unsafe-inline'"));
-  for (const origin of ["https://*.googleapis.com", "https://*.firebaseio.com", "https://*.cloudfunctions.net", "https://fonts.gstatic.com"]) {
+  for (const origin of ["https://firestore.googleapis.com", "https://*.firebaseio.com", "https://*.cloudfunctions.net", "https://fonts.gstatic.com"]) {
     assert.ok(csp["connect-src"].includes(origin), origin);
   }
   assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
@@ -133,4 +133,86 @@ test("TAQ-19: Firebase config keys are allowed only as apiKey entries in firebas
   assert.deepEqual(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS, line), []);
   assert.equal(clientKeys.scanText("frontend/lib/other.dart", line).length, 1);
   assert.equal(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS, `final k = '${"AI" + "za"}${"y".repeat(35)}';`).length, 1);
+});
+
+// --- TAQ-78: local secret files never get committed ---
+
+test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; example templates are not", () => {
+  const { execFileSync } = require("child_process");
+  const ignored = (file) => {
+    try {
+      execFileSync("git", ["check-ignore", "-q", file], { cwd: root });
+      return true;
+    } catch (err) {
+      if (err.status === 1) return false;
+      throw err;
+    }
+  };
+  for (const file of [
+    "backend/.secret.local",
+    "backend/.secret.prod.local",
+    "backend/.env.local",
+    "backend/.env.tashil-proptech-os.local",
+    "frontend/.env.local",
+    "backend/.env",
+  ]) {
+    assert.equal(ignored(file), true, `${file} must be ignored`);
+  }
+  assert.equal(ignored("backend/.secret.local.example"), false);
+});
+
+// --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
+
+test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined, "the CSP stays report-only");
+  const connect = headers["Content-Security-Policy-Report-Only"].match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
+  const googleapis = connect.filter((origin) => origin.includes("googleapis.com"));
+  assert.deepEqual(googleapis.sort(), [
+    "https://content-firebaseappcheck.googleapis.com",
+    "https://fcmregistrations.googleapis.com",
+    "https://firebaseinstallations.googleapis.com",
+    "https://firebaselogging.googleapis.com",
+    "https://firebaseremoteconfig.googleapis.com",
+    "https://firebaseremoteconfigrealtime.googleapis.com",
+    "https://firebasestorage.googleapis.com",
+    "https://firestore.googleapis.com",
+    "https://identitytoolkit.googleapis.com",
+    "https://securetoken.googleapis.com",
+    "https://storage.googleapis.com",
+  ]);
+  for (const origin of connect) {
+    assert.doesNotMatch(origin, /\*\.googleapis\.com|generativelanguage|aiplatform/, origin);
+  }
+});
+
+test("TAQ-79: the --build scan allows only the firebase_options keys in compiled web output", () => {
+  const os = require("os");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "client-keys-"));
+  const firebaseKey = "AIza" + "F".repeat(35);
+  const otherKey = "AIza" + "G".repeat(35);
+  const write = (rel, text) => {
+    fs.mkdirSync(path.dirname(path.join(tmp, rel)), { recursive: true });
+    fs.writeFileSync(path.join(tmp, rel), text);
+  };
+  try {
+    write(clientKeys.FIREBASE_OPTIONS, `  static const FirebaseOptions web = FirebaseOptions(\n    apiKey: '${firebaseKey}',\n  );\n`);
+    assert.throws(() => clientKeys.scanClient(tmp, { build: true }), /flutter build web/);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js`, `a={apiKey:"${firebaseKey}",authDomain:"x"};b="${firebaseKey}"\n`);
+    assert.deepEqual(clientKeys.scanClient(tmp, { build: true }), []);
+
+    write(`${clientKeys.BUILD_DIR}/main.dart.js`, `a={apiKey:"${firebaseKey}"};k="${otherKey}"\n`);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js.map`, `{"x":"https://generativelanguage.googleapis.com/v1beta/models/m:generateContent"}`);
+    write(`${clientKeys.BUILD_DIR}/assets/env.json`, `{"k":"${Buffer.from("AQ." + "h".repeat(30)).toString("base64")}"}`);
+    const rules = clientKeys.scanClient(tmp, { build: true }).map((f) => `${f.file}: ${f.rule}`).sort();
+    assert.deepEqual(rules, [
+      `${clientKeys.BUILD_DIR}/assets/env.json: base64 of an AQ. key`,
+      `${clientKeys.BUILD_DIR}/main.dart.js.map: Gemini REST method`,
+      `${clientKeys.BUILD_DIR}/main.dart.js.map: direct Gemini API URL`,
+      `${clientKeys.BUILD_DIR}/main.dart.js: Google API key (AIza…)`,
+    ]);
+    assert.deepEqual(clientKeys.scanClient(tmp), [], "without --build the compiled output is not scanned");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });

@@ -148,6 +148,7 @@ service cloud.firestore {
     function contactPhone(text) {
       let t = text
         .replace('[\\x{fe0e}\\x{fe0f}\\x{20e3}\\x{200d}]', '')
+        .replace('[\\x{a7}\\x{a6}\\x{a4}\\x{b6}\\x{60}\\x{b4}]', '~')
         .replace('[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[\\x{2c}\\x{66c}\\x{ff0c}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', '§')
         .replace('[\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+[\\x{7c}\\x{ff5c}][\\x{9}-\\x{d}\\x{20}\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', '§')
         .replace('(^|[^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[^\\p{N}][\\x{2c}\\x{66c}\\x{ff0c}])([1١۱߁१১੧૧୧௧౧೧൧෧๑໑༡၁១᠑１𝟏𝟙𝟣𝟭𝟷₁①⓵❶➀➊¹2٢۲߂२২੨૨୨௨౨೨൨෨๒໒༢၂២᠒２𝟐𝟚𝟤𝟮𝟸₂②⓶❷➁➋²3٣۳߃३৩੩૩୩௩౩೩൩෩๓໓༣၃៣᠓３𝟑𝟛𝟥𝟯𝟹₃③⓷❸➂➌³4٤۴߄४৪੪૪୪௪౪೪൪෪๔໔༤၄៤᠔４𝟒𝟜𝟦𝟰𝟺₄④⓸❹➃➍⁴5٥۵߅५৫੫૫୫௫౫೫൫෫๕໕༥၅៥᠕５𝟓𝟝𝟧𝟱𝟻₅⑤⓹❺➄➎⁵6٦۶߆६৬੬૬୬௬౬೬൬෬๖໖༦၆៦᠖６𝟔𝟞𝟨𝟲𝟼₆⑥⓺❻➅➏⁶7٧۷߇७৭੭૭୭௭౭೭൭෭๗໗༧၇៧᠗７𝟕𝟟𝟩𝟳𝟽₇⑦⓻❼➆➐⁷8٨۸߈८৮੮૮୮௮౮೮൮෮๘໘༨၈៨᠘８𝟖𝟠𝟪𝟴𝟾₈⑧⓼❽➇➑⁸9٩۹߉९৯੯૯୯௯౯೯൯෯๙໙༩၉៩᠙９𝟗𝟡𝟫𝟵𝟿₉⑨⓽❾➈➒⁹](?:\\p{N}{0,2}(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3})+|\\p{N}?(?:[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{2})+[\\x{2c}\\x{66c}\\x{ff0c}]\\p{N}{3}))([^\\p{N}\\x{2c}\\x{66c}\\x{ff0c}]|[\\x{2c}\\x{66c}\\x{ff0c}][^\\p{N}]|[\\x{2c}\\x{66c}\\x{ff0c}]$|$)', '$1§$2§$3')
@@ -242,12 +243,12 @@ service cloud.firestore {
       let amenities = d.get('amenitiesMap', {});
       let images = d.get('imageUrls', []);
       let image = d.get('image', '');
-      // join() fails on non-string entries, which denies the write. The joiner is not a
-      // separator, so digits in neighbouring fields never read as one phone number.
+      // join() fails on non-string entries, which denies the write. A spaced " | " is a list
+      // break for the phone patterns, so digits in neighbouring fields never read as one number.
       let freeText = titles.values().concat(descriptions.values()).concat(locations.values())
         .concat(amenities.get('ar', [])).concat(amenities.get('en', [])).concat(amenities.get('hi', []))
         .concat([d.get('buildingName', ''), d.get('cityCode', ''), d.get('propertyTypeCode', '')])
-        .join(' ¶ ');
+        .join(' | ');
       return d.get('status', 'unavailable') in ['vacant', 'rented', 'unavailable']
         && country in ['EG', 'AE']
         && d.get('currencyCode', currency) == currency
