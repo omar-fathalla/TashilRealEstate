@@ -32,9 +32,12 @@ const MODEL_ALIASES = {
   "gemini-3.8-creative": DEFAULT_MODEL,
 };
 
-// Listing a property and reading lease/ID documents belong to the owner and agency portals.
-// Investor is not a backend role yet; add it here once setUserRole can assign it.
-const PORTAL_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
+// Listing a property and reading lease/ID documents belong to the owner and agency portals,
+// and to platform staff who support them. Investor is deliberately not here: investors do not
+// list properties or hold leases, and OCR reads national IDs and contracts, so they have no use
+// for either feature and no business processing other people's documents. They keep every
+// visitor-level AI feature (valuation, search, market index, advisor) under the per-user quota.
+const PORTAL_ROLES = ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"];
 
 // `visitor`: reachable from public pages, so signed-out callers may use it under the
 // per-IP limit. `inline`: may carry base64 images or PDFs. `roles`: signed-in callers must

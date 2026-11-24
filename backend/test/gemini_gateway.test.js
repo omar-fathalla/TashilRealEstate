@@ -103,20 +103,25 @@ test("TAQ-19: every visitor feature works signed out; sign-in-only features work
   assert.equal(calls.length, visitorFeatures.length + 2);
 });
 
-test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () => {
+test("TAQ-79 / TAQ-91: onboarding and OCR need an owner, agency, Admin or SuperAdmin role", async () => {
   const portalFeatures = Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].roles);
   assert.deepEqual(portalFeatures.sort(), ["document_ocr", "onboarding"]);
   await db.collection("Users").doc("profile-owner").set({ role: "Owner" });
   await db.collection("Users").doc("profile-tenant").set({ role: "Tenant" });
   await db.collection("Users").doc("profile-agency").set({ role: "AgencyAdmin" });
+  await db.collection("Users").doc("profile-investor").set({ role: "Investor" });
+  await db.collection("Users").doc("profile-admin").set({ role: "Admin" });
   for (const feature of portalFeatures) {
     for (const denied of [
       { uid: "no-role" },
       { uid: "tenant-claim", role: "Tenant" },
       { uid: "profile-tenant" },
+      // Investors do not list properties or hold leases, so OCR and onboarding are not theirs.
       { uid: "investor-claim", role: "Investor" },
+      { uid: "profile-investor" },
       // The profile document cannot vouch for an elevated role.
       { uid: "profile-agency" },
+      { uid: "profile-admin" },
     ]) {
       await expectCode(call({ feature, ...denied }), "permission-denied");
     }
@@ -124,18 +129,23 @@ test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () 
       { uid: "owner-claim", role: "Owner" },
       { uid: "profile-owner" },
       { uid: "agency-claim", role: "AgencyAdmin" },
+      { uid: "platform-admin-claim", role: "Admin" },
       { uid: "admin-claim", role: "SuperAdmin" },
     ]) {
       await call({ feature, ...allowed });
     }
   }
-  assert.equal(calls.length, portalFeatures.length * 4);
+  assert.equal(calls.length, portalFeatures.length * 5);
   const buckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.map((d) => d.id);
-  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-agency"]) {
+  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-investor", "profile-agency", "profile-admin"]) {
     assert.ok(!buckets.includes(`uid_${uid}`), `a denied ${uid} must not use quota`);
   }
-  // Tenants keep the public AI features.
+  // Tenants and Investors keep every public AI feature.
   await call({ uid: "tenant-claim", role: "Tenant" });
+  for (const feature of Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].visitor)) {
+    await call({ feature, uid: "investor-claim", role: "Investor" });
+    await call({ feature, uid: "profile-investor" });
+  }
 });
 
 test("TAQ-19: an unknown feature is rejected", async () => {

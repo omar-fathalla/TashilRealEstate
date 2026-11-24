@@ -1,10 +1,16 @@
 const { HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
-const SELF_SERVICE_ROLES = ["Owner", "Tenant"];
-const ASSIGNABLE_ROLES = ["Owner", "Tenant", "AgencyAdmin", "SuperAdmin"];
+// Roles a user may pick for themselves at signup. They are only read from the profile document
+// (or a claim); a profile can never vouch for any other role, so none of these escalates.
+const SELF_SERVICE_ROLES = ["Owner", "Tenant", "Investor"];
+// Roles setUserRole (SuperAdmin only) can grant as custom claims.
+const ASSIGNABLE_ROLES = ["Owner", "Tenant", "Investor", "AgencyAdmin", "Admin", "SuperAdmin"];
 // Roles whose private listings the sync trigger publishes to the marketplace.
 const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
+// Platform staff who moderate listings and read the sanitized user directory. Admin is the
+// restricted platform role; SuperAdmin keeps everything Admin can do.
+const PLATFORM_STAFF_ROLES = ["Admin", "SuperAdmin"];
 
 function requireAuth(request) {
   if (!request.auth || !request.auth.uid) {
@@ -103,6 +109,7 @@ module.exports = {
   SELF_SERVICE_ROLES,
   ASSIGNABLE_ROLES,
   PUBLISHER_ROLES,
+  PLATFORM_STAFF_ROLES,
   requireAuth,
   resolveRole,
   resolveUserRole,

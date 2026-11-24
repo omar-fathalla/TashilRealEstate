@@ -15,6 +15,12 @@ service firebase.storage {
       return isSignedIn() && request.auth.token.get('role', '') == 'SuperAdmin';
     }
 
+    // Platform Admin may list and remove public listing photos to moderate them. It has no
+    // access to the private users/ folder (KYC documents, contracts, voice notes).
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.get('role', '') == 'Admin';
+    }
+
     function under10MB() {
       return request.resource.size < 10 * 1024 * 1024;
     }
@@ -34,12 +40,12 @@ service firebase.storage {
     // so file names of unpublished properties are not enumerable.
     match /public/listings/{ownerUid}/{propertyId}/{fileName} {
       allow get: if true;
-      allow list: if isSelf(ownerUid) || isSuperAdmin();
+      allow list: if isSelf(ownerUid) || isSuperAdmin() || isAdmin();
       allow create, update: if isSelf(ownerUid)
         && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId))
         && under10MB()
         && request.resource.contentType.matches('image/(png|jpe?g|webp|gif)');
-      allow delete: if isSuperAdmin()
+      allow delete: if isSuperAdmin() || isAdmin()
         || (isSelf(ownerUid)
           && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId)));
     }

@@ -5,7 +5,7 @@ const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 // Import these directly: the Functions emulator wraps admin.firestore, which drops its static
 // FieldValue/Timestamp members and made every server-timestamp write crash locally.
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -13,6 +13,7 @@ if (!admin.apps.length) {
 
 const {
   PUBLISHER_ROLES,
+  PLATFORM_STAFF_ROLES,
   requireAuth,
   requireRole,
   resolveUserAuthority,
@@ -35,6 +36,8 @@ exports.processRentPayment = onCall(async (request) => {
   if (!auth) {
     throw new Error("Unauthenticated");
   }
+  // Payments belong to the lease parties and the super admin; Admin and Investor have no part in them.
+  await requireRole(auth, ["Owner", "Tenant", "AgencyAdmin", "SuperAdmin"]);
 
   const leaseId = data.leaseId;
   const amount = data.amount;
@@ -211,6 +214,40 @@ exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
   });
   logger.info(`Role ${result.role} assigned to ${result.uid} by ${auth.uid}`);
   return { success: true, ...result };
+});
+
+// Profile fields a platform Admin may see. An allowlist, so a field added to Users later (IBAN,
+// national ID, phone, KYC data, ...) stays hidden until someone decides to expose it. Firestore
+// rules cannot hide single fields, which is why Admin reads users through this callable instead
+// of reading Users/{uid} (rules keep that to the owner of the profile and SuperAdmin).
+const ADMIN_USER_FIELDS = ["user_id", "email", "full_name", "role", "agency_id", "country_code", "countryCode"];
+const ADMIN_USER_PAGE_MAX = 100;
+
+function adminUserView(doc) {
+  const view = { uid: doc.id };
+  for (const field of ADMIN_USER_FIELDS) {
+    const value = doc.get(field);
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") view[field] = value;
+  }
+  const created = doc.get("created_at");
+  if (created instanceof Timestamp) view.created_at = created.toDate().toISOString();
+  return view;
+}
+
+// Read-only, paged, sanitized user directory for platform staff (Admin and SuperAdmin).
+exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, PLATFORM_STAFF_ROLES);
+  const data = request.data || {};
+  const requested = Number(data.limit);
+  const limit = Number.isInteger(requested) && requested >= 1 ? Math.min(requested, ADMIN_USER_PAGE_MAX) : 50;
+  let query = admin.firestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
+  if (typeof data.startAfter === "string" && data.startAfter) query = query.startAfter(data.startAfter);
+  const snap = await query.get();
+  return {
+    users: snap.docs.map(adminUserView),
+    nextPageToken: snap.size === limit ? snap.docs[snap.size - 1].id : null,
+  };
 });
 
 // Demo accounts are seeded only by the local admin script (seed.js), never by a deployed endpoint.
@@ -423,12 +460,18 @@ function boundedNumber(value, fallback, max) {
  * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
  * identity, installments, unit numbers, notes, and owner contact data never do.
  */
-/** Rating and featured flag are moderated server-side, so they come from the current public doc. */
+/**
+ * Rating, featured, verified and hidden flags are moderated by platform staff, so they come from
+ * the current public doc and an owner's edit can never clear them. A listing hidden by moderation
+ * stays unpublished until a moderator restores it.
+ */
 function moderatedFields(current) {
   const rating = current && current.rating;
   return {
     rating: typeof rating === "number" && rating >= 0 && rating <= 5 ? rating : DEFAULT_LISTING_RATING,
     isFeatured: Boolean(current && current.isFeatured === true),
+    verified: Boolean(current && current.verified === true),
+    moderation_hidden: Boolean(current && current.moderation_hidden === true),
   };
 }
 
@@ -467,10 +510,10 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
     agencyNames: PLATFORM_AGENCY_NAMES,
     agencyPhone: PLATFORM_AGENCY_PHONE,
     ...moderatedFields(current),
-    is_published: true,
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
   };
+  listing.is_published = !listing.moderation_hidden;
   if (agencyId) listing.agency_id = agencyId;
   return listing;
 }

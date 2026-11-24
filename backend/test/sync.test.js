@@ -299,3 +299,38 @@ test("TAQ-55: a published listing can never be replaced as a placeholder", async
   await ownerWrites("ownerB", "live-a", privateListing({ titles: { en: "Scam" } }));
   assert.equal((await publicDoc("live-a")).owner_id, "ownerA");
 });
+
+// --- TAQ-91: Investor and Admin cannot publish; moderation flags survive owner edits ---
+
+test("TAQ-91: an Investor's or an Admin's draft never reaches the marketplace", async () => {
+  await db.doc("Users/invP").set({ role: "Investor" });
+  await db.doc("Users/admP").set({ role: "Admin" });
+  await admin.auth().createUser({ uid: "invC" });
+  await admin.auth().setCustomUserClaims("invC", { role: "Investor" });
+  await admin.auth().createUser({ uid: "admC" });
+  await admin.auth().setCustomUserClaims("admC", { role: "Admin" });
+  for (const uid of ["invP", "admP", "invC", "admC"]) {
+    await ownerWrites(uid, `${uid}-1`, privateListing());
+    assert.equal(await publicDoc(`${uid}-1`), null, uid);
+  }
+  await db.doc("Properties/inv-live").set({ id: "inv-live", owner_id: "invP", is_published: true, status: "vacant", titles: { en: "x" } });
+  await ownerWrites("invP", "inv-live", privateListing());
+  assert.equal((await publicDoc("inv-live")).is_published, false);
+});
+
+test("TAQ-91: a listing hidden or verified by a moderator keeps those flags when its owner edits it", async () => {
+  await ownerWrites("ownerA", "mod-1", privateListing());
+  assert.equal((await publicDoc("mod-1")).verified, false);
+  await db.doc("Properties/mod-1").set({ verified: true, moderation_hidden: true, is_published: false }, { merge: true });
+
+  await ownerWrites("ownerA", "mod-1", privateListing({ titles: { en: "Edited by owner" } }));
+  const pub = await publicDoc("mod-1");
+  assert.equal(pub.titles.en, "Edited by owner");
+  assert.equal(pub.verified, true);
+  assert.equal(pub.moderation_hidden, true);
+  assert.equal(pub.is_published, false, "the owner cannot republish a listing moderation hid");
+
+  await db.doc("Properties/mod-1").set({ moderation_hidden: false }, { merge: true });
+  await ownerWrites("ownerA", "mod-1", privateListing());
+  assert.equal((await publicDoc("mod-1")).is_published, true);
+});

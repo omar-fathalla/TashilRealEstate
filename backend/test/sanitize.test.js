@@ -12,7 +12,7 @@ const PUBLIC_FIELDS = [
   "id", "owner_id", "countryCode", "currencyCode", "titles", "descriptions", "locations",
   "cityCode", "propertyTypeCode", "buildingName", "pricePerMonth", "bedrooms", "bathrooms",
   "areaSqM", "image", "imageUrls", "amenitiesMap", "isFurnished", "agencyNames", "agencyPhone",
-  "rating", "isFeatured", "is_published", "status", "updated_at",
+  "rating", "isFeatured", "is_published", "status", "updated_at", "verified", "moderation_hidden",
 ].sort();
 
 const ownerProperty = {
