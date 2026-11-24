@@ -56,7 +56,8 @@ production data by accident.
 ```bash
 cd backend
 npm ci
-npm test                # rules + functions on Firestore/Auth emulators, then a Functions emulator smoke test
+npm test                # Firestore/Storage rules + functions on the Firestore/Auth/Storage emulators,
+                        # then a Functions emulator smoke test
 npm run serve           # Functions + Firestore + Auth emulators on demo-tashil-dev
 ```
 
@@ -64,9 +65,8 @@ The Functions emulator used to crash on the first server-timestamp write
 (`Cannot read properties of undefined (reading 'serverTimestamp')`): the emulator wraps
 `admin.firestore`, which drops its static `FieldValue`/`Timestamp`. The callables and the
 marketplace sync now import them from `firebase-admin/firestore`, and
-`npm run test:emulator` checks that inside the real emulator. `processRentPayment` and the
-market-index functions still use the old form and will fail the same way in the emulator
-until their own tickets (TAQ-16, TAQ-20) touch them.
+`npm run test:emulator` checks that inside the real emulator. `processRentPayment` still
+uses the old form and will fail the same way in the emulator until TAQ-16 touches it.
 
 ## Demo accounts
 

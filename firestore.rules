@@ -301,9 +301,34 @@ service cloud.firestore {
     }
 
     // 3. Agencies Collection
+    // The agency document is a public profile. Contact details, licence, bank and staff data
+    // belong in Agencies/{agencyId}/private/*.
+    function publicAgencyFields() {
+      return [
+        'name', 'names', 'logo', 'logoUrl', 'orn', 'rera', 'city', 'cityCode', 'countryCode',
+        'area', 'about', 'website', 'verified_badge', 'updated_at'
+      ];
+    }
+
+    function canManageAgency(agencyId) {
+      return isSuperAdmin() || isAgencyAdminOf(agencyId);
+    }
+
     match /Agencies/{agencyId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || (isAgencyAdmin() && request.auth.uid == agencyId);
+      allow create: if canManageAgency(agencyId)
+        && request.resource.data.keys().hasOnly(publicAgencyFields())
+        && (isSuperAdmin() || !('verified_badge' in request.resource.data))
+        && request.resource.data.get('verified_badge', false) is bool;
+      allow update: if canManageAgency(agencyId)
+        && request.resource.data.keys().hasOnly(publicAgencyFields())
+        && (isSuperAdmin() || !changedKeys().hasAny(['verified_badge']))
+        && request.resource.data.get('verified_badge', false) is bool;
+      allow delete: if canManageAgency(agencyId);
+
+      match /private/{docId} {
+        allow read, write: if canManageAgency(agencyId);
+      }
     }
 
     // 4. Leases Collection
