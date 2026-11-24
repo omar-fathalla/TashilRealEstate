@@ -139,8 +139,57 @@ test("TAQ-45: seedDatabase is no longer a deployed function", () => {
   const publicHttp = Object.keys(fns)
     .filter((name) => fns[name] && fns[name].__endpoint && fns[name].__endpoint.httpsTrigger)
     .sort();
-  // syncMarketIndexManual is tracked separately (TAQ-20) and touches no accounts.
-  assert.deepEqual(publicHttp, ["syncMarketIndexManual"]);
+  assert.deepEqual(publicHttp, []);
+});
+
+// --- TAQ-20: syncMarketIndexManual ---
+
+test("TAQ-20: syncMarketIndexManual is a single-instance callable, not a public HTTP endpoint", () => {
+  const endpoint = fns.syncMarketIndexManual.__endpoint;
+  assert.ok(endpoint.callableTrigger, "expected a callable trigger");
+  assert.equal(endpoint.httpsTrigger, undefined);
+  assert.equal(endpoint.maxInstances, 1);
+  assert.equal(typeof fns.syncMarketIndexDaily, "function");
+});
+
+test("TAQ-20: market index refresh requires sign-in", async () => {
+  await expectCode(fns.syncMarketIndexManual.run({ data: { country: "EG" } }), "unauthenticated");
+});
+
+test("TAQ-20: only a SuperAdmin can refresh the market index", async () => {
+  await expectCode(fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: caller("owner") }), "permission-denied");
+  await expectCode(
+    fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: caller("agent", { role: "AgencyAdmin", agency_id: "agency-1" }) }),
+    "permission-denied",
+  );
+  await db.collection("Users").doc("legacy").set({ role: "SuperAdmin" });
+  await expectCode(fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: caller("legacy") }), "permission-denied");
+  assert.equal((await db.collection("MarketIndices").doc("EG").get()).exists, false);
+});
+
+test("TAQ-20: the country must be EG or AE", async () => {
+  const adminCaller = caller("root", { role: "SuperAdmin" });
+  for (const country of [undefined, "", "US", "eg ae", 7, "../Users"]) {
+    await expectCode(fns.syncMarketIndexManual.run({ data: { country }, auth: adminCaller }), "invalid-argument");
+  }
+  assert.equal((await db.collection("MarketIndices").get()).size, 0);
+});
+
+test("TAQ-20: a SuperAdmin refresh writes the index, then a 10-minute cooldown applies", async () => {
+  const adminCaller = caller("root", { role: "SuperAdmin" });
+  const result = await fns.syncMarketIndexManual.run({ data: { country: "ae" }, auth: adminCaller });
+  assert.deepEqual(result, { success: true, country: "AE" });
+  const written = await db.collection("MarketIndices").doc("AE").get();
+  assert.ok(written.get("updatedAt") instanceof admin.firestore.Timestamp);
+
+  await expectCode(fns.syncMarketIndexManual.run({ data: { country: "AE" }, auth: adminCaller }), "resource-exhausted");
+  await fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: adminCaller });
+
+  const elevenMinutesAgo = admin.firestore.Timestamp.fromMillis(Date.now() - 11 * 60 * 1000);
+  await db.collection("MarketIndices").doc("AE").update({ updatedAt: elevenMinutesAgo });
+  await fns.syncMarketIndexManual.run({ data: { country: "AE" }, auth: adminCaller });
+  const refreshed = await db.collection("MarketIndices").doc("AE").get();
+  assert.ok(refreshed.get("updatedAt").toMillis() > elevenMinutesAgo.toMillis());
 });
 
 // --- TAQ-8 / TAQ-9: setUserRole ---

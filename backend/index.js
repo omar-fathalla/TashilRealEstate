@@ -1,4 +1,4 @@
-const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
@@ -785,23 +785,33 @@ exports.syncMarketIndexDaily = onSchedule(
   }
 );
 
+const MARKET_INDEX_COUNTRIES = ["EG", "AE"];
+const MARKET_INDEX_COOLDOWN_MS = 10 * 60 * 1000;
+
 /**
- * On-demand HTTP Endpoint: Allows manual/admin trigger of the market index pipeline.
+ * SuperAdmin-only callable that refreshes one country's market index outside the daily
+ * schedule. A country can be refreshed at most once every 10 minutes.
  */
-exports.syncMarketIndexManual = onRequest(async (req, res) => {
-  const db = admin.firestore();
-  const country = (req.query.country || "EG").toUpperCase();
-  try {
-    const payload = generateMarketIndexData(country);
-    await db.collection("MarketIndices").doc(country).set(payload, { merge: true });
-    res.json({
-      success: true,
-      message: `Daily market index updated for ${country}`,
-      data: payload,
-    });
-  } catch (err) {
-    logger.error("Error in syncMarketIndexManual", err);
-    res.status(500).json({ success: false, error: err.message });
+exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, ["SuperAdmin"]);
+  const data = request.data || {};
+  const country = typeof data.country === "string" ? data.country.trim().toUpperCase() : "";
+  if (!MARKET_INDEX_COUNTRIES.includes(country)) {
+    throw new HttpsError("invalid-argument", "country must be EG or AE.");
   }
+
+  const db = admin.firestore();
+  const ref = db.collection("MarketIndices").doc(country);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const updatedAt = snap.exists ? snap.get("updatedAt") : null;
+    if (updatedAt instanceof Timestamp && Date.now() - updatedAt.toMillis() < MARKET_INDEX_COOLDOWN_MS) {
+      throw new HttpsError("resource-exhausted", "This market index was refreshed less than 10 minutes ago.");
+    }
+    tx.set(ref, generateMarketIndexData(country), { merge: true });
+  });
+  logger.info(`Manual market index refresh for [${country}] by ${auth.uid}`);
+  return { success: true, country };
 });
 
