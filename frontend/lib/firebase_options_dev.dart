@@ -10,7 +10,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// The web API key is a public Firebase browser key restricted to dev referrers. It is not
 /// kept in the repo; pass it at build time:
 ///
-///   flutter build web --dart-define=FIREBASE_ENV=dev --dart-define=DEV_FIREBASE_WEB_API_KEY=<key>
+/// ```bash
+/// flutter build web --dart-define=FIREBASE_ENV=dev --dart-define=DEV_FIREBASE_WEB_API_KEY=KEY
+/// ```
 class DevFirebaseOptions {
   DevFirebaseOptions._();
 
