@@ -468,6 +468,12 @@ test("TAQ-69: thousands groups are one token, and list separators end a number",
   assert.equal(sanitized("Price 1,500,000 | call 050 123 4567"), "Price 1,500,000 | call");
 });
 
+test("TAQ-66: 010 12 345 678 and 01 012 345 678 are caught, in any digits", async () => {
+  await expectCaught(variants(["010 12 345 678", "01 012 345 678"]));
+  assert.equal(sanitized("Call 010 12 345 678 now"), "Call  now");
+  assert.equal(sanitized("اتصل ٠١ ٠١٢ ٣٤٥ ٦٧٨ الآن"), "اتصل  الآن");
+});
+
 test("TAQ-63: a max-size listing (4000-character descriptions) is evaluated within the rules' limits", async () => {
   const ref = doc(root(), "Properties/prop-1");
   const sentence = "Spacious flat of 120 m2 on floor 12, price 1.500.000 EGP, built 2015, ready 2026-01-15. ";

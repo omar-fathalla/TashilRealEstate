@@ -120,23 +120,26 @@ function buildPhoneSource() {
   const tail = (m) => (m === 0 ? "" : m === 1 ? D : `${quant(X, m - 1)}${D}`);
 
   // Rest of a number after its first group: one group of lo..hi digits, or 2-3 groups.
-  const rest = (firstLength, lo, hi) => {
+  // `keepThousands` lists group counts for which all-3-digit groups still read as a phone.
+  const rest = (firstLength, lo, hi, keepThousands = []) => {
     const options = [`${S}${groupRange(Math.max(lo, 2), hi)}`];
     for (const parts of compositions(lo, hi)) {
-      const thousands = firstLength <= THOUSANDS_GROUP_LIMIT && parts.every((p) => p === MIN_PART);
+      const thousands = firstLength <= THOUSANDS_GROUP_LIMIT && parts.every((p) => p === MIN_PART)
+        && !keepThousands.includes(parts.length);
       if (!thousands) options.push(parts.map((p) => `${S}${group(p)}`).join(""));
     }
     return `(?:${options.join("|")})`;
   };
 
-  // Trunk zero, then 8-10 digits: one run, or a short first group (area/operator code)
-  // followed by groups of 3+ digits. No EG/UAE operator or area code starts with 0, so the
-  // digit after the trunk zero is never a real 0 (the trailing zeros of 1 500 000 never
-  // start a number).
+  // Trunk zero, then 8-10 digits: one run, or a first group of up to 7 digits (010 12 345 678
+  // once short groups are merged) followed by groups. No EG/UAE operator or area code starts
+  // with 0, so the digit after the trunk zero is never a real 0 (the trailing zeros of
+  // 1 500 000 never start a number). 0X DDD DDD DDD is an 11-digit EG mobile, not a
+  // thousands grouping, because no amount starts with 0.
   const zero = digitSet(0);
   const afterTrunk = set([...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((k) => digitCodePoints(k)), ...ZERO_LETTERS, ...ONE_LETTERS]);
   const trunkForms = [`${X}{6,8}${D}`];
-  for (let a = 1; a <= 3; a += 1) trunkForms.push(`${tail(a - 1)}${rest(1 + a, 8 - a, 10 - a)}`);
+  for (let a = 1; a <= 7; a += 1) trunkForms.push(`${tail(a - 1)}${rest(1 + a, 8 - a, 10 - a, a === 1 ? [3] : [])}`);
   const trunkSource = `${zero}${afterTrunk}(?:${trunkForms.join("|")})`;
 
   // Mobile numbers written without a trunk zero or country code: a two-digit operator
