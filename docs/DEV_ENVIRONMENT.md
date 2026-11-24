@@ -55,8 +55,27 @@ firebase deploy --project dev --only hosting
 
 `npm run deploy` in `backend/` is prod-only (`--project prod`); do not use it for dev.
 Non-secret function settings such as `VISITOR_IP_TRUSTED_HOPS` or `ENFORCE_APP_CHECK` go in
-`backend/.env.tashil-aqar-dev` (Firebase loads `.env.<project id>` on deploy). Never put a
-secret in it; secrets go through Secret Manager.
+`backend/.env.tashil-aqar-dev` (Firebase loads `.env.<project id>` on deploy, after `backend/.env`).
+Never put a secret in either file; secrets go through Secret Manager.
+
+### Function params in `backend/.env` (TAQ-89)
+
+A non-interactive `firebase deploy --only functions` (CI, agents) fails with "no value for
+GEMINI_THINKING_BUDGET" unless every `defineString`/`defineInt` param has a value in a `.env`
+file, even if the code has a default. `backend/.env` is committed and holds only those
+non-secret params:
+
+| Param | Type | Value | Meaning |
+| --- | --- | --- | --- |
+| `GEMINI_MODEL` | string | `gemini-3.5-flash` | model the gateway uses |
+| `GEMINI_THINKING_BUDGET` | int | `0` | thinking tokens (see below) |
+
+`backend/test/function_params.test.js` fails if a param used in `backend/` has no value there,
+if `.env` holds anything that is not a declared param, or if `backend/.env` becomes gitignored.
+When you add a `defineString`/`defineInt`, add its line to `backend/.env`. `GEMINI_API_KEY` is a
+secret (`defineSecret`) and stays in Secret Manager. `ENFORCE_APP_CHECK` and
+`VISITOR_IP_TRUSTED_HOPS` are plain environment variables, not params, so they are not needed
+there.
 
 ## Secrets
 
@@ -74,9 +93,10 @@ defines.
 The model is a server-side setting, the string param `GEMINI_MODEL` (default
 `gemini-3.5-flash`). The app never chooses it: every old model name the app sends
 (`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-*`, `gemini-3.8-pro`, and so on) runs
-on the configured model. To change it, put the value in the git-ignored
-`backend/.env.<project id>` (for example `backend/.env.tashil-aqar-dev`, or `.env.local` for the
-emulator):
+on the configured model. To change it for every project, edit `backend/.env`. To change it for
+one project, put the value in `backend/.env.<project id>` (for example
+`backend/.env.tashil-aqar-dev`), which overrides `backend/.env`; `.env.local` does the same for
+the emulator and is gitignored:
 
 ```
 GEMINI_MODEL=gemini-3.8-flash
@@ -97,7 +117,7 @@ therefore owns both settings:
   `generationConfig.thinkingConfig.thinkingBudget` on every call. `0` turns thinking off, a
   positive number (up to 24576) caps it, `-1` sends no `thinkingConfig` at all (the model's own
   default). An invalid value is ignored and `0` is used. Any `thinkingConfig` from the client is
-  dropped. Set it in `backend/.env.<project id>` like `GEMINI_MODEL`, then redeploy
+  dropped. Set it in `backend/.env` (or a per-project `.env.<project id>`) like `GEMINI_MODEL`, then redeploy
   `functions:geminiGenerate`. When you raise it, keep the budget well below the 4096 output cap.
 - `maxOutputTokens` from the app is clamped to between 1024 and 4096. The floor is
   `CAPS.minOutputTokens` in `backend/gemini_gateway.js`.
