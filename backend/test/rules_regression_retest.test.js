@@ -97,3 +97,13 @@ test("TAQ-50 [probe] still-unlocked near names", async (t) => {
   for (const f of ["is_verified", "kyc_verified", "isPhoneVerified", "email_verified", "Role", "role_updated_by", "plan"]) { try { await updateDoc(doc(c.ownerA, "Users/ownerA"), { [f]: true }); r[f] = "ALLOWED"; } catch { r[f] = "denied"; } }
   t.diagnostic("PROBE " + JSON.stringify(r));
 });
+
+// TAQ-63/TAQ-65: SuperAdmin direct writes go through the same contact filter.
+test("TAQ-63/65 SuperAdmin direct write with an obfuscated phone, link or handle denied; prices allowed", async () => {
+  for (const v of ["010 12 34 56 78", "5 0 1 2 3 4 5 6 7", "050|123|4567", "010 x 1234 x 5678", "0l0l2345678", "wa.me/201012345678", "@owner_handle"]) {
+    await assertFails(setDoc(P(c.sa, "sa_c"), { ...base("sa_c"), buildingName: v }));
+  }
+  for (const v of ["501 234 567", "1.500.000.000", "15 01 2026", "2 + 1 rooms", "example.com"]) {
+    await assertSucceeds(setDoc(P(c.sa, "sa_ok"), { ...base("sa_ok"), buildingName: v }));
+  }
+});

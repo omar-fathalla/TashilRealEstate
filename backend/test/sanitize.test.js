@@ -159,6 +159,24 @@ test("TAQ-52: phone numbers and emails are removed from free text", () => {
   assert.equal(out.locations.en, "Dubai");
 });
 
+test("TAQ-63/TAQ-65: short digit groups, punctuation separators and messaging links are removed", () => {
+  const out = sanitizeForMarketplace({
+    pricePerMonth: 9000,
+    buildingName: "Tower 010 12 34 56 78",
+    titles: { ar: "شقة ٠١٠٬١٢٣٤٬٥٦٧٨", en: "Flat 050|123|4567 sea view", hi: "फ्लैट t.me/owner" },
+    descriptions: { ar: "السعر ١٬٥٠٠٬٠٠٠ جنيه", en: "Price 1.500.000.000 EGP, ready 01/01/2026 10:30", hi: "@owner_hi संपर्क" },
+    locations: { ar: "دبي", en: "Dubai 501 234 567", hi: "दुबई" },
+  }, "o", "p");
+  assert.equal(out.buildingName, "Tower");
+  assert.equal(out.titles.ar, "شقة");
+  assert.equal(out.titles.en, "Flat  sea view");
+  assert.equal(out.titles.hi, "फ्लैट");
+  assert.equal(out.descriptions.ar, "السعر ١٬٥٠٠٬٠٠٠ جنيه");
+  assert.equal(out.descriptions.en, "Price 1.500.000.000 EGP, ready 01/01/2026 10:30");
+  assert.equal(out.descriptions.hi, "संपर्क");
+  assert.equal(out.locations.en, "Dubai 501 234 567");
+});
+
 test("TAQ-52: the published status is always vacant and strings are bounded", () => {
   const out = sanitizeForMarketplace({ pricePerMonth: 9000, status: "sold", buildingName: "x".repeat(500) }, "o", "p");
   assert.equal(out.status, "vacant");

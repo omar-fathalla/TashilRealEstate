@@ -1145,6 +1145,8 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
                           maxLines: 3,
                           decoration: InputDecoration(
                             hintText: loc.tr('detailedDescriptionHint'),
+                            helperText: loc.tr('publicDescriptionContactNotice'),
+                            helperMaxLines: 3,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             contentPadding: const EdgeInsets.all(12),
                           ),
