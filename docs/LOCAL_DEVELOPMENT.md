@@ -5,7 +5,7 @@
 | Tool | Version | Notes |
 | --- | --- | --- |
 | Flutter | 3.50.1 (Dart 3.14) | Pinned in `frontend/.fvmrc` and `frontend/pubspec.yaml` |
-| Node.js | 20 | Cloud Functions runtime (`backend/package.json` engines) |
+| Node.js | 22 | Cloud Functions runtime (`backend/package.json` engines) |
 | Java | 21 | Firestore emulator |
 | Firebase CLI | 15.x (tested with 15.37) | `npm i -g firebase-tools` |
 
