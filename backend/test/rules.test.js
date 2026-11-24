@@ -429,6 +429,60 @@ test("TAQ-48: marketplace search over published listings still works", async () 
   assert.deepEqual(ae.docs.map((d) => d.id), ["pub-1"]);
 });
 
+// --- TAQ-21: signed-in users cannot read every listing ---
+
+const ownerB = () => db("ownerB", { role: "Owner" });
+const nonAdminReaders = () => [
+  ["visitor", anonDb()],
+  ["owner B", ownerB()],
+  ["tenant", db("tenant", { role: "Tenant" })],
+  ["agency 2 admin", db("agent2", { role: "AgencyAdmin", agency_id: "agency-2" })],
+];
+
+async function seedTaq21Listings() {
+  await seed("Properties/a-vacant", listing("ownerA", { id: "a-vacant", status: "vacant", is_published: false, agency_id: "agency-1" }));
+  await seed("Properties/a-rented", listing("ownerA", { id: "a-rented", status: "rented", is_published: false }));
+  await seed("Properties/a-unavailable", listing("ownerA", { id: "a-unavailable", status: "unavailable", is_published: false }));
+  await seed("Properties/a-published", listing("ownerA", { id: "a-published" }));
+}
+
+test("TAQ-21: owner B cannot get owner A's unpublished listing in any status", async () => {
+  await seedTaq21Listings();
+  for (const id of ["a-vacant", "a-rented", "a-unavailable"]) {
+    await assertFails(getDoc(doc(ownerB(), `Properties/${id}`)), id);
+  }
+  await assertSucceeds(getDoc(doc(ownerB(), "Properties/a-published")));
+});
+
+test("TAQ-21: an unfiltered Properties query is denied for every non-admin", async () => {
+  await seedTaq21Listings();
+  for (const [label, reader] of nonAdminReaders()) {
+    await assertFails(getDocs(collection(reader, "Properties")), label);
+    await assertFails(getDocs(query(collection(reader, "Properties"), where("status", "in", ["vacant", "rented", "unavailable"]))), label);
+  }
+  await assertFails(getDocs(collection(db("ownerA", { role: "Owner" }), "Properties")));
+  await assertSucceeds(getDocs(collection(db("root", { role: "SuperAdmin" }), "Properties")));
+});
+
+test("TAQ-21: visitors and signed-in users can query published listings", async () => {
+  await seedTaq21Listings();
+  for (const [label, reader] of nonAdminReaders()) {
+    const snap = await assertSucceeds(getDocs(query(collection(reader, "Properties"), where("is_published", "==", true))));
+    assert.deepEqual(snap.docs.map((d) => d.id), ["a-published"], label);
+  }
+});
+
+test("TAQ-21: the owner and the managing agency admin can read the unpublished listing", async () => {
+  await seedTaq21Listings();
+  const ownerA = db("ownerA", { role: "Owner" });
+  for (const id of ["a-vacant", "a-rented", "a-unavailable"]) {
+    await assertSucceeds(getDoc(doc(ownerA, `Properties/${id}`)), id);
+  }
+  await assertSucceeds(getDoc(doc(db("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }), "Properties/a-vacant")));
+  const mine = await assertSucceeds(getDocs(query(collection(ownerA, "Properties"), where("owner_id", "==", "ownerA"))));
+  assert.equal(mine.size, 4);
+});
+
 // --- TAQ-49: only Owners and AgencyAdmins can publish listings ---
 
 test("TAQ-49: a Tenant cannot create a public listing", async () => {
