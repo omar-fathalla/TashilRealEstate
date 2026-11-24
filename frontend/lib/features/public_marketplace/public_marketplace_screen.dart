@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/localization/app_localizations.dart';
@@ -42,6 +44,9 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   bool _isSemanticLoading = false;
   List<SemanticSearchResultItem> _semanticResults = [];
   final _semanticService = AiSemanticVectorSearchService();
+  // Each AI search is a rate-limited server call, so typing waits for a pause first.
+  static const Duration _semanticTypingPause = Duration(milliseconds: 700);
+  Timer? _semanticDebounce;
 
   final List<String> _typeCodes = ['all', 'apartment', 'villa', 'studio', 'duplex', 'chalet'];
 
@@ -74,6 +79,7 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
   @override
   void dispose() {
     CountryController.currentCountry.removeListener(_onCountryChanged);
+    _semanticDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -371,13 +377,17 @@ class _PublicMarketplaceScreenState extends State<PublicMarketplaceScreen> {
               },
               onChanged: (val) {
                 if (_isSemanticSearchActive) {
-                  _performSemanticSearch(val, currentCountry);
+                  _semanticDebounce?.cancel();
+                  _semanticDebounce = Timer(_semanticTypingPause, () {
+                    if (mounted) _performSemanticSearch(val, currentCountry);
+                  });
                 } else {
                   setState(() {});
                 }
               },
               onSubmitted: (val) {
                 if (_isSemanticSearchActive) {
+                  _semanticDebounce?.cancel();
                   _performSemanticSearch(val, currentCountry);
                 } else {
                   setState(() {});
