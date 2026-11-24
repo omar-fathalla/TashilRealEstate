@@ -115,87 +115,76 @@ The dev project has one test account per role, all on the `test.tashilaqar.com` 
 Passwords exist only in the dev project's Secret Manager. Never write them into the repo, a PR,
 a ticket or a build define. Do not delete these accounts.
 
-How the roles map to the backend today (`backend/authz.js`, `firestore.rules`):
+How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91):
 
 | Account | Role claim | Notes |
 | --- | --- | --- |
-| `visitor@` | none | Signed in, no role: can use public AI features, not onboarding or OCR. |
+| `visitor@` | none | Signed in with no role: public AI features only, no onboarding or OCR. A real visitor is signed out. |
 | `tenant@` | `Tenant` (claim or profile) | |
 | `owner@` | `Owner` (claim or profile) | |
 | `agency@` | `AgencyAdmin` + `agency_id` claim | |
-| `admin@` | not defined | The backend has no plain "Admin" role; see "Open questions". |
-| `superadmin@` | `SuperAdmin` | |
-| `investor@` | not defined | There is no Investor role yet; see below. |
+| `investor@` | `Investor` (claim or profile) | Self-service like Owner and Tenant. Browses, saves, compares, market index, valuation and AI. No publishing, leases or tenants. |
+| `admin@` | `Admin` (claim only) | Platform Admin. Moderates listings and reads users and agencies. Only a SuperAdmin can grant it. |
+| `superadmin@` | `SuperAdmin` (claim only) | |
+
+### What each role can do (TAQ-91 decisions)
+
+- **Admin** (`/admin`): hide, restore and verify public listings (`is_published`,
+  `verified`, `moderation_hidden`, `updated_at` only; a hidden listing can be restored only while
+  vacant); read all listings, agencies, crash telemetry; read users only through the
+  `listUsersForAdmin` callable, which returns an allowlist (uid, email, name, role, country and
+  agency) and never the IBAN, national ID, phone or any private field; escalate maintenance requests
+  (`status`, `escalated`, `resolution_note`). It cannot call `setUserRole`, touch roles or claims,
+  create or change a SuperAdmin, write system settings, Remote Config, payments, invoices or
+  secrets, run `seedDatabase` or `syncMarketIndexManual`, or delete users. Its role is never read
+  from the profile document, so it cannot be self-granted.
+- **Investor**: browse, save and compare listings, market index, valuation and the AI features that
+  are open to any signed-in user. It cannot publish listings and has no access to leases, tenants
+  or maintenance. It is accepted at signup and never escalates: the profile document can only ever
+  carry `Owner`, `Tenant` or `Investor`.
+- **OCR and onboarding** (`document_ocr`, `onboarding` in the Gemini gateway) stay `Owner`,
+  `AgencyAdmin`, `Admin` and `SuperAdmin`. Investors do not get them: both features exist to
+  list and manage properties, which an Investor cannot do, and OCR processes identity and
+  contract documents.
+- **Where each lands**: `Admin` -> `/admin`, `SuperAdmin` -> `/super-admin` (it may also open
+  `/admin`), `Investor` -> `/` (the marketplace). `/super-admin` stays SuperAdmin-only.
+  `/investor-dashboard` stays public, as before.
 
 ## Creating the test users
 
-`backend/seed.js` is the only script that creates users with roles. What it does today:
+`backend/seed.js` creates users with roles. Two sets:
 
-- It seeds three accounts only: `agency@test.com` (AgencyAdmin), `owner@test.com` (Owner) and
-  `tenant@test.com` (Tenant). The list is `DEMO_USERS` in `seed.js`.
-- The password comes from the `SEED_DEMO_PASSWORD` environment variable (at least 8
-  characters), never argv. One password is used for all accounts. Without it, the script
-  generates one and prints it, which is only allowed for emulators and `demo-*` projects.
-- Emulator: `firebase emulators:exec --only firestore,auth --project demo-tashil-dev 'node seed.js'`.
-- Dev: `SEED_DEMO_PASSWORD=... node seed.js --project tashil-aqar-dev --allow-live-project`, with
-  Application Default Credentials for dev. It refuses any other live project without the flag.
-- Existing accounts keep their password unless `--reset-passwords` is given; nothing is deleted.
-- It cannot create `visitor@`, `investor@`, `admin@` or `superadmin@`, and it uses the
-  `@test.com` domain. `SuperAdmin` is assignable through `applyUserRole`, but no script uses it.
-  `backend/scripts/role_claims.js` only audits claims.
+- Default set (`DEMO_USERS`): `agency@test.com`, `owner@test.com`, `tenant@test.com`. One password
+  from `SEED_DEMO_PASSWORD`.
+- `--set tashilaqar-test` (TAQ-91): the seven accounts above on `test.tashilaqar.com`. Each
+  password comes from its own variable: `SEED_PW_VISITOR`, `SEED_PW_TENANT`, `SEED_PW_OWNER`,
+  `SEED_PW_AGENCY`, `SEED_PW_INVESTOR`, `SEED_PW_ADMIN`, `SEED_PW_SUPERADMIN` (at least 8
+  characters, never argv). Emulators and `demo-*` projects may leave them unset (random passwords
+  are generated and printed). The visitor gets an Auth user with no claim and no role.
 
-So the seven `@test.tashilaqar.com` accounts cannot be created by an existing script. They were
-created by hand in the dev project; do not run `seed.js` against dev expecting them.
+Safety: the test set runs only against emulators, `demo-*` projects, or `tashil-aqar-dev` with
+`--allow-live-project`. The production project is read from the `prod` alias in `.firebaserc` at
+runtime and always refused. Seeded documents carry `demo_seed: true`. Existing accounts keep their
+password unless `--reset-passwords` is passed; nothing is deleted.
 
-### Proposal: seed the per-role accounts from one table
+```bash
+# Emulator
+firebase emulators:exec --only firestore,auth --project demo-tashil-dev 'node seed.js --set tashilaqar-test'
 
-A small change to `seed.js` would cover this (not implemented here, because the Investor and
-Admin roles need a decision first):
+# Dev (Application Default Credentials for dev; set all seven SEED_PW_* variables first)
+node seed.js --set tashilaqar-test --project tashil-aqar-dev --allow-live-project
+```
 
-1. Add a second user set, selected with `--set tashilaqar-test`, with one row per account:
-   email, role, display name. `visitor@` has `role: null` (create the user, set no claim).
-2. Read passwords from the environment, one variable per account (`SEED_PASSWORD_OWNER`,
-   `SEED_PASSWORD_TENANT`, ...) with `SEED_DEMO_PASSWORD` as the fallback, so each role can have
-   its own secret that CI or a developer injects from Secret Manager
-   (`gcloud secrets versions access latest --secret=... --project tashil-aqar-dev`).
-   Passwords never go through argv, files in the repo or logs.
-3. Keep the existing safety checks: `demo-*` or loopback emulators run freely; a real project
-   needs `--allow-live-project`, which for this set should additionally require the project id
-   to be `tashil-aqar-dev` (never prod).
-4. Reuse `applyUserRole`, so the claim and the `Users/{uid}` mirror are written the same way as
-   `setUserRole`. Extend `test/seed.test.js` with the new set.
+Passwords exist only in Secret Manager or the shell environment. Do not write them to the repo.
 
-## Adding the Investor role
+## Follow-ups
 
-The Investor role does not exist in `setUserRole`: `ASSIGNABLE_ROLES` in `backend/authz.js` is
-`Owner`, `Tenant`, `AgencyAdmin`, `SuperAdmin`, so `applyUserRole` rejects `Investor`. The
-`/investor-dashboard` route is public today (`null` in `RouteAccess.table`). Proposed change,
-as one ticket:
-
-1. **Backend roles** (`backend/authz.js`): add `Investor` to `ASSIGNABLE_ROLES`. Keep it out of
-   `SELF_SERVICE_ROLES`, so it is only ever granted by a SuperAdmin through a custom claim, the
-   same as AgencyAdmin; a profile document can then never escalate to it. Update
-   the `setUserRole` tests in `backend/test/functions.test.js` and check `scripts/role_claims.js`.
-2. **Firestore rules** (`firestore.rules`): `currentRole()` already honours any claim, so no
-   change there. Add an `isInvestor()` helper and grant read-only access to exactly the
-   collections the investor dashboard reads, scoped by `investor_id == request.auth.uid` (the
-   multi-tenant isolation standard). Add rules tests for allowed reads and for every write and
-   cross-investor read being denied.
-3. **Gemini gateway** (`backend/gemini_gateway.js`): add `Investor` to `PORTAL_ROLES` only if
-   investors should use onboarding or OCR. Probably they should not, so give investor-facing AI
-   features their own role list instead of widening `PORTAL_ROLES`.
-4. **Flutter** (`frontend/lib/core/auth/trusted_role.dart`, `route_access.dart`): add
-   `TrustedRole.investor` to `all`, set `/investor-dashboard` to `{investor, superAdmin}`, and
-   return `/investor-dashboard` from `RouteAccess.homeFor`. Check the login redirect, header
-   navbar and role tests.
-5. **Seeding and tests**: give `investor@test.tashilaqar.com` the role in the seed set above,
-   and add `Investor` cases to the `setUserRole` tests in `backend/test/functions.test.js`.
-
-## Open questions
-
-- `agency@` and `admin@`: the backend knows `AgencyAdmin` and `SuperAdmin`. Decide whether
-  `admin@` is a second AgencyAdmin (needs its own `agency_id`), an alias for `SuperAdmin`, or a
-  new role. Until then it has no defined behaviour.
+- The Admin dashboard covers listings moderation and read-only users and agencies. There is no
+  Reports feature or collection in the app yet, so "handle reports" has nothing to act on; add it
+  with the reports feature. Maintenance escalation is enforced in `firestore.rules` and tested,
+  but has no screen in `/admin` yet.
+- `/fast-onboarding` is still limited to `Owner` and `AgencyAdmin` in the Flutter route table (as
+  before TAQ-91). The gateway already accepts `Admin` and `SuperAdmin` for onboarding and OCR.
 - App Check for dev: register a dev reCAPTCHA site key before turning on `ENFORCE_APP_CHECK` in
   dev, as described in `docs/SECURITY_SETUP.md`.
 - Mobile: add an Android and an iOS app to `tashil-aqar-dev` and extend
