@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Gemini key (plain or base64), read one from a define, or call the Gemini API directly.
 /// backend/scripts/check_client_ai_keys.js applies the same rules in `npm test`.
 const _firebaseOptions = 'lib/firebase_options.dart';
+const _firebaseOptionsDev = 'lib/firebase_options_dev.dart';
 
 final _rules = <String, RegExp>{
   'Google API key (AIza…)': RegExp(r'AIza[0-9A-Za-z_-]{30,}'),
@@ -25,7 +26,7 @@ List<String> scanLine(String file, int lineNo, String line) {
   final findings = <String>[];
   _rules.forEach((name, pattern) {
     if (!pattern.hasMatch(line)) return;
-    if (name.startsWith('Google API key (AIza') && file == _firebaseOptions && _firebaseApiKeyLine.hasMatch(line)) {
+    if (name.startsWith('Google API key (AIza') && (file == _firebaseOptions || file == _firebaseOptionsDev) && _firebaseApiKeyLine.hasMatch(line)) {
       return;
     }
     findings.add('$file:$lineNo: $name');
@@ -75,5 +76,11 @@ void main() {
     expect(scanLine(_firebaseOptions, 1, "    apiKey: '$key',"), isEmpty);
     expect(scanLine('lib/other.dart', 1, "    apiKey: '$key',"), hasLength(1));
     expect(scanLine(_firebaseOptions, 1, "final k = '$key';"), hasLength(1));
+  });
+
+  test('the dev Firebase options get the same apiKey allowance, and nothing wider', () {
+    final key = 'AI' 'za${'d' * 35}';
+    expect(scanLine(_firebaseOptionsDev, 1, "    apiKey: '$key',"), isEmpty);
+    expect(scanLine(_firebaseOptionsDev, 1, "final k = '$key';"), hasLength(1));
   });
 }

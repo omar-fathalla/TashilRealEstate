@@ -216,3 +216,69 @@ test("TAQ-79: the --build scan allows only the firebase_options keys in compiled
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+// --- TAQ-7: the dev Firebase project ---
+
+test("TAQ-7: .firebaserc keeps the demo default and prod, and adds the Tashil Aqar dev alias", () => {
+  const rc = JSON.parse(read(".firebaserc"));
+  assert.deepEqual(rc.projects, {
+    default: "demo-tashil-dev",
+    prod: "tashil-proptech-os",
+    dev: "tashil-aqar-dev",
+  });
+});
+
+test("TAQ-7: tashil-dev (another product's project) is not referenced anywhere", () => {
+  const { execFileSync } = require("child_process");
+  const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
+  const offenders = files.filter((file) => {
+    if (file === "backend/test/project_config.test.js") return false;
+    const text = fs.readFileSync(path.join(root, file), "utf8");
+    return /(^|[^\w-])tashil-dev\b/.test(text);
+  });
+  assert.deepEqual(offenders, []);
+});
+
+test("TAQ-7: the dev web config names tashil-aqar-dev and takes its API key from a define", () => {
+  const dev = read(clientKeys.FIREBASE_OPTIONS_DEV);
+  for (const value of [
+    "projectId: 'tashil-aqar-dev'",
+    "appId: '1:169661829655:web:0251892e514a30e54c4252'",
+    "messagingSenderId: '169661829655'",
+    "authDomain: 'tashil-aqar-dev.firebaseapp.com'",
+    "storageBucket: 'tashil-aqar-dev.firebasestorage.app'",
+  ]) {
+    assert.ok(dev.includes(value), value);
+  }
+  assert.doesNotMatch(dev, /measurementId/);
+  assert.match(dev, /String\.fromEnvironment\(webApiKeyDefine\)/);
+  assert.doesNotMatch(dev, /AIza/);
+  assert.match(read("frontend/lib/app_firebase_options.dart"), /fromEnvironment\('FIREBASE_ENV', defaultValue: 'prod'\)/);
+});
+
+test("TAQ-7: the key guard allows the dev firebase config like prod's, and only that", () => {
+  const key = "AIza" + "d".repeat(35);
+  const line = `    apiKey: '${key}',`;
+  assert.deepEqual(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS_DEV, line), []);
+  assert.equal(clientKeys.scanText("frontend/lib/other.dart", line).length, 1);
+  assert.equal(clientKeys.scanText(clientKeys.FIREBASE_OPTIONS_DEV, `final k = '${key}';`).length, 1);
+
+  const os = require("os");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "client-keys-dev-"));
+  const build = path.join(tmp, clientKeys.BUILD_DIR);
+  fs.mkdirSync(build, { recursive: true });
+  fs.mkdirSync(path.join(tmp, "frontend/lib"), { recursive: true });
+  try {
+    fs.writeFileSync(path.join(tmp, clientKeys.FIREBASE_OPTIONS), "  apiKey: '" + "AIza" + "p".repeat(35) + "',\n");
+    fs.writeFileSync(path.join(build, "main.dart.js"), `a={apiKey:"${key}",projectId:"tashil-aqar-dev"}\n`);
+    assert.equal(clientKeys.scanClient(tmp, { build: true, env: {} }).length, 1, "an unknown dev key is flagged");
+    assert.deepEqual(clientKeys.scanClient(tmp, { build: true, env: { [clientKeys.DEV_KEY_ENV]: key } }), []);
+    assert.equal(
+      clientKeys.scanClient(tmp, { build: true, env: { [clientKeys.DEV_KEY_ENV]: "AIza" + "z".repeat(35) } }).length,
+      1,
+      "only the exact dev key is accepted",
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
