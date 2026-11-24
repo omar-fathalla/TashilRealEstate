@@ -289,12 +289,81 @@ test("TAQ-19: only known request fields reach Gemini and output tokens are cappe
     contents: [{ role: "user", parts: [{ text: "Book a viewing" }] }],
     system_instruction: { parts: [{ text: "You are a broker." }] },
     tools: [{ function_declarations: [{ name: "book_viewing_appointment", parameters: { type: "object" } }] }],
-    generationConfig: { temperature: 0.6, maxOutputTokens: gw.CAPS.maxOutputTokens, responseMimeType: "application/json" },
+    generationConfig: {
+      temperature: 0.6,
+      maxOutputTokens: gw.CAPS.maxOutputTokens,
+      responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   });
   await call({ uid: "u1", request: { ...textRequest(), tools: [{ google_search: {} }] } });
   assert.deepEqual(calls[1].body.tools, [{ google_search: {} }]);
   await expectCode(call({ uid: "u1", request: { ...textRequest(), tools: [{ code_execution: {} }] } }), "invalid-argument");
   await expectCode(call({ uid: "u1", request: { contents: [{ role: "system", parts: [{ text: "x" }] }] } }), "invalid-argument");
+});
+
+// --- TAQ-89: thinking budget and output-token floor ---
+
+async function withEnv(name, value, fn) {
+  const original = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  try {
+    return await fn();
+  } finally {
+    if (original === undefined) delete process.env[name];
+    else process.env[name] = original;
+  }
+}
+
+test("TAQ-89: thinking is capped on the server: budget 0 by default, with or without a generationConfig", async () => {
+  await call({ uid: "u1" });
+  await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens: 2000 } } });
+  assert.deepEqual(calls[0].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+  assert.deepEqual(calls[1].body.generationConfig, { maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } });
+});
+
+test("TAQ-89: a client cannot set or override thinkingConfig", async () => {
+  const attempts = [
+    { thinkingConfig: { thinkingBudget: 24576, includeThoughts: true } },
+    { thinking_config: { thinking_budget: -1 } },
+    { thinkingConfig: { thinkingLevel: "high" } },
+  ];
+  for (const generationConfig of attempts) {
+    await call({ uid: "u1", request: { ...textRequest(), generationConfig } });
+  }
+  await call({ uid: "u1", request: { ...textRequest(), thinkingConfig: { thinkingBudget: 5000 } } });
+  assert.equal(calls.length, 4);
+  for (const sent of calls) {
+    assert.deepEqual(sent.body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+    assert.equal(sent.body.thinkingConfig, undefined);
+  }
+});
+
+test("TAQ-89: GEMINI_THINKING_BUDGET sets the budget; -1 sends none; invalid values fall back to 0", async () => {
+  await withEnv("GEMINI_THINKING_BUDGET", "512", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "-1", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "999999", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "-5", () => call({ uid: "u1" }));
+  assert.deepEqual(calls[0].body.generationConfig, { thinkingConfig: { thinkingBudget: 512 } });
+  assert.equal(calls[1].body.generationConfig, undefined);
+  assert.deepEqual(calls[2].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+  assert.deepEqual(calls[3].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+});
+
+test("TAQ-89: maxOutputTokens has a server-side floor of 1024 and keeps the 4096 cap", async () => {
+  assert.equal(gw.CAPS.minOutputTokens, 1024);
+  assert.equal(gw.CAPS.maxOutputTokens, 4096);
+  for (const maxOutputTokens of [1, 200, 1023, 1024, 3000, 4096, 100000]) {
+    await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } });
+  }
+  assert.deepEqual(
+    calls.map((c) => c.body.generationConfig.maxOutputTokens),
+    [1024, 1024, 1024, 1024, 3000, 4096, 4096],
+  );
+  for (const maxOutputTokens of [0, -5, "abc"]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } }), "invalid-argument");
+  }
 });
 
 // --- Rate limits ---

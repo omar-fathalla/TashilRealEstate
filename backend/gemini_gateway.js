@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret, defineString } = require("firebase-functions/params");
+const { defineSecret, defineString, defineInt } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
@@ -13,6 +13,12 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 // Server-side model setting. Change it with the GEMINI_MODEL param (backend/.env.<project>
 // or the environment) and redeploy; the client never picks the model.
 const GEMINI_MODEL = defineString("GEMINI_MODEL", { default: "gemini-3.5-flash" });
+
+// Thinking tokens count against maxOutputTokens, so a small limit can be spent on thinking and
+// leave a cut-off answer. The budget is set here, never by the client. 0 turns thinking off,
+// a positive value caps it, -1 sends no thinkingConfig (the model's own default).
+const GEMINI_THINKING_BUDGET = defineInt("GEMINI_THINKING_BUDGET", { default: 0 });
+const MAX_THINKING_BUDGET = 24576;
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const RATE_LIMIT_COLLECTION = "AiRateLimits";
@@ -78,6 +84,7 @@ const CAPS = {
   contents: 24,
   partsPerContent: 16,
   functionDeclarations: 8,
+  minOutputTokens: 1024,
   maxOutputTokens: 4096,
 };
 
@@ -126,6 +133,27 @@ function resolveModel(requested) {
   if (ALLOWED_MODELS.has(name)) return name;
   if (Object.prototype.hasOwnProperty.call(MODEL_ALIASES, name)) return configuredModel();
   throw invalid("This model is not allowed.");
+}
+
+/** The server-configured thinking budget; null means "send no thinkingConfig". */
+function configuredThinkingBudget() {
+  let value;
+  try {
+    value = GEMINI_THINKING_BUDGET.value();
+  } catch (error) {
+    value = 0;
+  }
+  if (value === -1) return null;
+  if (Number.isInteger(value) && value >= 0 && value <= MAX_THINKING_BUDGET) return value;
+  logger.warn("GEMINI_THINKING_BUDGET is invalid; using 0", { configured: value });
+  return 0;
+}
+
+/** Adds the server-owned thinking budget. Any thinkingConfig from the client was already dropped. */
+function applyThinkingBudget(body) {
+  const budget = configuredThinkingBudget();
+  if (budget === null) return body;
+  return { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingBudget: budget } } };
 }
 
 function isModelNotFound(result) {
@@ -200,7 +228,7 @@ function sanitizeGenerationConfig(config) {
   if (config.maxOutputTokens !== undefined) {
     const tokens = Math.floor(Number(config.maxOutputTokens));
     if (!Number.isFinite(tokens) || tokens < 1) throw invalid("maxOutputTokens is out of range.");
-    out.maxOutputTokens = Math.min(tokens, CAPS.maxOutputTokens);
+    out.maxOutputTokens = Math.min(Math.max(tokens, CAPS.minOutputTokens), CAPS.maxOutputTokens);
   }
   if (config.responseMimeType !== undefined) {
     if (!RESPONSE_MIME_TYPES.has(config.responseMimeType)) throw invalid("responseMimeType is not allowed.");
@@ -390,7 +418,9 @@ async function handleGeminiGenerate(request) {
   if (FEATURES[feature].roles) await requireRole(request.auth, FEATURES[feature].roles);
 
   const model = resolveModel(data.model);
-  const { body, totals } = sanitizeRequest(feature, data.request);
+  const sanitized = sanitizeRequest(feature, data.request);
+  const { totals } = sanitized;
+  const body = applyThinkingBudget(sanitized.body);
 
   const key = GEMINI_API_KEY.value();
   if (!key) throw new HttpsError("failed-precondition", "AI is not configured.");
@@ -448,6 +478,8 @@ module.exports = {
     MODEL_ALIASES,
     DEFAULT_MODEL,
     configuredModel,
+    configuredThinkingBudget,
+    applyThinkingBudget,
     RATE_LIMIT_COLLECTION,
     resolveModel,
     sanitizeRequest,
