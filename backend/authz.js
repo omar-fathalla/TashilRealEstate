@@ -74,13 +74,35 @@ async function loadLease(leaseId) {
   return { id: snap.id, ...snap.data() };
 }
 
+const MAX_RENT = 1e9;
+
+/** A stored rent field: absent (undefined/null), or a finite number > 0. Anything else is refused. */
+function storedRent(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > MAX_RENT) {
+    throw new HttpsError("failed-precondition", "The lease rent is not a valid positive amount.", { reason: "rent_invalid" });
+  }
+  return value;
+}
+
+/**
+ * The monthly rent the server charges. Every rent field the lease carries (monthly, annual, base,
+ * financialTerms.*) must be a finite number > 0; one bad value stops the payment instead of
+ * falling through to another field.
+ */
 function leaseAmount(lease) {
-  const terms = lease.financialTerms || {};
-  const monthly = Number(terms.monthlyRent || lease.monthly_rent || lease.baseAmount || 0);
-  if (monthly > 0) return monthly;
-  const annual = Number(terms.annualRent || 0);
-  if (annual > 0) return Math.round((annual / 12) * 100) / 100;
-  throw new HttpsError("failed-precondition", "The lease has no server-side rent amount.");
+  const raw = lease.financialTerms;
+  if (raw !== undefined && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) {
+    throw new HttpsError("failed-precondition", "The lease rent is not a valid positive amount.", { reason: "rent_invalid" });
+  }
+  const terms = raw || {};
+  const monthly = [terms.monthlyRent, lease.monthly_rent, lease.baseAmount].map(storedRent);
+  const annual = [terms.annualRent, lease.annual_rent].map(storedRent);
+  const firstMonthly = monthly.find((v) => v !== null);
+  if (firstMonthly !== undefined) return firstMonthly;
+  const firstAnnual = annual.find((v) => v !== null);
+  if (firstAnnual !== undefined) return Math.round((firstAnnual / 12) * 100) / 100;
+  throw new HttpsError("failed-precondition", "The lease has no server-side rent amount.", { reason: "rent_missing" });
 }
 
 function leaseCountry(lease) {

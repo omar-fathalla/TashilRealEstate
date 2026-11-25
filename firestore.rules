@@ -586,31 +586,82 @@ service cloud.firestore {
     // 4. Leases Collection
     // Lease documents are the server-side source of truth for reminder and invoice parties.
     // Statuses: draft, pending_tenant_approval, active, expired, terminated, rejected.
-    // Lifecycle: the owner or managing agency moves draft -> pending_tenant_approval (and may pull it
-    // back to draft or terminate it). Only the lease's tenant can move pending_tenant_approval to
-    // active (approve) or rejected, changing nothing but the decision. active -> expired |
-    // terminated. expired, terminated and rejected are final. Rent, dates and the rest of the terms
-    // are editable only while the lease is a draft, so the tenant approves exactly what they saw.
-    // After that only `status` (forward), `notes` and `updated_at` change. tenant_id, owner_id,
-    // agency_id and property_id never change after creation, for anyone but SuperAdmin.
-    function leaseStatusOnCreateOk(d) {
-      return d.get('status', 'draft') in ['draft', 'pending_tenant_approval'];
+    // Leases are created by the createLease / createLeaseFromApplication functions (Admin SDK),
+    // which check that the property belongs to the owner and that the agency manages it. The only
+    // client create left is SuperAdmin's break-glass, and only as a draft or offer with valid rent
+    // and dates. No client, SuperAdmin included, ever writes `active`: a lease becomes active only
+    // in respondToLeaseOffer, under the property lock (PropertyLeaseLocks). Lifecycle: the owner or
+    // managing agency moves draft -> pending_tenant_approval (and may pull it back to draft or
+    // terminate it); the tenant may reject a pending offer; active -> expired | terminated.
+    // expired, terminated and rejected are final. Rent, dates and the rest of the terms are editable
+    // only while the lease is a draft, so the tenant approves exactly what they saw. tenant_id,
+    // owner_id, agency_id and property_id never change after creation, for anyone.
+    function leaseAmountOk(v) {
+      return v is number && v > 0 && v <= 1000000000;
+    }
+
+    function leaseOptionalAmountOk(d, key) {
+      return !(key in d) || leaseAmountOk(d[key]);
+    }
+
+    // Every rent field a lease carries is a finite number > 0 (NaN and Infinity fail both bounds).
+    function leaseRentOk(d) {
+      return leaseOptionalAmountOk(d, 'monthly_rent')
+        && leaseOptionalAmountOk(d, 'annual_rent')
+        && leaseOptionalAmountOk(d, 'baseAmount')
+        && (!('financialTerms' in d)
+          || (d.financialTerms is map
+            && d.financialTerms.keys().hasOnly(['monthlyRent', 'annualRent'])
+            && leaseOptionalAmountOk(d.financialTerms, 'monthlyRent')
+            && leaseOptionalAmountOk(d.financialTerms, 'annualRent')));
+    }
+
+    function leaseHasRent(d) {
+      return leaseAmountOk(d.get('monthly_rent', 0))
+        || leaseAmountOk(d.get('annual_rent', 0))
+        || ('financialTerms' in d && d.financialTerms is map
+          && (leaseAmountOk(d.financialTerms.get('monthlyRent', 0)) || leaseAmountOk(d.financialTerms.get('annualRent', 0))));
+    }
+
+    function leaseDateOk(v) {
+      return v is string && v.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+
+    function leaseDatesOk(d) {
+      return leaseDateOk(d.get('start_date', null)) && leaseDateOk(d.get('end_date', null))
+        && d.end_date > d.start_date;
+    }
+
+    // An offer the tenant can accept carries a positive rent and a valid date range.
+    function leaseTermsOk(d) {
+      return leaseRentOk(d) && leaseHasRent(d) && leaseDatesOk(d);
     }
 
     function leasePartiesOk(d) {
       return d.get('tenant_id', '') is string && d.get('tenant_id', '') != ''
-        && d.get('owner_id', '') is string && d.get('owner_id', '') != '';
+        && d.get('owner_id', '') is string && d.get('owner_id', '') != ''
+        && d.get('tenant_id', '') != d.get('owner_id', '')
+        && d.get('property_id', '') is string && d.get('property_id', '') != ''
+        && d.get('agency_id', '') is string;
     }
 
-    // An Owner may create a lease for a property in their own private silo, with no agency.
-    function ownerCreatesLease(d) {
-      return isOwner()
-        && d.get('owner_id', '') == request.auth.uid
-        && d.get('agency_id', '') == ''
-        && d.get('tenant_id', '') is string && d.get('tenant_id', '') != '' && d.get('tenant_id', '') != request.auth.uid
-        && d.get('property_id', '') is string && d.get('property_id', '') != ''
-        && leaseStatusOnCreateOk(d)
-        && exists(/databases/$(database)/documents/Users/$(request.auth.uid)/properties/$(d.property_id));
+    function leaseCreateOk(d) {
+      return leasePartiesOk(d)
+        && d.get('status', '') in ['draft', 'pending_tenant_approval']
+        && leaseTermsOk(d);
+    }
+
+    // Rules every lease update obeys, whoever writes it.
+    function leaseUpdateInvariantsOk() {
+      let before = resource.data.get('status', 'draft');
+      let after = request.resource.data.get('status', 'draft');
+      return !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id', 'property_id'])
+        && (after != 'active' || before == 'active')
+        && (!changedKeys().hasAny(['monthly_rent', 'annual_rent', 'baseAmount', 'financialTerms'])
+          || leaseRentOk(request.resource.data))
+        && (!changedKeys().hasAny(['start_date', 'end_date']) || leaseDatesOk(request.resource.data))
+        && (after != 'pending_tenant_approval' || before == 'pending_tenant_approval'
+          || leaseTermsOk(request.resource.data));
     }
 
     function ownerManagesLease() {
@@ -619,7 +670,7 @@ service cloud.firestore {
         && resource.data.get('agency_id', '') == '';
     }
 
-    // Manager (owner or agency) status moves. Never to active or rejected: that is the tenant's call.
+    // Manager (owner or agency) status moves. Never to active or rejected: those are the tenant's.
     function leaseStatusMoveOk() {
       let from = resource.data.get('status', 'draft');
       let to = request.resource.data.get('status', 'draft');
@@ -630,20 +681,18 @@ service cloud.firestore {
     }
 
     function leaseEditOk() {
-      return !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id', 'property_id'])
-        && leaseStatusMoveOk()
+      return leaseStatusMoveOk()
         && (resource.data.get('status', 'draft') == 'draft'
           || changedKeys().hasOnly(['status', 'notes', 'updated_at']));
     }
 
-    // The tenant's decision on a lease offer: approve or reject, only while pending, and only the
-    // decision fields change (an optional short note from the tenant).
+    // The tenant may reject a pending offer here; approving goes through respondToLeaseOffer.
     function tenantDecidesLease() {
       return isAuthenticated()
         && resource.data.get('tenant_id', '') == request.auth.uid
         && resource.data.get('owner_id', '') != request.auth.uid
         && resource.data.get('status', 'draft') == 'pending_tenant_approval'
-        && request.resource.data.get('status', 'draft') in ['active', 'rejected']
+        && request.resource.data.get('status', 'draft') == 'rejected'
         && changedKeys().hasOnly(['status', 'updated_at', 'tenant_decision_note'])
         && request.resource.data.get('tenant_decision_note', '') is string
         && request.resource.data.get('tenant_decision_note', '').size() <= 500;
@@ -656,15 +705,30 @@ service cloud.firestore {
           resource.data.owner_id == request.auth.uid ||
           agencyManagesResource()
         ));
-      allow create: if isSuperAdmin()
-        || (isAgencyAdminOf(request.resource.data.get('agency_id', ''))
-          && leasePartiesOk(request.resource.data) && leaseStatusOnCreateOk(request.resource.data))
-        || ownerCreatesLease(request.resource.data);
-      allow update: if isSuperAdmin()
+      allow create: if isSuperAdmin() && leaseCreateOk(request.resource.data);
+      allow update: if leaseUpdateInvariantsOk() && (
+        isSuperAdmin()
         || ((agencyManagesResource() || ownerManagesLease()) && leaseEditOk())
-        || tenantDecidesLease();
-      allow delete: if isSuperAdmin() || agencyManagesResource()
+        || tenantDecidesLease());
+      // An active lease is ended (terminated / expired) before it can be deleted, except by SuperAdmin.
+      allow delete: if isSuperAdmin()
+        || (agencyManagesResource() && resource.data.get('status', 'draft') != 'active')
         || (ownerManagesLease() && resource.data.get('status', 'draft') == 'draft');
+    }
+
+    // 4a. PropertyLeaseLocks (TAQ-110)
+    // One doc per property with a live lease, written only by respondToLeaseOffer and the payment
+    // functions (Admin SDK) and removed by releasePropertyLeaseLock. No client reads or writes it.
+    match /PropertyLeaseLocks/{propertyId} {
+      allow read, write: if false;
+    }
+
+    // 4a2. AdminAlerts (TAQ-110)
+    // Server-written alerts for platform staff, e.g. a gateway charge for an already paid month
+    // that needs a refund. Read by platform staff only; no client writes.
+    match /AdminAlerts/{alertId} {
+      allow read: if isPlatformStaff();
+      allow write: if false;
     }
 
     // 4b. Invoices
@@ -799,12 +863,23 @@ service cloud.firestore {
         && d.get('tenant_id', '') == lease.get('tenant_id', '')
         && d.get('owner_id', '') == lease.get('owner_id', '')
         && d.get('agency_id', '') == lease.get('agency_id', '')
+        && d.get('property_id', '') == lease.get('property_id', '')
+        && d.get('property_title', '') == lease.get('property_title', '')
+        && d.get('tenant_name', '') == lease.get('tenant_name', '')
         && lease.get('status', 'draft') == 'active'
         && (request.auth.uid == lease.get('tenant_id', '') || request.auth.uid == lease.get('owner_id', ''));
     }
 
     // A new request: a short title, an optional description, a category, at most three inline
     // photos, and always the pending status. Parties and lease are checked separately.
+    // Inline photos: a base64 data URL of a raster image type, at most 300,000 characters each
+    // (the limit the app enforces), so three fit well inside the 1 MiB document limit.
+    function maintenancePhotoOk(photos, i) {
+      return photos.size() <= i
+        || (photos[i] is string && photos[i].size() <= 300000
+          && photos[i].matches('^data:image/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$'));
+    }
+
     function maintenanceCreateShapeOk(d) {
       return d.keys().hasOnly(['lease_id', 'tenant_id', 'owner_id', 'agency_id', 'property_id', 'property_title',
           'tenant_name', 'title', 'description', 'category', 'photos', 'status', 'created_at', 'updated_at'])
@@ -814,6 +889,9 @@ service cloud.firestore {
         && d.get('description', '') is string && d.get('description', '').size() <= 2000
         && d.get('category', 'other') in ['plumbing', 'electrical', 'ac', 'appliance', 'structural', 'cleaning', 'other']
         && d.get('photos', []) is list && d.get('photos', []).size() <= 3
+        && maintenancePhotoOk(d.get('photos', []), 0)
+        && maintenancePhotoOk(d.get('photos', []), 1)
+        && maintenancePhotoOk(d.get('photos', []), 2)
         && d.get('status', '') == 'pending'
         && d.get('created_at', request.time) == request.time
         && d.get('updated_at', request.time) == request.time;

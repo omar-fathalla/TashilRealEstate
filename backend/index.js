@@ -983,3 +983,8 @@ exports.recordManualPayment = require("./payments").recordManualPayment;
 
 // Lease offer and decision notifications (TAQ-110).
 exports.notifyLeaseStatusChange = require("./lease_notifications").notifyLeaseStatusChange;
+
+// Lease creation, the tenant's decision and the one-live-lease-per-property lock (TAQ-110).
+exports.createLease = require("./leases").createLease;
+exports.respondToLeaseOffer = require("./leases").respondToLeaseOffer;
+exports.releasePropertyLeaseLock = require("./leases").releasePropertyLeaseLock;
