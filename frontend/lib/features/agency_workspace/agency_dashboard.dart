@@ -21,6 +21,7 @@ import 'package:tashil_real_estate/features/rent_collection/views/rent_collectio
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/views/financial_kpi_dashboard_view.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
+import 'package:tashil_real_estate/features/maintenance/views/maintenance_views.dart';
 
 class AgencyDashboard extends StatefulWidget {
   const AgencyDashboard({super.key});
@@ -41,6 +42,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
     const RentCollectionView(),
     const FinancialKpiDashboardView(role: FinancialPortalRole.agency),
     const InvestorDashboardView(),
+    const MaintenanceManagerView(agency: true),
   ];
 
   @override
@@ -247,6 +249,14 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           isSelected: _selectedIndex == 6,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 6),
+        ),
+        TashilRailDestination(
+          icon: Icons.build_outlined,
+          selectedIcon: Icons.build_rounded,
+          label: loc.tr('maintenanceTickets'),
+          isSelected: _selectedIndex == 7,
+          isExpanded: isExpanded,
+          onTap: () => setState(() => _selectedIndex = 7),
         ),
         TashilRailDestination(
           icon: Icons.tune_outlined,
@@ -780,6 +790,16 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           onTap: () {
             Navigator.pop(context);
             setState(() => _selectedIndex = 6);
+          },
+        ),
+        TashilDrawerDestination(
+          icon: Icons.build_outlined,
+          selectedIcon: Icons.build_rounded,
+          label: loc.tr('maintenanceTickets'),
+          isSelected: _selectedIndex == 7,
+          onTap: () {
+            Navigator.pop(context);
+            setState(() => _selectedIndex = 7);
           },
         ),
         const TashilDivider.middleInset(height: 16.0),
