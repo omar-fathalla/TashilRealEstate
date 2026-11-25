@@ -446,8 +446,15 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                           TashilButton.tonal(
                             onPressed: () => RecordManualPaymentDialog.show(
                               context,
-                              property: prop,
-                              installment: installment,
+                              propertyId: prop.id,
+                              period: installment.monthKey,
+                              onRecorded: (method, reference) => PropertyLifecycleService().recordInstallmentPayment(
+                                propertyId: prop.id,
+                                monthKey: installment.monthKey,
+                                status: method == 'cash' ? InstallmentPaymentStatus.paidCash : InstallmentPaymentStatus.paidBankWire,
+                                paymentMethod: method,
+                                notes: reference,
+                              ).catchError((_) {}),
                             ),
                             label: loc.tr('recordPaymentBtn'),
                           ),
@@ -575,10 +582,17 @@ class _MonthlyPaymentScheduleDialogState extends State<MonthlyPaymentScheduleDia
                               )
                             : TashilButton.tonal(
                                 onPressed: () => RecordManualPaymentDialog.show(
-                                  context,
-                                  property: prop,
-                                  installment: installment,
-                                ),
+                              context,
+                              propertyId: prop.id,
+                              period: installment.monthKey,
+                              onRecorded: (method, reference) => PropertyLifecycleService().recordInstallmentPayment(
+                                propertyId: prop.id,
+                                monthKey: installment.monthKey,
+                                status: method == 'cash' ? InstallmentPaymentStatus.paidCash : InstallmentPaymentStatus.paidBankWire,
+                                paymentMethod: method,
+                                notes: reference,
+                              ).catchError((_) {}),
+                            ),
                                 label: loc.tr('recordPaymentBtn'),
                               ),
                       ),

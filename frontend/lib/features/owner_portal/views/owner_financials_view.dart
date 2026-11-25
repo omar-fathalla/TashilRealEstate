@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/core/services/callable_error.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/lease_payment_service.dart';
 import 'package:flutter/services.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -38,6 +40,28 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendReminder(RentInvoiceModel invoice) async {
+    final loc = AppLocalizations.of(context);
+    final propertyId = invoice.propertyId;
+    if (propertyId == null) {
+      TashilSnackBar.showError(context: context, message: loc.tr('mpReminderNoLease'));
+      return;
+    }
+    try {
+      final due = invoice.dueDate;
+      final dueDate = '${due.year}-${due.month.toString().padLeft(2, '0')}-${due.day.toString().padLeft(2, '0')}';
+      await LeasePaymentService.instance.sendReminderForProperty(propertyId, dueDate: dueDate);
+      _rentService.sendReminder(invoice.id);
+      if (mounted) TashilSnackBar.showSuccess(context: context, message: loc.tr('mpReminderSent'));
+    } on NoActiveLeaseException {
+      if (mounted) TashilSnackBar.showError(context: context, message: loc.tr('mpReminderNoLease'));
+    } catch (e) {
+      if (mounted) {
+        TashilSnackBar.showError(context: context, message: '${loc.tr('mpReminderFailed')} ${describeCallableError(e).text}');
+      }
+    }
   }
 
   @override
@@ -612,11 +636,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                 } else if (action == 'warning') {
                   LegalWarningNoticeDialog.show(context, invoice);
                 } else if (action == 'remind') {
-                  RentCollectionService().sendReminder(invoice.id);
-                  TashilSnackBar.showSuccess(
-                    context: context,
-                    message: loc.tr('reminderSentViaWhatsAppSuccess'),
-                  );
+                  _sendReminder(invoice);
                 } else if (action == 'link') {
                   Clipboard.setData(ClipboardData(
                     text: 'https://tashil-realestate.web.app/#/rent-collection?invoice=${invoice.id}',

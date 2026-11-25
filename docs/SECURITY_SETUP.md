@@ -221,8 +221,10 @@ Before the first live payment, run a sandbox payment end to end: Paymob's docs d
 `null` field is written into the signed string, and the code treats it as empty (as PHP and
 JavaScript's `join` do). A sandbox callback with a wrong-signature result would show it at once.
 
-Deploying this change also stops exporting `processRentPayment`: `firebase deploy` will offer to
-delete the old function on prod and dev. Nothing in the app calls it.
+Deploying this change also stops exporting `processRentPayment`, so the deploy deletes it. A
+non-interactive deploy needs `firebase deploy --only functions --force` to confirm the deletion;
+run that on dev first and on prod only with Mohamed's approval. Nothing in the app calls the old
+function.
 
 ### Payment split and manual payments (TAQ-16)
 
