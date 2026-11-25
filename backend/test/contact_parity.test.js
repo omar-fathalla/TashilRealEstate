@@ -7,6 +7,7 @@ const { doc, setDoc } = require("firebase/firestore");
 
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 const { sanitizeForMarketplace } = require("../index");
+const LISTING_NUMBER_CORPUS = require("./fixtures/listing_number_corpus");
 
 let testEnv;
 
@@ -562,12 +563,28 @@ test("TAQ-72: phones split by § ¶ ¦ ¤ ` or ´ are caught in the sanitizer an
   assert.equal(sanitized("اتصل ٠٥٠¶١٢٣¶٤٥٦٧ الآن"), "اتصل  الآن");
 });
 
-test("TAQ-72: other symbols and punctuation between phone groups are separators too", async () => {
-  const seps = ["\u00a9", "\u00ae", "\u00b0", "\u00b1", "\u00d7", "\u00ab", "\u00bb", "\u00bf", "\u2016", "\u2020", "\u2022", "\u2030", "\u203b", "\u060c", "\u061b", "\u3001"];
+test("TAQ-72 (L-1): any short run of symbols, emoji or punctuation between phone groups is a separator", async () => {
+  const seps = [
+    "\u00b9", "\u00b2", "\u00ba", "\u00aa", "\u00bc", "\u2219", "\u2500", "\u2502", "\u25a0", "\u260e", "\u2605", "\u2192",
+    "\u301c", "\uff5e", "\uff1b", "\u30fb", "\u266a", "\u20ac", "\u20b9", "\u{1f4de}", "\u260e\ufe0f", "\u{1f449}\u{1f3fd}",
+    "\u00a9", "\u00b0", "\u00d7", "\u00ab", "\u2016", "\u2020", "\u060c", "\u3001", "@", " \u{1f4de} ", " \u2605 \u2605 ",
+  ];
   await expectCaught(variants([
     ...seps.map((sep) => `010${sep}1234${sep}5678`),
     ...seps.map((sep) => `+971${sep}50${sep}123${sep}4567`),
+    "0\u20ac1\u20ac0\u20ac1\u20ac2\u20ac3\u20ac4\u20ac5\u20ac6\u20ac7\u20ac8",
   ]));
+  assert.equal(sanitized("Call 010\u260e1234\u26055678 now"), "Call  now");
+});
+
+test("TAQ-108: a corpus of real Arabic and English listing descriptions full of numbers stays free", async () => {
+  assert.ok(LISTING_NUMBER_CORPUS.length >= 50);
+  await expectFree([...LISTING_NUMBER_CORPUS, ...LISTING_NUMBER_CORPUS.map(arabicIndic)]);
+});
+
+test("TAQ-72 (L-1): a symbol run longer than six characters still breaks a number, and digit-only superscripts stay digits", async () => {
+  await expectFree(["Year 2019 \u2605\u2605\u2605\u2605\u2605\u2605\u2605 2024 \u2605\u2605\u2605\u2605\u2605\u2605\u2605 1234"]);
+  await expectCaught(["\u2070\u2075\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077"]);
 });
 
 test("TAQ-72: prices, handles, dates, permits and clause marks with § or ¶ stay free", async () => {
@@ -588,5 +605,15 @@ test("TAQ-72: prices, handles, dates, permits and clause marks with § or ¶ sta
     "«Marina Tower» 2026 © Tashil 7134 — 2025",
     "Fee 5% ± 1%, floors 12–40, view ‖ garden ‖ sea",
     "Rooms: 3، baths: 2؛ area 185",
+    "Price € 1,200",
+    "Rent €1,200 / month, deposit €2,400",
+    "Price €950 – €1,200",
+    "₹ 12,00,000 per year",
+    "Price ₹1,50,00,000",
+    "Floors 3 → 12, 2 BR ★★★★",
+    "Area 150 m² · 2 baths · 3 BR",
+    "Rooms 3 ・ baths 2 ・ floor 12",
+    "Plot 25¼ × 40½ m",
+    "¹ Terms apply. ² VAT included.",
   ]);
 });

@@ -7,7 +7,7 @@ const {
   assertFails,
   assertSucceeds,
 } = require("@firebase/rules-unit-testing");
-const { doc, setDoc } = require("firebase/firestore");
+const { doc, setDoc, updateDoc, deleteDoc } = require("firebase/firestore");
 
 if (!process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Storage emulator is attached.");
@@ -34,6 +34,7 @@ test.beforeEach(async () => {
     const db = ctx.firestore();
     await setDoc(doc(db, "Users/ownerA/properties/propA"), { owner_id: "ownerA", isPublished: true });
     await setDoc(doc(db, "Users/ownerB/properties/propB"), { owner_id: "ownerB" });
+    await setDoc(doc(db, "Properties/propA"), { owner_id: "ownerA", is_published: true, moderation_hidden: false, status: "vacant" });
     const storage = ctx.storage();
     await storage.ref("public/listings/ownerA/propA/front.jpg").put(bytes(16), { contentType: "image/jpeg" });
     await storage.ref("users/ownerA/kyc/id.jpg").put(bytes(16), { contentType: "image/jpeg" });
@@ -55,6 +56,11 @@ function as(uid, claims = {}) {
 }
 
 const superAdmin = () => as("root", { role: "SuperAdmin" });
+const platformAdmin = () => as("admin1", { role: "Admin" });
+
+async function seed(fn) {
+  await testEnv.withSecurityRulesDisabled((ctx) => fn(ctx.firestore(), ctx.storage()));
+}
 const jpeg = { contentType: "image/jpeg" };
 
 // --- TAQ-14: reads ---
@@ -72,7 +78,7 @@ test("TAQ-14: a visitor cannot read private files, the bucket root, or list fold
   await assertFails(anon().ref("users/x").listAll());
 });
 
-test("TAQ-70: only the owner or a SuperAdmin can list a property's listing photos", async () => {
+test("TAQ-70: only the owner, a SuperAdmin or an Admin can list a property's listing photos", async () => {
   const folder = "public/listings/ownerA/propA";
   await assertFails(anon().ref(folder).listAll());
   await assertFails(anon().ref(folder).list({ maxResults: 10 }));
@@ -82,6 +88,7 @@ test("TAQ-70: only the owner or a SuperAdmin can list a property's listing photo
   const own = await assertSucceeds(as("ownerA").ref(folder).listAll());
   assert.deepEqual(own.items.map((item) => item.name), ["front.jpg"]);
   await assertSucceeds(superAdmin().ref(folder).listAll());
+  await assertSucceeds(platformAdmin().ref(folder).listAll());
 });
 
 test("TAQ-70: a signed-out visitor still gets a published listing photo", async () => {
@@ -107,6 +114,179 @@ test("TAQ-14: a SuperAdmin can read and delete private files", async () => {
 test("TAQ-14: a SuperAdmin role written into a profile without a claim grants nothing", async () => {
   await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "Users/legacy"), { role: "SuperAdmin" }));
   await assertFails(as("legacy").ref("users/x/id.jpg").getDownloadURL());
+});
+
+// --- TAQ-14 / TAQ-70 (M-1): a listing photo is public only while its listing is live ---
+
+const PHOTO = "public/listings/ownerA/propA/front.jpg";
+
+// A signed-out GET of the object with ?alt=media and no token, which is evaluated by the rules.
+async function fetchMedia(objectPath) {
+  const bucket = anon().ref(objectPath).bucket;
+  const url = `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}/v0/b/${bucket}/o/${encodeURIComponent(objectPath)}?alt=media`;
+  return fetch(url);
+}
+
+async function setPublic(data) {
+  await seed((db) => setDoc(doc(db, "Properties/propA"), { owner_id: "ownerA", status: "vacant", ...data }));
+}
+
+async function expectHiddenFromPublic(label) {
+  for (const storage of [anon(), as("ownerB"), as("investor1", { role: "Investor" }), as("agent", { role: "AgencyAdmin", agency_id: "agency-1" })]) {
+    await assertFails(storage.ref(PHOTO).getDownloadURL(), label);
+    await assertFails(storage.ref(PHOTO).getMetadata(), label);
+  }
+  assert.equal((await fetchMedia(PHOTO)).status, 403, `${label}: tokenless alt=media download`);
+}
+
+async function expectStaffAndOwnerRead() {
+  for (const storage of [as("ownerA"), superAdmin(), platformAdmin()]) {
+    await assertSucceeds(storage.ref(PHOTO).getDownloadURL());
+    await assertSucceeds(storage.ref(PHOTO).getMetadata());
+  }
+}
+
+test("M-1: a published, unhidden listing's photo is readable by anyone, by URL, metadata or direct download", async () => {
+  for (const storage of [anon(), as("ownerB"), as("investor1", { role: "Investor" })]) {
+    await assertSucceeds(storage.ref(PHOTO).getDownloadURL());
+    await assertSucceeds(storage.ref(PHOTO).getMetadata());
+  }
+  assert.equal((await fetchMedia(PHOTO)).status, 200, "tokenless alt=media download");
+});
+
+test("M-1: an unpublished listing's photo is not public; the owner, SuperAdmin and Admin still read it", async () => {
+  await setPublic({ is_published: false, moderation_hidden: false, status: "unavailable" });
+  await expectHiddenFromPublic("unpublished");
+  await expectStaffAndOwnerRead();
+});
+
+test("M-1: a moderation-hidden listing's photo is not public, even if is_published were still true", async () => {
+  await setPublic({ is_published: false, moderation_hidden: true });
+  await expectHiddenFromPublic("hidden");
+  await setPublic({ is_published: true, moderation_hidden: true });
+  await expectHiddenFromPublic("hidden, published flag stale");
+  await expectStaffAndOwnerRead();
+});
+
+test("M-1: a rented listing's photo is not public, even with a stale is_published flag", async () => {
+  await setPublic({ is_published: false, moderation_hidden: false, status: "rented" });
+  await expectHiddenFromPublic("rented");
+  await setPublic({ is_published: true, moderation_hidden: false, status: "rented" });
+  await expectHiddenFromPublic("rented, published flag stale");
+  await setPublic({ is_published: true, moderation_hidden: false, status: "unavailable" });
+  await expectHiddenFromPublic("unavailable");
+  await seed((db) => setDoc(doc(db, "Properties/propA"), { owner_id: "ownerA", is_published: true }));
+  await expectHiddenFromPublic("no status");
+  await expectStaffAndOwnerRead();
+});
+
+test("M-1: a deleted listing's photo is not public (no /Properties doc)", async () => {
+  await seed((db) => deleteDoc(doc(db, "Properties/propA")));
+  await expectHiddenFromPublic("deleted");
+  await expectStaffAndOwnerRead();
+});
+
+test("M-1: a photo under another owner's folder is not public, even if that property id is live", async () => {
+  await setPublic({ owner_id: "ownerB", is_published: true, moderation_hidden: false });
+  await expectHiddenFromPublic("wrong owner");
+  await seed((db, storage) => storage.ref("public/listings/ownerB/propA/x.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(anon().ref("public/listings/ownerB/propA/x.jpg").getDownloadURL());
+  await assertSucceeds(as("ownerA").ref(PHOTO).getDownloadURL(), "the uploader keeps their own file");
+});
+
+test("M-1: a listing with no is_published flag is not public", async () => {
+  await seed((db) => setDoc(doc(db, "Properties/propA"), { owner_id: "ownerA" }));
+  await expectHiddenFromPublic("no flag");
+});
+
+test("M-1: a download URL with a token is a bearer link the rules never see; tokenless access is refused", async () => {
+  const url = await assertSucceeds(anon().ref(PHOTO).getDownloadURL());
+  await setPublic({ is_published: false, moderation_hidden: true });
+  await assertFails(anon().ref(PHOTO).getDownloadURL());
+  assert.equal((await fetch(url.replace(/&token=[^&]*/, ""))).status, 403);
+  // Documented limitation: a token URL issued while the listing was live still downloads.
+  assert.equal((await fetch(url)).status, 200);
+});
+
+test("M-1 info (a): an owner cannot upload or replace photos while moderation holds the listing hidden", async () => {
+  const owner = as("ownerA");
+  await seed((db) => setDoc(doc(db, "PropertyModeration/propA"), { hidden: true }));
+  await assertFails(owner.ref("public/listings/ownerA/propA/new.jpg").put(bytes(16), jpeg));
+  await assertFails(owner.ref(PHOTO).put(bytes(16), jpeg));
+  await assertSucceeds(owner.ref(PHOTO).getDownloadURL());
+  await assertSucceeds(owner.ref(PHOTO).delete(), "removing a photo while held stays allowed");
+  await seed((db) => setDoc(doc(db, "PropertyModeration/propA"), { hidden: false }));
+  await assertSucceeds(owner.ref("public/listings/ownerA/propA/new.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(owner.ref("public/listings/ownerA/propA/new.jpg").delete());
+});
+
+// --- TAQ-107: while moderation holds a listing, owners add no photos through Storage or Firestore ---
+
+const OWN_PHOTO = "https://firebasestorage.googleapis.com/v0/b/b/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media";
+const NEW_PHOTO = "data:image/png;base64,iVBORw0KGgo=";
+
+async function holdPropA({ privateDoc = { owner_id: "ownerA", isPublished: true, title: "Flat", imageUrls: [OWN_PHOTO, "assets/images/b.jpg"], image: OWN_PHOTO } } = {}) {
+  await seed(async (db) => {
+    await setDoc(doc(db, "PropertyModeration/propA"), { hidden: true, pre_hide_published: true, updated_by: "admin1" });
+    if (privateDoc) await setDoc(doc(db, "Users/ownerA/properties/propA"), privateDoc);
+  });
+}
+
+const ownerDb = () => testEnv.authenticatedContext("ownerA").firestore();
+const privateRef = (db) => doc(db, "Users/ownerA/properties/propA");
+
+test("TAQ-107: a held listing's owner cannot add image refs to the private doc, by update or re-create", async () => {
+  await holdPropA();
+  const db = ownerDb();
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO, "assets/images/b.jpg", NEW_PHOTO] }));
+  await assertFails(updateDoc(privateRef(db), { image: NEW_PHOTO }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: NEW_PHOTO }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO], image: 7 }));
+  await assertSucceeds(deleteDoc(privateRef(db)));
+  await assertFails(setDoc(privateRef(db), { owner_id: "ownerA", isPublished: true, imageUrls: [OWN_PHOTO] }));
+  await assertSucceeds(setDoc(privateRef(db), { owner_id: "ownerA", isPublished: true, title: "Flat" }));
+});
+
+test("TAQ-107: a held listing's owner can still remove image refs and edit everything else", async () => {
+  await holdPropA();
+  const db = ownerDb();
+  await assertSucceeds(updateDoc(privateRef(db), { title: "Flat, renovated", rentalStatus: "rented" }));
+  await assertSucceeds(updateDoc(privateRef(db), { image: "assets/images/b.jpg" }), "the cover can become another photo it already has");
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO] }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO, "assets/images/c.jpg"] }));
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [], image: "" }));
+});
+
+test("TAQ-107: without a hold, or after it is lifted, the owner adds photos as before", async () => {
+  const db = ownerDb();
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [NEW_PHOTO], image: NEW_PHOTO }));
+  await seed((d) => setDoc(doc(d, "PropertyModeration/propA"), { hidden: false, pre_hide_published: true, updated_by: "admin1" }));
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [NEW_PHOTO, OWN_PHOTO] }));
+  await assertSucceeds(as("ownerA").ref("public/listings/ownerA/propA/after.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(as("ownerA").ref("public/listings/ownerA/propA/after.jpg").delete());
+});
+
+test("TAQ-107: SuperAdmin and Admin still remove a held listing's photos (Storage), and SuperAdmin its image refs (Firestore)", async () => {
+  await holdPropA();
+  await seed((db, storage) => storage.ref("public/listings/ownerA/propA/second.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(platformAdmin().ref("public/listings/ownerA/propA/second.jpg").delete());
+  await assertSucceeds(superAdmin().ref(PHOTO).delete());
+  await assertFails(as("ownerA").ref("public/listings/ownerA/propA/third.jpg").put(bytes(16), jpeg));
+
+  const bucket = `${projectId}.appspot.com`;
+  const url = (name) => `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2F${name}?alt=media`;
+  await seed((db) => setDoc(doc(db, "Properties/propA"), {
+    id: "propA", owner_id: "ownerA", countryCode: "AE", currencyCode: "AED",
+    titles: { ar: "شقة", en: "Apartment", hi: "अपार्टमेंट" }, pricePerMonth: 9000, status: "vacant",
+    is_published: false, moderation_hidden: true, image: url("front.jpg"), imageUrls: [url("front.jpg"), url("second.jpg")],
+  }));
+  const root = testEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
+  await assertSucceeds(updateDoc(doc(root, "Properties/propA"), { imageUrls: [url("front.jpg")] }));
+  await assertSucceeds(updateDoc(privateRef(root), { imageUrls: [OWN_PHOTO] }));
+  await assertSucceeds(updateDoc(privateRef(root), { imageUrls: [OWN_PHOTO, NEW_PHOTO] }), "SuperAdmin is not held back");
+  // Admin moderates visibility in Firestore, not image refs.
+  const adminDb = testEnv.authenticatedContext("admin1", { role: "Admin" }).firestore();
+  await assertFails(updateDoc(doc(adminDb, "Properties/propA"), { imageUrls: [] }));
 });
 
 // --- TAQ-14: private writes ---
@@ -167,8 +347,9 @@ test("TAQ-14: only the owner or a SuperAdmin can delete listing photos", async (
 // --- TAQ-14: listing documents still accept public/listings download URLs ---
 
 test("TAQ-14: Firestore imageRefsOk accepts public/listings download URLs and rejects users/ ones", async () => {
+  await seed((db) => deleteDoc(doc(db, "Properties/propA")));
   const bucket = `${projectId}.appspot.com`;
-  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media&token=abc`;
+  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media`;
   const privateUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/users%2FownerA%2Fkyc%2Fid.jpg?alt=media`;
   const listing = (imageUrls) => ({
     id: "propA",
@@ -185,6 +366,7 @@ test("TAQ-14: Firestore imageRefsOk accepts public/listings download URLs and re
   const db = testEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
   await assertSucceeds(setDoc(doc(db, "Properties/propA"), listing([publicUrl])));
   await assertFails(setDoc(doc(db, "Properties/propA"), listing([privateUrl])));
+  await assertFails(setDoc(doc(db, "Properties/propA"), listing([`${publicUrl}&token=abc`])));
 
   const { sanitizeForMarketplace } = require("../index");
   const sanitized = sanitizeForMarketplace({ ...listing([publicUrl, privateUrl]), image: privateUrl }, "ownerA", "propA");

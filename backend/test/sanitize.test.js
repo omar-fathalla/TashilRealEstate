@@ -6,7 +6,7 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 const { sanitizeForMarketplace } = require("../index");
 
 const BUCKET = `${process.env.GCLOUD_PROJECT}.appspot.com`;
-const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/listings%2Fprop-1%2Fliving.jpg?alt=media&token=abc`;
+const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/listings%2Fprop-1%2Fliving.jpg?alt=media`;
 
 const PUBLIC_FIELDS = [
   "id", "owner_id", "countryCode", "currencyCode", "titles", "descriptions", "locations",
@@ -181,4 +181,16 @@ test("TAQ-52: the published status is always vacant and strings are bounded", ()
   const out = sanitizeForMarketplace({ pricePerMonth: 9000, status: "sold", buildingName: "x".repeat(500) }, "o", "p");
   assert.equal(out.status, "vacant");
   assert.equal(out.buildingName.length, 200);
+});
+
+test("TAQ-14: public listings keep Storage photos as tokenless ?alt=media URLs, never download-token links", () => {
+  const withToken = `${PROJECT_IMAGE}&token=0a1b2c3d-aaaa`;
+  const bare = PROJECT_IMAGE.replace("?alt=media", "");
+  const out = sanitizeForMarketplace({ pricePerMonth: 9000, imageUrls: [withToken, bare, PROJECT_IMAGE.replace("?alt=media", "?token=x&alt=media")] }, "o", "p");
+  assert.deepEqual(out.imageUrls, [PROJECT_IMAGE, PROJECT_IMAGE, PROJECT_IMAGE]);
+  assert.equal(out.image, PROJECT_IMAGE);
+  for (const ref of out.imageUrls) assert.doesNotMatch(ref, /token=/);
+  // Bundled assets and inline picker images are kept as written.
+  const inline = "data:image/png;base64,iVBORw0KGgo=";
+  assert.deepEqual(sanitizeForMarketplace({ pricePerMonth: 9000, imageUrls: ["assets/images/a.jpg", inline] }, "o", "p").imageUrls, ["assets/images/a.jpg", inline]);
 });
