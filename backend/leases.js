@@ -275,18 +275,27 @@ const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
       return "rejected";
     }
     assertOfferTerms(lease, now);
-    await verifyLeaseProperty(t, db, lease);
+    const silo = await verifyLeaseProperty(t, db, lease);
     const lock = await readPropertyLock(t, db, lease, now);
     if (lock.heldByOther) throw alreadyLeased(lock.heldByOther);
     t.update(ref, { status: "active", activated_at: Timestamp.fromMillis(now), ...decided });
     writePropertyLock(t, lock.ref, lease, now, auth.uid);
+    // The private listing is marked rented and unpublished in the same transaction. The sync
+    // trigger then takes the public doc offline (status rented), so search, viewing requests and
+    // applications exclude it. isPublished is the owner's wish and `available` + published goes
+    // live on its own, so it is cleared here; the owner publishes again after the lease ends.
+    t.update(silo.ref, { rentalStatus: "rented", isPublished: false, updated_at: FieldValue.serverTimestamp() });
     if (lock.stale) logger.info("Took over a stale property lock", { propertyId: lease.property_id, from: lock.stale, to: lease.id });
     return "active";
   });
   return { success: true, status };
 });
 
-/** Releases the property lock when its lease stops being active (or is deleted). */
+/**
+ * Releases the property lock when its lease stops being active (or is deleted). When the lock was
+ * this lease's, the private listing goes back to `available` if it was `rented`. It is NOT
+ * republished: isPublished stays as the activation left it, so the owner decides when to list again.
+ */
 async function handleLeaseLockRelease(event) {
   const before = event.data && event.data.before;
   const after = event.data && event.data.after;
@@ -298,10 +307,15 @@ async function handleLeaseLockRelease(event) {
   const leaseId = event.params.leaseId;
   const db = admin.firestore();
   const ref = db.collection(LOCKS).doc(was.property_id);
+  const siloRef = validId(was.owner_id) ? db.collection("Users").doc(was.owner_id).collection("properties").doc(was.property_id) : null;
   return db.runTransaction(async (t) => {
     const lock = await t.get(ref);
     if (!lock.exists || lock.get("lease_id") !== leaseId) return false;
+    const silo = siloRef ? await t.get(siloRef) : null;
     t.delete(ref);
+    if (silo && silo.exists && silo.get("rentalStatus") === "rented") {
+      t.update(siloRef, { rentalStatus: "available", updated_at: FieldValue.serverTimestamp() });
+    }
     return true;
   });
 }

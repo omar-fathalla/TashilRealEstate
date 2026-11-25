@@ -318,3 +318,61 @@ test("TAQ-110: two acceptances race for one property; one wins, and terminating 
   assert.equal(a3.status, 200, JSON.stringify(a3.body));
   assert.equal(a3.body.result.status, "active");
 });
+
+// --- TAQ-110: activation takes the listing off the marketplace; release does not republish it ---
+
+test("TAQ-110: accepting a lease rents the property and removes it from the marketplace; ending it does not republish", async () => {
+  const owner = await signUp("rent-owner@example.com", { role: "Owner" });
+  const tenant = await signUp("rent-tenant@example.com", { role: "Tenant" });
+  const visitor = await signUp("rent-visitor@example.com", { role: "Tenant" });
+  await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant", full_name: "Lease Tenant" });
+  await db.doc(`Users/${visitor.uid}`).set({ role: "Tenant", full_name: "Visitor" });
+  const priv = db.doc(`Users/${owner.uid}/properties/rent-prop`);
+  await priv.set({ isPublished: true, rentalStatus: "available", countryCode: "AE", titles: { en: "Rent smoke" }, pricePerMonth: 6000 });
+  const live = await waitFor(async () => {
+    const snap = await db.doc("Properties/rent-prop").get();
+    return snap.exists && snap.get("is_published") === true ? snap.data() : null;
+  });
+  assert.ok(live, "the listing was not published");
+  const view = () => callable("requestViewing", visitor.idToken, { listingId: "rent-prop", name: "Visitor", phone: "+971501234567" });
+  const apply = () => callable("applyForRental", visitor.idToken, { listingId: "rent-prop", name: "Visitor", phone: "+971501234567" });
+  assert.equal((await view()).status, 200, "a vacant listing takes viewing requests");
+
+  const offer = await callable("createLease", owner.idToken, {
+    propertyId: "rent-prop", tenantId: tenant.uid, startDate: "2026-01-01", endDate: "2099-12-31", monthlyRent: 6000, sendOffer: true,
+  });
+  assert.equal(offer.status, 200, JSON.stringify(offer.body));
+  const accepted = await callable("respondToLeaseOffer", tenant.idToken, { leaseId: offer.body.result.leaseId, decision: "approve" });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  assert.equal((await priv.get()).get("rentalStatus"), "rented");
+  assert.equal((await priv.get()).get("isPublished"), false);
+
+  const offline = await waitFor(async () => {
+    const snap = await db.doc("Properties/rent-prop").get();
+    return snap.get("is_published") === false && snap.get("status") === "rented" ? snap.data() : null;
+  });
+  assert.ok(offline, "the sync did not take the listing off the marketplace as rented");
+  for (const call of [view, apply]) {
+    const refused = await call();
+    assert.equal(refused.status, 400, JSON.stringify(refused.body));
+    assert.equal(refused.body.error.details.reason, "listing_not_live");
+  }
+
+  await db.doc(`Leases/${offer.body.result.leaseId}`).update({ status: "terminated" });
+  const vacated = await waitFor(async () => ((await priv.get()).get("rentalStatus") === "available" ? true : null));
+  assert.ok(vacated, "the release trigger did not mark the property available");
+  assert.equal((await priv.get()).get("isPublished"), false);
+  await new Promise((r) => setTimeout(r, 2500));
+  const after = (await db.doc("Properties/rent-prop").get()).data();
+  assert.equal(after.is_published, false, "ending a lease must not republish the listing");
+  const still = await view();
+  assert.equal(still.status, 400, "still not live until the owner publishes");
+
+  await priv.update({ isPublished: true });
+  const back = await waitFor(async () => {
+    const snap = await db.doc("Properties/rent-prop").get();
+    return snap.get("is_published") === true ? snap.data() : null;
+  });
+  assert.ok(back, "the owner can publish again");
+  assert.equal(back.status, "vacant");
+});
