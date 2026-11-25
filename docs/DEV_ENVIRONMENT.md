@@ -273,6 +273,24 @@ node seed.js --set tashilaqar-test --project tashil-aqar-dev --allow-live-projec
 
 Passwords exist only in Secret Manager or the shell environment. Do not write them to the repo.
 
+## Firestore rules budget (TAQ-101)
+
+A request may evaluate at most 1000 rule expressions, and the full listing check (`listingShapeOk`:
+sizes, contact filter, image references, localized maps) of a large listing uses most of them. So:
+
+- A SuperAdmin edit of an existing `/Properties` doc validates only the keys that changed
+  (`listingEditOk`, from `diff().affectedKeys()`), not the whole doc. Admin and SuperAdmin
+  visibility changes (`is_published`, `moderation_hidden`) take the moderation path first.
+  Admin still cannot edit content, only verify and moderate.
+- The full check runs once, on a SuperAdmin create. A create also needs the owner's private doc at
+  `Users/{owner_id}/properties/{id}` and is refused while `PropertyModeration/{id}` says hidden.
+- `backend/test/admin_investor_rules.test.js` holds a maximum-size listing fixture (every text at its
+  cap, 30 amenities per language, 20 images). Any rule change must keep its create and edit tests green;
+  a budget overrun shows as `maximum of 1000 expressions` in the emulator log.
+- `processRentPayment` rejects a `period` earlier than the lease's start month (`startDate`,
+  `start_date`, `leaseStartDate` or `lease_start_date`); a lease with no readable start date keeps the
+  24-month window.
+
 ## Follow-ups
 
 - The Admin dashboard covers listings moderation and read-only users and agencies. There is no
