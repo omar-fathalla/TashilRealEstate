@@ -562,6 +562,14 @@ test("TAQ-72: phones split by § ¶ ¦ ¤ ` or ´ are caught in the sanitizer an
   assert.equal(sanitized("اتصل ٠٥٠¶١٢٣¶٤٥٦٧ الآن"), "اتصل  الآن");
 });
 
+test("TAQ-72: other symbols and punctuation between phone groups are separators too", async () => {
+  const seps = ["\u00a9", "\u00ae", "\u00b0", "\u00b1", "\u00d7", "\u00ab", "\u00bb", "\u00bf", "\u2016", "\u2020", "\u2022", "\u2030", "\u203b", "\u060c", "\u061b", "\u3001"];
+  await expectCaught(variants([
+    ...seps.map((sep) => `010${sep}1234${sep}5678`),
+    ...seps.map((sep) => `+971${sep}50${sep}123${sep}4567`),
+  ]));
+});
+
 test("TAQ-72: prices, handles, dates, permits and clause marks with § or ¶ stay free", async () => {
   await expectFree([
     "Price 1,500,000 | Apt #1203 | 3 BR",
@@ -576,5 +584,9 @@ test("TAQ-72: prices, handles, dates, permits and clause marks with § or ¶ sta
     "Units 10§12§34",
     "Use the `Book viewing` button",
     "Price 1,500,000 § 2,000,000",
+    "Terrace 12×8 m, 35° C summer, 2 × 150 m²",
+    "«Marina Tower» 2026 © Tashil 7134 — 2025",
+    "Fee 5% ± 1%, floors 12–40, view ‖ garden ‖ sea",
+    "Rooms: 3، baths: 2؛ area 185",
   ]);
 });
