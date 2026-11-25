@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/callable_error.dart';
@@ -206,7 +207,7 @@ void main() {
       expect(backend.recorded, isEmpty);
     });
 
-    testWidgets('a server refusal shows a translated headline and the server message, and keeps the dialog open', (tester) async {
+    testWidgets('a server refusal shows a translated message, never the server text, and keeps the dialog open', (tester) async {
       final backend = FakeBackend(leases: [marina])
         ..failRecord = FirebaseFunctionsException(code: 'already-exists', message: 'Rent for 2026-11 has already been paid on this lease.');
       var recorded = 0;
@@ -215,19 +216,71 @@ void main() {
       await tester.tap(find.text('Record payment and issue receipt'));
       await tester.pumpAndSettle();
       expect(find.text('This month is already paid on this lease.'), findsOneWidget);
-      expect(find.text('Rent for 2026-11 has already been paid on this lease.'), findsOneWidget);
+      expect(find.text('Rent for 2026-11 has already been paid on this lease.'), findsNothing);
       expect(find.byType(RecordManualPaymentDialog), findsOneWidget);
       expect(recorded, 0, reason: 'nothing is synced locally when the server refused');
     });
 
-    testWidgets('an unknown error code falls back to a generic message plus the raw reason', (tester) async {
-      final backend = FakeBackend(leases: [marina])..failRecord = FirebaseFunctionsException(code: 'internal', message: 'Failed to record the payment.');
-      await openDialog(tester, backend);
-      await tester.enterText(field('Reference or receipt number'), 'RCPT-1');
-      await tester.tap(find.text('Record payment and issue receipt'));
-      await tester.pumpAndSettle();
-      expect(find.text('The payment could not be recorded.'), findsOneWidget);
-      expect(find.text('Failed to record the payment.'), findsOneWidget);
+    for (final locale in const [Locale('en'), Locale('ar')]) {
+      testWidgets('TAQ-110 N-2: an unknown code or reason shows a generic translated message, never raw server English (${locale.languageCode})', (tester) async {
+        for (final error in [
+          FirebaseFunctionsException(code: 'internal', message: 'Failed to record the payment.'),
+          FirebaseFunctionsException(code: 'failed-precondition', message: 'Something new the app does not know.', details: {'reason': 'brand_new_reason'}),
+          FirebaseFunctionsException(code: 'weird-code', message: 'Totally unexpected.', details: {'reason': 'other'}),
+        ]) {
+          final backend = FakeBackend(leases: [marina])..failRecord = error;
+          await openDialog(tester, backend, locale: locale);
+          await tester.enterText(find.byType(TextField).at(2), 'RCPT-1');
+          await tester.tap(find.byType(TashilButton));
+          await tester.pumpAndSettle();
+          final loc = AppLocalizations(locale);
+          final expected = error.code == 'failed-precondition' ? loc.tr('mpErr_failed-precondition') : loc.tr('mpErr_unknown');
+          expect(find.text(expected), findsOneWidget, reason: error.code);
+          expect(find.textContaining(error.message!), findsNothing, reason: error.code);
+          await tester.tapAt(const Offset(5, 5));
+          await tester.pumpAndSettle();
+        }
+      });
+
+      testWidgets('TAQ-110 N-2: an open online payment shows when it expires, in local time (${locale.languageCode})', (tester) async {
+        final until = DateTime(2026, 11, 25, 14, 37);
+        final backend = FakeBackend(leases: [marina])
+          ..failRecord = FirebaseFunctionsException(
+            code: 'failed-precondition',
+            message: 'An online payment for this month is still open. Try again after it expires.',
+            details: {'reason': 'payment_pending', 'retryAfterMs': until.millisecondsSinceEpoch, 'period': '2026-11'},
+          );
+        await openDialog(tester, backend, locale: locale);
+        await tester.enterText(find.byType(TextField).at(2), 'RCPT-1');
+        await tester.tap(find.byType(TashilButton));
+        await tester.pumpAndSettle();
+        final text = AppLocalizations(locale).tr('mpErr_payment_pending').replaceAll('{time}', '2026-11-25 14:37');
+        expect(find.text(text), findsOneWidget);
+        expect(find.textContaining('still open. Try again'), findsNothing);
+      });
+    }
+
+    test('TAQ-110 N-2: manual payment reasons map to their own messages in every language', () {
+      for (final lang in ['ar', 'en', 'hi']) {
+        final loc = AppLocalizations(Locale(lang));
+        final utc = DateTime.utc(2026, 11, 25, 10, 5);
+        final pending = manualPaymentErrorText(loc, CallableErrorInfo('failed-precondition', 'x', reason: 'payment_pending', retryAfterMs: utc.millisecondsSinceEpoch));
+        expect(pending, contains(localDateTimeLabel(utc.toLocal())), reason: lang);
+        expect(pending, isNot(contains('{time}')));
+        expect(manualPaymentErrorText(loc, const CallableErrorInfo('failed-precondition', 'x', reason: 'payment_pending')), loc.tr('mpErr_payment_pending_soon'));
+        expect(manualPaymentErrorText(loc, const CallableErrorInfo('already-exists', 'x', reason: 'already_paid')), loc.tr('mpErr_already-exists'));
+        expect(manualPaymentErrorText(loc, const CallableErrorInfo('failed-precondition', 'x', reason: 'lease_not_verified')), loc.tr('mpErr_lease_not_verified'));
+        for (final reason in ['property_not_registered', 'property_id_conflict']) {
+          expect(manualPaymentErrorText(loc, CallableErrorInfo('failed-precondition', 'x', reason: reason)), loc.tr('mpErr_property_invalid'));
+        }
+        for (final key in ['mpErr_payment_pending', 'mpErr_payment_pending_soon', 'mpErr_lease_not_verified', 'mpErr_property_invalid']) {
+          expect(loc.tr(key), isNot(key), reason: '$lang $key');
+        }
+      }
+      expect(localDateTimeLabel(DateTime(2026, 1, 2, 3, 4)), '2026-01-02 03:04');
+      final info = describeCallableError(FirebaseFunctionsException(code: 'failed-precondition', message: 'm', details: {'reason': 'payment_pending', 'retryAfterMs': 1700000000000}));
+      expect(info.retryAfterMs, 1700000000000);
+      expect(describeCallableError(FirebaseFunctionsException(code: 'internal', message: 'm')).retryAfterMs, isNull);
     });
 
     testWidgets('no active leases: explains and offers no form', (tester) async {

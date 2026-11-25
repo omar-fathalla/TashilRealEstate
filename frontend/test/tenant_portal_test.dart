@@ -270,11 +270,42 @@ void main() {
       expect(find.text('This property already has an active lease, so this offer cannot be accepted.'), findsOneWidget);
     });
 
+    for (final locale in const [Locale('en'), Locale('ar')]) {
+      testWidgets('TAQ-110 N-4: accepting an offer on a property that is not available is explained (${locale.languageCode})', (tester) async {
+        final backend = FakeTenantBackend()
+          ..leases = const [offer]
+          ..failDecision = FirebaseFunctionsException(
+            code: 'failed-precondition',
+            message: 'This property is not available to let right now.',
+            details: {'reason': 'property_not_available', 'rentalStatus': 'maintenance'},
+          );
+        final loc = AppLocalizations(locale);
+        await pump(tester, home(backend), locale: locale);
+        await tester.tap(find.text(loc.tr('tnApprove')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(loc.tr('confirm')));
+        await tester.pumpAndSettle();
+        expect(find.text(loc.tr('tnPropertyNotAvailable')), findsOneWidget);
+        expect(find.text('This property is not available to let right now.'), findsNothing, reason: 'the server text is not shown');
+        expect(backend.decisions, isEmpty);
+      });
+    }
+
+    test('TAQ-110: unavailable, unregistered and conflicting properties map to their own messages', () {
+      expect(decisionErrorKey('property_not_available'), 'tnPropertyNotAvailable');
+      expect(decisionErrorKey('property_not_registered'), 'tnOfferPropertyInvalid');
+      expect(decisionErrorKey('property_id_conflict'), 'tnOfferPropertyInvalid');
+      expect(AppLocalizations(const Locale('ar')).tr('tnPropertyNotAvailable'), 'هذا العقار غير متاح للإيجار حالياً، ولا يمكن قبول هذا العرض. تواصل مع المالك أو الوكالة.');
+      expect(AppLocalizations(const Locale('en')).tr('tnPropertyNotAvailable'), 'This property is not available to let right now, so this offer cannot be accepted. Contact the owner or agency.');
+      expect(AppLocalizations(const Locale('hi')).tr('tnPropertyNotAvailable'), isNot('tnPropertyNotAvailable'));
+    });
+
     test('every refusal reason maps to a message in all three languages (TAQ-110)', () {
       final keys = {
         for (final reason in [
           'property_already_leased', 'offer_expired', 'not_pending', 'property_not_found', 'property_not_managed',
           'property_agency_managed', 'owner_not_landlord', 'rent_invalid', 'rent_missing', 'lease_dates_invalid', 'other', '',
+          'property_not_available', 'property_not_registered', 'property_id_conflict',
         ])
           decisionErrorKey(reason),
       };

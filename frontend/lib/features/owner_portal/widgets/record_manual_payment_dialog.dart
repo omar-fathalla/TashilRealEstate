@@ -7,6 +7,40 @@ import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/lease_payment_service.dart';
 
+/// What the manual payment dialog says when `recordManualPayment` refuses: a translated text for
+/// the server's `details.reason`, or else for its error code. The server's own (English) message
+/// is never shown. For `payment_pending` the time the open online payment expires is shown in the
+/// device's local time zone.
+String manualPaymentErrorText(AppLocalizations loc, CallableErrorInfo error) {
+  switch (error.reason) {
+    case 'payment_pending':
+      final until = error.retryAfterMs;
+      if (until == null || until <= 0) return loc.tr('mpErr_payment_pending_soon');
+      return loc.tr('mpErr_payment_pending').replaceAll('{time}', localDateTimeLabel(DateTime.fromMillisecondsSinceEpoch(until)));
+    case 'already_paid':
+      return loc.tr('mpErr_already-exists');
+    case 'lease_not_verified':
+      return loc.tr('mpErr_lease_not_verified');
+    case 'property_not_registered':
+    case 'property_id_conflict':
+    case 'property_not_found':
+    case 'property_not_managed':
+    case 'property_agency_managed':
+    case 'owner_not_landlord':
+      return loc.tr('mpErr_property_invalid');
+  }
+  final key = 'mpErr_${error.code}';
+  final text = loc.tr(key);
+  return text == key ? loc.tr('mpErr_unknown') : text;
+}
+
+/// `YYYY-MM-DD HH:MM` in the device's local time zone.
+String localDateTimeLabel(DateTime time) {
+  final t = time.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+}
+
 /// Records a cash or bank-transfer rent payment on one of the owner's (or agency's) active leases
 /// through the `recordManualPayment` Cloud Function (TAQ-16). The server checks the lease, the
 /// amount and the month, issues the receipt and notifies the tenant; this dialog writes nothing.
@@ -226,10 +260,7 @@ class _RecordManualPaymentDialogState extends State<RecordManualPaymentDialog> {
                           if (_error != null)
                             Padding(
                               padding: const EdgeInsetsDirectional.only(top: 8),
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(loc.tr('mpErr_${_error!.code}') == 'mpErr_${_error!.code}' ? loc.tr('mpErr_unknown') : loc.tr('mpErr_${_error!.code}'), style: TextStyle(color: scheme.error, fontWeight: FontWeight.bold)),
-                                if (_error!.message.isNotEmpty) Text(_error!.message, style: TextStyle(color: scheme.error, fontSize: 12)),
-                              ]),
+                              child: Text(manualPaymentErrorText(loc, _error!), style: TextStyle(color: scheme.error, fontWeight: FontWeight.bold)),
                             ),
                           const SizedBox(height: 16),
                           TashilButton(label: loc.tr('mpConfirm'), icon: Icons.check_circle_rounded, isLoading: _saving, onPressed: _saving ? null : _save, height: 48),
