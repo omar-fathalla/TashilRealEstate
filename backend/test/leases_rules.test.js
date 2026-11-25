@@ -1,4 +1,5 @@
-// TAQ-13: lease create/update rules (owner-created leases, locked parties, rent frozen after draft).
+// TAQ-13: lease create/update rules (owner-created leases, locked parties, rent frozen after draft,
+// tenant approval of lease offers).
 const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
@@ -70,7 +71,7 @@ const L = (db, id = "l1") => doc(db, `Leases/${id}`);
 
 test("TAQ-13: an owner creates a lease for their own property, without an agency", async () => {
   await assertSucceeds(setDoc(L(ctx.ownerA), lease()));
-  await assertSucceeds(setDoc(L(ctx.ownerA, "l2"), lease({ status: "active" })));
+  await assertSucceeds(setDoc(L(ctx.ownerA, "l2"), lease({ status: "pending_tenant_approval" })));
   const { agency_id, ...noAgencyKey } = lease();
   await assertSucceeds(setDoc(L(ctx.ownerA, "l3"), noAgencyKey));
 });
@@ -90,7 +91,7 @@ test("TAQ-13: an owner lease cannot carry an agency, miss a tenant, or lease to 
   await assertFails(setDoc(L(ctx.ownerA), lease({ tenant_id: "" })));
   await assertFails(setDoc(L(ctx.ownerA), lease({ tenant_id: 7 })));
   await assertFails(setDoc(L(ctx.ownerA), lease({ tenant_id: "ownerA" })));
-  for (const status of ["expired", "terminated", "bogus", 3]) {
+  for (const status of ["active", "rejected", "expired", "terminated", "pending_signatures", "bogus", 3]) {
     await assertFails(setDoc(L(ctx.ownerA), lease({ status })), String(status));
   }
 });
@@ -109,6 +110,8 @@ test("TAQ-13: an agency creates leases for itself only", async () => {
   await assertFails(setDoc(L(ctx.ag2, "l2"), agencyLease()), "ag2 naming ag1");
   await assertFails(setDoc(L(ctx.ag1, "l3"), agencyLease({ tenant_id: "" })));
   await assertFails(setDoc(L(ctx.ag1, "l4"), agencyLease({ status: "terminated" })));
+  await assertFails(setDoc(L(ctx.ag1, "l6"), agencyLease({ status: "active" })), "an agency cannot create an active lease");
+  await assertSucceeds(setDoc(L(ctx.ag1, "l7"), agencyLease({ status: "pending_tenant_approval" })));
   await assertSucceeds(setDoc(L(ctx.sa, "l5"), agencyLease({ status: "terminated" })));
 });
 
@@ -149,7 +152,7 @@ test("TAQ-13: tenant_id, owner_id, agency_id and property_id are locked after cr
 test("TAQ-13: the tenant, a stranger and the other owner cannot touch a lease", async () => {
   await seed({ "Leases/l1": lease() });
   await assertSucceeds(getDoc(L(ctx.tenantA)));
-  await assertFails(updateDoc(L(ctx.tenantA), { status: "active" }));
+  await assertFails(updateDoc(L(ctx.tenantA), { status: "active" }), "a draft is not up for decision");
   await assertFails(updateDoc(L(ctx.tenantA), { monthly_rent: 1 }));
   await assertFails(updateDoc(L(ctx.ownerB), { notes: "x" }));
   await assertFails(deleteDoc(L(ctx.tenantA)));
@@ -161,7 +164,7 @@ test("TAQ-13: an owner cannot edit a lease an agency manages", async () => {
   await seed({ "Leases/l1": agencyLease() });
   await assertSucceeds(getDoc(L(ctx.ownerA)));
   await assertFails(updateDoc(L(ctx.ownerA), { monthly_rent: 1 }));
-  await assertFails(updateDoc(L(ctx.ownerA), { status: "active" }));
+  await assertFails(updateDoc(L(ctx.ownerA), { status: "pending_tenant_approval" }));
   await assertFails(deleteDoc(L(ctx.ownerA)));
 });
 
@@ -171,7 +174,7 @@ test("TAQ-13: rent and dates change only while the lease is a draft", async () =
   await seed({ "Leases/own": lease(), "Leases/ag": agencyLease() });
   for (const [db, id] of [[ctx.ownerA, "own"], [ctx.ag1, "ag"]]) {
     await assertSucceeds(updateDoc(L(db, id), { monthly_rent: 5200, financialTerms: { monthlyRent: 5200 }, start_date: "2026-02-01", end_date: "2027-01-31" }));
-    await assertSucceeds(updateDoc(L(db, id), { status: "active" }), "activating with terms already final");
+    await assertSucceeds(updateDoc(L(db, id), { status: "pending_tenant_approval" }), "sending the offer with terms already final");
     for (const patch of [
       { monthly_rent: 1 },
       { financialTerms: { monthlyRent: 1 } },
@@ -186,17 +189,108 @@ test("TAQ-13: rent and dates change only while the lease is a draft", async () =
   }
 });
 
-test("TAQ-13: draft to active may change terms in the same write; terms stay locked from then on", async () => {
+test("TAQ-13: draft to pending may change terms in the same write; terms stay locked from then on", async () => {
   await seed({ "Leases/own": lease() });
-  await assertSucceeds(updateDoc(L(ctx.ownerA, "own"), { status: "active", monthly_rent: 5100, financialTerms: { monthlyRent: 5100 } }));
+  await assertSucceeds(updateDoc(L(ctx.ownerA, "own"), { status: "pending_tenant_approval", monthly_rent: 5100, financialTerms: { monthlyRent: 5100 } }));
   await assertFails(updateDoc(L(ctx.ownerA, "own"), { monthly_rent: 5200 }));
+});
+
+// --- the tenant's decision ---
+
+const decision = (status, extra = {}) => ({ status, updated_at: "2026-06-01", ...extra });
+
+test("TAQ-13: owners and agencies cannot activate or reject a lease; only the tenant can", async () => {
+  await seed({ "Leases/own": lease(), "Leases/ag": agencyLease(), "Leases/pown": lease({ status: "pending_tenant_approval" }), "Leases/pag": agencyLease({ status: "pending_tenant_approval" }) });
+  for (const id of ["own", "pown"]) {
+    for (const status of ["active", "rejected"]) await assertFails(updateDoc(L(ctx.ownerA, id), { status }), `owner ${id} -> ${status}`);
+  }
+  for (const id of ["ag", "pag"]) {
+    for (const status of ["active", "rejected"]) await assertFails(updateDoc(L(ctx.ag1, id), { status }), `agency ${id} -> ${status}`);
+  }
+  await assertFails(updateDoc(L(ctx.ownerA, "own"), { status: "active", monthly_rent: 1 }));
+});
+
+test("TAQ-13: the tenant approves or rejects a pending lease, and only the decision fields change", async () => {
+  await seed({ "Leases/a": lease({ status: "pending_tenant_approval" }), "Leases/r": lease({ status: "pending_tenant_approval" }), "Leases/n": lease({ status: "pending_tenant_approval" }) });
+  await assertSucceeds(updateDoc(L(ctx.tenantA, "a"), decision("active")));
+  await assertSucceeds(updateDoc(L(ctx.tenantA, "r"), decision("rejected", { tenant_decision_note: "Rent is too high" })));
+  await assertSucceeds(updateDoc(L(ctx.tenantA, "n"), { status: "active" }));
+  for (const bad of [
+    decision("active", { monthly_rent: 1 }),
+    decision("active", { financialTerms: { monthlyRent: 1 } }),
+    decision("active", { start_date: "2020-01-01" }),
+    decision("active", { end_date: "2099-01-01" }),
+    decision("active", { notes: "x" }),
+    decision("active", { tenant_id: "tenantB" }),
+    decision("active", { owner_id: "tenantA" }),
+    decision("active", { agency_id: "ag1" }),
+    decision("active", { property_id: "propB" }),
+    decision("active", { tenant_decision_note: "x".repeat(501) }),
+    decision("active", { tenant_decision_note: 5 }),
+    decision("active", { extra_field: 1 }),
+  ]) {
+    await seed({ "Leases/p": lease({ status: "pending_tenant_approval" }) });
+    await assertFails(updateDoc(L(ctx.tenantA, "p"), bad), JSON.stringify(bad));
+  }
+});
+
+test("TAQ-13: the tenant decides only while pending, and only to active or rejected", async () => {
+  await seed({
+    "Leases/d": lease(),
+    "Leases/a": lease({ status: "active" }),
+    "Leases/e": lease({ status: "expired" }),
+    "Leases/t": lease({ status: "terminated" }),
+    "Leases/x": lease({ status: "rejected" }),
+    "Leases/p": lease({ status: "pending_tenant_approval" }),
+  });
+  for (const id of ["d", "a", "e", "t", "x"]) {
+    for (const status of ["active", "rejected", "terminated", "draft"]) {
+      await assertFails(updateDoc(L(ctx.tenantA, id), decision(status)), `tenant ${id} -> ${status}`);
+    }
+  }
+  for (const status of ["draft", "terminated", "expired", "pending_tenant_approval", "bogus"]) {
+    await assertFails(updateDoc(L(ctx.tenantA, "p"), decision(status)), `tenant pending -> ${status}`);
+  }
+  await assertFails(updateDoc(L(ctx.tenantA, "p"), { updated_at: "2026-06-01" }), "no decision at all");
+});
+
+test("TAQ-13: only the lease's own tenant decides; other tenants, owners, agencies and strangers cannot", async () => {
+  await seed({ "Leases/p": lease({ status: "pending_tenant_approval" }), "Leases/pa": agencyLease({ status: "pending_tenant_approval" }) });
+  for (const who of ["tenantB", "ownerB", "investor", "ag2", "admin", "unauth"]) {
+    await assertFails(updateDoc(L(ctx[who], "p"), decision("active")), who);
+    await assertFails(updateDoc(L(ctx[who], "pa"), decision("rejected")), who);
+  }
+  await assertSucceeds(updateDoc(L(ctx.tenantA, "pa"), decision("active")), "tenant of an agency lease");
+});
+
+test("TAQ-13: a tenant who is also the owner of the lease cannot approve their own offer", async () => {
+  await seed({ "Leases/self": lease({ owner_id: "tenantA", tenant_id: "tenantA", status: "pending_tenant_approval" }) });
+  await assertFails(updateDoc(L(ctx.tenantA, "self"), decision("active")));
+});
+
+test("TAQ-13: after the decision, the tenant cannot change anything and terms stay locked", async () => {
+  await seed({ "Leases/p": lease({ status: "pending_tenant_approval" }) });
+  await assertSucceeds(updateDoc(L(ctx.tenantA, "p"), decision("active")));
+  await assertFails(updateDoc(L(ctx.tenantA, "p"), decision("rejected")), "cannot flip an active lease");
+  await assertFails(updateDoc(L(ctx.tenantA, "p"), { notes: "x" }));
+  await assertFails(updateDoc(L(ctx.ownerA, "p"), { monthly_rent: 1 }), "owner cannot edit rent on the now-active lease");
+  await assertSucceeds(updateDoc(L(ctx.ownerA, "p"), { status: "terminated" }));
+});
+
+test("TAQ-13: a rejected lease is final; the owner starts a new draft instead", async () => {
+  await seed({ "Leases/x": lease({ status: "rejected" }) });
+  for (const status of ["draft", "pending_tenant_approval", "active", "terminated"]) {
+    await assertFails(updateDoc(L(ctx.ownerA, "x"), { status }), `rejected -> ${status}`);
+  }
+  await assertFails(updateDoc(L(ctx.ownerA, "x"), { monthly_rent: 1 }));
+  await assertSucceeds(updateDoc(L(ctx.ownerA, "x"), { notes: "tenant declined" }));
 });
 
 test("TAQ-13: an active lease allows only status moves forward, notes and updated_at", async () => {
   await seed({ "Leases/own": lease({ status: "active" }), "Leases/ag": agencyLease({ status: "active" }) });
   for (const [db, id] of [[ctx.ownerA, "own"], [ctx.ag1, "ag"]]) {
     await assertSucceeds(updateDoc(L(db, id), { notes: "paid by cheque", updated_at: "2026-06-01" }));
-    for (const status of ["draft", "pending_signatures", "bogus"]) {
+    for (const status of ["draft", "pending_tenant_approval", "rejected", "pending_signatures", "bogus"]) {
       await assertFails(updateDoc(L(db, id), { status }), `active -> ${status}`);
     }
   }
@@ -214,11 +308,17 @@ test("TAQ-13: expired and terminated leases are final; an owner cannot unlock te
   }
 });
 
-test("TAQ-13: pending_signatures locks terms but can go back to draft before anything is paid", async () => {
-  await seed({ "Leases/p": lease({ status: "pending_signatures" }) });
+test("TAQ-13: a pending lease locks terms; the owner can pull it back to draft to edit, or terminate it", async () => {
+  await seed({ "Leases/p": lease({ status: "pending_tenant_approval" }), "Leases/q": lease({ status: "pending_tenant_approval" }) });
   await assertFails(updateDoc(L(ctx.ownerA, "p"), { monthly_rent: 1 }));
   await assertSucceeds(updateDoc(L(ctx.ownerA, "p"), { status: "draft" }));
   await assertSucceeds(updateDoc(L(ctx.ownerA, "p"), { monthly_rent: 4800 }));
+  await assertSucceeds(updateDoc(L(ctx.ownerA, "q"), { status: "terminated" }));
+});
+
+test("TAQ-13: SuperAdmin keeps break-glass over lease status", async () => {
+  await seed({ "Leases/p": lease({ status: "pending_tenant_approval" }) });
+  await assertSucceeds(updateDoc(L(ctx.sa, "p"), { status: "active" }));
 });
 
 test("TAQ-13: a lease with no status counts as a draft (older documents)", async () => {

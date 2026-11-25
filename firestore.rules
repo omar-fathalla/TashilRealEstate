@@ -581,13 +581,16 @@ service cloud.firestore {
 
     // 4. Leases Collection
     // Lease documents are the server-side source of truth for reminder and invoice parties.
-    // Lifecycle: draft -> pending_signatures -> active -> expired | terminated (draft and
-    // pending_signatures may also be terminated, pending_signatures may go back to draft). Rent,
-    // dates and the rest of the terms are editable only while the lease is a draft; after that only
-    // `status` (forward), `notes` and `updated_at` change. tenant_id, owner_id, agency_id and
-    // property_id never change after creation, for anyone but SuperAdmin.
+    // Statuses: draft, pending_tenant_approval, active, expired, terminated, rejected.
+    // Lifecycle: the owner or managing agency moves draft -> pending_tenant_approval (and may pull it
+    // back to draft or terminate it). Only the lease's tenant can move pending_tenant_approval to
+    // active (approve) or rejected, changing nothing but the decision. active -> expired |
+    // terminated. expired, terminated and rejected are final. Rent, dates and the rest of the terms
+    // are editable only while the lease is a draft, so the tenant approves exactly what they saw.
+    // After that only `status` (forward), `notes` and `updated_at` change. tenant_id, owner_id,
+    // agency_id and property_id never change after creation, for anyone but SuperAdmin.
     function leaseStatusOnCreateOk(d) {
-      return d.get('status', 'draft') in ['draft', 'pending_signatures', 'active'];
+      return d.get('status', 'draft') in ['draft', 'pending_tenant_approval'];
     }
 
     function leasePartiesOk(d) {
@@ -612,12 +615,13 @@ service cloud.firestore {
         && resource.data.get('agency_id', '') == '';
     }
 
+    // Manager (owner or agency) status moves. Never to active or rejected: that is the tenant's call.
     function leaseStatusMoveOk() {
       let from = resource.data.get('status', 'draft');
       let to = request.resource.data.get('status', 'draft');
       return to == from
-        || (from == 'draft' && to in ['pending_signatures', 'active', 'terminated'])
-        || (from == 'pending_signatures' && to in ['draft', 'active', 'terminated'])
+        || (from == 'draft' && to in ['pending_tenant_approval', 'terminated'])
+        || (from == 'pending_tenant_approval' && to in ['draft', 'terminated'])
         || (from == 'active' && to in ['expired', 'terminated']);
     }
 
@@ -626,6 +630,19 @@ service cloud.firestore {
         && leaseStatusMoveOk()
         && (resource.data.get('status', 'draft') == 'draft'
           || changedKeys().hasOnly(['status', 'notes', 'updated_at']));
+    }
+
+    // The tenant's decision on a lease offer: approve or reject, only while pending, and only the
+    // decision fields change (an optional short note from the tenant).
+    function tenantDecidesLease() {
+      return isAuthenticated()
+        && resource.data.get('tenant_id', '') == request.auth.uid
+        && resource.data.get('owner_id', '') != request.auth.uid
+        && resource.data.get('status', 'draft') == 'pending_tenant_approval'
+        && request.resource.data.get('status', 'draft') in ['active', 'rejected']
+        && changedKeys().hasOnly(['status', 'updated_at', 'tenant_decision_note'])
+        && request.resource.data.get('tenant_decision_note', '') is string
+        && request.resource.data.get('tenant_decision_note', '').size() <= 500;
     }
 
     match /Leases/{leaseId} {
@@ -640,7 +657,8 @@ service cloud.firestore {
           && leasePartiesOk(request.resource.data) && leaseStatusOnCreateOk(request.resource.data))
         || ownerCreatesLease(request.resource.data);
       allow update: if isSuperAdmin()
-        || ((agencyManagesResource() || ownerManagesLease()) && leaseEditOk());
+        || ((agencyManagesResource() || ownerManagesLease()) && leaseEditOk())
+        || tenantDecidesLease();
       allow delete: if isSuperAdmin() || agencyManagesResource()
         || (ownerManagesLease() && resource.data.get('status', 'draft') == 'draft');
     }
