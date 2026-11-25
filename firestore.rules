@@ -207,14 +207,9 @@ service cloud.firestore {
     // Emails: @ may be written [at], (at), {at} or full-width, with spaces around it, and
     // the dots as [dot]. `(?s)` lets `.` span newlines, so a later line is still checked.
     function contactFree(text) {
-      let local = '[A-Za-z0-9._%+Ａ-Ｚａ-ｚ０-９-]';
-      let ws = '[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*';
-      let at = ws + '([@＠﹫]|[\\[({]' + ws + '[Aa][Tt]' + ws + '[\\])}])' + ws;
-      let dot = '([.．]|' + ws + '[\\[({]' + ws + '[Dd][Oo][Tt]' + ws + '[\\])}]' + ws + ')';
-      let label = '[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+';
       return !contactPhone(text)
         && contactLinkFree(text)
-        && !text.matches('(?s)^.*' + local + at + label + '(' + dot + label + ')*' + dot + '[A-Za-zＡ-Ｚａ-ｚ]{2,}.*$');
+        && !text.matches('(?s)^.*[A-Za-z0-9._%+Ａ-Ｚａ-ｚ０-９-][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*([@＠﹫]|[\\[({][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[Aa][Tt][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[\\])}])[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+(([.．]|[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[\\[({][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[Dd][Oo][Tt][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[\\])}][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*)[A-Za-z0-9Ａ-Ｚａ-ｚ０-９-]+)*([.．]|[\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[\\[({][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[Dd][Oo][Tt][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*[\\])}][\\s\\x{00A0}\\x{2000}-\\x{200F}\\x{2028}\\x{2029}\\x{202F}\\x{3000}\\x{FEFF}]*)[A-Za-zＡ-Ｚａ-ｚ]{2,}.*$');
     }
 
     function inRange(value, min, max) {
@@ -230,16 +225,14 @@ service cloud.firestore {
       return request.auth.token.get('aud', '');
     }
 
+    // The pattern is built once per check. Only the bucket name varies, so the static parts are
+    // single literals: every string concatenation costs rule expressions.
     function imageRefPattern() {
       let bucket = projectId() + '[.](firebasestorage[.]app|appspot[.]com)';
-      return '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?'
-        + '|https://storage[.]googleapis[.]com/' + bucket + '/[^?# ]+'
-        + '|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)'
-        + '|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)'
-        + '|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)';
+      return '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?|https://storage[.]googleapis[.]com/'
+        + bucket + '/[^?# ]+|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)';
     }
 
-    // The pattern is passed in so a listing with both image and imageUrls builds it once.
     function imageRefsMatch(refs, ref) {
       return projectId().matches('[a-z][a-z0-9-]{4,29}')
         && refs.matches('^(' + ref + '( ' + ref + ')*)?$')
@@ -251,8 +244,10 @@ service cloud.firestore {
       return imageRefsMatch(refs, imageRefPattern());
     }
 
+    // An element holding a space would read as two refs once the list is joined, so the list is
+    // also checked joined with a comma, which adds no space of its own.
     function imageListOk(list) {
-      return list.size() <= 20 && imageRefsOk(list.join(' '));
+      return list.size() <= 20 && !list.join(',').matches('(?s)^.* .*$') && imageRefsOk(list.join(' '));
     }
 
     // Value checks that match what sanitizeForMarketplace produces. Kept compact because a
@@ -271,14 +266,18 @@ service cloud.firestore {
       // break for the phone patterns, so digits in neighbouring fields never read as one number.
       let freeText = titles.values().concat(descriptions.values()).concat(locations.values())
         .concat(amenities.get('ar', [])).concat(amenities.get('en', [])).concat(amenities.get('hi', []))
+        .concat(d.get('agencyNames', {}).values())
         .concat([d.get('buildingName', ''), d.get('cityCode', ''), d.get('propertyTypeCode', '')])
         .join(' | ');
-      return d.get('status', 'unavailable') in ['vacant', 'rented', 'unavailable']
+      // keys() fails on anything that is not a map, which denies the write. One combined check keeps
+      // each localized map to ar/en/hi.
+      return titles.keys().concat(descriptions.keys()).concat(locations.keys()).concat(amenities.keys())
+          .concat(d.get('agencyNames', {}).keys()).hasOnly(['ar', 'en', 'hi'])
+        && d.get('status', 'unavailable') in ['vacant', 'rented', 'unavailable']
         && country in ['EG', 'AE']
         && d.get('currencyCode', currency) == currency
-        && d.get('is_published', false) is bool
-        && [d.get('isFeatured', false), d.get('isFurnished', false), d.get('verified', false),
-          d.get('moderation_hidden', false)].hasOnly([true, false])
+        && [d.get('is_published', false), d.get('isFeatured', false), d.get('isFurnished', false),
+          d.get('verified', false), d.get('moderation_hidden', false)].hasOnly([true, false])
         && inRange(d.get('rating', 0), 0, 5)
         && (d.get('is_published', false) == false || 'pricePerMonth' in d)
         && inRange(d.get('pricePerMonth', 1), 0.01, 1000000000)
@@ -294,8 +293,9 @@ service cloud.firestore {
         && amenities.get('ar', []).size() <= 30 && amenities.get('en', []).size() <= 30 && amenities.get('hi', []).size() <= 30
         && contactFree(freeText)
         && image is string && !image.matches('^.* .*$') && imageRefsMatch(image, ref)
-        && images is list && images.size() <= 20 && imageRefsMatch(images.join(' '), ref)
-        && d.get('agencyPhone', '').size() <= 30
+        && images is list && images.size() <= 20 && !images.join(',').matches('(?s)^.* .*$') && imageRefsMatch(images.join(' '), ref)
+        && agencyPhoneOk(d) && agencyNameSizesOk(d.get('agencyNames', {}))
+        && d.get('agency_id', '').matches('^[A-Za-z0-9_-]{0,128}$')
         && (!('updated_at' in d) || d.updated_at is timestamp);
     }
 
@@ -378,6 +378,33 @@ service cloud.firestore {
       ];
     }
 
+    // agencyNames: a localized map of display names, like titles (string values, 200 chars at most,
+    // contact-free through the free-text check). agencyPhone is the one phone number a listing may
+    // carry, so it is checked for shape instead: phone characters only, 30 at most.
+    function agencyNameSizesOk(names) {
+      return names.get('ar', '').size() <= 200 && names.get('en', '').size() <= 200 && names.get('hi', '').size() <= 200;
+    }
+
+    function agencyNamesOk(d) {
+      return localizedKeysOk(d, 'agencyNames') && agencyNameSizesOk(d.get('agencyNames', {}));
+    }
+
+    function agencyPhoneOk(d) {
+      return d.get('agencyPhone', '') is string && d.get('agencyPhone', '').matches('^[0-9+() .-]{0,30}$');
+    }
+
+    // A SuperAdmin create needs the private doc of the doc's own owner_id, and a public doc created
+    // live (is_published true) must mirror a private listing its owner has published and left
+    // available, as publishDecision does server-side (isPublished, rentalStatus). Anything else can
+    // only be created unpublished. One get() serves both checks.
+    function privateListingOk(propertyId) {
+      let owner = request.resource.data.get('owner_id', '');
+      let path = /databases/$(database)/documents/Users/$(owner)/properties/$(propertyId);
+      return exists(path)
+        && (request.resource.data.get('is_published', false) != true
+          || (get(path).data.get('isPublished', false) == true && get(path).data.get('rentalStatus', 'available') == 'available'));
+    }
+
     function listingEditOk() {
       let d = request.resource.data;
       let c = changedKeys();
@@ -388,49 +415,51 @@ service cloud.firestore {
       let locations = d.get('locations', {});
       let amenities = d.get('amenitiesMap', {});
       return c.hasOnly(listingEditableKeys())
-        && (!c.hasAny(['agency_id']) || d.agency_id is string)
-        && (!c.hasAny(['status']) || d.get('status', '') in ['vacant', 'rented', 'unavailable'])
+        && (!('agency_id' in c) || (d.agency_id is string && d.agency_id.matches('^[A-Za-z0-9_-]{0,128}$')))
+        && (!('status' in c) || d.get('status', '') in ['vacant', 'rented', 'unavailable'])
         && (!c.hasAny(['countryCode', 'currencyCode'])
           || (country in ['EG', 'AE'] && d.get('currencyCode', currency) == currency))
         && (!c.hasAny(['isFeatured', 'isFurnished', 'verified'])
           || [d.get('isFeatured', false), d.get('isFurnished', false), d.get('verified', false)].hasOnly([true, false]))
-        && (!c.hasAny(['rating']) || inRange(d.get('rating', 0), 0, 5))
-        && (!c.hasAny(['pricePerMonth']) || ('pricePerMonth' in d && inRange(d.pricePerMonth, 0.01, 1000000000)))
-        && (!c.hasAny(['areaSqM']) || inRange(d.get('areaSqM', 1), 0.01, 1000000))
-        && (!c.hasAny(['bedrooms']) || inRange(d.get('bedrooms', 0), 0, 100))
-        && (!c.hasAny(['bathrooms']) || inRange(d.get('bathrooms', 0), 0, 100))
-        && (!c.hasAny(['titles']) || (localizedKeysOk(d, 'titles')
+        && (!('rating' in c) || inRange(d.get('rating', 0), 0, 5))
+        && (!('pricePerMonth' in c) || ('pricePerMonth' in d && inRange(d.pricePerMonth, 0.01, 1000000000)))
+        && (!('areaSqM' in c) || inRange(d.get('areaSqM', 1), 0.01, 1000000))
+        && (!('bedrooms' in c) || inRange(d.get('bedrooms', 0), 0, 100))
+        && (!('bathrooms' in c) || inRange(d.get('bathrooms', 0), 0, 100))
+        && (!('titles' in c) || ('titles' in d && localizedKeysOk(d, 'titles')
           && titles.get('ar', '').size() <= 200 && titles.get('en', '').size() <= 200 && titles.get('hi', '').size() <= 200))
-        && (!c.hasAny(['descriptions']) || (localizedKeysOk(d, 'descriptions')
+        && (!('descriptions' in c) || (localizedKeysOk(d, 'descriptions')
           && descriptions.get('ar', '').size() <= 4000 && descriptions.get('en', '').size() <= 4000
           && descriptions.get('hi', '').size() <= 4000))
-        && (!c.hasAny(['locations']) || (localizedKeysOk(d, 'locations')
+        && (!('locations' in c) || (localizedKeysOk(d, 'locations')
           && locations.get('ar', '').size() <= 300 && locations.get('en', '').size() <= 300 && locations.get('hi', '').size() <= 300))
-        && (!c.hasAny(['amenitiesMap']) || (localizedKeysOk(d, 'amenitiesMap')
+        && (!('amenitiesMap' in c) || (localizedKeysOk(d, 'amenitiesMap')
           && amenities.get('ar', []).size() <= 30 && amenities.get('en', []).size() <= 30 && amenities.get('hi', []).size() <= 30))
-        && (!c.hasAny(['buildingName']) || d.get('buildingName', '').size() <= 200)
+        && (!('buildingName' in c) || d.get('buildingName', '').size() <= 200)
         && (!c.hasAny(['cityCode', 'propertyTypeCode'])
           || (d.get('cityCode', '').size() <= 60 && d.get('propertyTypeCode', '').size() <= 60))
-        && (!c.hasAny(['agencyPhone']) || d.get('agencyPhone', '').size() <= 30)
-        && (!c.hasAny(['updated_at']) || d.updated_at is timestamp)
-        && (!c.hasAny(['image']) || (d.image is string && !d.image.matches('^.* .*$') && imageRefsOk(d.image)))
-        && (!c.hasAny(['imageUrls']) || (d.imageUrls is list && imageListOk(d.imageUrls)))
-        && (!c.hasAny(['titles', 'descriptions', 'locations', 'amenitiesMap', 'buildingName', 'cityCode', 'propertyTypeCode'])
+        && (!('agencyPhone' in c) || agencyPhoneOk(d))
+        && (!('agencyNames' in c) || agencyNamesOk(d))
+        && (!('updated_at' in c) || d.updated_at is timestamp)
+        && (!('image' in c) || (d.image is string && !d.image.matches('^.* .*$') && imageRefsOk(d.image)))
+        && (!('imageUrls' in c) || (d.imageUrls is list && imageListOk(d.imageUrls)))
+        && (!c.hasAny(['titles', 'descriptions', 'locations', 'amenitiesMap', 'agencyNames', 'buildingName', 'cityCode', 'propertyTypeCode'])
           || contactFree(listingEditedText(d, c)));
     }
 
     // The free text of only the fields this update changed, joined with " | " (a list break for the
     // phone patterns) like listingValuesOk does for a whole listing.
     function listingEditedText(d, c) {
-      return (c.hasAny(['titles']) ? d.get('titles', {}).values() : [])
-        .concat(c.hasAny(['descriptions']) ? d.get('descriptions', {}).values() : [])
-        .concat(c.hasAny(['locations']) ? d.get('locations', {}).values() : [])
-        .concat(c.hasAny(['amenitiesMap'])
+      return (('titles' in c) ? d.get('titles', {}).values() : [])
+        .concat(('descriptions' in c) ? d.get('descriptions', {}).values() : [])
+        .concat(('locations' in c) ? d.get('locations', {}).values() : [])
+        .concat(('agencyNames' in c) ? d.get('agencyNames', {}).values() : [])
+        .concat(('amenitiesMap' in c)
           ? d.get('amenitiesMap', {}).get('ar', []).concat(d.get('amenitiesMap', {}).get('en', [])).concat(d.get('amenitiesMap', {}).get('hi', []))
           : [])
-        .concat([c.hasAny(['buildingName']) ? d.get('buildingName', '') : '',
-          c.hasAny(['cityCode']) ? d.get('cityCode', '') : '',
-          c.hasAny(['propertyTypeCode']) ? d.get('propertyTypeCode', '') : ''])
+        .concat([('buildingName' in c) ? d.get('buildingName', '') : '',
+          ('cityCode' in c) ? d.get('cityCode', '') : '',
+          ('propertyTypeCode' in c) ? d.get('propertyTypeCode', '') : ''])
         .join(' | ');
     }
 
@@ -438,10 +467,6 @@ service cloud.firestore {
       let d = request.resource.data;
       return d.keys().hasOnly(publicListingFields())
         && d.get('id', propertyId) == propertyId
-        && localizedKeysOk(d, 'titles')
-        && localizedKeysOk(d, 'descriptions')
-        && localizedKeysOk(d, 'locations')
-        && localizedKeysOk(d, 'amenitiesMap')
         && listingValuesOk(d);
     }
 
@@ -469,7 +494,7 @@ service cloud.firestore {
       // public doc cannot be followed by recreating it live.
       allow create: if isSuperAdmin()
         && !listingModerationHidden(propertyId)
-        && exists(/databases/$(database)/documents/Users/$(request.resource.data.get('owner_id', ''))/properties/$(propertyId))
+        && privateListingOk(propertyId)
         && listingShapeOk(propertyId);
       // Visibility changes (is_published, moderation_hidden) by Admin or SuperAdmin take the
       // moderation path and are checked first. Every other SuperAdmin edit takes the cheap path
