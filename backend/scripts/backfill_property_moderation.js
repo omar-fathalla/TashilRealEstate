@@ -9,8 +9,13 @@
  * restored after this migration is never published automatically, and the owner's next sync (or a
  * moderator) decides. Existing moderation docs are never changed. Nothing is deleted.
  *
- *   node scripts/backfill_property_moderation.js --project <projectId>          # dry run (default)
- *   node scripts/backfill_property_moderation.js --project <projectId> --apply  # writes
+ *   node scripts/backfill_property_moderation.js --project demo-<name>                      # dry run (default)
+ *   node scripts/backfill_property_moderation.js --project demo-<name> --apply              # writes
+ *   node scripts/backfill_property_moderation.js --project <id> --confirm-project=<id>      # real project
+ *
+ * The target project id is printed first. Any project id that does not start with `demo-` is
+ * refused, even for a dry run, unless `--confirm-project=<id>` repeats exactly that id. The dry run
+ * stays the default; `--apply` is still needed to write.
  *
  * Credentials come from Application Default Credentials or the emulator environment variables.
  */
@@ -50,10 +55,13 @@ async function backfill(db, { apply = false } = {}) {
 }
 
 function parseArgs(argv) {
-  const args = { project: "", apply: false };
+  const args = { project: "", apply: false, confirmProject: "" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
+    else if (arg.startsWith("--project=")) args.project = arg.slice("--project=".length);
+    else if (arg === "--confirm-project") args.confirmProject = argv[++i] || "";
+    else if (arg.startsWith("--confirm-project=")) args.confirmProject = arg.slice("--confirm-project=".length);
     else if (arg === "--apply") args.apply = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -61,17 +69,37 @@ function parseArgs(argv) {
   return args;
 }
 
-module.exports = { findMissingModeration, backfill };
+/**
+ * Decides whether the script may touch args.project. A `demo-` project is always fine; anything
+ * else needs `--confirm-project=<that exact id>`, so a copy-pasted command cannot reach a real
+ * project by accident.
+ */
+function resolveTarget(args) {
+  const projectId = args.project;
+  const demo = projectId.startsWith("demo-");
+  if (!demo && args.confirmProject !== projectId) {
+    throw Object.assign(new Error(
+      `Refusing to run against "${projectId}": it is not a demo- project. ` +
+      `Repeat the project id to confirm: --confirm-project=${projectId}` +
+      (args.confirmProject ? ` (got --confirm-project=${args.confirmProject}).` : "."),
+    ), { exitCode: 2 });
+  }
+  return { projectId, demo };
+}
+
+module.exports = { findMissingModeration, backfill, parseArgs, resolveTarget };
 
 if (require.main === module) {
   (async () => {
     const args = parseArgs(process.argv.slice(2));
-    admin.initializeApp({ projectId: args.project });
+    console.log(`Target project: ${args.project} (${args.apply ? "APPLY: will write" : "dry run: no writes"})`);
+    const target = resolveTarget(args);
+    admin.initializeApp({ projectId: target.projectId });
     const result = await backfill(admin.firestore(), { apply: args.apply });
     console.log(`${result.missing.length} hidden listing(s) without a moderation doc: ${result.missing.join(", ") || "none"}`);
     console.log(args.apply ? "Moderation docs written." : "Dry run. Re-run with --apply to write them.");
   })().catch((err) => {
     console.error(err.message);
-    process.exit(1);
+    process.exit(err.exitCode || 1);
   });
 }
