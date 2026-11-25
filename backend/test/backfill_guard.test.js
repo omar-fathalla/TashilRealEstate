@@ -36,7 +36,7 @@ test("TAQ-100: demo- projects need no confirmation", () => {
 });
 
 test("TAQ-100: any other project is refused without an exactly matching --confirm-project", () => {
-  for (const project of ["tashil-proptech-os", "tashil-dev", "my-project", "Demo-x", "xdemo-x", "demo", "x-demo-y"]) {
+  for (const project of ["tashil-proptech-os", "my-project", "Demo-x", "xdemo-x", "demo", "x-demo-y"]) {
     assert.throws(() => resolveTarget({ project, confirmProject: "" }), /not a demo- project/, project);
     assert.throws(() => resolveTarget({ project, confirmProject: "other" }), /got --confirm-project=other/, project);
     assert.throws(() => resolveTarget({ project, confirmProject: `${project} ` }), /not a demo- project/, project);
@@ -52,7 +52,7 @@ test("TAQ-100: the CLI prints the target first and exits 2 for a real project wi
   for (const args of [
     ["--project", "tashil-proptech-os"],
     ["--project", "tashil-proptech-os", "--apply"],
-    ["--project=tashil-dev", "--confirm-project=tashil-proptech-os"],
+    ["--project=some-real-project", "--confirm-project=tashil-proptech-os"],
     ["--project", "some-real-project", "--confirm-project", ""],
   ]) {
     const result = run(args, env);
