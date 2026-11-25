@@ -7,6 +7,7 @@ const { doc, setDoc } = require("firebase/firestore");
 
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 const { sanitizeForMarketplace } = require("../index");
+const LISTING_NUMBER_CORPUS = require("./fixtures/listing_number_corpus");
 
 let testEnv;
 
@@ -574,6 +575,11 @@ test("TAQ-72 (L-1): any short run of symbols, emoji or punctuation between phone
     "0\u20ac1\u20ac0\u20ac1\u20ac2\u20ac3\u20ac4\u20ac5\u20ac6\u20ac7\u20ac8",
   ]));
   assert.equal(sanitized("Call 010\u260e1234\u26055678 now"), "Call  now");
+});
+
+test("TAQ-108: a corpus of real Arabic and English listing descriptions full of numbers stays free", async () => {
+  assert.ok(LISTING_NUMBER_CORPUS.length >= 50);
+  await expectFree([...LISTING_NUMBER_CORPUS, ...LISTING_NUMBER_CORPUS.map(arabicIndic)]);
 });
 
 test("TAQ-72 (L-1): a symbol run longer than six characters still breaks a number, and digit-only superscripts stay digits", async () => {
