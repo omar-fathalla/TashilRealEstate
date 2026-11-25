@@ -54,6 +54,7 @@ test.beforeEach(async () => {
     db.doc("Properties/held").set(listing({ moderation_hidden: true })),
     db.doc("Properties/noowner").set(listing({ owner_id: "" })),
     db.doc("Users/owner/properties/p1").set({ title: "Marina Apartment", agency_id: "agency-1", countryCode: "AE" }),
+    db.doc("PropertyOwners/p1").set({ owner_id: "owner" }),
   ]);
   // The listing's owner is agency-1's account, as the sync trigger stamps agency_id from claims.
   await admin.auth().createUser({ uid: "owner" });
@@ -367,7 +368,7 @@ test("TAQ-112: only managers create the lease, with valid dates and rent", async
   for (const startDate of [undefined, "bad", "2026-02-30"]) await expectCode(createLease(leaseInput({ startDate })), "invalid-argument");
   await expectCode(createLease(leaseInput({ endDate: "2026-07-01" })), "invalid-argument");
   await expectCode(createLease(leaseInput({ endDate: "2026-06-01" })), "invalid-argument");
-  for (const monthlyRent of [0, -5, "8000", 1e10, NaN]) await expectCode(createLease(leaseInput({ monthlyRent })), "invalid-argument");
+  for (const monthlyRent of [0, -5, "8000", 1e10, NaN, 7999.999]) await expectCode(createLease(leaseInput({ monthlyRent })), "invalid-argument");
   assert.equal((await db.collection("Leases").get()).size, 0);
   await createLease(leaseInput(), caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }));
 });

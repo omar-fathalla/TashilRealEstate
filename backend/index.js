@@ -25,6 +25,7 @@ const {
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
 const { phoneSpans, linkSpans, EXTRA_DIGIT_VALUES } = require("./contact_patterns");
+const { claimOrCheckOwner, registeredOwner } = require("./property_owners");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -552,6 +553,11 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
   return db.runTransaction(async (tx) => {
     const current = await tx.get(marketDocRef);
     const moderation = moderationFromSnap(await tx.get(moderationRef));
+    const registered = await registeredOwner(tx, db, propertyId);
+    if (registered && registered !== ownerId) {
+      logger.warn(`Refusing to sync [${propertyId}] from owner [${ownerId}]: the id is registered to [${registered}].`);
+      return false;
+    }
     if (current.exists && current.get("owner_id") !== ownerId) {
       if (claimPlaceholder && await isClaimablePlaceholder(current)) {
         logger.warn(
@@ -598,8 +604,11 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const propertyId = event.params.propertyId;
     const db = admin.firestore();
 
-    // 1. Handle document deletion in owner's tree
+    // 1. Handle document deletion in owner's tree. A doc flagged id_conflict never owned the
+    // public listing, so deleting it changes nothing there.
     if (!event.data || !event.data.after || !event.data.after.exists) {
+      const was = event.data && event.data.before && event.data.before.exists ? event.data.before.data() || {} : {};
+      if (was.id_conflict === true) return null;
       logger.info(`Property [${propertyId}] was deleted by owner [${ownerId}]. Removing from /Properties.`);
       try {
         await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current, moderation) => {
@@ -619,6 +628,13 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     }
 
     const afterData = event.data.after.data();
+    if (afterData.id_conflict === true) {
+      logger.warn(`Not syncing [${propertyId}] from owner [${ownerId}]: the private doc is flagged id_conflict.`);
+      return null;
+    }
+    const created = !event.data.before || !event.data.before.exists;
+    const ownership = await claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder: isClaimablePlaceholder });
+    if (ownership.blocked) return null;
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
     const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
@@ -727,7 +743,7 @@ async function liftHold(db, propertyId, preHidePublished) {
   const privateSnap = ownerId && preHidePublished
     ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
     : null;
-  const privateData = privateSnap && privateSnap.exists ? privateSnap.data() : null;
+  const privateData = privateSnap && privateSnap.exists && privateSnap.get("id_conflict") !== true ? privateSnap.data() : null;
   const decision = privateData ? await publishDecision(ownerId, privateData) : null;
   const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
   if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);

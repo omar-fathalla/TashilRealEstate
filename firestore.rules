@@ -140,9 +140,18 @@ service cloud.firestore {
         // While moderation holds the listing hidden the owner cannot add image refs (the same
         // block storage.rules puts on photo uploads), so lifting the hold cannot publish photos
         // nobody reviewed. Removing refs and every other edit stay allowed.
-        allow create, update: if isSuperAdmin()
-          || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor')
-            && (!privateImagesAdded() || !listingModerationHidden(propertyId)));
+        // Property ids are global (TAQ-110): an id registered to another owner in PropertyOwners
+        // cannot be created here, and `id_conflict` (set by the server on a colliding doc) is never
+        // written or cleared by a client, SuperAdmin included.
+        allow create: if propertyIdFreeFor(propertyId, userId)
+          && !('id_conflict' in request.resource.data)
+          && (isSuperAdmin()
+            || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor')
+              && (!privateImagesAdded() || !listingModerationHidden(propertyId))));
+        allow update: if !changedKeys().hasAny(['id_conflict', 'id_conflict_at'])
+          && (isSuperAdmin()
+            || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor')
+              && (!privateImagesAdded() || !listingModerationHidden(propertyId))));
         allow delete: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor'));
       }
 
@@ -333,6 +342,11 @@ service cloud.firestore {
     // mirror for the UI; the rules below force it to equal the moderation doc.
     function moderationPath(propertyId) {
       return /databases/$(database)/documents/PropertyModeration/$(propertyId);
+    }
+
+    function propertyIdFreeFor(propertyId, uid) {
+      return !exists(/databases/$(database)/documents/PropertyOwners/$(propertyId))
+        || get(/databases/$(database)/documents/PropertyOwners/$(propertyId)).data.get('owner_id', '') == uid;
     }
 
     function listingModerationHidden(propertyId) {
@@ -714,6 +728,13 @@ service cloud.firestore {
       allow delete: if isSuperAdmin()
         || (agencyManagesResource() && resource.data.get('status', 'draft') != 'active')
         || (ownerManagesLease() && resource.data.get('status', 'draft') == 'draft');
+    }
+
+    // 4a0. PropertyOwners (TAQ-110)
+    // The one owner each property id belongs to, written only by the marketplace sync trigger
+    // (first creator claims) and the dev backfill script. No client reads or writes it.
+    match /PropertyOwners/{propertyId} {
+      allow read, write: if false;
     }
 
     // 4a. PropertyLeaseLocks (TAQ-110)

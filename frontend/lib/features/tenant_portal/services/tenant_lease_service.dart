@@ -75,7 +75,11 @@ String decisionErrorKey(String reason) {
       return 'tnOfferExpired';
     case 'not_pending':
       return 'tnOfferNotPending';
+    case 'property_not_available':
+      return 'tnPropertyNotAvailable';
     case 'property_not_found':
+    case 'property_not_registered':
+    case 'property_id_conflict':
     case 'property_not_managed':
     case 'property_agency_managed':
     case 'owner_not_landlord':

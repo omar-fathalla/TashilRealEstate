@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
+import 'package:tashil_real_estate/core/utils/property_ids.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/models/property_onboarding_model.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/services/gemini_onboarding_service.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/property_media_gallery_uploader.dart';
@@ -381,7 +382,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
     setState(() => _isSubmitting = true);
 
     try {
-      final propId = widget.existingPropertyId ?? 'prop-${DateTime.now().millisecondsSinceEpoch}';
+      final propId = widget.existingPropertyId ?? newPropertyId();
       final cityCode = deriveCityCode(
         city: _draft.city,
         district: _draft.district,
@@ -430,11 +431,6 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
         rentalStatus: PropertyRentalStatus.available,
         installments: const [],
       );
-      if (isEditing) {
-        await PropertyLifecycleService().updateProperty(managedProp);
-      } else {
-        await PropertyLifecycleService().addProperty(managedProp);
-      }
 
       // 2. Add to Public Marketplace (السوق العقاري العام)
       final propertyItem = PropertyItem(
@@ -505,13 +501,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
         agencyPhone: '+20 100 123 4567',
         rating: 5.0,
       );
-      if (isEditing) {
-        PropertyRepository().updateProperty(propertyItem);
-      } else {
-        PropertyRepository().addProperty(propertyItem);
-      }
-
-      // 3. Persist to Owner's dedicated Firestore tree & Public Marketplace
+      // 3. Persist to Owner's dedicated Firestore tree first; local lists change only once it is saved.
       final ownerId = PropertyLifecycleService().currentOwnerId;
       final savedOk = await FirestoreService().saveOwnerProperty(
         ownerId: ownerId,
@@ -520,6 +510,14 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
 
       if (!savedOk) {
         throw Exception('Failed to persist property to cloud Firestore.');
+      }
+
+      if (isEditing) {
+        await PropertyLifecycleService().updateProperty(managedProp);
+        PropertyRepository().updateProperty(propertyItem);
+      } else {
+        await PropertyLifecycleService().addProperty(managedProp);
+        PropertyRepository().addProperty(propertyItem);
       }
 
       if (!mounted) return;
@@ -537,7 +535,7 @@ class _FastPropertyOnboardingDialogState extends State<FastPropertyOnboardingDia
         setState(() => _isSubmitting = false);
         TashilSnackBar.showError(
           context: context,
-          message: 'Error saving property: $e',
+          message: loc.tr(propertySaveErrorKey(e, creating: !isEditing)),
         );
       }
     }

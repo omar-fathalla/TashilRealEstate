@@ -72,6 +72,9 @@ test.beforeEach(async () => {
   await db.doc("Users/ownerB/properties/propB").set({ title: "Villa B", countryCode: "EG" });
   await db.doc("Users/ag1owner/properties/propG").set({ titles: { en: "Agency Tower" }, countryCode: "AE", agency_id: "ag1" });
   await db.doc("Users/ag1owner/properties/propNoAgency").set({ title: "Unmanaged", countryCode: "AE" });
+  for (const [id, owner] of [["propA", "ownerA"], ["propB", "ownerB"], ["propG", "ag1owner"], ["propNoAgency", "ag1owner"]]) {
+    await db.doc(`PropertyOwners/${id}`).set({ owner_id: owner });
+  }
 });
 
 const ownerA = () => caller("ownerA", { role: "Owner" });
@@ -325,6 +328,8 @@ test("TAQ-110: releasing leaves a status the owner set by hand, and a lock anoth
   assert.equal((await silo("ownerA", "propA")).rentalStatus, "maintenance");
 
   const a = (await create(input({ tenantId: "tenantB" }))).leaseId;
+  await reason(respond(a, "approve", "tenantB"), "failed-precondition", "property_not_available");
+  await db.doc("Users/ownerA/properties/propA").update({ rentalStatus: "available" });
   await respond(a, "approve", "tenantB");
   await db.doc("Leases/old").set({ status: "active", property_id: "propA", owner_id: "ownerA", tenant_id: "tenantC", agency_id: "" });
   assert.equal(await writeLease("old", (ref) => ref.update({ status: "terminated" })), false);
@@ -361,7 +366,7 @@ test("TAQ-110: an older active lease without a lock claims it on first payment, 
 // --- the dry-run audit ---
 
 test("TAQ-110: the lease audit only reads, refuses production, and lists what the checks would refuse", async () => {
-  assert.throws(() => resolveTarget("tashil-proptech-os"), /Refusing/);
+  assert.throws(() => resolveTarget("qa-fake-prod-xyz"), /Refusing/);
   assert.throws(() => resolveTarget("some-other-project"), /Refusing/);
   assert.equal(resolveTarget("tashil-aqar-dev"), "tashil-aqar-dev");
   assert.equal(resolveTarget("demo-tashil-test"), "demo-tashil-test");
@@ -388,6 +393,12 @@ test("TAQ-110: the lease audit only reads, refuses production, and lists what th
   assert.deepEqual(report.rentInvalid.map((x) => x.leaseId), ["norent"]);
   assert.deepEqual(report.partiesMissing.map((x) => x.leaseId), ["noprop"]);
   assert.deepEqual(report.agencyPropertiesWithoutAgencyId.map((x) => x.property_id), ["propNoAgency"]);
+  assert.deepEqual(report.statusCounts, { active: 2, draft: 3, terminated: 1 });
+  assert.equal(report.registryEntries, 4);
+  assert.deepEqual(report.unregisteredIds, []);
+  assert.deepEqual(report.lockOwnerNotRegistered, [], "a1 is ownerA's lease and ownerA holds propA");
+  assert.deepEqual(report.rentalStatusAll, { "(unset)": 4 });
+  assert.deepEqual(report.rentalStatusLiveLeased, { "(unset)": 1 });
 
   const after = (await db.collection("Leases").get()).docs.map((d) => JSON.stringify(d.data())).sort();
   assert.deepEqual(after, before, "the audit writes nothing");

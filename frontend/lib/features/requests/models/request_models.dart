@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tashil_real_estate/core/services/callable_error.dart';
 
 DateTime? _date(dynamic value) {
   if (value is Timestamp) return value.toDate();
@@ -150,6 +151,9 @@ class RequestScope {
 
 /// The Cloud Function error codes the request flows surface to people.
 String requestErrorKey(Object error) {
+  final reason = describeCallableError(error).reason;
+  if (reason == 'property_not_registered' || reason == 'property_id_conflict') return 'rqPropertyNotVerified';
+  if (reason == 'rent_precision') return 'rqRentPrecision';
   final text = error.toString();
   if (text.contains('listing_not_live')) return 'rqListingUnavailable';
   if (text.contains('duplicate_pending') || text.contains('duplicate_application')) return 'rqDuplicate';

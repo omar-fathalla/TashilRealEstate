@@ -1,3 +1,5 @@
+import 'package:tashil_real_estate/core/utils/property_ids.dart';
+
 class PropertyItem {
   final String id;
   final String countryCode; // 'EG' or 'AE'
@@ -513,7 +515,7 @@ class PropertyItem {
       return [];
     }
 
-    final id = docId ?? map['id']?.toString() ?? 'prop-${DateTime.now().millisecondsSinceEpoch}';
+    final id = docId ?? map['id']?.toString() ?? newPropertyId();
     final fallbackTitle = map['title_ar']?.toString() ?? map['title']?.toString() ?? '';
     final fallbackDesc = map['description_ar']?.toString() ?? map['description']?.toString() ?? '';
     final fallbackLoc = map['location']?.toString() ?? '';
