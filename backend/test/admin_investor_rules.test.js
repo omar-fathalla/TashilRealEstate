@@ -78,7 +78,7 @@ test.beforeEach(async () => {
   await seed("Properties/draft", { ...live, id: "draft", is_published: false, status: "unavailable" });
   await seed("Agencies/agency-1", { name: "Agency One", verified_badge: false });
   await seed("Agencies/agency-1/private/bank", { iban: "AE070331234567890123456" });
-  await seed("Leases/lease-1", { owner_id: "ownerA", tenant_id: "tenantA", agency_id: "agency-1" });
+  await seed("Leases/lease-1", { owner_id: "ownerA", tenant_id: "tenantA", agency_id: "agency-1", status: "active" });
   await seed("Invoices/inv-1", { owner_id: "ownerA", tenant_id: "tenantA", agency_id: "agency-1" });
   await seed("Maintenance/m-1", { owner_id: "ownerA", tenant_id: "tenantA", agency_id: "agency-1", status: "open", title: "Leak" });
   await seed("Telemetry_Crashes/c-1", { message: "boom", isFatal: false, platform: "web" });
@@ -523,7 +523,7 @@ test("TAQ-91: maintenance requests stay with their parties and staff", async () 
   await assertFails(getDoc(doc(as("stranger", CLAIMS.owner), "Maintenance/m-1")));
   await assertFails(getDoc(doc(as("stranger", { role: "Tenant" }), "Maintenance/m-1")));
   await assertFails(getDoc(doc(as("stranger"), "Maintenance/m-1")));
-  const request = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  const request = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", title: "Leak", status: "pending" };
   await assertSucceeds(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m2"), request));
   await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/m3"), { ...request, tenant_id: "someoneElse" }));
 });
@@ -533,7 +533,7 @@ test("TAQ-91: maintenance requests stay with their parties and staff", async () 
 test("TAQ-91 (UT b): a maintenance create must match the lease's tenant, owner and agency", async () => {
   const tenant = as("tenantA", { role: "Tenant" });
   const owner = as("ownerA", CLAIMS.owner);
-  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", title: "Leak", status: "pending" };
   await assertSucceeds(setDoc(doc(tenant, "Maintenance/ok-t"), ok));
   await assertSucceeds(setDoc(doc(owner, "Maintenance/ok-o"), ok));
 
@@ -545,18 +545,18 @@ test("TAQ-91 (UT b): a maintenance create must match the lease's tenant, owner a
   await assertFails(setDoc(doc(owner, "Maintenance/bad-o2"), { ...ok, owner_id: "ownerB" }));
   // agency mismatched, missing or invented
   await assertFails(setDoc(doc(tenant, "Maintenance/bad-a"), { ...ok, agency_id: "agency-2" }));
-  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a2"), { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
-  await seed("Leases/lease-noagency", { owner_id: "ownerA", tenant_id: "tenantA" });
-  await assertSucceeds(setDoc(doc(tenant, "Maintenance/ok-na"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
-  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a3"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" }));
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a2"), { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", title: "Leak", status: "pending" }));
+  await seed("Leases/lease-noagency", { owner_id: "ownerA", tenant_id: "tenantA", status: "active" });
+  await assertSucceeds(setDoc(doc(tenant, "Maintenance/ok-na"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", title: "Leak", status: "pending" }));
+  await assertFails(setDoc(doc(tenant, "Maintenance/bad-a3"), { lease_id: "lease-noagency", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", title: "Leak", status: "pending" }));
 });
 
 test("TAQ-91 (UT b): a maintenance create needs a real lease and a caller who is its tenant or owner", async () => {
-  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", status: "open" };
+  const ok = { lease_id: "lease-1", tenant_id: "tenantA", owner_id: "ownerA", agency_id: "agency-1", title: "Leak", status: "pending" };
   await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n1"), { ...ok, lease_id: "no-such-lease" }));
   await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n3"), { ...ok, lease_id: "" }));
   await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n4"), { ...ok, lease_id: 5 }));
-  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n5"), { tenant_id: "tenantA", owner_id: "ownerA", status: "open" }));
+  await assertFails(setDoc(doc(as("tenantA", { role: "Tenant" }), "Maintenance/n5"), { tenant_id: "tenantA", owner_id: "ownerA", title: "Leak", status: "pending" }));
   // someone who is neither party names the real parties of a real lease
   await assertFails(setDoc(doc(as("stranger", { role: "Tenant" }), "Maintenance/n6"), ok));
   await assertFails(setDoc(doc(as("stranger", CLAIMS.owner), "Maintenance/n7"), ok));

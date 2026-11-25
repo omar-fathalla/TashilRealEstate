@@ -10,7 +10,10 @@ import 'package:tashil_real_estate/core/widgets/theme_palette_switcher.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'models/tenant_models.dart';
+import 'services/tenant_lease_service.dart';
 import 'views/tenant_home_view.dart';
+import 'views/tenant_notifications_view.dart';
 import 'views/tenant_payments_view.dart';
 import 'views/tenant_support_view.dart';
 
@@ -28,7 +31,10 @@ class _TenantDashboardState extends State<TenantDashboard> {
     const TenantHomeView(),
     const TenantPaymentsView(),
     const TenantSupportView(),
+    const TenantNotificationsView(),
   ];
+
+  late final Stream<List<TenantNotification>> _notifications = TenantLeaseService.instance.watchNotifications();
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +149,21 @@ class _TenantDashboardState extends State<TenantDashboard> {
                     icon: const Icon(Icons.handyman_outlined),
                     selectedIcon: const Icon(Icons.handyman),
                     label: loc.tr('navMaintenance'),
+                  ),
+                  NavigationDestination(
+                    icon: StreamBuilder<List<TenantNotification>>(
+                      stream: _notifications,
+                      builder: (context, snapshot) {
+                        final unread = (snapshot.data ?? const <TenantNotification>[]).where((n) => !n.read).length;
+                        return Badge(
+                          isLabelVisible: unread > 0,
+                          label: Text('$unread'),
+                          child: const Icon(Icons.notifications_outlined),
+                        );
+                      },
+                    ),
+                    selectedIcon: const Icon(Icons.notifications),
+                    label: loc.tr('tnNotifications'),
                   ),
                 ],
               ),

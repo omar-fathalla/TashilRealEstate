@@ -15,6 +15,7 @@ import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_document_view.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/signature_pad_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
 
 /// Material Design 3 (M3) Leases & Contracts Management View.
 /// Conforms to:
@@ -267,6 +268,16 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                       ),
                       const SizedBox(height: 24),
 
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TashilButton(
+                          label: loc.tr('mpTitle'),
+                          icon: Icons.receipt_long_rounded,
+                          variant: TashilButtonVariant.tonal,
+                          onPressed: () => RecordManualPaymentDialog.show(context),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       // 2. M3 KPI Cards Grid
                       _buildKpiSection(
                         loc: loc,
