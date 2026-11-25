@@ -90,8 +90,11 @@ a forged header cannot pick its own. This is covered by `backend/test/gemini_gat
 A local probe script that needs one bucket per simulated visitor can start the emulator with
 `VISITOR_IP_EMULATOR_TRUST_XFF=true` (for example in `backend/.env.local`), which trusts the
 last `X-Forwarded-For` entry again, or send each simulated visitor from a different source
-address. The switch is read only when `FUNCTIONS_EMULATOR=true`, so it never changes a deployed
-function.
+address. The switch is read only when `FUNCTIONS_EMULATOR` is exactly `true`, so it never
+changes a deployed function (tested in `backend/test/gemini_gateway.test.js`). Never set it on
+dev or prod anyway: keep it out of `backend/.env`, every `backend/.env.<project id>` and the
+function's runtime environment (`backend/test/project_config.test.js` fails if a committed env
+file names it).
 The emulator therefore cannot show the per-network behaviour in step 5 below; that needs a deploy.
 
 ### Verify on a non-prod deploy before production

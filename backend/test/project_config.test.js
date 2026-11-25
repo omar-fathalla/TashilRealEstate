@@ -394,3 +394,13 @@ test("TAQ-88: the lockfile and firebase.json runtime agree with engines.node", (
     assert.ok(major >= MIN_NODE_MAJOR, `firebase.json runtime ${entry.runtime} is too old`);
   }
 });
+
+test("TAQ-83: the emulator-only XFF switch is never committed in a function env file", () => {
+  const root = path.join(__dirname, "../..");
+  const files = require("child_process").execFileSync("git", ["ls-files", "backend/.env*", "backend/**/.env*"], { cwd: root, encoding: "utf8" })
+    .split("\n").filter(Boolean);
+  assert.ok(files.includes("backend/.env"));
+  for (const file of files) {
+    assert.doesNotMatch(fs.readFileSync(path.join(root, file), "utf8"), /VISITOR_IP_EMULATOR_TRUST_XFF/, file);
+  }
+});

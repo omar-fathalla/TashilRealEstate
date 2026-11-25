@@ -490,6 +490,42 @@ test("TAQ-83: under the Functions emulator X-Forwarded-For is ignored, so one fo
   );
 });
 
+test("TAQ-83: VISITOR_IP_EMULATOR_TRUST_XFF=true changes nothing outside the emulator", async () => {
+  const keys = ["FUNCTIONS_EMULATOR", "VISITOR_IP_EMULATOR_TRUST_XFF", "VISITOR_IP_TRUSTED_HOPS"];
+  const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  const requests = [
+    { headers: { "x-forwarded-for": "10.0.0.1, 203.0.113.7" }, socket: { remoteAddress: "169.254.1.1" } },
+    { headers: { "x-forwarded-for": "10.0.0.2" }, socket: { remoteAddress: "35.191.0.1" } },
+    { headers: {}, socket: { remoteAddress: "203.0.113.9" } },
+  ];
+  const addresses = (hops) => requests.map((r) => gw.clientAddress(r, hops));
+  try {
+    for (const flag of [undefined, "false", "1", "TRUE"]) {
+      if (flag === undefined) delete process.env.FUNCTIONS_EMULATOR;
+      else process.env.FUNCTIONS_EMULATOR = flag;
+      delete process.env.VISITOR_IP_EMULATOR_TRUST_XFF;
+      const without = [addresses(1), addresses(2)];
+      process.env.VISITOR_IP_EMULATOR_TRUST_XFF = "true";
+      assert.equal(gw.forwardedForTrusted(), true, `FUNCTIONS_EMULATOR=${flag}`);
+      assert.deepEqual([addresses(1), addresses(2)], without, `FUNCTIONS_EMULATOR=${flag}`);
+      // With two trusted hops the client-chosen single entry is still not a bucket of its own.
+      assert.deepEqual(gw.clientAddress(requests[1], 2), { ip: "35.191.0.1", source: "socket" });
+    }
+    // And a forged prefix still cannot buy fresh quota with the switch set outside the emulator.
+    delete process.env.FUNCTIONS_EMULATOR;
+    process.env.VISITOR_IP_EMULATOR_TRUST_XFF = "true";
+    gw.deps.now = () => Date.UTC(2026, 10, 24, 13, 0, 0);
+    const forged = (i) => ({ headers: { "x-forwarded-for": `10.${i}.0.1, 203.0.113.70` }, socket: { remoteAddress: "169.254.1.1" } });
+    for (let i = 1; i <= gw.LIMITS.visitor.perMinute; i += 1) await call({ rawRequest: forged(i) });
+    await expectCode(call({ rawRequest: forged(99) }), "resource-exhausted");
+  } finally {
+    for (const k of keys) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  }
+});
+
 test("TAQ-83: the visitor-quota tests keep separate buckets under the emulator flag too", async () => {
   const saved = process.env.FUNCTIONS_EMULATOR;
   process.env.FUNCTIONS_EMULATOR = "true";
