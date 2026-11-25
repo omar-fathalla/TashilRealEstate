@@ -168,9 +168,15 @@ test("M-1: a moderation-hidden listing's photo is not public, even if is_publish
   await expectStaffAndOwnerRead();
 });
 
-test("M-1: a rented listing's photo is not public", async () => {
+test("M-1: a rented listing's photo is not public, even with a stale is_published flag", async () => {
   await setPublic({ is_published: false, moderation_hidden: false, status: "rented" });
   await expectHiddenFromPublic("rented");
+  await setPublic({ is_published: true, moderation_hidden: false, status: "rented" });
+  await expectHiddenFromPublic("rented, published flag stale");
+  await setPublic({ is_published: true, moderation_hidden: false, status: "unavailable" });
+  await expectHiddenFromPublic("unavailable");
+  await seed((db) => setDoc(doc(db, "Properties/propA"), { owner_id: "ownerA", is_published: true }));
+  await expectHiddenFromPublic("no status");
   await expectStaffAndOwnerRead();
 });
 

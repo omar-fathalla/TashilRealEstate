@@ -33,14 +33,16 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*|application/pdf|audio/.*');
     }
 
-    // The listing behind a photo is live: its public /Properties doc exists, is published, is not
-    // held by moderation, and belongs to the owner in the photo's path. One Firestore read; a
-    // missing doc is null, so a deleted listing is refused. Unpublished, rented and held listings
-    // all have is_published == false (syncOwnerPropertyToMarketplace / reconcilePropertyModeration).
+    // The listing behind a photo is live: its public /Properties doc exists, is published, is
+    // vacant (the only status sanitizeForMarketplace gives a live listing), is not held by
+    // moderation, and belongs to the owner in the photo's path. One Firestore read; a missing doc
+    // is null, so a deleted listing is refused. The trigger also sets is_published == false on
+    // rented, unpublished and held listings; the status check does not rely on that.
     function listingLive(ownerUid, propertyId) {
       let listing = firestore.get(/databases/(default)/documents/Properties/$(propertyId));
       return listing != null
         && listing.data.get('is_published', false) == true
+        && listing.data.get('status', 'unavailable') == 'vacant'
         && listing.data.get('moderation_hidden', false) != true
         && listing.data.get('owner_id', '') == ownerUid;
     }

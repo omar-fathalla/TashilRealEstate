@@ -165,6 +165,17 @@ test("TAQ-46: the owner can still conceal and delete their own listing", async (
   assert.equal(pub, null);
 });
 
+test("M-1: any rental status other than available takes a live listing offline (is_published false, not vacant)", async () => {
+  for (const rentalStatus of ["rented", "maintenance", "reserved"]) {
+    await ownerWrites("ownerA", "listing-r", privateListing());
+    assert.equal((await publicDoc("listing-r")).is_published, true);
+    await ownerWrites("ownerA", "listing-r", privateListing({ rentalStatus }));
+    const pub = await publicDoc("listing-r");
+    assert.equal(pub.is_published, false, rentalStatus);
+    assert.equal(pub.status, rentalStatus === "rented" ? "rented" : "unavailable", rentalStatus);
+  }
+});
+
 // --- TAQ-51: the trigger is the only writer of public listings ---
 
 test("TAQ-51: the trigger publishes a listing id nobody could claim first", async () => {
