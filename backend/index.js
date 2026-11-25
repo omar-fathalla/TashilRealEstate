@@ -41,20 +41,40 @@ function currentBillingPeriod(now = new Date()) {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+// The month a lease starts in, as a monthIndex, or null when the lease carries no readable start
+// date (older documents). Accepts an ISO string, a Date or a Firestore Timestamp.
+function leaseStartMonth(lease) {
+  for (const key of ["startDate", "start_date", "leaseStartDate", "lease_start_date"]) {
+    const raw = lease ? lease[key] : undefined;
+    if (raw === undefined || raw === null || raw === "") continue;
+    const date = typeof raw === "string" ? new Date(raw) : raw && typeof raw.toDate === "function" ? raw.toDate() : raw;
+    if (date instanceof Date && !Number.isNaN(date.getTime())) {
+      return monthIndex(date.getUTCFullYear(), date.getUTCMonth() + 1);
+    }
+  }
+  return null;
+}
+
 /**
  * The month a payment is for: the caller's explicit `period` (YYYY-MM, from 24 months back to next
  * month, so the key can neither be garbage nor reach arbitrarily far) or the current billing month.
+ *
+ * It is also never earlier than the month the lease starts in, when the lease records a start date.
  */
-function paymentPeriod(value, now = new Date()) {
-  if (value === undefined || value === null) return currentBillingPeriod(now);
-  const match = typeof value === "string" ? BILLING_PERIOD_PATTERN.exec(value) : null;
+function paymentPeriod(value, now = new Date(), lease = null) {
+  const period = value === undefined || value === null ? currentBillingPeriod(now) : value;
+  const match = typeof period === "string" ? BILLING_PERIOD_PATTERN.exec(period) : null;
   if (!match) throw new HttpsError("invalid-argument", "period must be a month in the form YYYY-MM.");
   const requested = monthIndex(Number(match[1]), Number(match[2]));
   const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
   if (requested > current + 1 || requested < current - PAYMENT_PERIODS_BACK) {
     throw new HttpsError("invalid-argument", "period is outside the months a payment can be recorded for.");
   }
-  return value;
+  const start = leaseStartMonth(lease);
+  if (start !== null && requested < start) {
+    throw new HttpsError("invalid-argument", "period is before the month this lease starts.");
+  }
+  return period;
 }
 
 // Records a rent payment for a lease. Only the lease's tenant can pay it, and the amount is the
@@ -81,7 +101,7 @@ exports.processRentPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
     }
   }
 
-  const period = paymentPeriod(data.period);
+  const period = paymentPeriod(data.period, new Date(), lease);
   const countryCode = leaseCountry(lease);
   const platformFee = round2(due * 0.02);
   const agencyFee = round2(due * 0.08);

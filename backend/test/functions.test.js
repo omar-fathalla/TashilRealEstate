@@ -555,6 +555,30 @@ test("TAQ-99: a malformed or out-of-range period is INVALID_ARGUMENT", async () 
   assert.equal((await transactions()).length, 2);
 });
 
+test("TAQ-101: a period before the lease start month is rejected, the start month and later are fine", async () => {
+  const start = monthsFromNow(-3);
+  await db.collection("Leases").doc("lease-1").update({ startDate: `${start}-15T00:00:00.000Z` });
+  for (const period of [monthsFromNow(-4), monthsFromNow(-24)]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+  for (const period of [start, monthsFromNow(-2), undefined]) {
+    await fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() });
+  }
+  assert.equal((await transactions()).length, 3);
+});
+
+test("TAQ-101: the lease start month also bounds a lease that stores it as a timestamp or under another name", async () => {
+  await db.collection("Leases").doc("lease-1").update({ start_date: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)) });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-2) }, auth: tenantCaller() }), "invalid-argument");
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-1) }, auth: tenantCaller() });
+});
+
+test("TAQ-101: a lease with no readable start date keeps the plain 24-month window", async () => {
+  await db.collection("Leases").doc("lease-1").update({ startDate: "not a date" });
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-24) }, auth: tenantCaller() });
+});
+
 test("TAQ-99: a rejected call (wrong amount, other tenant) does not use up the month", async () => {
   await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 1 }, auth: tenantCaller() }), "invalid-argument");
   await db.collection("Users").doc("tenant2").set({ role: "Tenant" });
