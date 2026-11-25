@@ -177,3 +177,49 @@ too; only the public Firebase `apiKey` values from `firebase_options.dart` may a
 cd frontend && flutter build web --release
 cd ../backend && npm run check:client-keys:build
 ```
+
+## Paymob rent payments (TAQ-16)
+
+Rent is paid through Paymob Unified Checkout (UAE). The app never decides that a payment happened:
+
+1. `createRentPaymentIntent` (callable, the lease's tenant only) loads the lease, takes the amount
+   from it, writes `Transactions/{leaseId}_{YYYY-MM}` as `pending`, asks Paymob for an intention
+   and returns the checkout URL. The checkout URL (it carries the intention's client secret) is
+   kept in `PaymentSessions/{paymobOrderId}`, which no client can read.
+2. `paymobWebhook` (HTTPS) receives Paymob's "Transaction Processed" callback. It verifies the
+   `hmac` query parameter (HMAC-SHA512 over the 20 documented fields, with `PAYMOB_HMAC_SECRET`),
+   finds the payment by the Paymob order id the server stored (not by anything in the body's
+   references), checks amount and currency, and only then sets `paid`, issues the `Paid_Verified`
+   invoice and notifies the tenant and the owner. Replays and duplicate captures change nothing.
+   Failed callbacks set `failed` (a later success on the same order still pays it). Refunds and
+   voids are logged for manual review and do not change the payment.
+3. Clients cannot write `Transactions` or read `PaymentSessions` (`firestore.rules`).
+
+### Turning it on
+
+The gateway is off: `PAYMENTS_ENABLED=false` in `backend/.env`. While off, the callable answers
+`failed-precondition` and the webhook answers `503`, and deploys do not bind the Paymob secrets, so a
+missing secret cannot block a deploy. To enable it for a project:
+
+```
+firebase functions:secrets:set PAYMOB_SECRET_KEY --project <project>
+firebase functions:secrets:set PAYMOB_PUBLIC_KEY --project <project>
+firebase functions:secrets:set PAYMOB_HMAC_SECRET --project <project>
+firebase functions:secrets:set PAYMOB_INTEGRATION_ID --project <project>
+```
+
+Then, in the git-ignored `backend/.env.<project id>`, set `PAYMENTS_ENABLED=true` and
+`PAYMOB_NOTIFICATION_URL=<the deployed paymobWebhook HTTPS URL>`; optional:
+`PAYMOB_REDIRECT_URL`, `PAYMOB_BASE_URL` (default `https://uae.paymob.com`),
+`PAYMOB_CHECKOUT_URL` (default `https://uae.checkout.paymob.com`), `PAYMOB_CURRENCY` (default
+`AED`). In the Paymob dashboard set the integration's transaction processed callback to the same
+URL. Use Paymob's test keys on dev and live keys only on prod. Never put any of these keys in
+`backend/.env` or anywhere in the repo (`backend/test/project_config.test.js` fails if a tracked
+file names them).
+
+Before the first live payment, run a sandbox payment end to end: Paymob's docs do not say how a
+`null` field is written into the signed string, and the code treats it as empty (as PHP and
+JavaScript's `join` do). A sandbox callback with a wrong-signature result would show it at once.
+
+Deploying this change also stops exporting `processRentPayment`: `firebase deploy` will offer to
+delete the old function on prod and dev. Nothing in the app calls it.

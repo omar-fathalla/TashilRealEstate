@@ -10,7 +10,7 @@
     "test": "npm run test:core && npm run test:emulator",
     "test:core": "firebase emulators:exec --only firestore,auth,storage --project demo-tashil-test 'npm run test:unit'",
     "test:unit": "node --test --test-concurrency=1 test/*.test.js && node test_sync.js",
-    "test:emulator": "firebase emulators:exec --only functions,firestore,auth --project demo-tashil-test 'node --test --test-concurrency=1 test/emulator/*.smoke.js'",
+    "test:emulator": "PAYMENTS_ENABLED=true PAYMOB_SECRET_KEY=fake-secret-key PAYMOB_PUBLIC_KEY=fake-public-key PAYMOB_HMAC_SECRET=fake-hmac-secret PAYMOB_INTEGRATION_ID=12345 PAYMOB_BASE_URL=http://127.0.0.1:9877 PAYMOB_NOTIFICATION_URL=https://example.test/paymobWebhook firebase emulators:exec --only functions,firestore,auth --project demo-tashil-test 'node --test --test-concurrency=1 test/emulator/*.smoke.js'",
     "seed": "node seed.js",
     "audit:roles": "node scripts/role_claims.js",
     "gen:contact-rules": "node scripts/generate_contact_rules.js",

@@ -130,55 +130,124 @@ test("TAQ-20: syncMarketIndexManual is SuperAdmin-only and writes a server times
   assert.notEqual(res.status, 200);
 });
 
-// --- TAQ-91: processRentPayment and moderation in the Functions emulator ---
+// --- TAQ-16: rent payment with a fake gateway, in the Functions emulator ---
+// `npm run test:emulator` sets the PAYMOB_* variables below for the functions; the keys are dummy
+// values, the gateway is a local fake and no real Paymob endpoint is ever called.
 
-test("TAQ-91: processRentPayment runs in the Functions emulator, with clean error statuses", async () => {
-  const tenant = await signUp("smoke-tenant@example.com");
-  await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant" });
-  await db.doc("Leases/pay-lease").set({
-    owner_id: "smoke-owner-x",
-    tenant_id: tenant.uid,
-    country_code: "AE",
-    financialTerms: { monthlyRent: 5000 },
+const crypto = require("crypto");
+const http = require("http");
+const payments = require("../../payments");
+
+function fakeGateway(port) {
+  const calls = [];
+  const server = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", (c) => { raw += c; });
+    req.on("end", () => {
+      const body = JSON.parse(raw || "{}");
+      calls.push({ url: req.url, auth: req.headers.authorization, body });
+      const orderId = 70000 + calls.length;
+      res.writeHead(201, { "content-type": "application/json" });
+      res.end(JSON.stringify({ id: `int${orderId}`, intention_order_id: orderId, client_secret: `cs_${orderId}` }));
+    });
   });
+  return new Promise((resolve) => server.listen(port, "127.0.0.1", () => resolve({ server, calls })));
+}
 
-  const ok = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
-  assert.equal(ok.status, 200, JSON.stringify(ok.body));
-  assert.equal(ok.body.result.success, true);
-  const tx = (await db.doc(`Transactions/${ok.body.result.transactionId}`).get()).data();
-  assert.equal(tx.amount, 5000);
-  assert.ok(tx.createdAt, "server timestamp missing");
+test("TAQ-16: rent payment runs in the Functions emulator: pending first, paid only by the signed webhook", async () => {
+  const base = new URL(process.env.PAYMOB_BASE_URL || "http://127.0.0.1:9877");
+  const hmacSecret = process.env.PAYMOB_HMAC_SECRET;
+  assert.equal(process.env.PAYMENTS_ENABLED, "true", "run through `npm run test:emulator`");
+  const gw = await fakeGateway(Number(base.port));
+  try {
+    const tenant = await signUp("smoke-tenant@example.com");
+    await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant", full_name: "Smoke Tenant" });
+    await db.doc("Users/smoke-owner-x").set({ role: "Owner" });
+    await db.doc("Leases/pay-lease").set({
+      owner_id: "smoke-owner-x",
+      tenant_id: tenant.uid,
+      country_code: "AE",
+      status: "active",
+      financialTerms: { monthlyRent: 5000 },
+    });
 
-  const duplicate = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
-  assert.equal(duplicate.status, 409, JSON.stringify(duplicate.body));
-  const lastMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1));
-  const period = `${lastMonth.getUTCFullYear()}-${String(lastMonth.getUTCMonth() + 1).padStart(2, "0")}`;
-  const concurrent = await Promise.all(
-    [0, 1, 2, 3].map(() => callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", period })),
-  );
-  assert.equal(concurrent.filter((r) => r.status === 200).length, 1, JSON.stringify(concurrent.map((r) => r.status)));
-  assert.ok(concurrent.every((r) => r.status === 200 || r.status === 409), JSON.stringify(concurrent.map((r) => r.status)));
-  assert.equal((await db.collection("Transactions").where("leaseId", "==", "pay-lease").get()).size, 2);
+    const ok = await callable("createRentPaymentIntent", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const result = ok.body.result;
+    assert.equal(result.status, "pending");
+    assert.match(result.checkoutUrl, /clientSecret=cs_70001$/);
+    assert.equal(gw.calls.length, 1);
+    assert.equal(gw.calls[0].body.amount, 500000);
+    assert.equal(gw.calls[0].auth, `Token ${process.env.PAYMOB_SECRET_KEY}`);
+    let tx = (await db.doc(`Transactions/${result.transactionId}`).get()).data();
+    assert.equal(tx.status, "pending");
+    assert.ok(tx.createdAt, "server timestamp missing");
 
-  const wrongAmount = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: -999999 });
-  assert.equal(wrongAmount.status, 400, JSON.stringify(wrongAmount.body));
-  const text = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: "abc" });
-  assert.equal(text.status, 400, JSON.stringify(text.body));
-  const missing = await callable("processRentPayment", tenant.idToken, { leaseId: "nope", amount: 5000 });
-  assert.equal(missing.status, 404, JSON.stringify(missing.body));
+    const again = await callable("createRentPaymentIntent", tenant.idToken, { leaseId: "pay-lease" });
+    assert.equal(again.status, 200, JSON.stringify(again.body));
+    assert.equal(again.body.result.checkoutUrl, result.checkoutUrl);
+    assert.equal(gw.calls.length, 1);
 
-  const other = await signUp("smoke-other@example.com");
-  await db.doc(`Users/${other.uid}`).set({ role: "Tenant" });
-  const denied = await callable("processRentPayment", other.idToken, { leaseId: "pay-lease", amount: 5000 });
-  assert.equal(denied.status, 403, JSON.stringify(denied.body));
+    const wrongAmount = await callable("createRentPaymentIntent", tenant.idToken, { leaseId: "pay-lease", amount: -999999 });
+    assert.equal(wrongAmount.status, 400, JSON.stringify(wrongAmount.body));
+    const missing = await callable("createRentPaymentIntent", tenant.idToken, { leaseId: "nope" });
+    assert.equal(missing.status, 404, JSON.stringify(missing.body));
+    const other = await signUp("smoke-other@example.com");
+    await db.doc(`Users/${other.uid}`).set({ role: "Tenant" });
+    const denied = await callable("createRentPaymentIntent", other.idToken, { leaseId: "pay-lease" });
+    assert.equal(denied.status, 403, JSON.stringify(denied.body));
+    const signedOut = await fetch(`http://${functionsHost}/${projectId}/us-central1/createRentPaymentIntent`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: { leaseId: "pay-lease" } }),
+    });
+    assert.equal(signedOut.status, 401, "signed out is UNAUTHENTICATED (401), not INTERNAL (500)");
 
-  const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/processRentPayment`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ data: { leaseId: "pay-lease", amount: 5000 } }),
-  });
-  assert.equal(res.status, 401, "signed out is UNAUTHENTICATED (401), not INTERNAL (500)");
+    const obj = {
+      amount_cents: 500000, created_at: "2026-11-25T12:00:00.000000", currency: "AED", error_occured: false,
+      has_parent_transaction: false, id: 880001, integration_id: Number(process.env.PAYMOB_INTEGRATION_ID), is_3d_secure: true,
+      is_auth: false, is_capture: false, is_refunded: false, is_standalone_payment: true, is_voided: false,
+      order: { id: Number(result.orderId) }, owner: 1, pending: false,
+      source_data: { pan: "2346", sub_type: "MasterCard", type: "card" }, success: true,
+    };
+    const hook = (hmac) => fetch(
+      `http://${functionsHost}/${projectId}/us-central1/paymobWebhook${hmac ? `?hmac=${hmac}` : ""}`,
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "TRANSACTION", obj }) },
+    );
+    const good = crypto.createHmac("sha512", hmacSecret).update(payments.hmacPayload(obj)).digest("hex");
+
+    assert.equal((await hook(null)).status, 401, "no signature");
+    assert.equal((await hook("0".repeat(128))).status, 401, "wrong signature");
+    assert.equal((await db.doc(`Transactions/${result.transactionId}`).get()).get("status"), "pending");
+
+    const paid = await hook(good);
+    assert.equal(paid.status, 200);
+    assert.equal((await paid.json()).outcome, "paid");
+    const replay = await hook(good);
+    assert.equal((await replay.json()).outcome, "already_paid");
+
+    tx = (await db.doc(`Transactions/${result.transactionId}`).get()).data();
+    assert.equal(tx.status, "paid");
+    assert.equal((await db.collection("Invoices").where("transactionId", "==", result.transactionId).get()).size, 1);
+    assert.equal((await db.collection(`Users/${tenant.uid}/notifications`).get()).size, 1);
+    assert.equal((await db.collection("Users/smoke-owner-x/notifications").get()).size, 1);
+
+    const repay = await callable("createRentPaymentIntent", tenant.idToken, { leaseId: "pay-lease" });
+    assert.equal(repay.status, 409, JSON.stringify(repay.body));
+    const wrongMethod = await fetch(`http://${functionsHost}/${projectId}/us-central1/paymobWebhook?hmac=${good}`);
+    assert.equal(wrongMethod.status, 405);
+    const legacy = await fetch(`http://${functionsHost}/${projectId}/us-central1/processRentPayment`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${tenant.idToken}` },
+      body: JSON.stringify({ data: { leaseId: "pay-lease", amount: 5000 } }),
+    });
+    assert.equal(legacy.status, 404, "processRentPayment no longer exists");
+  } finally {
+    gw.server.close();
+  }
 });
+
+// --- TAQ-91: moderation in the Functions emulator ---
 
 test("TAQ-91: the moderation trigger keeps a hidden listing hidden when its owner edits it", async () => {
   await db.doc("Users/mod-owner").set({ role: "Owner" });

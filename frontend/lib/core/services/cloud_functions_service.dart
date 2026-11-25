@@ -15,19 +15,19 @@ class CloudFunctionsService {
     return _functions!;
   }
 
-  /// Records a rent payment for [leaseId]. The server only accepts the lease's tenant and the rent
-  /// on the lease: [amount] may be left out, and if it is sent it must equal that rent. [period]
-  /// (YYYY-MM) defaults to the current billing month; a lease can be paid once per period, and a
-  /// repeat fails with `already-exists` (the existing id is in the error details). Failures
-  /// (not signed in, not the tenant, wrong amount, unknown lease) are thrown to the caller; a
-  /// rejected payment is never reported as a success.
-  Future<Map<String, dynamic>> processRentPayment({
+  /// Starts an online rent payment for [leaseId] (TAQ-16). The server takes the amount from the
+  /// lease; [amount] may be left out, and if it is sent it must equal that rent. [period] (YYYY-MM)
+  /// defaults to the current billing month. The result is a `pending` payment with a `checkoutUrl`
+  /// to open: the payment only becomes paid when the gateway's signed webhook says so, never from
+  /// this call. Failures (payment not available yet, not the tenant, inactive or expired lease,
+  /// month already paid) are thrown to the caller.
+  Future<Map<String, dynamic>> createRentPaymentIntent({
     required String leaseId,
     double? amount,
     String? period,
   }) async {
     try {
-      final callable = functions.httpsCallable('processRentPayment');
+      final callable = functions.httpsCallable('createRentPaymentIntent');
       final response = await callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         if (amount != null) 'amount': amount,
@@ -35,7 +35,7 @@ class CloudFunctionsService {
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      debugPrint('[CloudFunctionsService] Error calling processRentPayment: $e');
+      debugPrint('[CloudFunctionsService] Error calling createRentPaymentIntent: $e');
       rethrow;
     }
   }

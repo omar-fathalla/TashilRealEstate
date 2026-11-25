@@ -608,6 +608,25 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 4b2. Transactions and PaymentSessions (TAQ-16)
+    // Rent payments are written only by the payment functions (Admin SDK): pending by
+    // createRentPaymentIntent, paid or failed by the signed Paymob webhook. The parties can read
+    // them; no client can write one, so no client can make a payment look paid.
+    // PaymentSessions hold the gateway checkout links (they carry the client secret): server only.
+    match /Transactions/{transactionId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('tenant_id', '') == request.auth.uid ||
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          agencyManagesResource()
+        ));
+      allow write: if false;
+    }
+
+    match /PaymentSessions/{orderId} {
+      allow read, write: if false;
+    }
+
     // 4c. Telemetry_Crashes
     // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
     // beyond the caller's own uid. Only platform staff (SuperAdmin, Admin) can read them back.

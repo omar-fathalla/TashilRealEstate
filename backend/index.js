@@ -29,125 +29,6 @@ const { phoneSpans, linkSpans, EXTRA_DIGIT_VALUES } = require("./contact_pattern
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
 
-const round2 = (value) => Math.round(value * 100) / 100;
-
-const BILLING_PERIOD_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
-const PAYMENT_PERIODS_BACK = 24;
-
-const monthIndex = (year, month) => year * 12 + (month - 1);
-
-/** The billing month (UTC) of [now] as YYYY-MM. */
-function currentBillingPeriod(now = new Date()) {
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-// The month a lease starts in, as a monthIndex, or null when the lease carries no readable start
-// date (older documents). Accepts an ISO string, a Date or a Firestore Timestamp.
-function leaseStartMonth(lease) {
-  for (const key of ["startDate", "start_date", "leaseStartDate", "lease_start_date"]) {
-    const raw = lease ? lease[key] : undefined;
-    if (raw === undefined || raw === null || raw === "") continue;
-    const date = typeof raw === "string" ? new Date(raw) : raw && typeof raw.toDate === "function" ? raw.toDate() : raw;
-    if (date instanceof Date && !Number.isNaN(date.getTime())) {
-      return monthIndex(date.getUTCFullYear(), date.getUTCMonth() + 1);
-    }
-  }
-  return null;
-}
-
-/**
- * The month a payment is for: the caller's explicit `period` (YYYY-MM, from 24 months back to next
- * month, so the key can neither be garbage nor reach arbitrarily far) or the current billing month.
- *
- * It is also never earlier than the month the lease starts in, when the lease records a start date.
- */
-function paymentPeriod(value, now = new Date(), lease = null) {
-  const period = value === undefined || value === null ? currentBillingPeriod(now) : value;
-  const match = typeof period === "string" ? BILLING_PERIOD_PATTERN.exec(period) : null;
-  if (!match) throw new HttpsError("invalid-argument", "period must be a month in the form YYYY-MM.");
-  const requested = monthIndex(Number(match[1]), Number(match[2]));
-  const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
-  if (requested > current + 1 || requested < current - PAYMENT_PERIODS_BACK) {
-    throw new HttpsError("invalid-argument", "period is outside the months a payment can be recorded for.");
-  }
-  const start = leaseStartMonth(lease);
-  if (start !== null && requested < start) {
-    throw new HttpsError("invalid-argument", "period is before the month this lease starts.");
-  }
-  return period;
-}
-
-// Records a rent payment for a lease. Only the lease's tenant can pay it, and the amount is the
-// lease's own rent: a client may omit it or repeat it, but can never choose a different one. The
-// owner and the managing agency have no payment flow in the app (no call site), so they cannot
-// record payments here; SuperAdmin cannot either, so every payment traces to the tenant who made it.
-exports.processRentPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
-  await requireRole(auth, ["Tenant"]);
-  const data = request.data || {};
-
-  const lease = await loadLease(data.leaseId);
-  if (!lease.tenant_id || lease.tenant_id !== auth.uid) {
-    throw new HttpsError("permission-denied", "Only the tenant of this lease can pay it.");
-  }
-
-  const due = leaseAmount(lease);
-  if (data.amount !== undefined && data.amount !== null) {
-    if (typeof data.amount !== "number" || !Number.isFinite(data.amount) || data.amount <= 0) {
-      throw new HttpsError("invalid-argument", "amount must be a positive number.");
-    }
-    if (Math.abs(data.amount - due) > 0.005) {
-      throw new HttpsError("invalid-argument", "amount does not match the rent due on this lease.");
-    }
-  }
-
-  const period = paymentPeriod(data.period, new Date(), lease);
-  const countryCode = leaseCountry(lease);
-  const platformFee = round2(due * 0.02);
-  const agencyFee = round2(due * 0.08);
-  const ownerPayout = round2(due - platformFee - agencyFee);
-
-  // One payment per lease and month: the id is deterministic and the record is create()d inside a
-  // transaction, so a retry, a double tap or two concurrent calls write exactly one transaction.
-  const db = admin.firestore();
-  const transactionRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
-  try {
-    await db.runTransaction(async (tx) => {
-      if ((await tx.get(transactionRef)).exists) {
-        throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
-          transactionId: transactionRef.id,
-          period,
-        });
-      }
-      tx.create(transactionRef, {
-        transactionId: transactionRef.id,
-        leaseId: lease.id,
-        period,
-        tenant_id: lease.tenant_id,
-        owner_id: lease.owner_id || "",
-        agency_id: lease.agency_id || "",
-        amount: due,
-        currencyCode: countryCode === "AE" ? "AED" : "EGP",
-        splits: { platformFee, agencyFee, ownerPayout },
-        status: "Completed",
-        createdAt: FieldValue.serverTimestamp(),
-        userId: auth.uid,
-      });
-    });
-    return { success: true, transactionId: transactionRef.id, period };
-  } catch (error) {
-    if (error instanceof HttpsError) throw error;
-    if (error && (error.code === 6 || error.code === "already-exists")) {
-      throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
-        transactionId: transactionRef.id,
-        period,
-      });
-    }
-    logger.error("Error processing rent payment", error);
-    throw new HttpsError("internal", "Failed to process the payment.");
-  }
-});
-
 function parseDueDate(value) {
   if (typeof value !== "string" || !value) return new Date().toISOString();
   const parsed = new Date(value);
@@ -1087,3 +968,7 @@ exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
 });
 
 exports.geminiGenerate = require("./gemini_gateway").geminiGenerate;
+
+// Rent payments through Paymob (TAQ-16). Off until PAYMENTS_ENABLED=true and the keys exist.
+exports.createRentPaymentIntent = require("./payments").createRentPaymentIntent;
+exports.paymobWebhook = require("./payments").paymobWebhook;
