@@ -88,6 +88,14 @@ class FirestoreService {
       final propData = property.toMap();
       propData['owner_id'] = ownerId;
       propData['updated_at'] = FieldValue.serverTimestamp();
+      // Lease functions accept an agency lease only when the property doc names the agency too.
+      if (currentUser.uid == ownerId) {
+        final claims = (await currentUser.getIdTokenResult()).claims ?? const {};
+        final agencyId = claims['agency_id'];
+        if (claims['role'] == 'AgencyAdmin' && agencyId is String && agencyId.isNotEmpty) {
+          propData['agency_id'] = agencyId;
+        }
+      }
 
       // Ensure owner user doc exists
       await _db.collection('Users').doc(ownerId).set({

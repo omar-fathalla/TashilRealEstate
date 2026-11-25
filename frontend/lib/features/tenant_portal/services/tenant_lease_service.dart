@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/tenant_models.dart';
@@ -13,8 +14,8 @@ abstract class TenantBackend {
   Stream<List<TenantInvoice>> watchInvoices(String uid);
   Stream<List<TenantNotification>> watchNotifications(String uid);
 
-  /// Moves a pending lease offer to `active` or `rejected`. The rules allow only the tenant, only
-  /// while the lease is pending, and only these fields.
+  /// Answers a pending lease offer through the respondToLeaseOffer function, which activates the
+  /// lease only if no other live lease holds the property. Throws the callable's error on refusal.
   Future<void> decideLease(String leaseId, {required bool approve});
 
   Future<void> markNotificationRead(String uid, String notificationId);
@@ -54,16 +55,39 @@ class FirebaseTenantBackend implements TenantBackend {
   }
 
   @override
-  Future<void> decideLease(String leaseId, {required bool approve}) {
-    return _db.collection('Leases').doc(leaseId).update({
-      'status': approve ? 'active' : 'rejected',
-      'updated_at': FieldValue.serverTimestamp(),
-    });
+  Future<void> decideLease(String leaseId, {required bool approve}) async {
+    final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('respondToLeaseOffer');
+    await callable.call<Map<String, dynamic>>({'leaseId': leaseId, 'decision': approve ? 'approve' : 'reject'});
   }
 
   @override
   Future<void> markNotificationRead(String uid, String notificationId) {
     return _db.collection('Users').doc(uid).collection('notifications').doc(notificationId).update({'read': true});
+  }
+}
+
+/// The dictionary key that explains why respondToLeaseOffer refused, from its `details.reason`.
+String decisionErrorKey(String reason) {
+  switch (reason) {
+    case 'property_already_leased':
+      return 'tnPropertyAlreadyLeased';
+    case 'offer_expired':
+      return 'tnOfferExpired';
+    case 'not_pending':
+      return 'tnOfferNotPending';
+    case 'property_not_found':
+    case 'property_not_managed':
+    case 'property_agency_managed':
+    case 'owner_not_landlord':
+    case 'lease_missing_property':
+    case 'lease_missing_owner':
+      return 'tnOfferPropertyInvalid';
+    case 'rent_invalid':
+    case 'rent_missing':
+    case 'lease_dates_invalid':
+      return 'tnOfferTermsInvalid';
+    default:
+      return 'tnDecisionFailed';
   }
 }
 

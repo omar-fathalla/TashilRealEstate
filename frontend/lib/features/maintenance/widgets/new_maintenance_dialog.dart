@@ -12,6 +12,11 @@ import '../services/maintenance_service.dart';
 const maxPhotoChars = 300000;
 const maxPhotos = 3;
 
+/// Raster image data URLs only; the same check firestore.rules applies to each stored photo.
+final _photoDataUrl = RegExp(r'^data:image/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$');
+
+bool isAcceptedPhoto(String photo) => photo.length <= maxPhotoChars && _photoDataUrl.hasMatch(photo);
+
 /// A tenant's new maintenance request (TAQ-111). It attaches itself to the tenant's active lease.
 class NewMaintenanceDialog extends StatefulWidget {
   final MaintenanceService? service;
@@ -36,6 +41,7 @@ class _NewMaintenanceDialogState extends State<NewMaintenanceDialog> {
   bool _sending = false;
   bool _missingTitle = false;
   bool _photoTooLarge = false;
+  bool _photoUnsupported = false;
 
   @override
   void dispose() {
@@ -47,6 +53,7 @@ class _NewMaintenanceDialogState extends State<NewMaintenanceDialog> {
   Future<void> _addPhotos() async {
     final picked = await (widget.pickPhotos ?? MediaPickerService().pickImages)();
     var tooLarge = false;
+    var unsupported = false;
     setState(() {
       for (final photo in picked) {
         if (_photos.length >= maxPhotos) break;
@@ -54,9 +61,14 @@ class _NewMaintenanceDialogState extends State<NewMaintenanceDialog> {
           tooLarge = true;
           continue;
         }
+        if (!isAcceptedPhoto(photo)) {
+          unsupported = true;
+          continue;
+        }
         _photos.add(photo);
       }
       _photoTooLarge = tooLarge;
+      _photoUnsupported = unsupported;
     });
   }
 
@@ -149,6 +161,11 @@ class _NewMaintenanceDialogState extends State<NewMaintenanceDialog> {
                     Padding(
                       padding: const EdgeInsetsDirectional.only(top: 8),
                       child: Text(loc.tr('mtPhotoTooLarge'), style: TextStyle(color: scheme.error)),
+                    ),
+                  if (_photoUnsupported)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(top: 8),
+                      child: Text(loc.tr('mtPhotoUnsupported'), style: TextStyle(color: scheme.error)),
                     ),
                 ],
               ),
