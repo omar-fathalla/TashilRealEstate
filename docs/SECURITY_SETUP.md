@@ -57,6 +57,20 @@ entries, or a malformed one, the TCP peer address is used.
 - Set `VISITOR_IP_TRUSTED_HOPS=2` (for example in `backend/.env.<project id>`) if an external
   Application Load Balancer or another trusted proxy appends one more entry after the client's.
 
+Behind Firebase Hosting: the app calls the callable on its `cloudfunctions.net` URL, not through
+a Hosting rewrite, so the default `1` applies and `firebase.json` has no function rewrite. If a
+Hosting `rewrites` rule to the function is ever added, Hosting's own proxy sits in front of
+Google's front end and the chain can be longer; do not guess. Deploy it to a non-prod project,
+send `X-Forwarded-For: 10.9.9.9` with a known source IP, read `ipSource` and the new `ip_…`
+document, and set `VISITOR_IP_TRUSTED_HOPS` to the position (from the right) of your own IP
+before sending any production traffic through that route.
+
+Local emulator: the Functions emulator has no front end that appends the caller, so every
+`X-Forwarded-For` entry would be client-written. When `FUNCTIONS_EMULATOR=true` the header is
+ignored and the TCP peer is used (`ipSource: "socket"`), so all local calls share one bucket and
+a forged header cannot pick its own. This is covered by `backend/test/gemini_gateway.test.js`.
+The emulator therefore cannot show the per-network behaviour in step 5 below; that needs a deploy.
+
 ### Verify on a non-prod deploy before production
 
 Use a Firebase project you own that is **not** `tashil-proptech-os`.
