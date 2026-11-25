@@ -28,6 +28,14 @@ function geminiReply(status, payload) {
   };
 }
 
+// These tests model a deployed function, where X-Forwarded-For is trusted per hop count, even
+// when the runner inherits FUNCTIONS_EMULATOR; the emulator cases set the flag themselves.
+const ambientEmulatorFlag = process.env.FUNCTIONS_EMULATOR;
+delete process.env.FUNCTIONS_EMULATOR;
+test.after(() => {
+  if (ambientEmulatorFlag !== undefined) process.env.FUNCTIONS_EMULATOR = ambientEmulatorFlag;
+});
+
 const OK_PAYLOAD = {
   candidates: [{ content: { parts: [{ text: "{\"ok\":true}" }] } }],
   usageMetadata: { totalTokenCount: 12 },
@@ -42,7 +50,9 @@ function call({ feature = "valuation", model, request = textRequest(), uid = nul
   return fns.geminiGenerate.run({
     data: { feature, model, request },
     auth: uid ? { uid, token: role ? { uid, role } : { uid } } : undefined,
-    rawRequest: rawRequest || { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99" },
+    // The visitor's address is both the trusted X-Forwarded-For entry and the TCP peer, so each
+    // `ip` is its own bucket whether or not the header is trusted (FUNCTIONS_EMULATOR).
+    rawRequest: rawRequest || { headers: { "x-forwarded-for": `198.51.100.99, ${ip}` }, ip: "198.51.100.99", socket: { remoteAddress: ip } },
   });
 }
 
@@ -466,6 +476,9 @@ test("TAQ-83: the trusted hop is counted from the right, whatever the client put
 test("TAQ-83: under the Functions emulator X-Forwarded-For is ignored, so one forged entry cannot pick a bucket", () => {
   assert.equal(gw.forwardedForTrusted({}), true);
   assert.equal(gw.forwardedForTrusted({ FUNCTIONS_EMULATOR: "true" }), false);
+  // Probe scripts can opt back in under the emulator only; deployed functions ignore the switch.
+  assert.equal(gw.forwardedForTrusted({ FUNCTIONS_EMULATOR: "true", VISITOR_IP_EMULATOR_TRUST_XFF: "true" }), true);
+  assert.equal(gw.forwardedForTrusted({ VISITOR_IP_EMULATOR_TRUST_XFF: "false" }), true);
   const peer = { remoteAddress: "127.0.0.1" };
   assert.deepEqual(
     gw.clientAddress({ headers: { "x-forwarded-for": "198.51.100.77" }, socket: peer }, 1, false),
@@ -475,6 +488,22 @@ test("TAQ-83: under the Functions emulator X-Forwarded-For is ignored, so one fo
     gw.clientAddress({ headers: { "x-forwarded-for": "198.51.100.77" }, socket: peer }, 1, true),
     { ip: "198.51.100.77", source: "x-forwarded-for" },
   );
+});
+
+test("TAQ-83: the visitor-quota tests keep separate buckets under the emulator flag too", async () => {
+  const saved = process.env.FUNCTIONS_EMULATOR;
+  process.env.FUNCTIONS_EMULATOR = "true";
+  try {
+    gw.deps.now = () => Date.UTC(2026, 10, 24, 12, 0, 0);
+    for (let i = 0; i < gw.LIMITS.visitor.perMinute; i += 1) await call({ ip: "192.0.2.10" });
+    await expectCode(call({ ip: "192.0.2.10" }), "resource-exhausted");
+    await call({ ip: "192.0.2.11" });
+    // A forged header alone, from the same TCP peer, does not get a fresh bucket.
+    await expectCode(call({ rawRequest: { headers: { "x-forwarded-for": "10.1.2.3" }, socket: { remoteAddress: "192.0.2.10" } } }), "resource-exhausted");
+  } finally {
+    if (saved === undefined) delete process.env.FUNCTIONS_EMULATOR;
+    else process.env.FUNCTIONS_EMULATOR = saved;
+  }
 });
 
 test("TAQ-77: a forged X-Forwarded-For cannot buy a visitor fresh quota on its own", async () => {

@@ -87,6 +87,11 @@ Local emulator: the Functions emulator has no front end that appends the caller,
 `X-Forwarded-For` entry would be client-written. When `FUNCTIONS_EMULATOR=true` the header is
 ignored and the TCP peer is used (`ipSource: "socket"`), so all local calls share one bucket and
 a forged header cannot pick its own. This is covered by `backend/test/gemini_gateway.test.js`.
+A local probe script that needs one bucket per simulated visitor can start the emulator with
+`VISITOR_IP_EMULATOR_TRUST_XFF=true` (for example in `backend/.env.local`), which trusts the
+last `X-Forwarded-For` entry again, or send each simulated visitor from a different source
+address. The switch is read only when `FUNCTIONS_EMULATOR=true`, so it never changes a deployed
+function.
 The emulator therefore cannot show the per-network behaviour in step 5 below; that needs a deploy.
 
 ### Verify on a non-prod deploy before production

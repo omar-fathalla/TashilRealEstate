@@ -301,9 +301,13 @@ function trustedHops(env = process.env) {
  * caller's address, so every X-Forwarded-For entry was written by the client and a single
  * forged entry would choose its own bucket. Under the emulator the header is ignored and the
  * TCP peer is used (every local call shares one bucket).
+ * Local probe scripts that need one bucket per simulated visitor can set
+ * VISITOR_IP_EMULATOR_TRUST_XFF=true; it is read only under the emulator, so a deployed
+ * function always applies the trusted-hop rule above.
  */
 function forwardedForTrusted(env = process.env) {
-  return env.FUNCTIONS_EMULATOR !== "true";
+  if (env.FUNCTIONS_EMULATOR !== "true") return true;
+  return env.VISITOR_IP_EMULATOR_TRUST_XFF === "true";
 }
 
 function normalizeIp(value) {
