@@ -7,7 +7,7 @@ const {
   assertFails,
   assertSucceeds,
 } = require("@firebase/rules-unit-testing");
-const { doc, setDoc, deleteDoc } = require("firebase/firestore");
+const { doc, setDoc, updateDoc, deleteDoc } = require("firebase/firestore");
 
 if (!process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Storage emulator is attached.");
@@ -218,6 +218,75 @@ test("M-1 info (a): an owner cannot upload or replace photos while moderation ho
   await seed((db) => setDoc(doc(db, "PropertyModeration/propA"), { hidden: false }));
   await assertSucceeds(owner.ref("public/listings/ownerA/propA/new.jpg").put(bytes(16), jpeg));
   await assertSucceeds(owner.ref("public/listings/ownerA/propA/new.jpg").delete());
+});
+
+// --- TAQ-107: while moderation holds a listing, owners add no photos through Storage or Firestore ---
+
+const OWN_PHOTO = "https://firebasestorage.googleapis.com/v0/b/b/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media";
+const NEW_PHOTO = "data:image/png;base64,iVBORw0KGgo=";
+
+async function holdPropA({ privateDoc = { owner_id: "ownerA", isPublished: true, title: "Flat", imageUrls: [OWN_PHOTO, "assets/images/b.jpg"], image: OWN_PHOTO } } = {}) {
+  await seed(async (db) => {
+    await setDoc(doc(db, "PropertyModeration/propA"), { hidden: true, pre_hide_published: true, updated_by: "admin1" });
+    if (privateDoc) await setDoc(doc(db, "Users/ownerA/properties/propA"), privateDoc);
+  });
+}
+
+const ownerDb = () => testEnv.authenticatedContext("ownerA").firestore();
+const privateRef = (db) => doc(db, "Users/ownerA/properties/propA");
+
+test("TAQ-107: a held listing's owner cannot add image refs to the private doc, by update or re-create", async () => {
+  await holdPropA();
+  const db = ownerDb();
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO, "assets/images/b.jpg", NEW_PHOTO] }));
+  await assertFails(updateDoc(privateRef(db), { image: NEW_PHOTO }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: NEW_PHOTO }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO], image: 7 }));
+  await assertSucceeds(deleteDoc(privateRef(db)));
+  await assertFails(setDoc(privateRef(db), { owner_id: "ownerA", isPublished: true, imageUrls: [OWN_PHOTO] }));
+  await assertSucceeds(setDoc(privateRef(db), { owner_id: "ownerA", isPublished: true, title: "Flat" }));
+});
+
+test("TAQ-107: a held listing's owner can still remove image refs and edit everything else", async () => {
+  await holdPropA();
+  const db = ownerDb();
+  await assertSucceeds(updateDoc(privateRef(db), { title: "Flat, renovated", rentalStatus: "rented" }));
+  await assertSucceeds(updateDoc(privateRef(db), { image: "assets/images/b.jpg" }), "the cover can become another photo it already has");
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO] }));
+  await assertFails(updateDoc(privateRef(db), { imageUrls: [OWN_PHOTO, "assets/images/c.jpg"] }));
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [], image: "" }));
+});
+
+test("TAQ-107: without a hold, or after it is lifted, the owner adds photos as before", async () => {
+  const db = ownerDb();
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [NEW_PHOTO], image: NEW_PHOTO }));
+  await seed((d) => setDoc(doc(d, "PropertyModeration/propA"), { hidden: false, pre_hide_published: true, updated_by: "admin1" }));
+  await assertSucceeds(updateDoc(privateRef(db), { imageUrls: [NEW_PHOTO, OWN_PHOTO] }));
+  await assertSucceeds(as("ownerA").ref("public/listings/ownerA/propA/after.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(as("ownerA").ref("public/listings/ownerA/propA/after.jpg").delete());
+});
+
+test("TAQ-107: SuperAdmin and Admin still remove a held listing's photos (Storage), and SuperAdmin its image refs (Firestore)", async () => {
+  await holdPropA();
+  await seed((db, storage) => storage.ref("public/listings/ownerA/propA/second.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(platformAdmin().ref("public/listings/ownerA/propA/second.jpg").delete());
+  await assertSucceeds(superAdmin().ref(PHOTO).delete());
+  await assertFails(as("ownerA").ref("public/listings/ownerA/propA/third.jpg").put(bytes(16), jpeg));
+
+  const bucket = `${projectId}.appspot.com`;
+  const url = (name) => `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2F${name}?alt=media`;
+  await seed((db) => setDoc(doc(db, "Properties/propA"), {
+    id: "propA", owner_id: "ownerA", countryCode: "AE", currencyCode: "AED",
+    titles: { ar: "شقة", en: "Apartment", hi: "अपार्टमेंट" }, pricePerMonth: 9000, status: "vacant",
+    is_published: false, moderation_hidden: true, image: url("front.jpg"), imageUrls: [url("front.jpg"), url("second.jpg")],
+  }));
+  const root = testEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
+  await assertSucceeds(updateDoc(doc(root, "Properties/propA"), { imageUrls: [url("front.jpg")] }));
+  await assertSucceeds(updateDoc(privateRef(root), { imageUrls: [OWN_PHOTO] }));
+  await assertSucceeds(updateDoc(privateRef(root), { imageUrls: [OWN_PHOTO, NEW_PHOTO] }), "SuperAdmin is not held back");
+  // Admin moderates visibility in Firestore, not image refs.
+  const adminDb = testEnv.authenticatedContext("admin1", { role: "Admin" }).firestore();
+  await assertFails(updateDoc(doc(adminDb, "Properties/propA"), { imageUrls: [] }));
 });
 
 // --- TAQ-14: private writes ---

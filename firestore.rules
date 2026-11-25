@@ -111,6 +111,20 @@ service cloud.firestore {
         && selfRoleChangeOk();
     }
 
+    // True when a private property write brings an image ref (imageUrls or image) that the doc
+    // did not hold before. A value of the wrong type counts as new.
+    function privateImagesAdded() {
+      let before = resource == null ? {} : resource.data;
+      let after = request.resource.data;
+      let urls = after.get('imageUrls', []);
+      let image = after.get('image', '');
+      let oldUrls = before.get('imageUrls', []);
+      let known = (oldUrls is list ? oldUrls : []).concat([before.get('image', '')]).toSet();
+      return !(urls is list) || !(image is string)
+        || urls.toSet().difference(known).size() > 0
+        || (image != '' && !(image in known));
+    }
+
     match /Users/{userId} {
       // Profiles hold national ID and bank details, so they are private to their owner.
       allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
@@ -123,7 +137,13 @@ service cloud.firestore {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
         // Investors do not list properties, so they cannot create the private drafts that
         // listing photos and the marketplace sync hang off.
-        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor'));
+        // While moderation holds the listing hidden the owner cannot add image refs (the same
+        // block storage.rules puts on photo uploads), so lifting the hold cannot publish photos
+        // nobody reviewed. Removing refs and every other edit stay allowed.
+        allow create, update: if isSuperAdmin()
+          || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor')
+            && (!privateImagesAdded() || !listingModerationHidden(propertyId)));
+        allow delete: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor'));
       }
 
       // Written by Cloud Functions only.
