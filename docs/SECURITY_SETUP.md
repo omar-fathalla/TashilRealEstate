@@ -44,14 +44,20 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
 
 - The owner, a SuperAdmin and an Admin can always read and list them.
 - Anyone else can read a photo only while `/Properties/{propertyId}` exists, has
-  `is_published == true` and `moderation_hidden != true`, and has `owner_id == ownerUid`.
+  `is_published == true`, `status == 'vacant'` and `moderation_hidden != true`, and has
+  `owner_id == ownerUid`.
   Unpublished, rented, moderation-hidden and deleted listings are refused. The rule costs one
   Firestore read (Storage rules allow two per evaluation).
 - Owners cannot upload or replace photos while `PropertyModeration/{propertyId}` has
-  `hidden: true`. They can still delete them.
+  `hidden: true`, and `firestore.rules` stops them adding new `imageUrls` / `image` refs to
+  `Users/{ownerUid}/properties/{propertyId}` for as long. They can still delete photos and
+  remove refs; SuperAdmin and Admin can delete photos for moderation.
+- Public listings store Storage photos as tokenless `...?alt=media` URLs: the sanitizer drops
+  `&token=` and `firestore.rules` rejects it, so every download goes through these rules.
 - Download URLs with `&token=` are bearer links: Cloud Storage serves them without evaluating
   the rules. A token URL handed out while a listing was live keeps working after it goes
-  offline, until the token is revoked (Firebase console, file details, "Revoke").
+  offline, until the token is revoked (Firebase console, file details, "Revoke"). Revoking on
+  unpublish/hide and reissuing on republish is TAQ-109.
   Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
 - The deployed project needs the Storage service agent to have Firestore read access for
   cross-service rules (the console prompts for it on the first rules deploy).
