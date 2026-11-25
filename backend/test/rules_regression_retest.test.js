@@ -14,7 +14,7 @@ test.beforeEach(async () => {
   await env.withSecurityRulesDisabled(async (x) => { const d = x.firestore();
     await setDoc(doc(d, "Users/ownerA"), { role: "Owner" }); await setDoc(doc(d, "Users/ownerB"), { role: "Owner" });
     await setDoc(doc(d, "Users/tenant"), { role: "Tenant" }); await setDoc(doc(d, "Users/norole"), { full_name: "x" });
-    await setDoc(doc(d, "Users/ownerA/properties/sa_ok"), { owner_id: "ownerA" }); await setDoc(doc(d, "Users/ownerA/properties/sa_c"), { owner_id: "ownerA" });
+    await setDoc(doc(d, "Users/ownerA/properties/sa_ok"), { owner_id: "ownerA", isPublished: true }); await setDoc(doc(d, "Users/ownerA/properties/sa_c"), { owner_id: "ownerA", isPublished: true });
     await setDoc(doc(d, "Properties/pub"), { id: "pub", owner_id: "ownerA", is_published: true, status: "vacant", titles: { en: "pub" }, pricePerMonth: 1000, agencyPhone: "+20 100 123 4567", agencyNames: { en: "Tashil" } });
     await setDoc(doc(d, "Properties/vacantUnpub"), { id: "vacantUnpub", owner_id: "ownerA", is_published: false, status: "vacant" });
     await setDoc(doc(d, "Properties/noflag"), { id: "noflag", owner_id: "ownerA", status: "vacant" });

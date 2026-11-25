@@ -287,6 +287,14 @@ sizes, contact filter, image references, localized maps) of a large listing uses
 - `backend/test/admin_investor_rules.test.js` holds a maximum-size listing fixture (every text at its
   cap, 30 amenities per language, 20 images). Any rule change must keep its create and edit tests green;
   a budget overrun shows as `maximum of 1000 expressions` in the emulator log.
+- TAQ-103/104: edits also validate `agencyNames` (ar/en/hi map, strings up to 200 chars, contact-free),
+  `agencyPhone` (phone characters, 30 at most), `agency_id` (id characters) and keep `titles` present;
+  an image ref with a space inside a list element is rejected. A create that is live (`is_published`
+  true) needs the owner's private doc to be published (`isPublished`) and available (`rentalStatus`).
+- Measured headroom (SuperAdmin create, largest fixture): about 50-80 expressions of the 1000 left
+  (dev before TAQ-103 had under 27 on the largest fixture). One edit that rewrites every text field,
+  all images and every scalar in a single update is still over budget; split it, or edit the fields
+  you need. The emulator log must show no `maximum of 1000 expressions` message during `npm test`.
 - `processRentPayment` rejects a `period` earlier than the lease's start month (`startDate`,
   `start_date`, `leaseStartDate` or `lease_start_date`); a lease with no readable start date keeps the
   24-month window.

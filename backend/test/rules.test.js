@@ -41,7 +41,7 @@ test.beforeEach(async () => {
   // A SuperAdmin create is only allowed for a listing whose owner's private doc exists, so the
   // creates below get past that check and exercise the value rules they are written for.
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner" });
+    await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner", isPublished: true });
   });
 });
 
@@ -747,7 +747,7 @@ test("TAQ-57: in the prod project the prod bucket is accepted and other buckets 
   });
   try {
     await prodEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner" });
+      await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner", isPublished: true });
     });
     const root = prodEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
     const ref = doc(root, "Properties/prop-1");
