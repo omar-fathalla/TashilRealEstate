@@ -637,6 +637,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 4e. ViewingRequests and RentalApplications (TAQ-112)
+    // Written only by the requestViewing / applyForRental / respond / decide / createLease functions
+    // (Admin SDK): the listing must be live, the caller rate limited, and the owner and agency are
+    // copied from the public listing. Readable by the signed-in requester, the owner, the managing
+    // agency and platform staff. No client writes.
+    match /ViewingRequests/{requestId} {
+      allow read: if isPlatformStaff()
+        || (isAuthenticated() && (resource.data.get('requester_id', '') == request.auth.uid
+          || resource.data.get('owner_id', '') == request.auth.uid))
+        || agencyManagesResource();
+      allow write: if false;
+    }
+
+    match /RentalApplications/{applicationId} {
+      allow read: if isPlatformStaff()
+        || (isAuthenticated() && (resource.data.get('applicant_id', '') == request.auth.uid
+          || resource.data.get('owner_id', '') == request.auth.uid))
+        || agencyManagesResource();
+      allow write: if false;
+    }
+
     // 5. Maintenance Requests
     // Requests name their tenant, owner and agency. Parties and platform staff only; an
     // Investor (or any other signed-in user) has no access. Admin handles escalations by

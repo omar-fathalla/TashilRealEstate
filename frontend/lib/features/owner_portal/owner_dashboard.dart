@@ -7,6 +7,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/storage/local_storage_service.dart';
 import 'views/owner_overview_view.dart';
+import 'package:tashil_real_estate/features/requests/views/requests_inbox_view.dart';
 import 'views/owner_properties_view.dart';
 import 'views/owner_financials_view.dart';
 import 'views/owner_maintenance_view.dart';
@@ -77,6 +78,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     InvestorDashboardView(),
     OwnerMaintenanceView(),
     OwnerTrashView(),
+    RequestsInboxView(),
   ];
 
   @override
@@ -360,6 +362,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       isSelected: _selectedIndex == 7,
                       isExpanded: isExpanded,
                       onTap: () => _selectView(7),
+                    ),
+                    TashilRailDestination(
+                      icon: Icons.inbox_outlined,
+                      selectedIcon: Icons.inbox_rounded,
+                      label: loc.tr('rqInboxTitle'),
+                      isSelected: _selectedIndex == 8,
+                      isExpanded: isExpanded,
+                      onTap: () => _selectView(8),
                     ),
                     TashilRailDestination(
                       icon: Icons.tune_outlined,
@@ -1652,6 +1662,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           onTap: () {
             Navigator.pop(context);
             _selectView(7);
+          },
+        ),
+        TashilDrawerDestination(
+          icon: Icons.inbox_outlined,
+          selectedIcon: Icons.inbox_rounded,
+          label: loc.tr('rqInboxTitle'),
+          isSelected: _selectedIndex == 8,
+          onTap: () {
+            Navigator.pop(context);
+            _selectView(8);
           },
         ),
         TashilDrawerSectionHeader(

@@ -1087,3 +1087,10 @@ exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
 });
 
 exports.geminiGenerate = require("./gemini_gateway").geminiGenerate;
+
+// Viewing requests and rental applications (TAQ-112).
+exports.requestViewing = require("./requests").requestViewing;
+exports.respondToViewingRequest = require("./requests").respondToViewingRequest;
+exports.applyForRental = require("./requests").applyForRental;
+exports.decideRentalApplication = require("./requests").decideRentalApplication;
+exports.createLeaseFromApplication = require("./requests").createLeaseFromApplication;
