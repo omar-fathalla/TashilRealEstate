@@ -116,7 +116,8 @@ abstract class AdminDataSource {
   /// the listing was live so a later restore cannot publish anything that was not.
   Future<void> hide(AdminListing listing);
 
-  /// Lifts the hold and brings back the pre-hide `is_published` value (never for a rented listing).
+  /// Lifts the hold. The listing goes back online only if the server finds it was live before the
+  /// hide and its owner's private listing is still published, valid and allowed to publish.
   Future<void> restore(AdminListing listing);
 
   Future<AdminUserPage> loadUsers({String? startAfter});
@@ -186,8 +187,9 @@ class FirebaseAdminDataSource implements AdminDataSource {
       'updated_by': _uid,
       'updated_at': FieldValue.serverTimestamp(),
     });
+    // The rules never let a client set is_published to true. Lifting the flag is enough: the server
+    // re-reads the owner's private listing and republishes it only if it is still valid.
     batch.update(_listing(listing.id), {
-      'is_published': preHidePublished && listing.status == 'vacant',
       'moderation_hidden': false,
       'updated_at': FieldValue.serverTimestamp(),
     });

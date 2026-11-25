@@ -303,11 +303,20 @@ service cloud.firestore {
         && get(moderationPath(propertyId)).data.get('hidden', false) == true;
     }
 
-    // Admin moderation of the public doc: verify it, hide it, or restore it. A hide or restore
-    // must come in the same write batch as its PropertyModeration change (getAfter), so the
-    // moderation doc is always written together with, never after, the public doc. Restoring
-    // brings back the is_published value stored when the listing was hidden, and only for a
-    // listing that is still vacant, so a listing that was never public is never published.
+    // True only when this very request also writes PropertyModeration/{propertyId}: the moderation
+    // doc's updated_at is forced to request.time, which every write of one batch shares. A
+    // visibility change that arrives on its own (no moderation write) therefore never passes.
+    function moderationWrittenNow(propertyId) {
+      return existsAfter(moderationPath(propertyId))
+        && getAfter(moderationPath(propertyId)).data.get('updated_at', null) == request.time;
+    }
+
+    // Admin moderation of the public doc: verify it, hide it, or lift the hold. Any change to
+    // is_published or moderation_hidden must come in the same batch as a PropertyModeration write,
+    // and can only take the listing offline: no Admin or SuperAdmin write ever sets is_published
+    // to true. Going back online is the server's job (reconcilePropertyModeration re-reads the
+    // owner's private doc, rent and publish role), so a restore cannot republish a stale public
+    // doc while the private one is unpublished or invalid or its owner lost the publish role.
     function adminModerationOk(propertyId) {
       let d = request.resource.data;
       return changedKeys().hasOnly(['is_published', 'verified', 'moderation_hidden', 'updated_at'])
@@ -319,12 +328,9 @@ service cloud.firestore {
 
     function adminVisibilityOk(propertyId) {
       let d = request.resource.data;
-      let m = getAfter(moderationPath(propertyId)).data;
-      return d.get('moderation_hidden', false) == m.get('hidden', false)
-        && (m.get('hidden', false) == true
-          ? d.get('is_published', false) == false
-          : d.get('is_published', false)
-              == (m.get('pre_hide_published', false) == true && resource.data.get('status', '') == 'vacant'));
+      return moderationWrittenNow(propertyId)
+        && d.get('moderation_hidden', false) == getAfter(moderationPath(propertyId)).data.get('hidden', false)
+        && d.get('is_published', false) == false;
     }
 
     // A moderator writes exactly these four fields. Hiding records whether the public doc is
@@ -377,8 +383,12 @@ service cloud.firestore {
       // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
       // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
       // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
-      allow create, update: if (isSuperAdmin() && listingShapeOk(propertyId))
-        || (isAdmin() && adminModerationOk(propertyId));
+      allow create: if isSuperAdmin() && listingShapeOk(propertyId);
+      // SuperAdmin content edits cannot touch visibility; any visibility change, by SuperAdmin or
+      // Admin, takes the moderation path (listingShapeOk is too costly to evaluate alongside it).
+      allow update: if (isSuperAdmin() && !changedKeys().hasAny(['is_published', 'moderation_hidden'])
+          && listingShapeOk(propertyId))
+        || ((isAdmin() || isSuperAdmin()) && adminModerationOk(propertyId));
 
       // An owner may remove their own listing, except while moderation holds it hidden: deleting
       // the public doc must not be a way to lose that state.

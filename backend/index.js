@@ -31,6 +31,32 @@ const ENFORCE_APP_CHECK = appCheckEnforced();
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
+const BILLING_PERIOD_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const PAYMENT_PERIODS_BACK = 24;
+
+const monthIndex = (year, month) => year * 12 + (month - 1);
+
+/** The billing month (UTC) of [now] as YYYY-MM. */
+function currentBillingPeriod(now = new Date()) {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * The month a payment is for: the caller's explicit `period` (YYYY-MM, from 24 months back to next
+ * month, so the key can neither be garbage nor reach arbitrarily far) or the current billing month.
+ */
+function paymentPeriod(value, now = new Date()) {
+  if (value === undefined || value === null) return currentBillingPeriod(now);
+  const match = typeof value === "string" ? BILLING_PERIOD_PATTERN.exec(value) : null;
+  if (!match) throw new HttpsError("invalid-argument", "period must be a month in the form YYYY-MM.");
+  const requested = monthIndex(Number(match[1]), Number(match[2]));
+  const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  if (requested > current + 1 || requested < current - PAYMENT_PERIODS_BACK) {
+    throw new HttpsError("invalid-argument", "period is outside the months a payment can be recorded for.");
+  }
+  return value;
+}
+
 // Records a rent payment for a lease. Only the lease's tenant can pay it, and the amount is the
 // lease's own rent: a client may omit it or repeat it, but can never choose a different one. The
 // owner and the managing agency have no payment flow in the app (no call site), so they cannot
@@ -55,28 +81,48 @@ exports.processRentPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
     }
   }
 
+  const period = paymentPeriod(data.period);
   const countryCode = leaseCountry(lease);
   const platformFee = round2(due * 0.02);
   const agencyFee = round2(due * 0.08);
   const ownerPayout = round2(due - platformFee - agencyFee);
 
+  // One payment per lease and month: the id is deterministic and the record is create()d inside a
+  // transaction, so a retry, a double tap or two concurrent calls write exactly one transaction.
+  const db = admin.firestore();
+  const transactionRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
   try {
-    const transactionRef = admin.firestore().collection("Transactions").doc();
-    await transactionRef.set({
-      transactionId: transactionRef.id,
-      leaseId: lease.id,
-      tenant_id: lease.tenant_id,
-      owner_id: lease.owner_id || "",
-      agency_id: lease.agency_id || "",
-      amount: due,
-      currencyCode: countryCode === "AE" ? "AED" : "EGP",
-      splits: { platformFee, agencyFee, ownerPayout },
-      status: "Completed",
-      createdAt: FieldValue.serverTimestamp(),
-      userId: auth.uid,
+    await db.runTransaction(async (tx) => {
+      if ((await tx.get(transactionRef)).exists) {
+        throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+          transactionId: transactionRef.id,
+          period,
+        });
+      }
+      tx.create(transactionRef, {
+        transactionId: transactionRef.id,
+        leaseId: lease.id,
+        period,
+        tenant_id: lease.tenant_id,
+        owner_id: lease.owner_id || "",
+        agency_id: lease.agency_id || "",
+        amount: due,
+        currencyCode: countryCode === "AE" ? "AED" : "EGP",
+        splits: { platformFee, agencyFee, ownerPayout },
+        status: "Completed",
+        createdAt: FieldValue.serverTimestamp(),
+        userId: auth.uid,
+      });
     });
-    return { success: true, transactionId: transactionRef.id };
+    return { success: true, transactionId: transactionRef.id, period };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    if (error && (error.code === 6 || error.code === "already-exists")) {
+      throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+        transactionId: transactionRef.id,
+        period,
+      });
+    }
     logger.error("Error processing rent payment", error);
     throw new HttpsError("internal", "Failed to process the payment.");
   }
@@ -607,6 +653,20 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
 }
 
 /**
+ * Whether a private listing may be live right now: the owner wants it public and available, holds
+ * a role that can publish, and has a positive rent. `refusal` says why not when it wants to be live.
+ */
+async function publishDecision(ownerId, data) {
+  const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
+  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "" };
+  const { role, agencyId } = await resolveUserAuthority(ownerId);
+  const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
+    : !hasPublishablePrice(data) ? "the rent is not a positive number"
+      : "";
+  return { wantsPublic, refusal, agencyId };
+}
+
+/**
  * Event-Driven Cloud Function: Automatically synchronizes owner property mutations
  * from the private tree (Users/{ownerId}/properties/{propertyId}) to the public
  * marketplace collection (/Properties/{propertyId}).
@@ -641,13 +701,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const afterData = event.data.after.data();
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const wantsPublic = isPublished && rentalStatus === "available";
-    const { role: ownerRole, agencyId } = wantsPublic ? await resolveUserAuthority(ownerId) : { role: "", agencyId: "" };
-
-    const refusal = !wantsPublic ? ""
-      : !PUBLISHER_ROLES.includes(ownerRole) ? `owner [${ownerId}] has role [${ownerRole || "none"}]`
-        : !hasPublishablePrice(afterData) ? "the rent is not a positive number"
-          : "";
+    const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -706,29 +760,39 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
 );
 
 /**
- * Keeps the public listing in line with PropertyModeration. A hide always takes the public doc
- * offline, even if the moderation doc was written without the public doc. Lifting the hold only
- * clears the mirror: whether the listing goes back online is decided by the moderator's restore
- * write (which brings back the pre-hide value) or by the owner's next sync.
+ * Keeps the public listing in line with PropertyModeration.
+ *
+ * A hide always takes the public doc offline, even if the moderation doc was written without it.
+ *
+ * Lifting the hold (or deleting the moderation doc) is the only way a moderated listing goes back
+ * online, and it is decided here, never by a client write: the public doc is rebuilt from the
+ * owner's current private doc, and published only if the listing was live before the hide
+ * (pre_hide_published), the private doc still wants to be public and available, the rent is
+ * positive, and the owner still holds a publishing role. Otherwise the listing stays offline. This
+ * is what stops a restore from reviving a stale public doc (old price, lost role, unpublished).
  */
 exports.reconcilePropertyModeration = onDocumentWritten(
   `${MODERATION_COLLECTION}/{propertyId}`,
   async (event) => {
     const propertyId = event.params.propertyId;
+    const before = event.data && event.data.before;
     const after = event.data && event.data.after;
     const hidden = Boolean(after && after.exists && after.get("hidden") === true);
+    const wasHidden = Boolean(before && before.exists && before.get("hidden") === true);
+    const preHidePublished = Boolean(after && after.exists && after.get("pre_hide_published") === true);
     const db = admin.firestore();
     const ref = db.collection("Properties").doc(propertyId);
     try {
-      await db.runTransaction(async (tx) => {
-        const current = await tx.get(ref);
-        if (!current.exists) return;
-        if (hidden && (current.get("is_published") !== false || current.get("moderation_hidden") !== true)) {
-          tx.update(ref, { is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() });
-        } else if (!hidden && current.get("moderation_hidden") === true) {
-          tx.update(ref, { moderation_hidden: false, updated_at: FieldValue.serverTimestamp() });
+      const current = await ref.get();
+      if (!current.exists) return null;
+      if (hidden) {
+        if (current.get("is_published") !== false || current.get("moderation_hidden") !== true) {
+          await ref.update({ is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() });
         }
-      });
+        return null;
+      }
+      if (!wasHidden && current.get("moderation_hidden") !== true) return null;
+      await liftHold(db, propertyId, preHidePublished);
     } catch (err) {
       logger.error(`Error reconciling moderation for property [${propertyId}]`, err);
       throw err;
@@ -736,6 +800,33 @@ exports.reconcilePropertyModeration = onDocumentWritten(
     return null;
   }
 );
+
+async function liftHold(db, propertyId, preHidePublished) {
+  const ref = db.collection("Properties").doc(propertyId);
+  const ownerId = (await ref.get()).get("owner_id");
+  const privateSnap = ownerId && preHidePublished
+    ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
+    : null;
+  const privateData = privateSnap && privateSnap.exists ? privateSnap.data() : null;
+  const decision = privateData ? await publishDecision(ownerId, privateData) : null;
+  const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
+  if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);
+
+  await db.runTransaction(async (tx) => {
+    const current = await tx.get(ref);
+    const moderation = moderationFromSnap(await tx.get(db.collection(MODERATION_COLLECTION).doc(propertyId)));
+    if (!current.exists || current.get("owner_id") !== ownerId || moderation.hidden) return;
+    if (goLive) {
+      tx.set(ref, sanitizeForMarketplace(privateData, ownerId, propertyId, {
+        agencyId: decision.agencyId,
+        current: current.data(),
+        moderation: NOT_MODERATED,
+      }));
+    } else {
+      tx.update(ref, { is_published: false, moderation_hidden: false, updated_at: FieldValue.serverTimestamp() });
+    }
+  });
+}
 
 // Export helper for unit testing
 exports.sanitizeForMarketplace = sanitizeForMarketplace;

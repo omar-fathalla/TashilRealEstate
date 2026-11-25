@@ -18,6 +18,7 @@ const {
   where,
   getDocs,
   serverTimestamp,
+  writeBatch,
 } = require("firebase/firestore");
 
 let testEnv;
@@ -601,7 +602,13 @@ test("TAQ-51: owners and agencies cannot edit a listing directly", async () => {
 test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
   const root = db("root", { role: "SuperAdmin" });
   await assertSucceeds(setDoc(doc(root, "Properties/prop-1"), listing("owner")));
-  await assertSucceeds(updateDoc(doc(root, "Properties/prop-1"), { is_published: false, status: "unavailable" }));
+  await assertSucceeds(updateDoc(doc(root, "Properties/prop-1"), { status: "unavailable" }));
+  // TAQ-98: taking it offline goes through the moderation batch, never on its own
+  await assertFails(updateDoc(doc(root, "Properties/prop-1"), { is_published: false }));
+  const batch = writeBatch(root);
+  batch.set(doc(root, "PropertyModeration/prop-1"), { hidden: true, pre_hide_published: true, updated_by: "root", updated_at: serverTimestamp() });
+  batch.update(doc(root, "Properties/prop-1"), { is_published: false, moderation_hidden: true });
+  await assertSucceeds(batch.commit());
   await assertSucceeds(deleteDoc(doc(root, "Properties/prop-1")));
 });
 

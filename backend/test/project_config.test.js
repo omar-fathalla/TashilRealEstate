@@ -182,6 +182,43 @@ test("TAQ-91: the repo-root .env and .secret* are ignored, and the ignore does n
   assert.equal(check("backend/.secret.local") !== "", true);
 });
 
+test("TAQ-100 (F4 follow-up): backend/.secret*.json and backend/.env.* are ignored, backend/.env and examples are not", () => {
+  const { execFileSync } = require("child_process");
+  const check = (file) => {
+    try {
+      return execFileSync("git", ["check-ignore", "-v", file], { cwd: root, encoding: "utf8" }).trim();
+    } catch (err) {
+      if (err.status === 1) return "";
+      throw err;
+    }
+  };
+  for (const file of [
+    "backend/.secret.json",
+    "backend/.secret-prod.json",
+    "backend/.secret.service-account.json",
+    "backend/.env.tashil-proptech-os",
+    "backend/.env.some-project",
+    "backend/.env.production",
+  ]) {
+    assert.notEqual(check(file), "", `${file} must be ignored`);
+  }
+  assert.equal(check("backend/.env"), "", "backend/.env stays tracked");
+  let exampleIgnored = true;
+  try {
+    execFileSync("git", ["check-ignore", "-q", "backend/.env.example"], { cwd: root });
+  } catch (err) {
+    if (err.status !== 1) throw err;
+    exampleIgnored = false;
+  }
+  assert.equal(exampleIgnored, false, "example templates stay tracked");
+  assert.equal(check("backend/package.json"), "");
+  const { execFileSync: run } = require("child_process");
+  assert.equal(run("git", ["ls-files", "--error-unmatch", "backend/.env"], { cwd: root, encoding: "utf8" }).trim(), "backend/.env");
+  const tracked = run("git", ["ls-files", "backend"], { cwd: root, encoding: "utf8" }).split("\n");
+  assert.deepEqual(tracked.filter((f) => /(^|\/)\.env\./.test(f) && !f.endsWith(".example")), [], "no per-project env file is tracked");
+  assert.deepEqual(tracked.filter((f) => /\.secret.*\.json$/.test(f)), [], "no secret json is tracked");
+});
+
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
 
 test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {

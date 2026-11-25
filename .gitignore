@@ -8,6 +8,11 @@ backend/npm-debug.log
 /.env
 /.secret*
 
+# Nested backend secrets and per-project env files (backend/.env stays tracked: `.env.*` needs a dot
+# after `env`, so it does not match it).
+backend/.secret*.json
+backend/.env.*
+
 # Local secrets for the Functions emulator and per-environment overrides
 .secret.local
 .secret.*.local
