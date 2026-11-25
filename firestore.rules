@@ -676,6 +676,45 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 4b2. Transactions and PaymentSessions (TAQ-16)
+    // Rent payments are written only by the payment functions (Admin SDK): pending by
+    // createRentPaymentIntent, paid or failed by the signed Paymob webhook. The parties can read
+    // them; no client can write one, so no client can make a payment look paid.
+    // PaymentSessions hold the gateway checkout links (they carry the client secret): server only.
+    match /Transactions/{transactionId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('tenant_id', '') == request.auth.uid ||
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          agencyManagesResource()
+        ));
+      allow write: if false;
+    }
+
+    match /PaymentSessions/{orderId} {
+      allow read, write: if false;
+    }
+
+    // 4b3. Settings (TAQ-16)
+    // Platform settings. Only SuperAdmin reads or writes them, and the only document is
+    // payment_split: the platform and agency percentages the payment functions apply (the owner
+    // gets the rest). The functions read it with the Admin SDK when they create a payment.
+    function paymentSplitOk(d) {
+      return d.keys().hasOnly(['platform_percent', 'agency_percent', 'updated_by', 'updated_at'])
+        && d.keys().hasAll(['platform_percent', 'agency_percent', 'updated_by', 'updated_at'])
+        && d.platform_percent is number && d.agency_percent is number
+        && d.platform_percent >= 0 && d.agency_percent >= 0
+        && d.platform_percent + d.agency_percent <= 100
+        && d.updated_by == request.auth.uid
+        && d.updated_at == request.time;
+    }
+
+    match /Settings/{settingId} {
+      allow read: if isSuperAdmin();
+      allow create, update: if isSuperAdmin() && settingId == 'payment_split' && paymentSplitOk(request.resource.data);
+      allow delete: if false;
+    }
+
     // 4c. Telemetry_Crashes
     // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
     // beyond the caller's own uid. Only platform staff (SuperAdmin, Admin) can read them back.
