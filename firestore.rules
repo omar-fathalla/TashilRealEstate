@@ -581,6 +581,53 @@ service cloud.firestore {
 
     // 4. Leases Collection
     // Lease documents are the server-side source of truth for reminder and invoice parties.
+    // Lifecycle: draft -> pending_signatures -> active -> expired | terminated (draft and
+    // pending_signatures may also be terminated, pending_signatures may go back to draft). Rent,
+    // dates and the rest of the terms are editable only while the lease is a draft; after that only
+    // `status` (forward), `notes` and `updated_at` change. tenant_id, owner_id, agency_id and
+    // property_id never change after creation, for anyone but SuperAdmin.
+    function leaseStatusOnCreateOk(d) {
+      return d.get('status', 'draft') in ['draft', 'pending_signatures', 'active'];
+    }
+
+    function leasePartiesOk(d) {
+      return d.get('tenant_id', '') is string && d.get('tenant_id', '') != ''
+        && d.get('owner_id', '') is string && d.get('owner_id', '') != '';
+    }
+
+    // An Owner may create a lease for a property in their own private silo, with no agency.
+    function ownerCreatesLease(d) {
+      return isOwner()
+        && d.get('owner_id', '') == request.auth.uid
+        && d.get('agency_id', '') == ''
+        && d.get('tenant_id', '') is string && d.get('tenant_id', '') != '' && d.get('tenant_id', '') != request.auth.uid
+        && d.get('property_id', '') is string && d.get('property_id', '') != ''
+        && leaseStatusOnCreateOk(d)
+        && exists(/databases/$(database)/documents/Users/$(request.auth.uid)/properties/$(d.property_id));
+    }
+
+    function ownerManagesLease() {
+      return isOwner()
+        && resource.data.get('owner_id', '') == request.auth.uid
+        && resource.data.get('agency_id', '') == '';
+    }
+
+    function leaseStatusMoveOk() {
+      let from = resource.data.get('status', 'draft');
+      let to = request.resource.data.get('status', 'draft');
+      return to == from
+        || (from == 'draft' && to in ['pending_signatures', 'active', 'terminated'])
+        || (from == 'pending_signatures' && to in ['draft', 'active', 'terminated'])
+        || (from == 'active' && to in ['expired', 'terminated']);
+    }
+
+    function leaseEditOk() {
+      return !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id', 'property_id'])
+        && leaseStatusMoveOk()
+        && (resource.data.get('status', 'draft') == 'draft'
+          || changedKeys().hasOnly(['status', 'notes', 'updated_at']));
+    }
+
     match /Leases/{leaseId} {
       allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
@@ -588,11 +635,14 @@ service cloud.firestore {
           resource.data.owner_id == request.auth.uid ||
           agencyManagesResource()
         ));
-      allow create: if isSuperAdmin() || isAgencyAdminOf(request.resource.data.get('agency_id', ''));
-      allow update: if isSuperAdmin() || (
-        agencyManagesResource() && !changedKeys().hasAny(['agency_id'])
-      );
-      allow delete: if isSuperAdmin() || agencyManagesResource();
+      allow create: if isSuperAdmin()
+        || (isAgencyAdminOf(request.resource.data.get('agency_id', ''))
+          && leasePartiesOk(request.resource.data) && leaseStatusOnCreateOk(request.resource.data))
+        || ownerCreatesLease(request.resource.data);
+      allow update: if isSuperAdmin()
+        || ((agencyManagesResource() || ownerManagesLease()) && leaseEditOk());
+      allow delete: if isSuperAdmin() || agencyManagesResource()
+        || (ownerManagesLease() && resource.data.get('status', 'draft') == 'draft');
     }
 
     // 4b. Invoices
