@@ -9,9 +9,10 @@
  * may be taken over; `releasePropertyLeaseLock` deletes the lock when its lease leaves `active`.
  *
  * Every path re-checks the property against the lease parties (verifyLeaseProperty): the property
- * exists in the owner's private tree, the owner can let property, and the agency on the lease is
- * the owner's agency by claims AND by the property doc. Owners of agency-managed properties cannot
- * lease them themselves; the agency does.
+ * exists in the owner's private tree, its id is registered to that owner (PropertyOwners, see
+ * property_owners.js) and any public listing has the same owner and agency, the owner can let
+ * property, and the agency on the lease is the owner's agency by claims AND by the property doc.
+ * Owners of agency-managed properties cannot lease them themselves; the agency does.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
@@ -26,6 +27,7 @@ if (!admin.apps.length) {
 const { requireAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
 const { appCheckEnforced } = require("./config");
 const { leaseLiveState, assertLeasePayable } = require("./lease_state");
+const { verifyPropertyOwnership, registeredOwner } = require("./property_owners");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
 const LOCKS = "PropertyLeaseLocks";
@@ -33,6 +35,8 @@ const LANDLORD_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
 const NOTE_MAX = 500;
 const MAX_RENT = 1e9;
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+// rentalStatus values a property may have when a lease is accepted; empty counts as vacant.
+const VACANT_STATUSES = ["", "available", "vacant"];
 
 const deps = { now: () => Date.now() };
 
@@ -62,6 +66,9 @@ function requireMoney(value, field) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > MAX_RENT) {
     throw new HttpsError("invalid-argument", `${field} must be a positive number.`);
   }
+  if (Math.abs(Math.round(value * 100) - value * 100) > 1e-6) {
+    throw new HttpsError("invalid-argument", `${field} can have at most 2 decimals.`, { reason: "rent_precision" });
+  }
   return Math.round(value * 100) / 100;
 }
 
@@ -82,6 +89,7 @@ async function verifyLeaseProperty(t, db, lease) {
   if (!validId(lease.owner_id)) throw precondition("The lease has no owner.", "lease_missing_owner");
   const silo = await t.get(db.collection("Users").doc(lease.owner_id).collection("properties").doc(lease.property_id));
   if (!silo.exists) throw precondition("This property does not belong to the lease's owner.", "property_not_found");
+  await verifyPropertyOwnership(t, db, lease, silo);
   const authority = await resolveUserAuthority(lease.owner_id);
   if (!LANDLORD_ROLES.includes(authority.role)) throw precondition("The lease's owner cannot let property.", "owner_not_landlord");
   const agency = typeof lease.agency_id === "string" ? lease.agency_id : "";
@@ -97,8 +105,9 @@ async function verifyLeaseProperty(t, db, lease) {
 }
 
 /**
- * The lock on the lease's property, read in [t]. `heldByOther` is set when another live lease
- * holds it; a lock whose lease is gone, moved or no longer live is stale and counts as free.
+ * The lock on the lease's property, read in [t]. `heldByOther` is set when another live lease of
+ * the property's registered owner holds it; a lock whose lease is gone, moved, no longer live, or
+ * belongs to an owner the registry does not name (a squatter) is stale and counts as free.
  */
 async function readPropertyLock(t, db, lease, nowMs) {
   if (!validId(lease.property_id)) throw precondition("The lease has no property.", "lease_missing_property");
@@ -110,7 +119,9 @@ async function readPropertyLock(t, db, lease, nowMs) {
   if (!validId(holderId)) return { ref, mine: false, heldByOther: "" };
   const holderSnap = await t.get(db.collection("Leases").doc(holderId));
   const holder = holderSnap.exists ? holderSnap.data() : null;
-  const live = holder && holder.property_id === lease.property_id && leaseLiveState(holder, nowMs).live;
+  const owner = holder ? await registeredOwner(t, db, lease.property_id) : "";
+  const live = holder && holder.property_id === lease.property_id && holder.owner_id === owner
+    && leaseLiveState(holder, nowMs).live;
   return { ref, mine: false, heldByOther: live ? holderId : "", stale: live ? "" : holderId };
 }
 
@@ -141,12 +152,12 @@ async function leaseForPayment(t, db, leaseId, nowMs, by) {
   if (!snap.exists) throw new HttpsError("not-found", "Lease not found.");
   const lease = { id: snap.id, ...snap.data() };
   assertLeasePayable(lease, nowMs);
+  await verifyLeaseProperty(t, db, lease);
   const lock = await readPropertyLock(t, db, lease, nowMs);
   if (lock.mine) return { lease, claim: () => {} };
   if (lock.heldByOther) {
     throw precondition("Another active lease holds this property; this lease cannot take payments.", "lease_not_verified", { leaseId: lock.heldByOther });
   }
-  await verifyLeaseProperty(t, db, lease);
   return { lease, claim: () => writePropertyLock(t, lock.ref, lease, nowMs, by) };
 }
 
@@ -278,6 +289,12 @@ const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
     const silo = await verifyLeaseProperty(t, db, lease);
     const lock = await readPropertyLock(t, db, lease, now);
     if (lock.heldByOther) throw alreadyLeased(lock.heldByOther);
+    // A property in maintenance (or marked rented / unavailable by hand) is not let. `rented` left
+    // behind by a lease that is no longer live (its lock is stale) counts as vacant.
+    const rental = typeof silo.get("rentalStatus") === "string" ? silo.get("rentalStatus").trim().toLowerCase() : "";
+    if (!VACANT_STATUSES.includes(rental) && !(rental === "rented" && lock.stale)) {
+      throw precondition("This property is not available to let right now.", "property_not_available", { rentalStatus: rental });
+    }
     t.update(ref, { status: "active", activated_at: Timestamp.fromMillis(now), ...decided });
     writePropertyLock(t, lock.ref, lease, now, auth.uid);
     // The private listing is marked rented and unpublished in the same transaction. The sync
@@ -312,8 +329,12 @@ async function handleLeaseLockRelease(event) {
     const lock = await t.get(ref);
     if (!lock.exists || lock.get("lease_id") !== leaseId) return false;
     const silo = siloRef ? await t.get(siloRef) : null;
+    const owner = await registeredOwner(t, db, was.property_id);
     t.delete(ref);
-    if (silo && silo.exists && silo.get("rentalStatus") === "rented") {
+    // Only the registered owner's property goes back to available: a squatter's lease ending must
+    // never change anything on the real owner's listing.
+    if (owner && owner === was.owner_id && silo && silo.exists && silo.get("id_conflict") !== true
+      && silo.get("rentalStatus") === "rented") {
       t.update(siloRef, { rentalStatus: "available", updated_at: FieldValue.serverTimestamp() });
     }
     return true;

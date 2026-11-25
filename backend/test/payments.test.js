@@ -87,6 +87,7 @@ async function seedLease(id, data) {
   if (lease.owner_id && lease.property_id) {
     await db.collection("Users").doc(lease.owner_id).collection("properties").doc(lease.property_id)
       .set({ title: `Property ${id}`, agency_id: lease.agency_id }, { merge: true });
+    await db.collection("PropertyOwners").doc(lease.property_id).set({ owner_id: lease.owner_id });
   }
   await db.collection("Leases").doc(id).set(lease);
 }

@@ -434,6 +434,9 @@ function requireMoney(value, field) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 1e9) {
     throw new HttpsError("invalid-argument", `${field} must be a positive number.`);
   }
+  if (Math.abs(Math.round(value * 100) - value * 100) > 1e-6) {
+    throw new HttpsError("invalid-argument", `${field} can have at most 2 decimals.`, { reason: "rent_precision" });
+  }
   return Math.round(value * 100) / 100;
 }
 
