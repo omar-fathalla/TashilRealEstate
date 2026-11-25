@@ -61,6 +61,9 @@ async function waitFor(check, timeoutMs = 20000) {
 
 test.beforeEach(clearEmulators);
 
+/** Waits for the sync trigger to register [propertyId] to [ownerId] in PropertyOwners. */
+const registered = (propertyId, ownerId) => waitFor(async () => (await db.doc(`PropertyOwners/${propertyId}`).get()).get("owner_id") === ownerId);
+
 // --- TAQ-44: the Functions emulator runs the trigger and callables without crashing ---
 
 test("TAQ-44: the sync trigger publishes an owner listing in the Functions emulator", async () => {
@@ -164,6 +167,7 @@ test("TAQ-16: rent payment runs in the Functions emulator: pending first, paid o
     await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant", full_name: "Smoke Tenant" });
     await db.doc("Users/smoke-owner-x").set({ role: "Owner" });
     await db.doc("Users/smoke-owner-x/properties/pay-prop").set({ title: "Pay smoke", countryCode: "AE" });
+    assert.ok(await registered("pay-prop", "smoke-owner-x"), "the sync trigger did not register the new property");
     await db.doc("Leases/pay-lease").set({
       owner_id: "smoke-owner-x",
       tenant_id: tenant.uid,
@@ -287,6 +291,7 @@ test("TAQ-110: two acceptances race for one property; one wins, and terminating 
   const t1 = await signUp("lease-t1@example.com", { role: "Tenant" });
   const t2 = await signUp("lease-t2@example.com", { role: "Tenant" });
   await db.doc(`Users/${owner.uid}/properties/lock-prop`).set({ title: "Lock smoke", countryCode: "AE" });
+  assert.ok(await registered("lock-prop", owner.uid), "the sync trigger did not register the new property");
   const offer = (tenantId) => callable("createLease", owner.idToken, {
     propertyId: "lock-prop", tenantId, startDate: "2026-01-01", endDate: "2099-12-31", monthlyRent: 4000, sendOffer: true,
   });
@@ -375,4 +380,40 @@ test("TAQ-110: accepting a lease rents the property and removes it from the mark
   });
   assert.ok(back, "the owner can publish again");
   assert.equal(back.status, "vacant");
+});
+
+// --- TAQ-110 N-1: a second owner reusing a property id is flagged and cannot lease it ---
+
+test("TAQ-110 N-1: the trigger flags a squatter's copy of a listed id; the squatter cannot lease it", async () => {
+  const owner = await signUp("reg-owner@example.com", { role: "Owner" });
+  const squatter = await signUp("reg-squatter@example.com", { role: "Owner" });
+  const tenant = await signUp("reg-tenant@example.com", { role: "Tenant" });
+  await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant", full_name: "Reg Tenant" });
+  await db.doc(`Users/${owner.uid}/properties/reg-prop`).set({ isPublished: true, rentalStatus: "available", countryCode: "AE", titles: { en: "Real" }, pricePerMonth: 6000 });
+  const live = await waitFor(async () => {
+    const snap = await db.doc("Properties/reg-prop").get();
+    return snap.exists && snap.get("is_published") === true ? snap.data() : null;
+  });
+  assert.ok(live, "the listing was not published");
+  assert.ok(await registered("reg-prop", owner.uid));
+
+  // Written with the Admin SDK, as if the create had slipped past the rules before the registry existed.
+  const copy = db.doc(`Users/${squatter.uid}/properties/reg-prop`);
+  await copy.set({ isPublished: true, rentalStatus: "available", countryCode: "AE", titles: { en: "Scam" }, pricePerMonth: 1 });
+  assert.ok(await waitFor(async () => (await copy.get()).get("id_conflict") === true), "the squatter's doc was not flagged");
+  const refused = await callable("createLease", squatter.idToken, {
+    propertyId: "reg-prop", tenantId: tenant.uid, startDate: "2026-01-01", endDate: "2099-12-31", monthlyRent: 1, sendOffer: true,
+  });
+  assert.equal(refused.status, 400, JSON.stringify(refused.body));
+  assert.equal(refused.body.error.details.reason, "property_id_conflict");
+  const pub = (await db.doc("Properties/reg-prop").get()).data();
+  assert.equal(pub.owner_id, owner.uid);
+  assert.equal(pub.titles.en, "Real");
+
+  const ok = await callable("createLease", owner.idToken, {
+    propertyId: "reg-prop", tenantId: tenant.uid, startDate: "2026-01-01", endDate: "2099-12-31", monthlyRent: 6000, sendOffer: true,
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const accepted = await callable("respondToLeaseOffer", tenant.idToken, { leaseId: ok.body.result.leaseId, decision: "approve" });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
 });
