@@ -27,6 +27,8 @@ if (!admin.apps.length) {
 
 const { requireAuth, requireRole, loadLease, leaseAmount, leaseCountry } = require("./authz");
 const { appCheckEnforced, paymentSecrets, paymobConfig } = require("./config");
+const { START_KEYS, END_KEYS, leaseDate, assertLeasePayable } = require("./lease_state");
+const { leaseForPayment } = require("./leases");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
 
@@ -36,10 +38,34 @@ const PAYMENT_PERIODS_BACK = 24;
 // lost a race waits before another attempt may start.
 const INTENTION_TTL_SECONDS = 30 * 60;
 const CREATING_LOCK_MS = 60 * 1000;
+// Invoice statuses that mean the month is settled, whichever way it was paid.
+const PAID_INVOICE_STATUSES = ["Paid_Verified", "Paid_Recorded"];
+const ALERTS = "AdminAlerts";
+
+/**
+ * When the gateway can no longer take money for the pending payment [tx]: the expiry of the
+ * Paymob intention it opened (the same TTL is sent to Paymob as the intention's `expiration`).
+ * While the intention is still being created, its expiry is not known yet, so the longest it could
+ * be is assumed. 0 when the payment has no open gateway intention.
+ */
+function intentExpiresAtMs(tx) {
+  // A declined card can be retried in the same checkout until the intention expires, so a failed
+  // payment keeps its intention open too.
+  if (!tx || !["pending", "failed"].includes(tx.status) || tx.gateway !== "paymob") return 0;
+  if (tx.gatewayState === "ready") {
+    if (typeof tx.intentExpiresAtMs === "number") return tx.intentExpiresAtMs;
+    return (tx.sessionExpiresAtMs || 0) + 60 * 1000;
+  }
+  if (tx.gatewayState === "creating" && tx.status === "pending") {
+    return (tx.intentStartedAtMs || 0) + CREATING_LOCK_MS + INTENTION_TTL_SECONDS * 1000;
+  }
+  return 0;
+}
 
 const deps = {
   fetch: (...args) => fetch(...args),
   now: () => Date.now(),
+  listSuperAdmins: () => listSuperAdminUids(),
 };
 
 const round2 = (value) => Math.round(value * 100) / 100;
@@ -49,19 +75,6 @@ const monthIndex = (year, month) => year * 12 + (month - 1);
 function currentBillingPeriod(now = new Date()) {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
-
-function leaseDate(lease, keys) {
-  for (const key of keys) {
-    const raw = lease ? lease[key] : undefined;
-    if (raw === undefined || raw === null || raw === "") continue;
-    const date = typeof raw === "string" ? new Date(raw) : raw && typeof raw.toDate === "function" ? raw.toDate() : raw;
-    if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
-  }
-  return null;
-}
-
-const START_KEYS = ["startDate", "start_date", "leaseStartDate", "lease_start_date"];
-const END_KEYS = ["endDate", "end_date", "leaseEndDate", "lease_end_date"];
 
 // The month a lease starts or ends in, as a monthIndex, or null when the lease carries no readable
 // date (older documents). Accepts an ISO string, a Date or a Firestore Timestamp.
@@ -94,17 +107,6 @@ function paymentPeriod(value, now = new Date(), lease = null) {
     throw new HttpsError("failed-precondition", "period is after the month this lease ends.");
   }
   return period;
-}
-
-/** Only an active lease that has not run out can be paid. */
-function assertLeasePayable(lease, now = new Date()) {
-  if (lease.status !== "active") {
-    throw new HttpsError("failed-precondition", "Only an active lease can be paid.", { reason: "lease_not_active" });
-  }
-  const end = leaseDate(lease, END_KEYS);
-  if (end !== null && end.getTime() < now.getTime()) {
-    throw new HttpsError("failed-precondition", "This lease has ended.", { reason: "lease_expired" });
-  }
 }
 
 const DEFAULT_SPLIT = { platformPercent: 2, agencyPercent: 8 };
@@ -249,8 +251,18 @@ const createRentPaymentIntent = onCall(
 
     // One payment per lease and month. The claim runs in a transaction so that concurrent calls
     // start one intention between them; the others either reuse it or are told to retry.
+    const invoiceRef = db.collection("Invoices").doc(`TASHIL-INV-${txRef.id}`);
     const claim = await db.runTransaction(async (t) => {
+      const held = await leaseForPayment(t, db, lease.id, now, auth.uid);
       const snap = await t.get(txRef);
+      const invoice = await t.get(invoiceRef);
+      if (invoice.exists && PAID_INVOICE_STATUSES.includes(invoice.get("status"))) {
+        throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+          transactionId: txRef.id,
+          period,
+          reason: "already_paid",
+        });
+      }
       let attempt = 1;
       if (snap.exists) {
         const existing = snap.data();
@@ -258,6 +270,7 @@ const createRentPaymentIntent = onCall(
           throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
             transactionId: txRef.id,
             period,
+            reason: "already_paid",
           });
         }
         if (existing.status === "pending") {
@@ -265,11 +278,13 @@ const createRentPaymentIntent = onCall(
             throw new HttpsError("aborted", "A payment for this month is being prepared. Try again in a moment.");
           }
           if (existing.gatewayState === "ready" && (existing.sessionExpiresAtMs || 0) > now && existing.currentOrderId) {
+            held.claim();
             return { reuse: existing.currentOrderId };
           }
         }
         attempt = (existing.attempt || 0) + 1;
       }
+      held.claim();
       const record = {
         transactionId: txRef.id,
         leaseId: lease.id,
@@ -326,6 +341,8 @@ const createRentPaymentIntent = onCall(
       await txRef.update({ status: "failed", gatewayState: "error", failureReason: "gateway_unavailable", updated_at: FieldValue.serverTimestamp() });
       throw error;
     }
+    // Paymob counts the intention's expiration from when it created it, which is no later than now.
+    const expiresAtMs = deps.now() + INTENTION_TTL_SECONDS * 1000;
 
     const checkoutUrl = checkoutUrlFor(config, intention.clientSecret);
     const batch = db.batch();
@@ -339,7 +356,7 @@ const createRentPaymentIntent = onCall(
       amountCents,
       currency,
       checkoutUrl,
-      expiresAtMs: now + INTENTION_TTL_SECONDS * 1000,
+      expiresAtMs,
       createdAt: FieldValue.serverTimestamp(),
     });
     batch.update(txRef, {
@@ -347,6 +364,7 @@ const createRentPaymentIntent = onCall(
       currentOrderId: intention.orderId,
       gatewayIntentionId: intention.id,
       sessionExpiresAtMs: now + (INTENTION_TTL_SECONDS - 60) * 1000,
+      intentExpiresAtMs: expiresAtMs,
       updated_at: FieldValue.serverTimestamp(),
     });
     await batch.commit();
@@ -420,6 +438,60 @@ function notificationFor(kind, tx, now) {
  * `paid` only comes from here; a paid payment is never downgraded.
  */
 async function applyGatewayTransaction(obj) {
+  const result = await settleGatewayTransaction(obj);
+  if (result.outcome === "refund_required" && result.alert) {
+    try {
+      await notifySuperAdmins(result.alertId, result.alert);
+    } catch (error) {
+      logger.error("Could not notify SuperAdmins of a refund", { alertId: result.alertId, message: error && error.message });
+    }
+  }
+  const { alert, ...outcome } = result;
+  return outcome;
+}
+
+/** Every SuperAdmin (by custom claim) gets an in-app notification for the refund alert. */
+async function notifySuperAdmins(alertId, alert) {
+  const db = admin.firestore();
+  const uids = await deps.listSuperAdmins();
+  const amount = `${Math.round(alert.amountCents) / 100} ${alert.currency}`;
+  const batch = db.batch();
+  for (const uid of uids) {
+    batch.set(db.collection("Users").doc(uid).collection("notifications").doc(alertId), {
+      id: alertId,
+      recipientId: uid,
+      type: "refund_required",
+      title: { ar: "مطلوب استرداد دفعة إيجار", en: "Rent payment needs a refund", hi: "किराया भुगतान का रिफंड आवश्यक है" },
+      body: {
+        ar: `تم تحصيل ${amount} إلكترونياً عن شهر ${alert.period} بعد سداده بالفعل. يلزم استرداد المبلغ للمستأجر.`,
+        en: `${amount} was charged online for ${alert.period} after that month was already paid. The tenant must be refunded.`,
+        hi: `${alert.period} का भुगतान पहले ही हो जाने के बाद ${amount} ऑनलाइन लिया गया। किरायेदार को रिफंड देना होगा।`,
+      },
+      transactionId: alert.transactionId,
+      leaseId: alert.leaseId,
+      status: "delivered",
+      read: false,
+      createdAt: Timestamp.now(),
+    });
+  }
+  if (uids.length) await batch.commit();
+  return uids.length;
+}
+
+async function listSuperAdminUids() {
+  const uids = [];
+  let pageToken;
+  do {
+    const page = await admin.auth().listUsers(1000, pageToken);
+    for (const user of page.users) {
+      if (user.customClaims && user.customClaims.role === "SuperAdmin") uids.push(user.uid);
+    }
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return uids;
+}
+
+async function settleGatewayTransaction(obj) {
   const db = admin.firestore();
   const orderId = String(obj.order.id);
   const sessionRef = db.collection("PaymentSessions").doc(orderId);
@@ -465,12 +537,40 @@ async function applyGatewayTransaction(obj) {
 
     if (tx.status === "paid") {
       if (tx.gatewayTransactionId === String(obj.id)) return { outcome: "already_paid" };
-      logger.error("Second Paymob payment for an already paid month", { transactionId: txRef.id });
+      // Money was taken for a month that is already settled (a manual payment after the checkout
+      // expired, or a second checkout). The month stays paid once; the charge needs a refund.
+      const gatewayTransactionId = String(obj.id);
+      const alertRef = db.collection(ALERTS).doc(`refund_${txRef.id}_${gatewayTransactionId}`);
+      const existingAlert = await t.get(alertRef);
+      if (existingAlert.exists) return { outcome: "refund_required", alertId: alertRef.id, transactionId: txRef.id, repeated: true };
+      const superseded = session.get("superseded") === true || (tx.supersededOrderIds || []).includes(orderId);
+      logger.error("Paymob payment for an already paid month: refund required", { transactionId: txRef.id, superseded });
       t.update(txRef, {
-        duplicateGatewayTransactions: FieldValue.arrayUnion(String(obj.id)),
+        refund_required: true,
+        refundRequiredGatewayTransactions: FieldValue.arrayUnion(gatewayTransactionId),
+        duplicateGatewayTransactions: FieldValue.arrayUnion(gatewayTransactionId),
         updated_at: FieldValue.serverTimestamp(),
+        auditTrail: FieldValue.arrayUnion(auditEntry("refund_required", { uid: "paymob_webhook", role: "system" }, { gatewayTransactionId, orderId })),
       });
-      return { outcome: "duplicate_payment" };
+      const alert = {
+        type: "refund_required",
+        status: "open",
+        transactionId: txRef.id,
+        leaseId: tx.leaseId || "",
+        period: tx.period || "",
+        orderId,
+        gatewayTransactionId,
+        amountCents: Number(obj.amount_cents),
+        currency: String(obj.currency).toUpperCase(),
+        settledBy: tx.gateway === "manual" ? "manual" : "gateway",
+        supersededIntent: superseded,
+        tenant_id: tx.tenant_id || "",
+        owner_id: tx.owner_id || "",
+        agency_id: tx.agency_id || "",
+        created_at: FieldValue.serverTimestamp(),
+      };
+      t.create(alertRef, alert);
+      return { outcome: "refund_required", alertId: alertRef.id, transactionId: txRef.id, alert };
     }
 
     const leaseSnap = await t.get(db.collection("Leases").doc(tx.leaseId));
@@ -606,13 +706,26 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   const txRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
   const actor = { uid: auth.uid, role };
   await db.runTransaction(async (t) => {
+    const held = await leaseForPayment(t, db, lease.id, now, auth.uid);
     const snap = await t.get(txRef);
     if (snap.exists && snap.get("status") === "paid") {
       throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
         transactionId: txRef.id,
         period,
+        reason: "already_paid",
       });
     }
+    const existing = snap.exists ? snap.data() : null;
+    const openUntil = intentExpiresAtMs(existing);
+    if (openUntil > now) {
+      throw new HttpsError("failed-precondition", "An online payment for this month is still open. Try again after it expires.", {
+        reason: "payment_pending",
+        transactionId: txRef.id,
+        period,
+        retryAfterMs: openUntil,
+      });
+    }
+    const supersededOrder = existing && existing.gateway === "paymob" && existing.currentOrderId ? String(existing.currentOrderId) : "";
     const record = {
       transactionId: txRef.id,
       leaseId: lease.id,
@@ -633,10 +746,23 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
       gateway: "manual",
       userId: auth.uid,
     };
-    const audit = auditEntry("manual_payment_recorded", actor, { method: data.method, reference, paidOn: data.paidOn });
+    const audit = auditEntry("manual_payment_recorded", actor, {
+      method: data.method,
+      reference,
+      paidOn: data.paidOn,
+      ...(supersededOrder ? { supersededOrderId: supersededOrder } : {}),
+    });
     const txView = { ...record, status: "paid" };
+    held.claim();
     if (snap.exists) {
-      t.update(txRef, { ...record, gatewayState: FieldValue.delete() });
+      t.update(txRef, {
+        ...record,
+        gatewayState: supersededOrder ? "superseded" : FieldValue.delete(),
+        ...(supersededOrder ? { supersededOrderIds: FieldValue.arrayUnion(supersededOrder) } : {}),
+      });
+      if (supersededOrder) {
+        t.set(db.collection("PaymentSessions").doc(supersededOrder), { superseded: true, supersededAt: Timestamp.fromMillis(now) }, { merge: true });
+      }
     } else {
       t.create(txRef, { ...record, status: "pending", createdAt: FieldValue.serverTimestamp(), auditTrail: [] });
     }
@@ -707,5 +833,7 @@ module.exports = {
   verifyPaymobHmac,
   paymentPeriod,
   assertLeasePayable,
+  intentExpiresAtMs,
+  INTENTION_TTL_SECONDS,
   deps,
 };

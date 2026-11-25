@@ -221,6 +221,34 @@ void main() {
       expect((backend.created.single['photos'] as List).length, 3);
     });
 
+    testWidgets('only image data URLs are attached (TAQ-110)', (tester) async {
+      final backend = FakeBackend(lease: activeLease);
+      final png = 'data:image/png;base64,${'A' * 100}';
+      await pump(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => NewMaintenanceDialog(
+                service: MaintenanceService(backend: backend),
+                pickPhotos: () async => ['data:image/svg+xml;base64,PHN2Zz4=', 'data:text/html;base64,PHA+', 'https://x.test/a.png', png],
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add photos'));
+      await tester.pumpAndSettle();
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('A photo type is not supported. Pick a regular photo from your device.'), findsOneWidget);
+      expect(isAcceptedPhoto(png), isTrue);
+      expect(isAcceptedPhoto('data:image/jpeg;base64,abc def'), isFalse);
+    });
+
     testWidgets('the tenant support screen is the real one and renders in Arabic', (tester) async {
       MaintenanceService.instance = MaintenanceService(backend: FakeBackend(uid: null));
       await pump(tester, const TenantSupportView(), locale: const Locale('ar'));

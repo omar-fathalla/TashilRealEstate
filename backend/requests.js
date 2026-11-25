@@ -20,6 +20,7 @@ if (!admin.apps.length) {
 }
 
 const { requireAuth, requireRole, resolveRole } = require("./authz");
+const { verifyLeaseProperty, readPropertyLock, alreadyLeased } = require("./leases");
 const { appCheckEnforced } = require("./config");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -123,14 +124,15 @@ async function consumeQuota(uid, kind) {
   });
 }
 
-/** A listing a request may target: published, not held by moderation, with an owner. */
+/** A listing a request may target: published, vacant, not held by moderation, with an owner. */
 async function loadLiveListing(listingId) {
   if (typeof listingId !== "string" || !listingId || listingId.length > 200 || listingId.includes("/")) {
     throw new HttpsError("invalid-argument", "A listing id is required.");
   }
   const snap = await admin.firestore().collection("Properties").doc(listingId).get();
   const listing = snap.exists ? snap.data() : null;
-  if (!listing || listing.is_published !== true || listing.moderation_hidden === true || !listing.owner_id) {
+  if (!listing || listing.is_published !== true || listing.moderation_hidden === true || !listing.owner_id
+    || ["rented", "unavailable"].includes(listing.status)) {
     throw new HttpsError("failed-precondition", "This listing is not available.", { reason: "listing_not_live" });
   }
   return { id: snap.id, ...listing };
@@ -466,11 +468,24 @@ const createLeaseFromApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, 
       throw new HttpsError("failed-precondition", "Approve the application before creating a lease.", { reason: "not_approved" });
     }
     const leaseSnap = await t.get(leaseRef);
-    if (leaseSnap.exists || application.lease_id) {
-      throw new HttpsError("already-exists", "A lease was already created from this application.", { leaseId: leaseRef.id });
+    if (leaseSnap.exists || application.lease_id || application.consumed_at) {
+      throw new HttpsError("already-exists", "A lease was already created from this application.", { leaseId: leaseRef.id, reason: "application_consumed" });
     }
     const listingSnap = await t.get(db.collection("Properties").doc(application.listing_id));
     const listing = listingSnap.exists ? listingSnap.data() : {};
+    if (!listingSnap.exists || listing.owner_id !== application.owner_id) {
+      throw new HttpsError("failed-precondition", "The listing no longer belongs to this owner.", { reason: "property_not_found" });
+    }
+    const parties = {
+      id: leaseRef.id,
+      owner_id: application.owner_id,
+      tenant_id: application.applicant_id,
+      agency_id: application.agency_id || "",
+      property_id: application.listing_id,
+    };
+    await verifyLeaseProperty(t, db, parties);
+    const lock = await readPropertyLock(t, db, parties, deps.now());
+    if (lock.heldByOther) throw alreadyLeased(lock.heldByOther);
     const rent = data.monthlyRent === undefined || data.monthlyRent === null
       ? requireMoney(Number(listing.pricePerMonth), "monthlyRent")
       : requireMoney(data.monthlyRent, "monthlyRent");
@@ -494,7 +509,7 @@ const createLeaseFromApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, 
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
     });
-    t.update(appRef, { lease_id: leaseRef.id, updated_at: FieldValue.serverTimestamp() });
+    t.update(appRef, { lease_id: leaseRef.id, consumed_at: FieldValue.serverTimestamp(), updated_at: FieldValue.serverTimestamp() });
     return { success: true, leaseId: leaseRef.id, status: "draft" };
   });
 });

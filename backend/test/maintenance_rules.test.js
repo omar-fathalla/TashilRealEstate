@@ -18,7 +18,17 @@ test.after(async () => {
   if (env) await env.cleanup();
 });
 
-const lease = (extra = {}) => ({ owner_id: "ownerA", tenant_id: "tenantA", agency_id: "", status: "active", ...extra });
+const lease = (extra = {}) => ({
+  owner_id: "ownerA",
+  tenant_id: "tenantA",
+  agency_id: "",
+  property_id: "p1",
+  property_title: "Marina Apartment",
+  tenant_name: "Sara Ali",
+  status: "active",
+  ...extra,
+});
+const PHOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
 
 test.beforeEach(async () => {
   await env.clearFirestore();
@@ -54,6 +64,9 @@ const request = (extra = {}) => ({
   tenant_id: "tenantA",
   owner_id: "ownerA",
   agency_id: "",
+  property_id: "p1",
+  property_title: "Marina Apartment",
+  tenant_name: "Sara Ali",
   title: "Kitchen sink leaks",
   description: "Water under the sink",
   category: "plumbing",
@@ -66,7 +79,7 @@ const request = (extra = {}) => ({
 
 test("TAQ-111: a tenant creates a request on their active lease; parties are checked against the lease", async () => {
   await assertSucceeds(setDoc(M(ctx.tenantA, "n1"), request()));
-  await assertSucceeds(setDoc(M(ctx.tenantA, "n2"), request({ lease_id: "agency", agency_id: "ag1", photos: ["data:image/jpeg;base64,AAAA"] })));
+  await assertSucceeds(setDoc(M(ctx.tenantA, "n2"), request({ lease_id: "agency", agency_id: "ag1", photos: [PHOTO] })));
   await assertFails(setDoc(M(ctx.tenantA, "n3"), request({ agency_id: "ag1" })), "agency does not match the lease");
   await assertFails(setDoc(M(ctx.tenantA, "n4"), request({ lease_id: "agency" })), "missing agency");
   await assertFails(setDoc(M(ctx.tenantA, "n5"), request({ owner_id: "ownerB" })), "wrong owner");
@@ -94,7 +107,7 @@ test("TAQ-111: the request shape is bounded", async () => {
     { description: "x".repeat(2001) },
     { description: 5 },
     { category: "magic" },
-    { photos: ["a", "b", "c", "d"] },
+    { photos: [PHOTO, PHOTO, PHOTO, PHOTO] },
     { photos: "not a list" },
     { status: "resolved" },
     { status: "in_progress" },
@@ -110,7 +123,47 @@ test("TAQ-111: the request shape is bounded", async () => {
   const { description, category, photos, ...minimal } = request();
   await assertSucceeds(setDoc(M(ctx.tenantA, "named"), request({ tenant_name: "Sara Ali", property_id: "p1", property_title: "Marina Apartment" })));
   await assertSucceeds(setDoc(M(ctx.tenantA, "min"), minimal), "description, category and photos are optional");
-  await assertSucceeds(setDoc(M(ctx.tenantA, "three"), request({ photos: ["a", "b", "c"] })));
+  await assertSucceeds(setDoc(M(ctx.tenantA, "three"), request({ photos: [PHOTO, PHOTO, PHOTO] })));
+});
+
+test("TAQ-110: the request's property, property title and tenant name are the lease's", async () => {
+  for (const patch of [
+    { property_id: "p2" },
+    { property_id: "" },
+    { property_title: "Penthouse" },
+    { property_title: "" },
+    { tenant_name: "Someone Else" },
+    { tenant_name: "" },
+  ]) {
+    await assertFails(setDoc(M(ctx.tenantA, "b"), request(patch)), JSON.stringify(patch));
+  }
+  const { property_id, property_title, tenant_name, ...unnamed } = request();
+  await assertFails(setDoc(M(ctx.tenantA, "b"), unnamed), "the lease names a property, so the request must too");
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), "Leases/bare"), { owner_id: "ownerA", tenant_id: "tenantA", agency_id: "", property_id: "p9", status: "active" });
+  });
+  await assertSucceeds(setDoc(M(ctx.tenantA, "bare"), { ...unnamed, lease_id: "bare", property_id: "p9" }), "a lease with no title or name needs none");
+});
+
+test("TAQ-110: photos are image data URLs within the size cap", async () => {
+  const big = `data:image/png;base64,${"A".repeat(300000 - "data:image/png;base64,".length)}`;
+  await assertSucceeds(setDoc(M(ctx.tenantA, "cap"), request({ photos: [big] })), "exactly at the cap");
+  for (const photos of [
+    ["a"],
+    ["https://evil.example/x.png"],
+    ["data:text/html;base64,PHNjcmlwdD4="],
+    ["data:image/svg+xml;base64,PHN2Zz4="],
+    ["data:image/png,rawdata"],
+    ["data:image/png;base64,abc def"],
+    [`${big}A`],
+    [PHOTO, 5],
+    [PHOTO, PHOTO, "javascript:alert(1)"],
+  ]) {
+    await assertFails(setDoc(M(ctx.tenantA, "p"), request({ photos })), JSON.stringify(photos).slice(0, 80));
+  }
+  for (const type of ["png", "jpeg", "jpg", "webp", "gif"]) {
+    await assertSucceeds(setDoc(M(ctx.tenantA, `t_${type}`), request({ photos: [`data:image/${type};base64,AAAA`] })), type);
+  }
 });
 
 test("TAQ-111: Admin, Investor-style roles, agencies and signed-out users cannot create requests", async () => {

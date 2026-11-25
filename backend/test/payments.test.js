@@ -78,6 +78,19 @@ test.after(() => {
   payments.deps.now = () => Date.now();
 });
 
+/**
+ * A lease on its own property in the owner's private tree. The owner ("owner") is the agency's
+ * account (claims agency_id agency-1), so the lease and the property carry agency-1.
+ */
+async function seedLease(id, data) {
+  const lease = { agency_id: "agency-1", property_id: `prop-${id}`, ...data };
+  if (lease.owner_id && lease.property_id) {
+    await db.collection("Users").doc(lease.owner_id).collection("properties").doc(lease.property_id)
+      .set({ title: `Property ${id}`, agency_id: lease.agency_id }, { merge: true });
+  }
+  await db.collection("Leases").doc(id).set(lease);
+}
+
 test.beforeEach(async () => {
   Object.assign(process.env, ENV);
   delete process.env.PAYMOB_CURRENCY;
@@ -86,10 +99,12 @@ test.beforeEach(async () => {
   payments.deps.now = () => Date.now();
   installGateway();
   await clearAll();
-  await db.collection("Users").doc("owner").set({ role: "Owner" });
+  await db.collection("Users").doc("owner").set({ role: "AgencyAdmin" });
+  await admin.auth().createUser({ uid: "owner" });
+  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
   await db.collection("Users").doc("tenant").set({ role: "Tenant", full_name: "Lease Tenant", email: "tenant@example.test" });
   await db.collection("Users").doc("stranger").set({ role: "Owner" });
-  await db.collection("Leases").doc("lease-1").set({
+  await seedLease("lease-1", {
     owner_id: "owner",
     tenant_id: "tenant",
     agency_id: "agency-1",
@@ -232,17 +247,17 @@ test("TAQ-16: only the lease's tenant can pay: other tenants, owner, agency, Sup
 });
 
 test("TAQ-16: a lease without a tenant or without a server-side rent cannot be paid", async () => {
-  await db.collection("Leases").doc("no-tenant").set({ owner_id: "owner", country_code: "AE", status: "active", financialTerms: { monthlyRent: 100 } });
+  await seedLease("no-tenant", { owner_id: "owner", country_code: "AE", status: "active", financialTerms: { monthlyRent: 100 } });
   await expectCode(intent({ leaseId: "no-tenant", amount: 100 }), "permission-denied");
-  await db.collection("Leases").doc("no-rent").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active" });
+  await seedLease("no-rent", { owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active" });
   await expectCode(intent({ leaseId: "no-rent", amount: 100 }), "failed-precondition");
-  await db.collection("Leases").doc("no-country").set({ owner_id: "owner", tenant_id: "tenant", status: "active", financialTerms: { monthlyRent: 100 } });
+  await seedLease("no-country", { owner_id: "owner", tenant_id: "tenant", status: "active", financialTerms: { monthlyRent: 100 } });
   await expectCode(intent({ leaseId: "no-country" }), "failed-precondition");
   assert.equal((await transactions()).length, 0);
 });
 
 test("TAQ-16: an annual-rent lease is charged one twelfth, rounded to cents", async () => {
-  await db.collection("Leases").doc("annual").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active", financialTerms: { annualRent: 100000 } });
+  await seedLease("annual", { owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active", financialTerms: { annualRent: 100000 } });
   await expectCode(intent({ leaseId: "annual", amount: 100000 }), "invalid-argument");
   await intent({ leaseId: "annual", amount: 8333.33 });
   const [tx] = await transactions();
@@ -304,7 +319,7 @@ test("TAQ-16: a paid month is ALREADY_EXISTS and the record is untouched", async
 });
 
 test("TAQ-16: different months, and different leases, are separate payments", async () => {
-  await db.collection("Leases").doc("lease-2").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active", financialTerms: { monthlyRent: 3000 } });
+  await seedLease("lease-2", { owner_id: "owner", tenant_id: "tenant", country_code: "AE", status: "active", financialTerms: { monthlyRent: 3000 } });
   const ids = [];
   for (const [leaseId, period] of [["lease-1", undefined], ["lease-1", monthsFromNow(-1)], ["lease-1", monthsFromNow(1)], ["lease-2", undefined]]) {
     ids.push((await intent({ leaseId, period })).transactionId);
@@ -388,7 +403,7 @@ test("TAQ-16: role and ownership are checked before the flag, so outsiders learn
 });
 
 test("TAQ-16: only AED leases are payable while the gateway is the UAE one", async () => {
-  await db.collection("Leases").doc("eg").set({ owner_id: "owner", tenant_id: "tenant", country_code: "EG", status: "active", financialTerms: { monthlyRent: 500 } });
+  await seedLease("eg", { owner_id: "owner", tenant_id: "tenant", country_code: "EG", status: "active", financialTerms: { monthlyRent: 500 } });
   await assert.rejects(intent({ leaseId: "eg" }), (e) => e.code === "failed-precondition" && e.details.reason === "currency_not_supported");
   assert.equal((await transactions()).length, 0);
 });
@@ -558,7 +573,7 @@ test("TAQ-16: a paid payment is never downgraded by a later failure, and a secon
   const result = await intent({ leaseId: "lease-1" });
   await webhook(gatewayObject(result));
   assert.equal((await webhook(gatewayObject(result, { success: false, id: 555009 }))).body.outcome, "failure_ignored");
-  assert.equal((await webhook(gatewayObject(result, { id: 555010 }))).body.outcome, "duplicate_payment");
+  assert.equal((await webhook(gatewayObject(result, { id: 555010 }))).body.outcome, "refund_required");
   const tx = (await db.collection("Transactions").doc(result.transactionId).get()).data();
   assert.equal(tx.status, "paid");
   assert.equal(tx.gatewayTransactionId, "555001");
@@ -697,12 +712,22 @@ test("TAQ-16: the transaction keeps an audit trail of the gateway events", async
 
 // --- manual cash and bank-transfer payments ---
 
-const manual = (data, auth = caller("owner")) => fns.recordManualPayment.run({ data, auth });
+const ownerCaller = () => caller("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
+const manual = (data, auth = ownerCaller()) => fns.recordManualPayment.run({ data, auth });
 const today = () => new Date().toISOString().slice(0, 10);
 const cash = (extra = {}) => ({ leaseId: "lease-1", method: "cash", reference: "Receipt 118", paidOn: today(), ...extra });
 
+/** Turns lease-1 into a lease of a private owner, with no agency, on the owner's own property. */
+async function makeOwnerLease() {
+  await admin.auth().setCustomUserClaims("owner", { role: "Owner" });
+  await db.collection("Users").doc("owner").set({ role: "Owner" });
+  await db.doc("Users/owner/properties/prop-lease-1").set({ agency_id: "" }, { merge: true });
+  await db.doc("Leases/lease-1").update({ agency_id: "" });
+}
+
 test("TAQ-16: the owner records a cash payment: paid, one recorded invoice, an audit entry and notifications", async () => {
-  const result = await manual(cash({ amount: 8000 }));
+  await makeOwnerLease();
+  const result = await manual(cash({ amount: 8000 }), caller("owner", { role: "Owner" }));
   assert.equal(result.status, "paid");
   assert.equal(result.transactionId, `lease-1_${monthsFromNow(0)}`);
   const tx = (await db.doc(`Transactions/${result.transactionId}`).get()).data();
@@ -792,19 +817,67 @@ test("TAQ-16: a month is paid once, whichever way it was paid", async () => {
   await expectCode(manual(cash({ period: monthsFromNow(-1) })), "already-exists");
 });
 
-test("TAQ-16: recording over a pending checkout settles it, and a late gateway success is flagged as a duplicate", async () => {
+test("TAQ-110: a manual payment waits for an open checkout, then supersedes it; a late gateway success is a refund, not a second payment", async () => {
+  await admin.auth().createUser({ uid: "root" });
+  await admin.auth().setCustomUserClaims("root", { role: "SuperAdmin" });
+  const start = Date.now();
+  payments.deps.now = () => start;
   const pending = await intent({ leaseId: "lease-1" });
+  let tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
+  assert.ok(tx.intentExpiresAtMs >= start + payments.INTENTION_TTL_SECONDS * 1000, "the stored expiry matches the Paymob intention's own expiration");
+  assert.equal(gateway.calls[0].body.expiration, payments.INTENTION_TTL_SECONDS);
+
+  await assert.rejects(manual(cash({ method: "bank_transfer", reference: "IBAN ref 9" })), (err) => {
+    assert.equal(err.code, "failed-precondition");
+    assert.equal(err.details.reason, "payment_pending");
+    assert.ok(err.details.retryAfterMs > 0);
+    return true;
+  });
+  payments.deps.now = () => tx.intentExpiresAtMs - 1;
+  await expectCode(manual(cash({ method: "bank_transfer", reference: "IBAN ref 9" })), "failed-precondition");
+
+  payments.deps.now = () => tx.intentExpiresAtMs + 1;
   const r = await manual(cash({ method: "bank_transfer", reference: "IBAN ref 9" }));
   assert.equal(r.transactionId, pending.transactionId);
-  let tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
-  assert.equal(tx.status, "paid");
-  assert.equal(tx.method, "bank_transfer");
-  assert.deepEqual(tx.auditTrail.map((e) => e.action), ["intent_created", "manual_payment_recorded"]);
-  assert.equal((await webhook(gatewayObject(pending))).body.outcome, "duplicate_payment");
   tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
   assert.equal(tx.status, "paid");
   assert.equal(tx.method, "bank_transfer");
+  assert.equal(tx.gatewayState, "superseded");
+  assert.deepEqual(tx.supersededOrderIds, [pending.orderId]);
+  assert.equal((await db.doc(`PaymentSessions/${pending.orderId}`).get()).get("superseded"), true);
+  assert.deepEqual(tx.auditTrail.map((e) => e.action), ["intent_created", "manual_payment_recorded"]);
+
+  const late = await webhook(gatewayObject(pending));
+  assert.equal(late.body.outcome, "refund_required");
+  tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
+  assert.equal(tx.status, "paid");
+  assert.equal(tx.method, "bank_transfer", "the month stays paid by the manual entry");
+  assert.equal(tx.refund_required, true);
+  assert.deepEqual(tx.refundRequiredGatewayTransactions, ["555001"]);
+  assert.equal((await db.collection("Invoices").get()).size, 1, "no second invoice");
+  const alerts = (await db.collection("AdminAlerts").get()).docs.map((d) => d.data());
+  assert.equal(alerts.length, 1);
+  assert.equal(alerts[0].type, "refund_required");
+  assert.equal(alerts[0].status, "open");
+  assert.equal(alerts[0].supersededIntent, true);
+  assert.equal(alerts[0].amountCents, 800000);
+  const note = (await db.collection("Users").doc("root").collection("notifications").get()).docs.map((d) => d.data());
+  assert.equal(note.length, 1);
+  assert.equal(note[0].type, "refund_required");
+  assert.ok(note[0].title.ar && note[0].title.en && note[0].title.hi);
+
+  assert.equal((await webhook(gatewayObject(pending))).body.outcome, "refund_required", "a replay is still a refund");
+  assert.equal((await db.collection("AdminAlerts").get()).size, 1, "a replay raises no second alert");
+  assert.equal((await db.collection("Users").doc("root").collection("notifications").get()).size, 1);
   assert.equal((await db.collection("Invoices").get()).size, 1);
+});
+
+test("TAQ-110: a checkout cannot be started for a month that is already paid, whichever way", async () => {
+  await manual(cash());
+  await assert.rejects(intent({ leaseId: "lease-1" }), (err) => err.code === "already-exists");
+  await db.doc(`Invoices/TASHIL-INV-lease-1_${monthsFromNow(-1)}`).set({ status: "Paid_Verified" });
+  await assert.rejects(intent({ leaseId: "lease-1", period: monthsFromNow(-1) }), (err) => err.code === "already-exists" && err.details.reason === "already_paid");
+  assert.equal(gateway.calls.length, 0);
 });
 
 test("TAQ-16: concurrent manual recordings for one month write one payment", async () => {

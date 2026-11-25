@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
@@ -251,6 +252,39 @@ void main() {
       await tester.tap(find.text('Confirm'));
       await tester.pumpAndSettle();
       expect(find.text('We could not save your decision. Please try again.'), findsOneWidget);
+    });
+
+    testWidgets('a second tenant accepting a leased property is told why (TAQ-110)', (tester) async {
+      final backend = FakeTenantBackend()
+        ..leases = const [offer]
+        ..failDecision = FirebaseFunctionsException(
+          code: 'failed-precondition',
+          message: 'This property already has an active lease.',
+          details: {'reason': 'property_already_leased'},
+        );
+      await pump(tester, home(backend));
+      await tester.tap(find.text('Approve lease'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+      expect(find.text('This property already has an active lease, so this offer cannot be accepted.'), findsOneWidget);
+    });
+
+    test('every refusal reason maps to a message in all three languages (TAQ-110)', () {
+      final keys = {
+        for (final reason in [
+          'property_already_leased', 'offer_expired', 'not_pending', 'property_not_found', 'property_not_managed',
+          'property_agency_managed', 'owner_not_landlord', 'rent_invalid', 'rent_missing', 'lease_dates_invalid', 'other', '',
+        ])
+          decisionErrorKey(reason),
+      };
+      expect(keys, containsAll(['tnPropertyAlreadyLeased', 'tnOfferExpired', 'tnOfferNotPending', 'tnOfferPropertyInvalid', 'tnOfferTermsInvalid', 'tnDecisionFailed']));
+      for (final lang in ['ar', 'en', 'hi']) {
+        final loc = AppLocalizations(Locale(lang));
+        for (final key in keys) {
+          expect(loc.tr(key), isNot(key), reason: '$lang $key');
+        }
+      }
     });
 
     testWidgets('past leases are listed with their status; drafts are hidden', (tester) async {

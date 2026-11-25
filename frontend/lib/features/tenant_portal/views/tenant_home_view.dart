@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
+import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/requests/models/request_models.dart';
 import 'package:tashil_real_estate/features/requests/services/requests_service.dart';
@@ -61,8 +62,8 @@ class _TenantHomeViewState extends State<TenantHomeView> {
     try {
       await _service.decideLease(lease.id, approve: approve);
       if (mounted) TashilSnackBar.showSuccess(context: context, message: loc.tr(approve ? 'tnOfferApproved' : 'tnOfferRejected'));
-    } catch (_) {
-      if (mounted) TashilSnackBar.showError(context: context, message: loc.tr('tnDecisionFailed'));
+    } catch (error) {
+      if (mounted) TashilSnackBar.showError(context: context, message: loc.tr(decisionErrorKey(describeCallableError(error).reason)));
     } finally {
       if (mounted) setState(() => _busy.remove(lease.id));
     }

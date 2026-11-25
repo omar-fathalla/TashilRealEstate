@@ -244,10 +244,17 @@ test("TAQ-11 [probe] Tenant can create a published public listing in own name", 
 });
 
 // ---------------- Leases (supporting TAQ-17) ----------------
-test("Leases: only agency/SuperAdmin create; owner/tenant cannot forge a lease", async () => {
+test("Leases: no client creates a lease except SuperAdmin's draft; owner/tenant/agency cannot forge one (TAQ-110)", async () => {
   await assertFails(setDoc(doc(ctx.ownerB, "Leases/forged"), { owner_id: "ownerB", tenant_id: "tenant", agency_id: "", country_code: "EG", financialTerms: { monthlyRent: 1 } }));
   await assertFails(setDoc(doc(ctx.tenant, "Leases/forged"), { owner_id: "tenant", tenant_id: "tenant" }));
   await assertFails(setDoc(doc(ctx.agY, "Leases/forged"), { owner_id: "ownerA", agency_id: "agX" }));
-  await assertSucceeds(setDoc(doc(ctx.agX, "Leases/ok"), { owner_id: "ownerA", tenant_id: "tenant", agency_id: "agX" }));
+  await assertFails(setDoc(doc(ctx.agX, "Leases/ok"), { owner_id: "ownerA", tenant_id: "tenant", agency_id: "agX" }), "agencies use createLease");
+  await assertFails(setDoc(doc(ctx.agX, "Leases/ok"), {
+    owner_id: "ownerA", tenant_id: "tenant", agency_id: "agX", property_id: "p1", status: "draft",
+    monthly_rent: 100, start_date: "2026-01-01", end_date: "2026-12-31",
+  }), "even a complete draft");
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), "Leases/ok"), { owner_id: "ownerA", tenant_id: "tenant", agency_id: "agX", property_id: "p1", status: "draft" });
+  });
   await assertFails(updateDoc(doc(ctx.agX, "Leases/ok"), { agency_id: "agY" }));
 });
