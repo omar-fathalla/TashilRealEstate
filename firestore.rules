@@ -7,8 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Roles a user may pick for themselves at signup; the profile can vouch for these only.
+    // Admin, AgencyAdmin and SuperAdmin come from custom claims set by setUserRole.
     function selfServiceRoles() {
-      return ['Owner', 'Tenant'];
+      return ['Owner', 'Tenant', 'Investor'];
     }
 
     function claimedRole() {
@@ -39,6 +41,17 @@ service cloud.firestore {
 
     function isAgencyAdmin() {
       return hasRole('AgencyAdmin');
+    }
+
+    // Platform Admin: moderates listings and handles escalations. Everything it may do is
+    // listed explicitly below; it has no access to Users documents (IBAN, national ID), leases,
+    // invoices, agency private data, roles or settings.
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+
+    function isPlatformStaff() {
+      return isSuperAdmin() || isAdmin();
     }
 
     function isOwner() {
@@ -108,7 +121,9 @@ service cloud.firestore {
       // Dedicated Owner Properties Tree (Users/{userId}/properties/{propertyId})
       match /properties/{propertyId} {
         allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
-        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+        // Investors do not list properties, so they cannot create the private drafts that
+        // listing photos and the marketplace sync hang off.
+        allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor'));
       }
 
       // Written by Cloud Functions only.
@@ -128,7 +143,7 @@ service cloud.firestore {
         'titles', 'descriptions', 'locations', 'cityCode', 'propertyTypeCode', 'buildingName',
         'pricePerMonth', 'bedrooms', 'bathrooms', 'areaSqM', 'image', 'imageUrls',
         'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
-        'is_published', 'status', 'updated_at'
+        'is_published', 'status', 'updated_at', 'verified', 'moderation_hidden'
       ];
     }
 
@@ -215,17 +230,25 @@ service cloud.firestore {
       return request.auth.token.get('aud', '');
     }
 
-    function imageRefsOk(refs) {
+    function imageRefPattern() {
       let bucket = projectId() + '[.](firebasestorage[.]app|appspot[.]com)';
-      let ref = '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?'
+      return '(https://firebasestorage[.]googleapis[.]com/v0/b/' + bucket + '/o/[^?# ]+([?][^# ]*)?'
         + '|https://storage[.]googleapis[.]com/' + bucket + '/[^?# ]+'
         + '|assets/[A-Za-z0-9_/.-]+[.](png|jpe?g|webp|gif)'
         + '|[A-Za-z0-9_.-]+[.](png|jpe?g|webp|gif)'
         + '|data:image/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+)';
+    }
+
+    // The pattern is passed in so a listing with both image and imageUrls builds it once.
+    function imageRefsMatch(refs, ref) {
       return projectId().matches('[a-z][a-z0-9-]{4,29}')
         && refs.matches('^(' + ref + '( ' + ref + ')*)?$')
         && !refs.matches('^.*[.][.].*$')
         && !refs.matches('(?i)^.*https://[^ ]*/(o/)?(users|private|kyc|documents|leases|contracts)(/|%2F).*$');
+    }
+
+    function imageRefsOk(refs) {
+      return imageRefsMatch(refs, imageRefPattern());
     }
 
     function imageListOk(list) {
@@ -243,6 +266,7 @@ service cloud.firestore {
       let amenities = d.get('amenitiesMap', {});
       let images = d.get('imageUrls', []);
       let image = d.get('image', '');
+      let ref = imageRefPattern();
       // join() fails on non-string entries, which denies the write. A spaced " | " is a list
       // break for the phone patterns, so digits in neighbouring fields never read as one number.
       let freeText = titles.values().concat(descriptions.values()).concat(locations.values())
@@ -253,8 +277,8 @@ service cloud.firestore {
         && country in ['EG', 'AE']
         && d.get('currencyCode', currency) == currency
         && d.get('is_published', false) is bool
-        && d.get('isFeatured', false) is bool
-        && d.get('isFurnished', false) is bool
+        && [d.get('isFeatured', false), d.get('isFurnished', false), d.get('verified', false),
+          d.get('moderation_hidden', false)].hasOnly([true, false])
         && inRange(d.get('rating', 0), 0, 5)
         && (d.get('is_published', false) == false || 'pricePerMonth' in d)
         && inRange(d.get('pricePerMonth', 1), 0.01, 1000000000)
@@ -269,10 +293,145 @@ service cloud.firestore {
         && d.get('cityCode', '').size() <= 60 && d.get('propertyTypeCode', '').size() <= 60
         && amenities.get('ar', []).size() <= 30 && amenities.get('en', []).size() <= 30 && amenities.get('hi', []).size() <= 30
         && contactFree(freeText)
-        && image is string && !image.matches('^.* .*$') && imageRefsOk(image)
-        && images is list && imageListOk(images)
+        && image is string && !image.matches('^.* .*$') && imageRefsMatch(image, ref)
+        && images is list && images.size() <= 20 && imageRefsMatch(images.join(' '), ref)
         && d.get('agencyPhone', '').size() <= 30
         && (!('updated_at' in d) || d.updated_at is timestamp);
+    }
+
+    // Moderation state lives in PropertyModeration/{propertyId}, a document no owner can create,
+    // change or delete, so it survives whatever happens to the public or the private listing doc.
+    // A missing document means "not hidden". The public doc keeps `moderation_hidden` only as a
+    // mirror for the UI; the rules below force it to equal the moderation doc.
+    function moderationPath(propertyId) {
+      return /databases/$(database)/documents/PropertyModeration/$(propertyId);
+    }
+
+    function listingModerationHidden(propertyId) {
+      return exists(moderationPath(propertyId))
+        && get(moderationPath(propertyId)).data.get('hidden', false) == true;
+    }
+
+    // True only when this very request also writes PropertyModeration/{propertyId}: the moderation
+    // doc's updated_at is forced to request.time, which every write of one batch shares. A
+    // visibility change that arrives on its own (no moderation write) therefore never passes.
+    function moderationWrittenNow(propertyId) {
+      return existsAfter(moderationPath(propertyId))
+        && getAfter(moderationPath(propertyId)).data.get('updated_at', null) == request.time;
+    }
+
+    // Admin moderation of the public doc: verify it, hide it, or lift the hold. Any change to
+    // is_published or moderation_hidden must come in the same batch as a PropertyModeration write,
+    // and can only take the listing offline: no Admin or SuperAdmin write ever sets is_published
+    // to true. Going back online is the server's job (reconcilePropertyModeration re-reads the
+    // owner's private doc, rent and publish role), so a restore cannot republish a stale public
+    // doc while the private one is unpublished or invalid or its owner lost the publish role.
+    function adminModerationOk(propertyId) {
+      let d = request.resource.data;
+      return changedKeys().hasOnly(['is_published', 'verified', 'moderation_hidden', 'updated_at'])
+        && [d.get('verified', false), d.get('moderation_hidden', false), d.get('is_published', false)].hasOnly([true, false])
+        && (!('updated_at' in d) || d.updated_at == request.time)
+        && (!changedKeys().hasAny(['is_published', 'moderation_hidden'])
+          || adminVisibilityOk(propertyId));
+    }
+
+    function adminVisibilityOk(propertyId) {
+      let d = request.resource.data;
+      return moderationWrittenNow(propertyId)
+        && d.get('moderation_hidden', false) == getAfter(moderationPath(propertyId)).data.get('hidden', false)
+        && d.get('is_published', false) == false;
+    }
+
+    // A moderator writes exactly these four fields. Hiding records whether the public doc is
+    // live right now (pre_hide_published), so a later restore cannot publish anything that was
+    // not published before. Every later change keeps that stored value.
+    function moderationDocShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['hidden', 'pre_hide_published', 'updated_by', 'updated_at'])
+        && d.hidden is bool
+        && d.pre_hide_published is bool
+        && d.updated_by == request.auth.uid
+        && d.updated_at == request.time;
+    }
+
+    function moderationHideOk(propertyId) {
+      let d = request.resource.data;
+      return d.hidden == true
+        && exists(/databases/$(database)/documents/Properties/$(propertyId))
+        && d.pre_hide_published
+          == (get(/databases/$(database)/documents/Properties/$(propertyId)).data.get('is_published', false) == true);
+    }
+
+    // SuperAdmin content edits of an existing public doc (rating, featuring, verify, price, text,
+    // images). A request may evaluate at most 1000 rule expressions and a full listing shape check
+    // of a large listing alone uses almost all of them, so an update validates only the keys it
+    // changes, using the diff, and trusts the rest of the stored doc. Visibility (is_published,
+    // moderation_hidden), the id and the owner are not editable here: visibility goes through the
+    // moderation path above, and the owner stays what the private doc said when the listing was made.
+    function listingEditableKeys() {
+      return [
+        'agency_id', 'countryCode', 'currencyCode',
+        'titles', 'descriptions', 'locations', 'cityCode', 'propertyTypeCode', 'buildingName',
+        'pricePerMonth', 'bedrooms', 'bathrooms', 'areaSqM', 'image', 'imageUrls',
+        'amenitiesMap', 'isFurnished', 'agencyNames', 'agencyPhone', 'rating', 'isFeatured',
+        'status', 'updated_at', 'verified'
+      ];
+    }
+
+    function listingEditOk() {
+      let d = request.resource.data;
+      let c = changedKeys();
+      let country = d.get('countryCode', 'EG');
+      let currency = country == 'AE' ? 'AED' : 'EGP';
+      let titles = d.get('titles', {});
+      let descriptions = d.get('descriptions', {});
+      let locations = d.get('locations', {});
+      let amenities = d.get('amenitiesMap', {});
+      return c.hasOnly(listingEditableKeys())
+        && (!c.hasAny(['agency_id']) || d.agency_id is string)
+        && (!c.hasAny(['status']) || d.get('status', '') in ['vacant', 'rented', 'unavailable'])
+        && (!c.hasAny(['countryCode', 'currencyCode'])
+          || (country in ['EG', 'AE'] && d.get('currencyCode', currency) == currency))
+        && (!c.hasAny(['isFeatured', 'isFurnished', 'verified'])
+          || [d.get('isFeatured', false), d.get('isFurnished', false), d.get('verified', false)].hasOnly([true, false]))
+        && (!c.hasAny(['rating']) || inRange(d.get('rating', 0), 0, 5))
+        && (!c.hasAny(['pricePerMonth']) || ('pricePerMonth' in d && inRange(d.pricePerMonth, 0.01, 1000000000)))
+        && (!c.hasAny(['areaSqM']) || inRange(d.get('areaSqM', 1), 0.01, 1000000))
+        && (!c.hasAny(['bedrooms']) || inRange(d.get('bedrooms', 0), 0, 100))
+        && (!c.hasAny(['bathrooms']) || inRange(d.get('bathrooms', 0), 0, 100))
+        && (!c.hasAny(['titles']) || (localizedKeysOk(d, 'titles')
+          && titles.get('ar', '').size() <= 200 && titles.get('en', '').size() <= 200 && titles.get('hi', '').size() <= 200))
+        && (!c.hasAny(['descriptions']) || (localizedKeysOk(d, 'descriptions')
+          && descriptions.get('ar', '').size() <= 4000 && descriptions.get('en', '').size() <= 4000
+          && descriptions.get('hi', '').size() <= 4000))
+        && (!c.hasAny(['locations']) || (localizedKeysOk(d, 'locations')
+          && locations.get('ar', '').size() <= 300 && locations.get('en', '').size() <= 300 && locations.get('hi', '').size() <= 300))
+        && (!c.hasAny(['amenitiesMap']) || (localizedKeysOk(d, 'amenitiesMap')
+          && amenities.get('ar', []).size() <= 30 && amenities.get('en', []).size() <= 30 && amenities.get('hi', []).size() <= 30))
+        && (!c.hasAny(['buildingName']) || d.get('buildingName', '').size() <= 200)
+        && (!c.hasAny(['cityCode', 'propertyTypeCode'])
+          || (d.get('cityCode', '').size() <= 60 && d.get('propertyTypeCode', '').size() <= 60))
+        && (!c.hasAny(['agencyPhone']) || d.get('agencyPhone', '').size() <= 30)
+        && (!c.hasAny(['updated_at']) || d.updated_at is timestamp)
+        && (!c.hasAny(['image']) || (d.image is string && !d.image.matches('^.* .*$') && imageRefsOk(d.image)))
+        && (!c.hasAny(['imageUrls']) || (d.imageUrls is list && imageListOk(d.imageUrls)))
+        && (!c.hasAny(['titles', 'descriptions', 'locations', 'amenitiesMap', 'buildingName', 'cityCode', 'propertyTypeCode'])
+          || contactFree(listingEditedText(d, c)));
+    }
+
+    // The free text of only the fields this update changed, joined with " | " (a list break for the
+    // phone patterns) like listingValuesOk does for a whole listing.
+    function listingEditedText(d, c) {
+      return (c.hasAny(['titles']) ? d.get('titles', {}).values() : [])
+        .concat(c.hasAny(['descriptions']) ? d.get('descriptions', {}).values() : [])
+        .concat(c.hasAny(['locations']) ? d.get('locations', {}).values() : [])
+        .concat(c.hasAny(['amenitiesMap'])
+          ? d.get('amenitiesMap', {}).get('ar', []).concat(d.get('amenitiesMap', {}).get('en', [])).concat(d.get('amenitiesMap', {}).get('hi', []))
+          : [])
+        .concat([c.hasAny(['buildingName']) ? d.get('buildingName', '') : '',
+          c.hasAny(['cityCode']) ? d.get('cityCode', '') : '',
+          c.hasAny(['propertyTypeCode']) ? d.get('propertyTypeCode', '') : ''])
+        .join(' | ');
     }
 
     function listingShapeOk(propertyId) {
@@ -298,16 +457,46 @@ service cloud.firestore {
       // Anyone (including unauthenticated visitors) can read published listings. Unpublished
       // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
       allow read: if resource.data.get('is_published', false) == true
-        || isSuperAdmin()
+        || isPlatformStaff()
         || ownsListing()
         || agencyManagesResource();
 
       // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
       // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
       // listing id before its owner publishes it. SuperAdmin keeps direct access for moderation.
-      allow create, update: if isSuperAdmin() && listingShapeOk(propertyId);
+      // A SuperAdmin create needs the owner's private doc to exist (the path is built from the
+      // doc's own owner_id) and is refused while moderation holds the id hidden, so deleting a held
+      // public doc cannot be followed by recreating it live.
+      allow create: if isSuperAdmin()
+        && !listingModerationHidden(propertyId)
+        && exists(/databases/$(database)/documents/Users/$(request.resource.data.get('owner_id', ''))/properties/$(propertyId))
+        && listingShapeOk(propertyId);
+      // Visibility changes (is_published, moderation_hidden) by Admin or SuperAdmin take the
+      // moderation path and are checked first. Every other SuperAdmin edit takes the cheap path
+      // that validates only the changed keys.
+      allow update: if (isAdmin() && adminModerationOk(propertyId))
+        || (isSuperAdmin()
+          && (changedKeys().hasAny(['is_published', 'moderation_hidden'])
+            ? adminModerationOk(propertyId)
+            : listingEditOk()));
 
-      allow delete: if isSuperAdmin() || ownsListing() || agencyManagesResource();
+      // An owner may remove their own listing, except while moderation holds it hidden: deleting
+      // the public doc must not be a way to lose that state.
+      allow delete: if isSuperAdmin()
+        || ((ownsListing() || agencyManagesResource()) && !listingModerationHidden(propertyId));
+    }
+
+    // 2b. Listing moderation state. Platform staff only; no owner, tenant or agency can create,
+    // change or delete it (including creating it first for their own listing). Only SuperAdmin
+    // can delete it. Admin writes stay limited to the four fields above.
+    match /PropertyModeration/{propertyId} {
+      allow read: if isPlatformStaff();
+      allow create: if isPlatformStaff() && moderationDocShapeOk() && moderationHideOk(propertyId);
+      allow update: if isPlatformStaff() && moderationDocShapeOk()
+        && (resource.data.get('hidden', false) == true || request.resource.data.hidden == false
+          ? request.resource.data.pre_hide_published == resource.data.get('pre_hide_published', false)
+          : moderationHideOk(propertyId));
+      allow delete: if isSuperAdmin();
     }
 
     // 3. Agencies Collection
@@ -372,7 +561,7 @@ service cloud.firestore {
 
     // 4c. Telemetry_Crashes
     // Visitor crash reports from the web app: create-only, fixed keys, bounded sizes, no PII
-    // beyond the caller's own uid. Only a SuperAdmin can read them back.
+    // beyond the caller's own uid. Only platform staff (SuperAdmin, Admin) can read them back.
     function crashReportOk(d) {
       return d.keys().hasOnly(['message', 'stack', 'context', 'isFatal', 'platform', 'uid', 'createdAt'])
         && d.keys().hasAll(['message', 'isFatal', 'platform', 'createdAt'])
@@ -388,7 +577,7 @@ service cloud.firestore {
 
     match /Telemetry_Crashes/{crashId} {
       allow create: if crashId.size() <= 64 && crashReportOk(request.resource.data);
-      allow get, list: if isSuperAdmin();
+      allow get, list: if isPlatformStaff();
       allow update, delete: if false;
     }
 
@@ -400,8 +589,46 @@ service cloud.firestore {
     }
 
     // 5. Maintenance Requests
+    // Requests name their tenant, owner and agency. Parties and platform staff only; an
+    // Investor (or any other signed-in user) has no access. Admin handles escalations by
+    // changing the status or escalation fields, nothing else.
+    function maintenanceParty() {
+      return isAuthenticated() && (
+        resource.data.get('tenant_id', '') == request.auth.uid ||
+        resource.data.get('owner_id', '') == request.auth.uid ||
+        agencyManagesResource()
+      );
+    }
+
+    // A new request must name the lease it belongs to, and that lease must link exactly the
+    // tenant, owner and agency the request names. The caller must be that lease's tenant or owner,
+    // so nobody can address a request to a party they have no lease with. One get() on the lease.
+    function maintenanceLinkedToLease() {
+      let d = request.resource.data;
+      let leaseId = d.get('lease_id', '');
+      return leaseId is string && leaseId.size() > 0
+        && exists(/databases/$(database)/documents/Leases/$(leaseId))
+        && maintenanceMatchesLease(d, get(/databases/$(database)/documents/Leases/$(leaseId)).data);
+    }
+
+    function maintenanceMatchesLease(d, lease) {
+      return d.get('tenant_id', '') is string && d.get('tenant_id', '') != ''
+        && d.get('owner_id', '') is string && d.get('owner_id', '') != ''
+        && d.get('tenant_id', '') == lease.get('tenant_id', '')
+        && d.get('owner_id', '') == lease.get('owner_id', '')
+        && d.get('agency_id', '') == lease.get('agency_id', '')
+        && (request.auth.uid == lease.get('tenant_id', '') || request.auth.uid == lease.get('owner_id', ''));
+    }
+
     match /Maintenance/{requestId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isPlatformStaff() || maintenanceParty();
+      allow create: if isSuperAdmin()
+        || ((isTenant() || isOwner()) && maintenanceLinkedToLease());
+      allow update: if isSuperAdmin()
+        || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
+        || ((isOwner() || isAgencyAdmin()) && maintenanceParty()
+          && !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id']));
+      allow delete: if isSuperAdmin() || (isAgencyAdmin() && agencyManagesResource());
     }
   }
 }

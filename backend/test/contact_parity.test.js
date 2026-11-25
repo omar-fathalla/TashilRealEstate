@@ -23,6 +23,10 @@ test.after(async () => {
 
 test.beforeEach(async () => {
   await testEnv.clearFirestore();
+  // A SuperAdmin create needs the owner's private doc, so the creates below reach the contact filter.
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner" });
+  });
 });
 
 function styled(digits, zeroCodePoint) {

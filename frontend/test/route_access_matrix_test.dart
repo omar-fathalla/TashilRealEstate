@@ -20,6 +20,7 @@ const Map<String, Set<String>?> expectedAccess = {
   '/market-index': public,
   '/financial-dashboard': public,
   '/super-admin': {'SuperAdmin'},
+  '/admin': {'Admin', 'SuperAdmin'},
   '/agency': {'AgencyAdmin'},
   '/owner': {'Owner'},
   '/tenant': {'Tenant'},
@@ -31,13 +32,15 @@ const Map<String, Set<String>?> expectedAccess = {
 
 const Map<String, String> expectedHome = {
   'SuperAdmin': '/super-admin',
+  'Admin': '/admin',
+  'Investor': '/',
   'AgencyAdmin': '/agency',
   'Owner': '/owner',
   'Tenant': '/tenant',
   '': '/',
 };
 
-const roles = ['SuperAdmin', 'AgencyAdmin', 'Owner', 'Tenant', ''];
+const roles = ['SuperAdmin', 'Admin', 'AgencyAdmin', 'Owner', 'Tenant', 'Investor', ''];
 
 void main() {
   test('the route_access table matches the expected matrix', () {
@@ -118,6 +121,40 @@ void main() {
     test('a trailing slash or query string does not skip the guard', () {
       expect(guardRedirect(Uri.parse('/super-admin/'), RoleSessionStatus.signedIn, 'Owner'), '/owner');
       expect(guardRedirect(Uri.parse('/super-admin?tab=users'), RoleSessionStatus.signedIn, 'Tenant'), '/tenant');
+    });
+  });
+
+  group('TAQ-91: Admin and Investor', () {
+    test('an Admin opens /admin but not the SuperAdmin portal or any owner, tenant or agency route', () {
+      expect(guardRedirect(Uri.parse('/admin'), RoleSessionStatus.signedIn, 'Admin'), isNull);
+      for (final route in ['/super-admin', '/owner', '/tenant', '/agency', '/checkout', '/payment-schedule', '/rent-collection']) {
+        expect(guardRedirect(Uri.parse(route), RoleSessionStatus.signedIn, 'Admin'), '/admin', reason: route);
+      }
+    });
+
+    test('a SuperAdmin may open /admin, and every other role is sent home from it', () {
+      expect(guardRedirect(Uri.parse('/admin'), RoleSessionStatus.signedIn, 'SuperAdmin'), isNull);
+      expect(guardRedirect(Uri.parse('/admin'), RoleSessionStatus.signedIn, 'Investor'), '/');
+      expect(guardRedirect(Uri.parse('/admin'), RoleSessionStatus.signedIn, 'Owner'), '/owner');
+      expect(guardRedirect(Uri.parse('/admin/'), RoleSessionStatus.signedIn, 'Tenant'), '/tenant');
+      expect(guardRedirect(Uri.parse('/admin?tab=users'), RoleSessionStatus.signedIn, 'AgencyAdmin'), '/agency');
+    });
+
+    test('an Investor reaches public pages and nothing role-gated', () {
+      for (final route in ['/', '/market-index', '/valuation', '/investor-dashboard']) {
+        expect(guardRedirect(Uri.parse(route), RoleSessionStatus.signedIn, 'Investor'), isNull, reason: route);
+      }
+      for (final route in ['/owner', '/tenant', '/agency', '/super-admin', '/admin', '/fast-onboarding', '/rent-collection']) {
+        expect(guardRedirect(Uri.parse(route), RoleSessionStatus.signedIn, 'Investor'), '/', reason: route);
+      }
+    });
+
+    test('post-login redirect never lets Admin or Investor into a portal they lack', () {
+      expect(postLoginDestination(role: 'Admin', redirect: '/super-admin'), '/admin');
+      expect(postLoginDestination(role: 'Admin', redirect: '/admin'), '/admin');
+      expect(postLoginDestination(role: 'Investor', redirect: '/admin'), '/');
+      expect(postLoginDestination(role: 'Investor', redirect: '/market-index'), '/market-index');
+      expect(postLoginDestination(role: 'Investor', hasDraft: true), '/');
     });
   });
 

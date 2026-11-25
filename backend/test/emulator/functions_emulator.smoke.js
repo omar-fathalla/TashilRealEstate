@@ -129,3 +129,81 @@ test("TAQ-20: syncMarketIndexManual is SuperAdmin-only and writes a server times
   const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/syncMarketIndexManual?country=EG`);
   assert.notEqual(res.status, 200);
 });
+
+// --- TAQ-91: processRentPayment and moderation in the Functions emulator ---
+
+test("TAQ-91: processRentPayment runs in the Functions emulator, with clean error statuses", async () => {
+  const tenant = await signUp("smoke-tenant@example.com");
+  await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant" });
+  await db.doc("Leases/pay-lease").set({
+    owner_id: "smoke-owner-x",
+    tenant_id: tenant.uid,
+    country_code: "AE",
+    financialTerms: { monthlyRent: 5000 },
+  });
+
+  const ok = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.result.success, true);
+  const tx = (await db.doc(`Transactions/${ok.body.result.transactionId}`).get()).data();
+  assert.equal(tx.amount, 5000);
+  assert.ok(tx.createdAt, "server timestamp missing");
+
+  const duplicate = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
+  assert.equal(duplicate.status, 409, JSON.stringify(duplicate.body));
+  const lastMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1));
+  const period = `${lastMonth.getUTCFullYear()}-${String(lastMonth.getUTCMonth() + 1).padStart(2, "0")}`;
+  const concurrent = await Promise.all(
+    [0, 1, 2, 3].map(() => callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", period })),
+  );
+  assert.equal(concurrent.filter((r) => r.status === 200).length, 1, JSON.stringify(concurrent.map((r) => r.status)));
+  assert.ok(concurrent.every((r) => r.status === 200 || r.status === 409), JSON.stringify(concurrent.map((r) => r.status)));
+  assert.equal((await db.collection("Transactions").where("leaseId", "==", "pay-lease").get()).size, 2);
+
+  const wrongAmount = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: -999999 });
+  assert.equal(wrongAmount.status, 400, JSON.stringify(wrongAmount.body));
+  const text = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: "abc" });
+  assert.equal(text.status, 400, JSON.stringify(text.body));
+  const missing = await callable("processRentPayment", tenant.idToken, { leaseId: "nope", amount: 5000 });
+  assert.equal(missing.status, 404, JSON.stringify(missing.body));
+
+  const other = await signUp("smoke-other@example.com");
+  await db.doc(`Users/${other.uid}`).set({ role: "Tenant" });
+  const denied = await callable("processRentPayment", other.idToken, { leaseId: "pay-lease", amount: 5000 });
+  assert.equal(denied.status, 403, JSON.stringify(denied.body));
+
+  const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/processRentPayment`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ data: { leaseId: "pay-lease", amount: 5000 } }),
+  });
+  assert.equal(res.status, 401, "signed out is UNAUTHENTICATED (401), not INTERNAL (500)");
+});
+
+test("TAQ-91: the moderation trigger keeps a hidden listing hidden when its owner edits it", async () => {
+  await db.doc("Users/mod-owner").set({ role: "Owner" });
+  const priv = db.doc("Users/mod-owner/properties/mod-smoke");
+  await priv.set({ isPublished: true, rentalStatus: "available", countryCode: "AE", titles: { en: "Mod smoke" }, pricePerMonth: 7000 });
+  const live = await waitFor(async () => {
+    const snap = await db.doc("Properties/mod-smoke").get();
+    return snap.exists && snap.get("is_published") === true ? snap.data() : null;
+  });
+  assert.ok(live, "listing was not published");
+
+  await db.doc("PropertyModeration/mod-smoke").set({ hidden: true, pre_hide_published: true, updated_by: "admin1" });
+  const hidden = await waitFor(async () => {
+    const snap = await db.doc("Properties/mod-smoke").get();
+    return snap.get("is_published") === false && snap.get("moderation_hidden") === true ? snap.data() : null;
+  });
+  assert.ok(hidden, "the moderation write did not take the public doc offline");
+
+  await db.doc("Properties/mod-smoke").delete();
+  await priv.set({ titles: { en: "Edited after the public doc was deleted" } }, { merge: true });
+  const back = await waitFor(async () => {
+    const snap = await db.doc("Properties/mod-smoke").get();
+    return snap.exists ? snap.data() : null;
+  });
+  assert.ok(back, "the sync did not recreate the public doc");
+  assert.equal(back.is_published, false);
+  assert.equal(back.moderation_hidden, true);
+});

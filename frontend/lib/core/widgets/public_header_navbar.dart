@@ -718,6 +718,10 @@ class PublicHeaderNavbar extends StatelessWidget implements PreferredSizeWidget 
     switch (role) {
       case TrustedRole.superAdmin:
         return info('Super Admin', loc.tr('roleSuperAdmin'), 'SA');
+      case TrustedRole.admin:
+        return info(loc.tr('roleAdmin'), loc.tr('roleAdmin'), 'AD');
+      case TrustedRole.investor:
+        return info(loc.tr('roleInvestor'), loc.tr('roleInvestor'), 'IN');
       case TrustedRole.agencyAdmin:
         return info(loc.tr('roleAgency'), loc.tr('roleAgency'), 'AG');
       case TrustedRole.tenant:

@@ -5,7 +5,7 @@ const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 // Import these directly: the Functions emulator wraps admin.firestore, which drops its static
 // FieldValue/Timestamp members and made every server-timestamp write crash locally.
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -13,6 +13,7 @@ if (!admin.apps.length) {
 
 const {
   PUBLISHER_ROLES,
+  PLATFORM_STAFF_ROLES,
   requireAuth,
   requireRole,
   resolveUserAuthority,
@@ -28,48 +29,122 @@ const { phoneSpans, linkSpans, EXTRA_DIGIT_VALUES } = require("./contact_pattern
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
 
-exports.processRentPayment = onCall(async (request) => {
-  const data = request.data;
-  const auth = request.auth;
+const round2 = (value) => Math.round(value * 100) / 100;
 
-  if (!auth) {
-    throw new Error("Unauthenticated");
+const BILLING_PERIOD_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const PAYMENT_PERIODS_BACK = 24;
+
+const monthIndex = (year, month) => year * 12 + (month - 1);
+
+/** The billing month (UTC) of [now] as YYYY-MM. */
+function currentBillingPeriod(now = new Date()) {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+// The month a lease starts in, as a monthIndex, or null when the lease carries no readable start
+// date (older documents). Accepts an ISO string, a Date or a Firestore Timestamp.
+function leaseStartMonth(lease) {
+  for (const key of ["startDate", "start_date", "leaseStartDate", "lease_start_date"]) {
+    const raw = lease ? lease[key] : undefined;
+    if (raw === undefined || raw === null || raw === "") continue;
+    const date = typeof raw === "string" ? new Date(raw) : raw && typeof raw.toDate === "function" ? raw.toDate() : raw;
+    if (date instanceof Date && !Number.isNaN(date.getTime())) {
+      return monthIndex(date.getUTCFullYear(), date.getUTCMonth() + 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * The month a payment is for: the caller's explicit `period` (YYYY-MM, from 24 months back to next
+ * month, so the key can neither be garbage nor reach arbitrarily far) or the current billing month.
+ *
+ * It is also never earlier than the month the lease starts in, when the lease records a start date.
+ */
+function paymentPeriod(value, now = new Date(), lease = null) {
+  const period = value === undefined || value === null ? currentBillingPeriod(now) : value;
+  const match = typeof period === "string" ? BILLING_PERIOD_PATTERN.exec(period) : null;
+  if (!match) throw new HttpsError("invalid-argument", "period must be a month in the form YYYY-MM.");
+  const requested = monthIndex(Number(match[1]), Number(match[2]));
+  const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  if (requested > current + 1 || requested < current - PAYMENT_PERIODS_BACK) {
+    throw new HttpsError("invalid-argument", "period is outside the months a payment can be recorded for.");
+  }
+  const start = leaseStartMonth(lease);
+  if (start !== null && requested < start) {
+    throw new HttpsError("invalid-argument", "period is before the month this lease starts.");
+  }
+  return period;
+}
+
+// Records a rent payment for a lease. Only the lease's tenant can pay it, and the amount is the
+// lease's own rent: a client may omit it or repeat it, but can never choose a different one. The
+// owner and the managing agency have no payment flow in the app (no call site), so they cannot
+// record payments here; SuperAdmin cannot either, so every payment traces to the tenant who made it.
+exports.processRentPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, ["Tenant"]);
+  const data = request.data || {};
+
+  const lease = await loadLease(data.leaseId);
+  if (!lease.tenant_id || lease.tenant_id !== auth.uid) {
+    throw new HttpsError("permission-denied", "Only the tenant of this lease can pay it.");
   }
 
-  const leaseId = data.leaseId;
-  const amount = data.amount;
-
-  if (!leaseId || !amount) {
-    throw new Error("Missing leaseId or amount");
+  const due = leaseAmount(lease);
+  if (data.amount !== undefined && data.amount !== null) {
+    if (typeof data.amount !== "number" || !Number.isFinite(data.amount) || data.amount <= 0) {
+      throw new HttpsError("invalid-argument", "amount must be a positive number.");
+    }
+    if (Math.abs(data.amount - due) > 0.005) {
+      throw new HttpsError("invalid-argument", "amount does not match the rent due on this lease.");
+    }
   }
 
-  // Calculate splits
-  const platformFee = amount * 0.02;
-  const agencyFee = amount * 0.08;
-  const ownerPayout = amount * 0.90;
+  const period = paymentPeriod(data.period, new Date(), lease);
+  const countryCode = leaseCountry(lease);
+  const platformFee = round2(due * 0.02);
+  const agencyFee = round2(due * 0.08);
+  const ownerPayout = round2(due - platformFee - agencyFee);
 
+  // One payment per lease and month: the id is deterministic and the record is create()d inside a
+  // transaction, so a retry, a double tap or two concurrent calls write exactly one transaction.
+  const db = admin.firestore();
+  const transactionRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
   try {
-    const db = admin.firestore();
-    const transactionRef = db.collection("Transactions").doc();
-    
-    await transactionRef.set({
-      transactionId: transactionRef.id,
-      leaseId: leaseId,
-      amount: amount,
-      splits: {
-        platformFee: platformFee,
-        agencyFee: agencyFee,
-        ownerPayout: ownerPayout
-      },
-      status: "Completed",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      userId: auth.uid
+    await db.runTransaction(async (tx) => {
+      if ((await tx.get(transactionRef)).exists) {
+        throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+          transactionId: transactionRef.id,
+          period,
+        });
+      }
+      tx.create(transactionRef, {
+        transactionId: transactionRef.id,
+        leaseId: lease.id,
+        period,
+        tenant_id: lease.tenant_id,
+        owner_id: lease.owner_id || "",
+        agency_id: lease.agency_id || "",
+        amount: due,
+        currencyCode: countryCode === "AE" ? "AED" : "EGP",
+        splits: { platformFee, agencyFee, ownerPayout },
+        status: "Completed",
+        createdAt: FieldValue.serverTimestamp(),
+        userId: auth.uid,
+      });
     });
-
-    return { success: true, transactionId: transactionRef.id };
+    return { success: true, transactionId: transactionRef.id, period };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    if (error && (error.code === 6 || error.code === "already-exists")) {
+      throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+        transactionId: transactionRef.id,
+        period,
+      });
+    }
     logger.error("Error processing rent payment", error);
-    throw new Error("Failed to process payment");
+    throw new HttpsError("internal", "Failed to process the payment.");
   }
 });
 
@@ -211,6 +286,66 @@ exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
   });
   logger.info(`Role ${result.role} assigned to ${result.uid} by ${auth.uid}`);
   return { success: true, ...result };
+});
+
+// Profile fields a platform Admin may see. An allowlist, so a field added to Users later (IBAN,
+// national ID, phone, KYC data, ...) stays hidden until someone decides to expose it. Firestore
+// rules cannot hide single fields, which is why Admin reads users through this callable instead
+// of reading Users/{uid} (rules keep that to the owner of the profile and SuperAdmin).
+const ADMIN_USER_FIELDS = ["user_id", "email", "full_name", "role", "agency_id", "country_code", "countryCode"];
+const ADMIN_USER_PAGE_MAX = 100;
+
+function adminUserView(doc) {
+  const view = { uid: doc.id };
+  for (const field of ADMIN_USER_FIELDS) {
+    const value = doc.get(field);
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") view[field] = value;
+  }
+  const created = doc.get("created_at");
+  if (created instanceof Timestamp) view.created_at = created.toDate().toISOString();
+  return view;
+}
+
+// Page tokens are Users document ids. Firestore ids with a slash, or of the reserved __x__ form,
+// make the query throw, so anything that is not a plain id is rejected up front.
+const PAGE_TOKEN_PATTERN = /^(?!__.*__$)[A-Za-z0-9_-]{1,128}$/;
+
+function isValidPageToken(value) {
+  return typeof value === "string" && PAGE_TOKEN_PATTERN.test(value);
+}
+
+/** The role in each user's custom claim (what the rules and the app trust), by uid. */
+async function claimRolesFor(uids) {
+  const roles = new Map();
+  if (uids.length === 0) return roles;
+  const result = await admin.auth().getUsers(uids.map((uid) => ({ uid })));
+  for (const user of result.users) {
+    const role = user.customClaims && user.customClaims.role;
+    if (typeof role === "string") roles.set(user.uid, role);
+  }
+  return roles;
+}
+
+// Read-only, paged, sanitized user directory for platform staff (Admin and SuperAdmin).
+exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
+  const auth = requireAuth(request);
+  await requireRole(auth, PLATFORM_STAFF_ROLES);
+  const data = request.data || {};
+  const requested = Number(data.limit);
+  const limit = Number.isInteger(requested) && requested >= 1 ? Math.min(requested, ADMIN_USER_PAGE_MAX) : 50;
+  let query = admin.firestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
+  if (data.startAfter !== undefined && data.startAfter !== null && data.startAfter !== "") {
+    if (!isValidPageToken(data.startAfter)) {
+      throw new HttpsError("invalid-argument", "startAfter is not a valid page token.");
+    }
+    query = query.startAfter(data.startAfter);
+  }
+  const snap = await query.get();
+  const claimRoles = await claimRolesFor(snap.docs.map((doc) => doc.id));
+  return {
+    users: snap.docs.map((doc) => ({ ...adminUserView(doc), claim_role: claimRoles.get(doc.id) || "" })),
+    nextPageToken: snap.size === limit ? snap.docs[snap.size - 1].id : null,
+  };
 });
 
 // Demo accounts are seeded only by the local admin script (seed.js), never by a deployed endpoint.
@@ -423,13 +558,28 @@ function boundedNumber(value, fallback, max) {
  * explicit allowlist. Only the fields below can ever reach the public catalog; tenant
  * identity, installments, unit numbers, notes, and owner contact data never do.
  */
-/** Rating and featured flag are moderated server-side, so they come from the current public doc. */
-function moderatedFields(current) {
+/**
+ * Rating, featured and verified are moderated by platform staff, so they come from the current
+ * public doc and an owner's edit can never clear them. Hiding is different: it is read from
+ * PropertyModeration/{propertyId}, a doc no owner can write or delete, so deleting or recreating
+ * the public or private doc cannot lift it. A listing hidden by moderation stays unpublished
+ * until a moderator restores it. A missing moderation doc means not hidden.
+ */
+function moderatedFields(current, moderation = NOT_MODERATED) {
   const rating = current && current.rating;
   return {
     rating: typeof rating === "number" && rating >= 0 && rating <= 5 ? rating : DEFAULT_LISTING_RATING,
     isFeatured: Boolean(current && current.isFeatured === true),
+    verified: Boolean(current && current.verified === true),
+    moderation_hidden: moderation.hidden === true,
   };
+}
+
+const NOT_MODERATED = Object.freeze({ hidden: false });
+const MODERATION_COLLECTION = "PropertyModeration";
+
+function moderationFromSnap(snap) {
+  return snap && snap.exists ? { hidden: snap.get("hidden") === true } : NOT_MODERATED;
 }
 
 /** Only listings with a positive rent can be published. */
@@ -438,7 +588,7 @@ function hasPublishablePrice(data) {
   return Number.isFinite(price) && price > 0;
 }
 
-function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", current = null } = {}) {
+function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", current = null, moderation = NOT_MODERATED } = {}) {
   const countryCode = data.countryCode === "AE" ? "AE" : "EG";
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
@@ -466,11 +616,11 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
     isFurnished: data.isFurnished !== false,
     agencyNames: PLATFORM_AGENCY_NAMES,
     agencyPhone: PLATFORM_AGENCY_PHONE,
-    ...moderatedFields(current),
-    is_published: true,
+    ...moderatedFields(current, moderation),
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
   };
+  listing.is_published = !listing.moderation_hidden;
   if (agencyId) listing.agency_id = agencyId;
   return listing;
 }
@@ -498,15 +648,17 @@ async function isClaimablePlaceholder(current) {
  */
 async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlaceholder = false } = {}) {
   const marketDocRef = db.collection("Properties").doc(propertyId);
+  const moderationRef = db.collection(MODERATION_COLLECTION).doc(propertyId);
   return db.runTransaction(async (tx) => {
     const current = await tx.get(marketDocRef);
+    const moderation = moderationFromSnap(await tx.get(moderationRef));
     if (current.exists && current.get("owner_id") !== ownerId) {
       if (claimPlaceholder && await isClaimablePlaceholder(current)) {
         logger.warn(
           `Replacing the unpublished placeholder [${propertyId}] held by ` +
           `[${current.get("owner_id") || "no owner"}] with the listing of owner [${ownerId}].`
         );
-        mutate(tx, marketDocRef, { exists: false, data: () => null });
+        mutate(tx, marketDocRef, { exists: false, data: () => null }, moderation);
         return true;
       }
       logger.warn(
@@ -515,9 +667,23 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
       );
       return false;
     }
-    mutate(tx, marketDocRef, current);
+    mutate(tx, marketDocRef, current, moderation);
     return true;
   });
+}
+
+/**
+ * Whether a private listing may be live right now: the owner wants it public and available, holds
+ * a role that can publish, and has a positive rent. `refusal` says why not when it wants to be live.
+ */
+async function publishDecision(ownerId, data) {
+  const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
+  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "" };
+  const { role, agencyId } = await resolveUserAuthority(ownerId);
+  const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
+    : !hasPublishablePrice(data) ? "the rent is not a positive number"
+      : "";
+  return { wantsPublic, refusal, agencyId };
 }
 
 /**
@@ -536,8 +702,15 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     if (!event.data || !event.data.after || !event.data.after.exists) {
       logger.info(`Property [${propertyId}] was deleted by owner [${ownerId}]. Removing from /Properties.`);
       try {
-        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => {
-          if (current.exists) tx.delete(ref);
+        await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current, moderation) => {
+          if (!current.exists) return;
+          // A listing under moderation hold is never deleted by an owner action: it stays,
+          // unpublished, so recreating the private doc cannot bring it back.
+          if (moderation.hidden) {
+            tx.set(ref, { is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() }, { merge: true });
+          } else {
+            tx.delete(ref);
+          }
         });
       } catch (err) {
         logger.error(`Error deleting property [${propertyId}] from /Properties`, err);
@@ -548,13 +721,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const afterData = event.data.after.data();
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const wantsPublic = isPublished && rentalStatus === "available";
-    const { role: ownerRole, agencyId } = wantsPublic ? await resolveUserAuthority(ownerId) : { role: "", agencyId: "" };
-
-    const refusal = !wantsPublic ? ""
-      : !PUBLISHER_ROLES.includes(ownerRole) ? `owner [${ownerId}] has role [${ownerRole || "none"}]`
-        : !hasPublishablePrice(afterData) ? "the rent is not a positive number"
-          : "";
+    const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -575,9 +742,13 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
       logger.info(`Syncing published property [${propertyId}] for owner [${ownerId}] to /Properties`);
       try {
         // Full replace (no merge) so stale or previously leaked fields are purged.
-        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current) => tx.set(
+        const written = await writeOwnedMarketDoc(db, ownerId, propertyId, (tx, ref, current, moderation) => tx.set(
           ref,
-          sanitizeForMarketplace(afterData, ownerId, propertyId, { agencyId, current: current.exists ? current.data() : null }),
+          sanitizeForMarketplace(afterData, ownerId, propertyId, {
+            agencyId,
+            current: current.exists ? current.data() : null,
+            moderation,
+          }),
         ), { claimPlaceholder: true });
         if (written) logger.info(`Successfully synchronized sanitized property [${propertyId}] to public marketplace.`);
       } catch (err) {
@@ -607,6 +778,75 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     return null;
   }
 );
+
+/**
+ * Keeps the public listing in line with PropertyModeration.
+ *
+ * A hide always takes the public doc offline, even if the moderation doc was written without it.
+ *
+ * Lifting the hold (or deleting the moderation doc) is the only way a moderated listing goes back
+ * online, and it is decided here, never by a client write: the public doc is rebuilt from the
+ * owner's current private doc, and published only if the listing was live before the hide
+ * (pre_hide_published), the private doc still wants to be public and available, the rent is
+ * positive, and the owner still holds a publishing role. Otherwise the listing stays offline. This
+ * is what stops a restore from reviving a stale public doc (old price, lost role, unpublished).
+ */
+exports.reconcilePropertyModeration = onDocumentWritten(
+  `${MODERATION_COLLECTION}/{propertyId}`,
+  async (event) => {
+    const propertyId = event.params.propertyId;
+    const before = event.data && event.data.before;
+    const after = event.data && event.data.after;
+    const hidden = Boolean(after && after.exists && after.get("hidden") === true);
+    const wasHidden = Boolean(before && before.exists && before.get("hidden") === true);
+    const preHidePublished = Boolean(after && after.exists && after.get("pre_hide_published") === true);
+    const db = admin.firestore();
+    const ref = db.collection("Properties").doc(propertyId);
+    try {
+      const current = await ref.get();
+      if (!current.exists) return null;
+      if (hidden) {
+        if (current.get("is_published") !== false || current.get("moderation_hidden") !== true) {
+          await ref.update({ is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() });
+        }
+        return null;
+      }
+      if (!wasHidden && current.get("moderation_hidden") !== true) return null;
+      await liftHold(db, propertyId, preHidePublished);
+    } catch (err) {
+      logger.error(`Error reconciling moderation for property [${propertyId}]`, err);
+      throw err;
+    }
+    return null;
+  }
+);
+
+async function liftHold(db, propertyId, preHidePublished) {
+  const ref = db.collection("Properties").doc(propertyId);
+  const ownerId = (await ref.get()).get("owner_id");
+  const privateSnap = ownerId && preHidePublished
+    ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
+    : null;
+  const privateData = privateSnap && privateSnap.exists ? privateSnap.data() : null;
+  const decision = privateData ? await publishDecision(ownerId, privateData) : null;
+  const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
+  if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);
+
+  await db.runTransaction(async (tx) => {
+    const current = await tx.get(ref);
+    const moderation = moderationFromSnap(await tx.get(db.collection(MODERATION_COLLECTION).doc(propertyId)));
+    if (!current.exists || current.get("owner_id") !== ownerId || moderation.hidden) return;
+    if (goLive) {
+      tx.set(ref, sanitizeForMarketplace(privateData, ownerId, propertyId, {
+        agencyId: decision.agencyId,
+        current: current.data(),
+        moderation: NOT_MODERATED,
+      }));
+    } else {
+      tx.update(ref, { is_published: false, moderation_hidden: false, updated_at: FieldValue.serverTimestamp() });
+    }
+  });
+}
 
 // Export helper for unit testing
 exports.sanitizeForMarketplace = sanitizeForMarketplace;

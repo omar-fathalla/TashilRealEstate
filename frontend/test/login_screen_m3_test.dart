@@ -80,7 +80,7 @@ void main() {
       expect(find.byIcon(Icons.smartphone_rounded), findsOneWidget);
     });
 
-    testWidgets('Signup role picker offers only self-service roles (Owner, Tenant)', (tester) async {
+    testWidgets('Signup role picker offers only self-service roles (Owner, Tenant, Investor)', (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -91,7 +91,9 @@ void main() {
       final roleGroup = tester.widget<TashilConnectedButtonGroup<String>>(
         find.byType(TashilConnectedButtonGroup<String>),
       );
-      expect(roleGroup.segments.map((s) => s.value).toList(), ['Owner', 'Tenant']);
+      expect(roleGroup.segments.map((s) => s.value).toList(), ['Owner', 'Tenant', 'Investor']);
+      expect(roleGroup.segments.map((s) => s.value), isNot(contains('Admin')));
+      expect(roleGroup.segments.map((s) => s.value), isNot(contains('SuperAdmin')));
       expect(
         find.descendant(
           of: find.byType(TashilConnectedButtonGroup<String>),

@@ -154,11 +154,69 @@ test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; exampl
     "backend/.env.local",
     "backend/.env.tashil-proptech-os.local",
     "frontend/.env.local",
-    "backend/.env",
   ]) {
     assert.equal(ignored(file), true, `${file} must be ignored`);
   }
   assert.equal(ignored("backend/.secret.local.example"), false);
+  // TAQ-89: backend/.env is committed on purpose (non-secret function params only).
+  assert.equal(ignored("backend/.env"), false);
+});
+
+test("TAQ-91: the repo-root .env and .secret* are ignored, and the ignore does not reach backend/.env", () => {
+  const { execFileSync } = require("child_process");
+  const check = (file) => {
+    try {
+      return execFileSync("git", ["check-ignore", "-v", file], { cwd: root, encoding: "utf8" }).trim();
+    } catch (err) {
+      if (err.status === 1) return "";
+      throw err;
+    }
+  };
+  for (const file of [".env", ".secret", ".secret.json", ".secret.prod"]) {
+    assert.match(check(file), /^\.gitignore:\d+:\/\.(env|secret\*)\t/, `${file} must be ignored by an anchored root rule`);
+  }
+  // `git check-ignore -v backend/.env` prints nothing: no rule matches, and the file is tracked.
+  assert.equal(check("backend/.env"), "");
+  const tracked = execFileSync("git", ["ls-files", "--error-unmatch", "backend/.env"], { cwd: root, encoding: "utf8" });
+  assert.equal(tracked.trim(), "backend/.env");
+  assert.equal(check("backend/.secret.local") !== "", true);
+});
+
+test("TAQ-100 (F4 follow-up): backend/.secret*.json and backend/.env.* are ignored, backend/.env and examples are not", () => {
+  const { execFileSync } = require("child_process");
+  const check = (file) => {
+    try {
+      return execFileSync("git", ["check-ignore", "-v", file], { cwd: root, encoding: "utf8" }).trim();
+    } catch (err) {
+      if (err.status === 1) return "";
+      throw err;
+    }
+  };
+  for (const file of [
+    "backend/.secret.json",
+    "backend/.secret-prod.json",
+    "backend/.secret.service-account.json",
+    "backend/.env.tashil-proptech-os",
+    "backend/.env.some-project",
+    "backend/.env.production",
+  ]) {
+    assert.notEqual(check(file), "", `${file} must be ignored`);
+  }
+  assert.equal(check("backend/.env"), "", "backend/.env stays tracked");
+  let exampleIgnored = true;
+  try {
+    execFileSync("git", ["check-ignore", "-q", "backend/.env.example"], { cwd: root });
+  } catch (err) {
+    if (err.status !== 1) throw err;
+    exampleIgnored = false;
+  }
+  assert.equal(exampleIgnored, false, "example templates stay tracked");
+  assert.equal(check("backend/package.json"), "");
+  const { execFileSync: run } = require("child_process");
+  assert.equal(run("git", ["ls-files", "--error-unmatch", "backend/.env"], { cwd: root, encoding: "utf8" }).trim(), "backend/.env");
+  const tracked = run("git", ["ls-files", "backend"], { cwd: root, encoding: "utf8" }).split("\n");
+  assert.deepEqual(tracked.filter((f) => /(^|\/)\.env\./.test(f) && !f.endsWith(".example")), [], "no per-project env file is tracked");
+  assert.deepEqual(tracked.filter((f) => /\.secret.*\.json$/.test(f)), [], "no secret json is tracked");
 });
 
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
@@ -299,4 +357,31 @@ test("TAQ-7: docs/DEV_ENVIRONMENT.md documents the dev build and deploy and hold
   }
   assert.doesNotMatch(doc, /AIza[0-9A-Za-z_-]{20,}/);
   assert.doesNotMatch(doc, /(password|passwd)\s*[:=]\s*\S{6,}/i);
+});
+
+// --- TAQ-88: Cloud Functions run on a supported Node runtime ---
+
+const MIN_NODE_MAJOR = 22;
+
+function minMajor(range) {
+  const match = String(range).match(/\d+/);
+  assert.ok(match, `engines.node "${range}" has no version number`);
+  return Number(match[0]);
+}
+
+test("TAQ-88: backend engines.node is at least 22 (Node 20 is decommissioned on Firebase)", () => {
+  const { engines } = JSON.parse(read("backend/package.json"));
+  assert.ok(engines && engines.node, "backend/package.json must set engines.node");
+  assert.ok(minMajor(engines.node) >= MIN_NODE_MAJOR, `engines.node is ${engines.node}; need >= ${MIN_NODE_MAJOR}`);
+});
+
+test("TAQ-88: the lockfile and firebase.json runtime agree with engines.node", () => {
+  const lock = JSON.parse(read("backend/package-lock.json"));
+  assert.ok(minMajor(lock.packages[""].engines.node) >= MIN_NODE_MAJOR);
+  const functions = JSON.parse(read("firebase.json")).functions;
+  for (const entry of Array.isArray(functions) ? functions : [functions]) {
+    if (entry.runtime === undefined) continue;
+    const major = Number(String(entry.runtime).replace(/^nodejs/, ""));
+    assert.ok(major >= MIN_NODE_MAJOR, `firebase.json runtime ${entry.runtime} is too old`);
+  }
 });

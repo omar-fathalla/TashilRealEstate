@@ -219,3 +219,371 @@ test("TAQ-9: setUserRole writes the role and agency as custom claims", async () 
   user = await admin.auth().getUser("target");
   assert.deepEqual(user.customClaims, { role: "Owner" });
 });
+
+// --- TAQ-91: Admin and Investor roles ---
+
+async function claimsOf(uid) {
+  return (await admin.auth().getUser(uid)).customClaims || {};
+}
+
+test("TAQ-91: a SuperAdmin can grant Admin and Investor; the claim and profile carry the role and no agency", async () => {
+  const root = caller("root", { role: "SuperAdmin" });
+  await admin.auth().createUser({ uid: "staff" });
+  await admin.auth().setCustomUserClaims("staff", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await fns.setUserRole.run({ data: { uid: "staff", role: "Admin" }, auth: root });
+  assert.deepEqual(await claimsOf("staff"), { role: "Admin" });
+  const profile = (await db.collection("Users").doc("staff").get()).data();
+  assert.equal(profile.role, "Admin");
+  assert.equal(profile.role_updated_by, "root");
+
+  await admin.auth().createUser({ uid: "inv" });
+  await fns.setUserRole.run({ data: { uid: "inv", role: "Investor" }, auth: root });
+  assert.deepEqual(await claimsOf("inv"), { role: "Investor" });
+});
+
+test("TAQ-91: an Admin cannot assign or change any role, for itself or anyone else", async () => {
+  const staff = caller("staff", { role: "Admin" });
+  await admin.auth().createUser({ uid: "staff" });
+  await admin.auth().setCustomUserClaims("staff", { role: "Admin" });
+  await admin.auth().createUser({ uid: "victim" });
+  await admin.auth().createUser({ uid: "root" });
+  await admin.auth().setCustomUserClaims("root", { role: "SuperAdmin" });
+  for (const data of [
+    { uid: "staff", role: "SuperAdmin" },
+    { uid: "staff", role: "Admin" },
+    { uid: "staff", role: "Owner" },
+    { uid: "victim", role: "SuperAdmin" },
+    { uid: "victim", role: "Admin" },
+    { uid: "victim", role: "Investor" },
+    { uid: "victim", role: "AgencyAdmin", agencyId: "agency-1" },
+    { uid: "root", role: "Owner" },
+    { uid: "root", role: "Admin" },
+  ]) {
+    await expectCode(fns.setUserRole.run({ data, auth: staff }), "permission-denied");
+  }
+  assert.deepEqual(await claimsOf("staff"), { role: "Admin" });
+  assert.deepEqual(await claimsOf("victim"), {});
+  assert.deepEqual(await claimsOf("root"), { role: "SuperAdmin" });
+});
+
+test("TAQ-91: Investor, Tenant, Owner and a profile that says Admin cannot assign roles either", async () => {
+  await admin.auth().createUser({ uid: "victim" });
+  await db.collection("Users").doc("fake-admin").set({ role: "Admin" });
+  for (const who of [caller("inv", { role: "Investor" }), caller("tenant"), caller("owner"), caller("fake-admin"), caller("nobody")]) {
+    await expectCode(fns.setUserRole.run({ data: { uid: "victim", role: "Owner" }, auth: who }), "permission-denied");
+  }
+  await expectCode(fns.setUserRole.run({ data: { uid: "victim", role: "Owner" } }), "unauthenticated");
+});
+
+test("TAQ-91: an Investor profile is trusted as a self-service role, Admin and SuperAdmin profiles are not", async () => {
+  const authz = require("../authz");
+  await db.collection("Users").doc("inv-profile").set({ role: "Investor" });
+  await db.collection("Users").doc("admin-profile").set({ role: "Admin" });
+  await db.collection("Users").doc("root-profile").set({ role: "SuperAdmin" });
+  assert.equal(await authz.resolveRole(caller("inv-profile")), "Investor");
+  assert.equal(await authz.resolveRole(caller("admin-profile")), "");
+  assert.equal(await authz.resolveRole(caller("root-profile")), "");
+  assert.equal(await authz.resolveRole(caller("admin-profile", { role: "Admin" })), "Admin");
+  assert.deepEqual(authz.SELF_SERVICE_ROLES, ["Owner", "Tenant", "Investor"]);
+  assert.ok(!authz.PUBLISHER_ROLES.includes("Investor") && !authz.PUBLISHER_ROLES.includes("Admin"));
+});
+
+test("TAQ-91: only Admin and SuperAdmin can read the user directory, and it never carries IBAN or national ID", async () => {
+  await db.collection("Users").doc("rich").set({
+    user_id: "rich",
+    role: "Owner",
+    email: "rich@test.tashilaqar.com",
+    full_name: "Rich Owner",
+    iban: "AE070331234567890123456",
+    national_id: "784-1990-1234567-1",
+    nationalId: "784199012345671",
+    phone: "+971500000001",
+    bank_details: { iban: "AE07" },
+    kyc_status: "approved",
+    created_at: admin.firestore.Timestamp.fromDate(new Date("2026-01-01T00:00:00Z")),
+  });
+  for (const who of [caller("a", { role: "Admin" }), caller("r", { role: "SuperAdmin" })]) {
+    const out = await fns.listUsersForAdmin.run({ data: { limit: 100 }, auth: who });
+    const row = out.users.find((u) => u.uid === "rich");
+    assert.deepEqual(row, {
+      uid: "rich",
+      user_id: "rich",
+      email: "rich@test.tashilaqar.com",
+      full_name: "Rich Owner",
+      role: "Owner",
+      claim_role: "",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    assert.doesNotMatch(JSON.stringify(out), /AE07|784|iban|national|phone|bank|kyc/i);
+  }
+  for (const who of [caller("inv", { role: "Investor" }), caller("o", { role: "Owner" }), caller("t", { role: "Tenant" }),
+    caller("ag", { role: "AgencyAdmin", agency_id: "agency-1" }), caller("none"), caller("tenant"), caller("owner")]) {
+    await expectCode(fns.listUsersForAdmin.run({ data: {}, auth: who }), "permission-denied");
+  }
+  await expectCode(fns.listUsersForAdmin.run({ data: {} }), "unauthenticated");
+});
+
+test("TAQ-91: the user directory is paged", async () => {
+  for (let i = 0; i < 5; i += 1) await db.collection("Users").doc(`p${i}`).set({ role: "Owner", email: `p${i}@x.test` });
+  const staff = caller("a", { role: "Admin" });
+  const first = await fns.listUsersForAdmin.run({ data: { limit: 2 }, auth: staff });
+  assert.equal(first.users.length, 2);
+  assert.ok(first.nextPageToken);
+  const second = await fns.listUsersForAdmin.run({ data: { limit: 2, startAfter: first.nextPageToken }, auth: staff });
+  assert.equal(second.users.length, 2);
+  assert.notEqual(second.users[0].uid, first.users[0].uid);
+  const huge = await fns.listUsersForAdmin.run({ data: { limit: 100000 }, auth: staff });
+  assert.ok(huge.users.length <= 100);
+});
+
+test("TAQ-91: Admin and Investor cannot touch payments or the market index refresh", async () => {
+  for (const who of [caller("a", { role: "Admin" }), caller("inv", { role: "Investor" }), caller("nobody")]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 100 }, auth: who }), "permission-denied");
+    await expectCode(fns.syncMarketIndexManual.run({ data: { country: "EG" }, auth: who }), "permission-denied");
+    await expectCode(fns.sendRentalReminder.run({ data: { leaseId: "lease-1" }, auth: who }), "permission-denied");
+    await expectCode(fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: who }), "permission-denied");
+  }
+});
+
+
+// --- TAQ-91 UT (e): processRentPayment ---
+
+const tenantCaller = () => caller("tenant");
+
+/** YYYY-MM for the UTC month [offset] months from now. */
+function monthsFromNow(offset) {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+async function transactions() {
+  return (await db.collection("Transactions").get()).docs.map((d) => d.data());
+}
+
+test("TAQ-91 (UT e): a signed-out caller gets UNAUTHENTICATED, not INTERNAL", async () => {
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 } }), "unauthenticated");
+  await expectCode(fns.processRentPayment.run({ data: undefined }), "unauthenticated");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): the lease's tenant pays the lease's rent and the server writes the record", async () => {
+  const result = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(result.success, true);
+  const [tx] = await transactions();
+  assert.equal(tx.leaseId, "lease-1");
+  assert.equal(tx.amount, 8000);
+  assert.equal(tx.currencyCode, "AED");
+  assert.equal(tx.tenant_id, "tenant");
+  assert.equal(tx.owner_id, "owner");
+  assert.equal(tx.agency_id, "agency-1");
+  assert.equal(tx.userId, "tenant");
+  assert.deepEqual(tx.splits, { platformFee: 160, agencyFee: 640, ownerPayout: 7200 });
+  assert.ok(tx.createdAt && typeof tx.createdAt.toDate === "function", "createdAt is a server timestamp (no FieldValue crash)");
+});
+
+test("TAQ-91 (UT e): the amount may be left out, and then the lease's rent is used", async () => {
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: tenantCaller() });
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: null, period: monthsFromNow(-1) }, auth: tenantCaller() });
+  assert.deepEqual((await transactions()).map((t) => t.amount), [8000, 8000]);
+});
+
+test("TAQ-91 (UT e): negative, non-numeric, non-finite and mismatching amounts are INVALID_ARGUMENT", async () => {
+  for (const amount of [-999999, 0, -0.01, "abc", "8000", true, [8000], {}, NaN, Infinity, -Infinity, 1, 7999.5, 8000.5, 80000]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): a missing or malformed lease id is INVALID_ARGUMENT and an unknown lease is NOT_FOUND", async () => {
+  for (const leaseId of [undefined, "", 7, null, {}, ["lease-1"]]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId, amount: 8000 }, auth: tenantCaller() }), "invalid-argument");
+  }
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "does-not-exist", amount: 8000 }, auth: tenantCaller() }), "not-found");
+  await expectCode(fns.processRentPayment.run({ data: undefined, auth: tenantCaller() }), "invalid-argument");
+});
+
+test("TAQ-91 (UT e): only the lease's tenant can pay: other tenants, owner, agency, SuperAdmin and other roles are denied", async () => {
+  await db.collection("Users").doc("tenant2").set({ role: "Tenant" });
+  await db.collection("Users").doc("inv").set({ role: "Investor" });
+  const denied = [
+    caller("tenant2"),
+    caller("owner"),
+    caller("stranger"),
+    caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" }),
+    caller("root", { role: "SuperAdmin" }),
+    caller("adm", { role: "Admin" }),
+    caller("inv"),
+    caller("nobody"),
+  ];
+  for (const who of denied) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: who }), "permission-denied");
+  }
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): a lease without a tenant or without a server-side rent cannot be paid", async () => {
+  await db.collection("Leases").doc("no-tenant").set({ owner_id: "owner", country_code: "AE", financialTerms: { monthlyRent: 100 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-tenant", amount: 100 }, auth: tenantCaller() }), "permission-denied");
+  await db.collection("Leases").doc("no-rent").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE" });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-rent", amount: 100 }, auth: tenantCaller() }), "failed-precondition");
+  await db.collection("Leases").doc("no-country").set({ owner_id: "owner", tenant_id: "tenant", financialTerms: { monthlyRent: 100 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "no-country" }, auth: tenantCaller() }), "failed-precondition");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-91 (UT e): an annual-rent lease is compared against one twelfth, rounded to cents", async () => {
+  await db.collection("Leases").doc("annual").set({ owner_id: "owner", tenant_id: "tenant", country_code: "EG", financialTerms: { annualRent: 100000 } });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "annual", amount: 100000 }, auth: tenantCaller() }), "invalid-argument");
+  await fns.processRentPayment.run({ data: { leaseId: "annual", amount: 8333.33 }, auth: tenantCaller() });
+  const [tx] = await transactions();
+  assert.equal(tx.amount, 8333.33);
+  assert.equal(tx.currencyCode, "EGP");
+  const { platformFee, agencyFee, ownerPayout } = tx.splits;
+  assert.equal(Math.round((platformFee + agencyFee + ownerPayout) * 100) / 100, 8333.33);
+});
+
+// --- TAQ-91 UT (d): listUsersForAdmin page tokens ---
+
+test("TAQ-91 (UT d): invalid startAfter values are INVALID_ARGUMENT, never INTERNAL", async () => {
+  const staff = caller("a", { role: "Admin" });
+  for (const startAfter of ["../x", "a/b", "x/", "/", "__x__", "____", "a b", "x".repeat(129), "a/../b", "..", ".", 5, true, ["p1"], {}]) {
+    await expectCode(fns.listUsersForAdmin.run({ data: { startAfter }, auth: staff }), "invalid-argument");
+  }
+});
+
+test("TAQ-91 (UT d): plain ids, empty and missing tokens still work", async () => {
+  for (const id of ["p1", "p2", "user_3", "User-4"]) await db.collection("Users").doc(id).set({ role: "Owner" });
+  const staff = caller("a", { role: "Admin" });
+  const noToken = await fns.listUsersForAdmin.run({ data: {}, auth: staff });
+  const emptyToken = await fns.listUsersForAdmin.run({ data: { startAfter: "" }, auth: staff });
+  const nullToken = await fns.listUsersForAdmin.run({ data: { startAfter: null }, auth: staff });
+  assert.equal(noToken.users.length, emptyToken.users.length);
+  assert.equal(noToken.users.length, nullToken.users.length);
+  const after = await fns.listUsersForAdmin.run({ data: { startAfter: "p1", limit: 100 }, auth: staff });
+  assert.ok(after.users.every((u) => u.uid > "p1"));
+  const unknown = await fns.listUsersForAdmin.run({ data: { startAfter: "zzz-not-a-user" }, auth: staff });
+  assert.deepEqual(unknown.users, []);
+  assert.equal(unknown.nextPageToken, null);
+});
+
+test("TAQ-91: the user directory carries the claim role next to the profile role", async () => {
+  await db.collection("Users").doc("claimed").set({ role: "Owner", email: "c@x.test", iban: "AE07", national_id: "784" });
+  await admin.auth().createUser({ uid: "claimed" });
+  await admin.auth().setCustomUserClaims("claimed", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await db.collection("Users").doc("plain").set({ role: "Tenant" });
+  const result = await fns.listUsersForAdmin.run({ data: { limit: 100 }, auth: caller("a", { role: "Admin" }) });
+  const byId = Object.fromEntries(result.users.map((u) => [u.uid, u]));
+  assert.equal(byId.claimed.role, "Owner");
+  assert.equal(byId.claimed.claim_role, "AgencyAdmin");
+  assert.equal(byId.plain.claim_role, "");
+  assert.equal("iban" in byId.claimed, false);
+  assert.equal("national_id" in byId.claimed, false);
+});
+
+// --- TAQ-99: processRentPayment is idempotent per lease and month ---
+
+test("TAQ-99: the transaction id is the lease id and the billing month, and the record carries the period", async () => {
+  const result = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(result.transactionId, `lease-1_${monthsFromNow(0)}`);
+  assert.equal(result.period, monthsFromNow(0));
+  const snap = await db.collection("Transactions").doc(result.transactionId).get();
+  assert.equal(snap.get("period"), monthsFromNow(0));
+  assert.equal(snap.get("transactionId"), result.transactionId);
+});
+
+test("TAQ-99: a second payment for the same lease and month is ALREADY_EXISTS and writes nothing", async () => {
+  const first = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  const before = (await db.collection("Transactions").doc(first.transactionId).get()).data();
+  await assert.rejects(
+    fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() }),
+    (err) => {
+      assert.equal(err.code, "already-exists");
+      assert.equal(err.details.transactionId, first.transactionId);
+      return true;
+    },
+  );
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: tenantCaller() }), "already-exists");
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(0) }, auth: tenantCaller() }), "already-exists");
+  const all = await transactions();
+  assert.equal(all.length, 1);
+  assert.deepEqual((await db.collection("Transactions").doc(first.transactionId).get()).data(), before, "the existing record is untouched");
+});
+
+test("TAQ-99: different months, and different leases, are separate payments", async () => {
+  await db.collection("Leases").doc("lease-2").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE", financialTerms: { monthlyRent: 3000 } });
+  const ids = [];
+  for (const [leaseId, period] of [["lease-1", undefined], ["lease-1", monthsFromNow(-1)], ["lease-1", monthsFromNow(1)], ["lease-2", undefined]]) {
+    const r = await fns.processRentPayment.run({ data: { leaseId, period }, auth: tenantCaller() });
+    ids.push(r.transactionId);
+  }
+  assert.equal(new Set(ids).size, 4);
+  assert.equal((await transactions()).length, 4);
+});
+
+test("TAQ-99: concurrent calls for the same lease and month create exactly one transaction", async () => {
+  const results = await Promise.allSettled(
+    Array.from({ length: 8 }, () => fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() })),
+  );
+  const ok = results.filter((r) => r.status === "fulfilled");
+  const rejected = results.filter((r) => r.status === "rejected");
+  assert.equal(ok.length, 1, JSON.stringify(results.map((r) => r.status === "rejected" ? r.reason.code : "ok")));
+  assert.equal(rejected.length, 7);
+  for (const r of rejected) assert.equal(r.reason.code, "already-exists", r.reason.message);
+  const all = await transactions();
+  assert.equal(all.length, 1);
+  assert.equal(all[0].transactionId, ok[0].value.transactionId);
+});
+
+test("TAQ-99: concurrent calls for different months all succeed", async () => {
+  const periods = [-3, -2, -1, 0, 1].map(monthsFromNow);
+  const results = await Promise.all(
+    periods.map((period) => fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() })),
+  );
+  assert.deepEqual(results.map((r) => r.period).sort(), [...periods].sort());
+  assert.equal((await transactions()).length, 5);
+});
+
+test("TAQ-99: a malformed or out-of-range period is INVALID_ARGUMENT", async () => {
+  for (const period of ["2026-13", "2026-00", "2026-1", "26-01", "2026/01", "2026-01-01", "abc", "", 202611, true, ["2026-11"], {}, monthsFromNow(2), monthsFromNow(-25), "1999-01", "9999-12"]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+  for (const period of [monthsFromNow(1), monthsFromNow(-24)]) {
+    await fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() });
+  }
+  assert.equal((await transactions()).length, 2);
+});
+
+test("TAQ-101: a period before the lease start month is rejected, the start month and later are fine", async () => {
+  const start = monthsFromNow(-3);
+  await db.collection("Leases").doc("lease-1").update({ startDate: `${start}-15T00:00:00.000Z` });
+  for (const period of [monthsFromNow(-4), monthsFromNow(-24)]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+  for (const period of [start, monthsFromNow(-2), undefined]) {
+    await fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() });
+  }
+  assert.equal((await transactions()).length, 3);
+});
+
+test("TAQ-101: the lease start month also bounds a lease that stores it as a timestamp or under another name", async () => {
+  await db.collection("Leases").doc("lease-1").update({ start_date: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)) });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-2) }, auth: tenantCaller() }), "invalid-argument");
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-1) }, auth: tenantCaller() });
+});
+
+test("TAQ-101: a lease with no readable start date keeps the plain 24-month window", async () => {
+  await db.collection("Leases").doc("lease-1").update({ startDate: "not a date" });
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(-24) }, auth: tenantCaller() });
+});
+
+test("TAQ-99: a rejected call (wrong amount, other tenant) does not use up the month", async () => {
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 1 }, auth: tenantCaller() }), "invalid-argument");
+  await db.collection("Users").doc("tenant2").set({ role: "Tenant" });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: caller("tenant2") }), "permission-denied");
+  assert.equal((await transactions()).length, 0);
+  const ok = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(ok.success, true);
+});

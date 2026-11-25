@@ -1,7 +1,17 @@
 # Node
 backend/node_modules/
 backend/npm-debug.log
-backend/.env
+# backend/.env is committed on purpose: non-secret function params only (docs/SECURITY_SETUP.md)
+
+# Repo-root env and secret files. Anchored with a leading slash on purpose: a bare `.env` would
+# also ignore backend/.env, which must stay tracked.
+/.env
+/.secret*
+
+# Nested backend secrets and per-project env files (backend/.env stays tracked: `.env.*` needs a dot
+# after `env`, so it does not match it).
+backend/.secret*.json
+backend/.env.*
 
 # Local secrets for the Functions emulator and per-environment overrides
 .secret.local

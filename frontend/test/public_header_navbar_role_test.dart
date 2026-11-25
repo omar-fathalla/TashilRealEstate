@@ -57,6 +57,34 @@ void main() {
     });
   });
 
+  group('TAQ-91: header for Admin and Investor', () {
+    for (final lang in ['ar', 'en', 'hi']) {
+      final loc = AppLocalizations(Locale(lang));
+
+      test('[$lang] Admin shows the Platform Admin title and routes to /admin, not /super-admin', () {
+        RoleSession.instance.debugSet(RoleSessionStatus.signedIn, 'Admin');
+        final info = PublicHeaderNavbar.debugResolveUserInfo(_FakeUser(email: 'someone@x.com'), loc);
+        expect(info.roleTitle, loc.tr('roleAdmin'));
+        expect(info.roleTitle, isNot(loc.tr('roleSuperAdmin')));
+        expect(info.dashboardRoute, '/admin');
+      });
+
+      test('[$lang] Investor shows the Investor title and lands on the marketplace', () {
+        RoleSession.instance.debugSet(RoleSessionStatus.signedIn, 'Investor');
+        final info = PublicHeaderNavbar.debugResolveUserInfo(_FakeUser(email: 'admin@x.com'), loc);
+        expect(info.roleTitle, loc.tr('roleInvestor'));
+        expect(info.dashboardRoute, '/');
+      });
+    }
+
+    test('the role labels are Arabic, English and Hindi respectively', () {
+      expect(AppLocalizations(const Locale('ar')).tr('roleAdmin'), 'أدمن المنصة');
+      expect(AppLocalizations(const Locale('ar')).tr('roleInvestor'), 'مستثمر');
+      expect(AppLocalizations(const Locale('en')).tr('roleAdmin'), 'Platform Admin');
+      expect(AppLocalizations(const Locale('en')).tr('roleInvestor'), 'Investor');
+    });
+  });
+
   group('TAQ-28: visitors see the login CTA and no dashboard link', () {
     Widget app(Locale locale) => MaterialApp(
           locale: locale,

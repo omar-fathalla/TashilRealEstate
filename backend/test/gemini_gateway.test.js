@@ -31,7 +31,7 @@ function geminiReply(status, payload) {
 const OK_PAYLOAD = {
   candidates: [{ content: { parts: [{ text: "{\"ok\":true}" }] } }],
   usageMetadata: { totalTokenCount: 12 },
-  modelVersion: "gemini-2.5-flash",
+  modelVersion: "gemini-3.5-flash",
 };
 
 function textRequest(text = "Estimate the rent for a 2 bedroom flat.") {
@@ -103,20 +103,25 @@ test("TAQ-19: every visitor feature works signed out; sign-in-only features work
   assert.equal(calls.length, visitorFeatures.length + 2);
 });
 
-test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () => {
+test("TAQ-79 / TAQ-91: onboarding and OCR need an owner, agency, Admin or SuperAdmin role", async () => {
   const portalFeatures = Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].roles);
   assert.deepEqual(portalFeatures.sort(), ["document_ocr", "onboarding"]);
   await db.collection("Users").doc("profile-owner").set({ role: "Owner" });
   await db.collection("Users").doc("profile-tenant").set({ role: "Tenant" });
   await db.collection("Users").doc("profile-agency").set({ role: "AgencyAdmin" });
+  await db.collection("Users").doc("profile-investor").set({ role: "Investor" });
+  await db.collection("Users").doc("profile-admin").set({ role: "Admin" });
   for (const feature of portalFeatures) {
     for (const denied of [
       { uid: "no-role" },
       { uid: "tenant-claim", role: "Tenant" },
       { uid: "profile-tenant" },
+      // Investors do not list properties or hold leases, so OCR and onboarding are not theirs.
       { uid: "investor-claim", role: "Investor" },
+      { uid: "profile-investor" },
       // The profile document cannot vouch for an elevated role.
       { uid: "profile-agency" },
+      { uid: "profile-admin" },
     ]) {
       await expectCode(call({ feature, ...denied }), "permission-denied");
     }
@@ -124,18 +129,23 @@ test("TAQ-79: onboarding and OCR need an owner, agency or admin role", async () 
       { uid: "owner-claim", role: "Owner" },
       { uid: "profile-owner" },
       { uid: "agency-claim", role: "AgencyAdmin" },
+      { uid: "platform-admin-claim", role: "Admin" },
       { uid: "admin-claim", role: "SuperAdmin" },
     ]) {
       await call({ feature, ...allowed });
     }
   }
-  assert.equal(calls.length, portalFeatures.length * 4);
+  assert.equal(calls.length, portalFeatures.length * 5);
   const buckets = (await db.collection(gw.RATE_LIMIT_COLLECTION).get()).docs.map((d) => d.id);
-  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-agency"]) {
+  for (const uid of ["no-role", "tenant-claim", "profile-tenant", "investor-claim", "profile-investor", "profile-agency", "profile-admin"]) {
     assert.ok(!buckets.includes(`uid_${uid}`), `a denied ${uid} must not use quota`);
   }
-  // Tenants keep the public AI features.
+  // Tenants and Investors keep every public AI feature.
   await call({ uid: "tenant-claim", role: "Tenant" });
+  for (const feature of Object.keys(gw.FEATURES).filter((name) => gw.FEATURES[name].visitor)) {
+    await call({ feature, uid: "investor-claim", role: "Investor" });
+    await call({ feature, uid: "profile-investor" });
+  }
 });
 
 test("TAQ-19: an unknown feature is rejected", async () => {
@@ -149,7 +159,7 @@ test("TAQ-19: the key is sent in a header, never in the URL or the response", as
   const result = await call({ uid: "owner-1" });
   assert.equal(calls.length, 1);
   assert.doesNotMatch(calls[0].url, /key=/);
-  assert.equal(calls[0].url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+  assert.equal(calls[0].url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent");
   assert.equal(calls[0].init.headers["x-goog-api-key"], TEST_KEY);
   assert.doesNotMatch(JSON.stringify(result), new RegExp(TEST_KEY));
 });
@@ -162,19 +172,81 @@ test("TAQ-19: a missing secret fails closed without calling Gemini", async () =>
 
 // --- Model allowlist ---
 
-test("TAQ-19: only allowlisted models run; legacy app ids map to the default model", async () => {
+const modelsCalled = () => calls.map((c) => c.url.match(/models\/([^:]+):/)[1]);
+
+test("TAQ-19/TAQ-89: allowlisted models run as asked; retired and legacy app ids map to the default", async () => {
+  for (const model of ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]) {
+    await call({ uid: "u1", model });
+  }
+  await call({ uid: "u1", model: "gemini-2.5-flash" });
   await call({ uid: "u1", model: "gemini-2.5-flash-lite" });
   await call({ uid: "u1", model: "gemini-3.8-pro" });
   await call({ uid: "u1", model: "gemini-1.5-flash" });
   await call({ uid: "u1" });
-  assert.deepEqual(
-    calls.map((c) => c.url.match(/models\/([^:]+):/)[1]),
-    ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.5-flash"],
-  );
+  assert.deepEqual(modelsCalled(), [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+  ]);
   for (const model of ["gemini-2.5-pro", "gemini-ultra", "../../v1/files", 42]) {
     await expectCode(call({ uid: "u1", model }), "invalid-argument");
   }
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 9);
+});
+
+test("TAQ-89: GEMINI_MODEL sets the server-side default; an unknown value falls back safely", async () => {
+  const original = process.env.GEMINI_MODEL;
+  const warnings = [];
+  const warn = logger.warn;
+  logger.warn = (...args) => warnings.push(JSON.stringify(args));
+  try {
+    process.env.GEMINI_MODEL = "gemini-3.8-flash";
+    await call({ uid: "u1", model: "gemini-2.5-flash" });
+    await call({ uid: "u1" });
+    process.env.GEMINI_MODEL = "gemini-retired-1";
+    await call({ uid: "u1", model: "gemini-2.0-flash" });
+  } finally {
+    logger.warn = warn;
+    if (original === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = original;
+  }
+  assert.deepEqual(modelsCalled(), ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.5-flash"]);
+  assert.match(warnings.join("\n"), /gemini-retired-1/);
+});
+
+test("TAQ-89: the model setting is a deployable string param defaulting to gemini-3.5-flash", () => {
+  assert.equal(gw.DEFAULT_MODEL, "gemini-3.5-flash");
+  assert.equal(gw.configuredModel(), "gemini-3.5-flash");
+  for (const alias of ["gemini-2.5-flash", "gemini-2.5-flash-lite"]) {
+    assert.ok(Object.prototype.hasOwnProperty.call(gw.MODEL_ALIASES, alias), alias);
+    assert.ok(!gw.ALLOWED_MODELS.has(alias), alias);
+  }
+});
+
+test("TAQ-89: an upstream 404 (model retired) is logged by model name only and returned as UNAVAILABLE", async () => {
+  reply = geminiReply(404, {
+    error: { code: 404, status: "NOT_FOUND", message: "models/gemini-3.5-flash is no longer available to new users." },
+  });
+  const lines = [];
+  const original = { info: logger.info, warn: logger.warn, error: logger.error };
+  for (const level of Object.keys(original)) logger[level] = (...args) => lines.push({ level, text: JSON.stringify(args) });
+  try {
+    await expectCode(call({ uid: "u1" }), "unavailable");
+  } finally {
+    Object.assign(logger, original);
+  }
+  const entry = lines.find((line) => line.level === "error");
+  assert.ok(entry, "a 404 must be logged at error level");
+  assert.match(entry.text, /GEMINI_MODEL/);
+  assert.match(entry.text, /"model":"gemini-3.5-flash"/);
+  assert.match(entry.text, /"status":404/);
+  assert.doesNotMatch(lines.map((line) => line.text).join("\n"), new RegExp(TEST_KEY));
 });
 
 // --- Size caps and body shape ---
@@ -217,12 +289,94 @@ test("TAQ-19: only known request fields reach Gemini and output tokens are cappe
     contents: [{ role: "user", parts: [{ text: "Book a viewing" }] }],
     system_instruction: { parts: [{ text: "You are a broker." }] },
     tools: [{ function_declarations: [{ name: "book_viewing_appointment", parameters: { type: "object" } }] }],
-    generationConfig: { temperature: 0.6, maxOutputTokens: gw.CAPS.maxOutputTokens, responseMimeType: "application/json" },
+    generationConfig: {
+      temperature: 0.6,
+      maxOutputTokens: gw.CAPS.maxOutputTokens,
+      responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   });
   await call({ uid: "u1", request: { ...textRequest(), tools: [{ google_search: {} }] } });
   assert.deepEqual(calls[1].body.tools, [{ google_search: {} }]);
   await expectCode(call({ uid: "u1", request: { ...textRequest(), tools: [{ code_execution: {} }] } }), "invalid-argument");
   await expectCode(call({ uid: "u1", request: { contents: [{ role: "system", parts: [{ text: "x" }] }] } }), "invalid-argument");
+});
+
+// --- TAQ-89: thinking budget and output-token floor ---
+
+async function withEnv(name, value, fn) {
+  const original = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  try {
+    return await fn();
+  } finally {
+    if (original === undefined) delete process.env[name];
+    else process.env[name] = original;
+  }
+}
+
+test("TAQ-89: thinking is capped on the server: budget 0 by default, with or without a generationConfig", async () => {
+  await call({ uid: "u1" });
+  await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens: 2000 } } });
+  assert.deepEqual(calls[0].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+  assert.deepEqual(calls[1].body.generationConfig, { maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } });
+});
+
+test("TAQ-89: a client cannot set or override thinkingConfig", async () => {
+  const attempts = [
+    { thinkingConfig: { thinkingBudget: 24576, includeThoughts: true } },
+    { thinking_config: { thinking_budget: -1 } },
+    { thinkingConfig: { thinkingLevel: "high" } },
+  ];
+  for (const generationConfig of attempts) {
+    await call({ uid: "u1", request: { ...textRequest(), generationConfig } });
+  }
+  await call({ uid: "u1", request: { ...textRequest(), thinkingConfig: { thinkingBudget: 5000 } } });
+  assert.equal(calls.length, 4);
+  for (const sent of calls) {
+    assert.deepEqual(sent.body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+    assert.equal(sent.body.thinkingConfig, undefined);
+  }
+});
+
+test("TAQ-89: GEMINI_THINKING_BUDGET sets the budget; -1 sends none; invalid values fall back to 0", async () => {
+  await withEnv("GEMINI_THINKING_BUDGET", "512", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "-1", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "999999", () => call({ uid: "u1" }));
+  await withEnv("GEMINI_THINKING_BUDGET", "-5", () => call({ uid: "u1" }));
+  assert.deepEqual(calls[0].body.generationConfig, { thinkingConfig: { thinkingBudget: 512 } });
+  assert.equal(calls[1].body.generationConfig, undefined);
+  assert.deepEqual(calls[2].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+  assert.deepEqual(calls[3].body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } });
+});
+
+test("TAQ-89: maxOutputTokens has a server-side floor of 1024 and keeps the 4096 cap", async () => {
+  assert.equal(gw.CAPS.minOutputTokens, 1024);
+  assert.equal(gw.CAPS.maxOutputTokens, 4096);
+  for (const maxOutputTokens of [1, 200, 1023, 1024, 3000, 4096, 100000]) {
+    await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } });
+  }
+  assert.deepEqual(
+    calls.map((c) => c.body.generationConfig.maxOutputTokens),
+    [1024, 1024, 1024, 1024, 3000, 4096, 4096],
+  );
+  for (const maxOutputTokens of [0, -5, "abc"]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } }), "invalid-argument");
+  }
+});
+
+test("TAQ-91: generationConfig numbers must be real numbers, and maxOutputTokens a strict integer", async () => {
+  const before = calls.length;
+  for (const maxOutputTokens of [true, false, [2000], "2000", 2000.5, null, {}, NaN, Infinity]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens } } }), "invalid-argument");
+  }
+  for (const [key, value] of [["temperature", true], ["temperature", [0.5]], ["topP", "0.5"], ["topK", [5]]]) {
+    await expectCode(call({ uid: "u1", request: { ...textRequest(), generationConfig: { [key]: value } } }), "invalid-argument");
+  }
+  assert.equal(calls.length, before, "no upstream call is made for a rejected config");
+  await call({ uid: "u1", request: { ...textRequest(), generationConfig: { maxOutputTokens: 2000, temperature: 0.5, topP: 0.9, topK: 20 } } });
+  assert.equal(calls.length, before + 1);
 });
 
 // --- Rate limits ---

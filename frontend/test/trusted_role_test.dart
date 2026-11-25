@@ -26,6 +26,28 @@ void main() {
     });
   });
 
+  group('TAQ-91: Admin and Investor roles', () {
+    test('Admin is only ever trusted from the custom claim', () {
+      expect(TrustedRole.fromSources(claimRole: 'Admin'), 'Admin');
+      expect(TrustedRole.fromSources(claimRole: 'Admin', profileRole: 'Owner'), 'Admin');
+      expect(TrustedRole.fromSources(profileRole: 'Admin'), '');
+      expect(TrustedRole.fromSources(profileRole: 'admin'), '');
+    });
+
+    test('Investor is self-service, so the profile is trusted, and a claim also works', () {
+      expect(TrustedRole.fromSources(profileRole: 'Investor'), 'Investor');
+      expect(TrustedRole.fromSources(claimRole: 'Investor'), 'Investor');
+      expect(TrustedRole.fromSources(claimRole: 'Investor', profileRole: 'SuperAdmin'), 'Investor');
+    });
+
+    test('a profile can never escalate an Investor to Admin or SuperAdmin', () {
+      expect(TrustedRole.fromSources(profileRole: 'SuperAdmin'), '');
+      expect(TrustedRole.selfServiceRoles, {'Owner', 'Tenant', 'Investor'});
+      expect(TrustedRole.selfServiceRoles.contains(TrustedRole.admin), isFalse);
+      expect(TrustedRole.all, containsAll(['Admin', 'Investor']));
+    });
+  });
+
   group('TAQ-53: the verified badge needs the server flag', () {
     test('profiles start unverified', () {
       expect(const UserProfileData(uid: 'u', email: 'e', fullName: 'n').isVerified, isFalse);

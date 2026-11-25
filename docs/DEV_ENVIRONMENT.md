@@ -55,8 +55,27 @@ firebase deploy --project dev --only hosting
 
 `npm run deploy` in `backend/` is prod-only (`--project prod`); do not use it for dev.
 Non-secret function settings such as `VISITOR_IP_TRUSTED_HOPS` or `ENFORCE_APP_CHECK` go in
-`backend/.env.tashil-aqar-dev` (Firebase loads `.env.<project id>` on deploy). Never put a
-secret in it; secrets go through Secret Manager.
+`backend/.env.tashil-aqar-dev` (Firebase loads `.env.<project id>` on deploy, after `backend/.env`).
+Never put a secret in either file; secrets go through Secret Manager.
+
+### Function params in `backend/.env` (TAQ-89)
+
+A non-interactive `firebase deploy --only functions` (CI, agents) fails with "no value for
+GEMINI_THINKING_BUDGET" unless every `defineString`/`defineInt` param has a value in a `.env`
+file, even if the code has a default. `backend/.env` is committed and holds only those
+non-secret params:
+
+| Param | Type | Value | Meaning |
+| --- | --- | --- | --- |
+| `GEMINI_MODEL` | string | `gemini-3.5-flash` | model the gateway uses |
+| `GEMINI_THINKING_BUDGET` | int | `0` | thinking tokens (see below) |
+
+`backend/test/function_params.test.js` fails if a param used in `backend/` has no value there,
+if `.env` holds anything that is not a declared param, or if `backend/.env` becomes gitignored.
+When you add a `defineString`/`defineInt`, add its line to `backend/.env`. `GEMINI_API_KEY` is a
+secret (`defineSecret`) and stays in Secret Manager. `ENFORCE_APP_CHECK` and
+`VISITOR_IP_TRUSTED_HOPS` are plain environment variables, not params, so they are not needed
+there.
 
 ## Secrets
 
@@ -68,6 +87,48 @@ defines.
 - Rotate or change it with `firebase functions:secrets:set GEMINI_API_KEY --project dev`, then
   redeploy `functions:geminiGenerate`.
 - Test-account passwords are kept in dev Secret Manager too (see below).
+
+### Gemini model (TAQ-89)
+
+The model is a server-side setting, the string param `GEMINI_MODEL` (default
+`gemini-3.5-flash`). The app never chooses it: every old model name the app sends
+(`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-*`, `gemini-3.8-pro`, and so on) runs
+on the configured model. To change it for every project, edit `backend/.env`. To change it for
+one project, put the value in `backend/.env.<project id>` (for example
+`backend/.env.tashil-aqar-dev`), which overrides `backend/.env`; `.env.local` does the same for
+the emulator and is gitignored:
+
+```
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+then redeploy `functions:geminiGenerate`. Allowed values: `gemini-3.5-flash`,
+`gemini-3.8-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`. Anything else is ignored
+with a warning and the default is used. To allow a new model, add it to `ALLOWED_MODELS` in
+`backend/gemini_gateway.js`.
+
+### Thinking budget and output tokens (TAQ-89)
+
+Gemini 3.x models think before answering, and thinking tokens count against `maxOutputTokens`.
+A small limit (a call with 200 used 188 on thinking) returns a cut-off answer. The server
+therefore owns both settings:
+
+- `GEMINI_THINKING_BUDGET` (int param, default `0`) is sent as
+  `generationConfig.thinkingConfig.thinkingBudget` on every call. `0` turns thinking off, a
+  positive number (up to 24576) caps it, `-1` sends no `thinkingConfig` at all (the model's own
+  default). An invalid value is ignored and `0` is used. Any `thinkingConfig` from the client is
+  dropped. Set it in `backend/.env` (or a per-project `.env.<project id>`) like `GEMINI_MODEL`, then redeploy
+  `functions:geminiGenerate`. When you raise it, keep the budget well below the 4096 output cap.
+- `maxOutputTokens` from the app is clamped to between 1024 and 4096. The floor is
+  `CAPS.minOutputTokens` in `backend/gemini_gateway.js`.
+
+Google's docs describe `thinking_level` as the control for Gemini 3 and later, so check a live
+call after any model change. If Gemini rejects `thinkingBudget` for a model, set
+`GEMINI_THINKING_BUDGET=-1` as a stopgap (the 1024 floor still limits truncation).
+
+If Gemini answers 404 ("no longer available"), `functions:log --only geminiGenerate` shows an
+error entry naming the model (never the key) and callers get the normal "AI service is
+unavailable" error. Set `GEMINI_MODEL` to an available model and redeploy.
 
 ## Verify the visitor IP rule on dev (TAQ-77)
 
@@ -115,87 +176,130 @@ The dev project has one test account per role, all on the `test.tashilaqar.com` 
 Passwords exist only in the dev project's Secret Manager. Never write them into the repo, a PR,
 a ticket or a build define. Do not delete these accounts.
 
-How the roles map to the backend today (`backend/authz.js`, `firestore.rules`):
+How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91):
 
 | Account | Role claim | Notes |
 | --- | --- | --- |
-| `visitor@` | none | Signed in, no role: can use public AI features, not onboarding or OCR. |
+| `visitor@` | none | Signed in with no role: public AI features only, no onboarding or OCR. A real visitor is signed out. |
 | `tenant@` | `Tenant` (claim or profile) | |
 | `owner@` | `Owner` (claim or profile) | |
 | `agency@` | `AgencyAdmin` + `agency_id` claim | |
-| `admin@` | not defined | The backend has no plain "Admin" role; see "Open questions". |
-| `superadmin@` | `SuperAdmin` | |
-| `investor@` | not defined | There is no Investor role yet; see below. |
+| `investor@` | `Investor` (claim or profile) | Self-service like Owner and Tenant. Browses, saves, compares, market index, valuation and AI. No publishing, leases or tenants. |
+| `admin@` | `Admin` (claim only) | Platform Admin. Moderates listings and reads users and agencies. Only a SuperAdmin can grant it. |
+| `superadmin@` | `SuperAdmin` (claim only) | |
+
+### What each role can do (TAQ-91 decisions)
+
+- **Admin** (`/admin`): hide, restore and verify public listings, read all listings, agencies and
+  crash telemetry, read users only through the `listUsersForAdmin` callable (an allowlist: uid,
+  email, name, profile role, claim role, country and agency; never the IBAN, national ID, phone or
+  any private field), and escalate maintenance requests (`status`, `escalated`, `resolution_note`).
+  It cannot call `setUserRole`, touch roles or claims, create or change a SuperAdmin, write system
+  settings, Remote Config, payments, invoices or secrets, run `seedDatabase` or
+  `syncMarketIndexManual`, or delete users. Its role is never read from the profile document, so it
+  cannot be self-granted.
+- **Listing moderation** lives in `PropertyModeration/{propertyId}` (`hidden`,
+  `pre_hide_published`, `updated_by`, `updated_at`). Only Admin and SuperAdmin can create or change
+  it, only SuperAdmin can delete it, and no owner, agency or tenant can touch it at all. A missing
+  doc means "not hidden". The Admin dashboard writes it in one batch with the public doc, and the
+  rules require the two to agree (`getAfter`), so the moderation doc is never written after the
+  public doc. `pre_hide_published` records whether the listing was live when hidden; a restore
+  brings back that value (and only for a vacant listing), so a listing that was never public is
+  never published by a restore. No client write can ever set `is_published` to `true` on the public doc:
+  a change to `is_published` or `moderation_hidden` by Admin or SuperAdmin is accepted only in the
+  same batch as a `PropertyModeration` write (the rules check that the moderation doc's `updated_at`
+  is this request's time) and only to take the listing offline. A restore therefore only lifts the
+  hold; `reconcilePropertyModeration` then rebuilds the public doc from the owner's current private
+  doc and puts it online only if the listing was live before the hide, the private doc is still
+  published and available, the rent is positive and the owner still holds a publishing role. The sync trigger reads `PropertyModeration`, so deleting or
+  recreating the public or private doc keeps a hidden listing hidden, and an owner or agency
+  cannot delete the public doc of a hidden listing. `reconcilePropertyModeration` takes the
+  public doc offline if a hide is written without it. An owner who deletes and recreates the
+  private doc under a new id has created a new listing, which needs no moderation.
+  Listings hidden before this change have no moderation doc: run
+  `node scripts/backfill_property_moderation.js --project <id>` (dry run by default, `--apply` to
+  write) once per project. It prints its target project first and refuses any project id that does
+  not start with `demo-` unless `--confirm-project=<that id>` is also given (even for a dry run). It records `pre_hide_published: false`, so such a listing is not
+  published automatically when restored.
+- **Maintenance requests** must carry `lease_id`, and that lease must link the request's
+  `tenant_id`, `owner_id` and `agency_id` (empty on both sides when the lease has no agency).
+  Only the lease's tenant or owner can create one.
+- **Rent payments** (`processRentPayment`): only the lease's tenant (role `Tenant`) can record a
+  payment. The owner, the managing agency and SuperAdmin cannot: the app has no flow in which they
+  record a payment, so nothing needs it. The amount is the lease's rent (monthly rent, or annual
+  rent divided by 12); the client may omit it or repeat it, and any other value is
+  `invalid-argument`. Errors are clean codes: `unauthenticated`, `permission-denied`,
+  `not-found`, `invalid-argument`, `failed-precondition`, `already-exists`. A lease can be paid once
+  per month: the transaction id is `<leaseId>_<YYYY-MM>` (`period` is an optional `YYYY-MM`, from 24
+  months back to next month; the default is the current UTC month) and the record is `create()`d
+  inside a Firestore transaction, so a repeat or a concurrent call gets `already-exists` (the
+  existing id is in the error details) and writes nothing.
+- **Investor**: browse, save and compare listings, market index, valuation and the AI features that
+  are open to any signed-in user. It cannot publish listings and has no access to leases, tenants
+  or maintenance. It is accepted at signup and never escalates: the profile document can only ever
+  carry `Owner`, `Tenant` or `Investor`.
+- **OCR and onboarding** (`document_ocr`, `onboarding` in the Gemini gateway) stay `Owner`,
+  `AgencyAdmin`, `Admin` and `SuperAdmin`. Investors do not get them: both features exist to
+  list and manage properties, which an Investor cannot do, and OCR processes identity and
+  contract documents.
+- **Where each lands**: `Admin` -> `/admin`, `SuperAdmin` -> `/super-admin` (it may also open
+  `/admin`), `Investor` -> `/` (the marketplace). `/super-admin` stays SuperAdmin-only.
+  `/investor-dashboard` stays public, as before.
 
 ## Creating the test users
 
-`backend/seed.js` is the only script that creates users with roles. What it does today:
+`backend/seed.js` creates users with roles. Two sets:
 
-- It seeds three accounts only: `agency@test.com` (AgencyAdmin), `owner@test.com` (Owner) and
-  `tenant@test.com` (Tenant). The list is `DEMO_USERS` in `seed.js`.
-- The password comes from the `SEED_DEMO_PASSWORD` environment variable (at least 8
-  characters), never argv. One password is used for all accounts. Without it, the script
-  generates one and prints it, which is only allowed for emulators and `demo-*` projects.
-- Emulator: `firebase emulators:exec --only firestore,auth --project demo-tashil-dev 'node seed.js'`.
-- Dev: `SEED_DEMO_PASSWORD=... node seed.js --project tashil-aqar-dev --allow-live-project`, with
-  Application Default Credentials for dev. It refuses any other live project without the flag.
-- Existing accounts keep their password unless `--reset-passwords` is given; nothing is deleted.
-- It cannot create `visitor@`, `investor@`, `admin@` or `superadmin@`, and it uses the
-  `@test.com` domain. `SuperAdmin` is assignable through `applyUserRole`, but no script uses it.
-  `backend/scripts/role_claims.js` only audits claims.
+- Default set (`DEMO_USERS`): `agency@test.com`, `owner@test.com`, `tenant@test.com`. One password
+  from `SEED_DEMO_PASSWORD`.
+- `--set tashilaqar-test` (TAQ-91): the seven accounts above on `test.tashilaqar.com`. Each
+  password comes from its own variable: `SEED_PW_VISITOR`, `SEED_PW_TENANT`, `SEED_PW_OWNER`,
+  `SEED_PW_AGENCY`, `SEED_PW_INVESTOR`, `SEED_PW_ADMIN`, `SEED_PW_SUPERADMIN` (at least 8
+  characters, never argv). Emulators and `demo-*` projects may leave them unset (random passwords
+  are generated and printed). The visitor gets an Auth user with no claim and no role.
 
-So the seven `@test.tashilaqar.com` accounts cannot be created by an existing script. They were
-created by hand in the dev project; do not run `seed.js` against dev expecting them.
+Safety: the test set runs only against emulators, `demo-*` projects, or `tashil-aqar-dev` with
+`--allow-live-project`. The production project is read from the `prod` alias in `.firebaserc` at
+runtime and always refused. Seeded documents carry `demo_seed: true`. Existing accounts keep their
+password unless `--reset-passwords` is passed; nothing is deleted.
 
-### Proposal: seed the per-role accounts from one table
+```bash
+# Emulator
+firebase emulators:exec --only firestore,auth --project demo-tashil-dev 'node seed.js --set tashilaqar-test'
 
-A small change to `seed.js` would cover this (not implemented here, because the Investor and
-Admin roles need a decision first):
+# Dev (Application Default Credentials for dev; set all seven SEED_PW_* variables first)
+node seed.js --set tashilaqar-test --project tashil-aqar-dev --allow-live-project
+```
 
-1. Add a second user set, selected with `--set tashilaqar-test`, with one row per account:
-   email, role, display name. `visitor@` has `role: null` (create the user, set no claim).
-2. Read passwords from the environment, one variable per account (`SEED_PASSWORD_OWNER`,
-   `SEED_PASSWORD_TENANT`, ...) with `SEED_DEMO_PASSWORD` as the fallback, so each role can have
-   its own secret that CI or a developer injects from Secret Manager
-   (`gcloud secrets versions access latest --secret=... --project tashil-aqar-dev`).
-   Passwords never go through argv, files in the repo or logs.
-3. Keep the existing safety checks: `demo-*` or loopback emulators run freely; a real project
-   needs `--allow-live-project`, which for this set should additionally require the project id
-   to be `tashil-aqar-dev` (never prod).
-4. Reuse `applyUserRole`, so the claim and the `Users/{uid}` mirror are written the same way as
-   `setUserRole`. Extend `test/seed.test.js` with the new set.
+Passwords exist only in Secret Manager or the shell environment. Do not write them to the repo.
 
-## Adding the Investor role
+## Firestore rules budget (TAQ-101)
 
-The Investor role does not exist in `setUserRole`: `ASSIGNABLE_ROLES` in `backend/authz.js` is
-`Owner`, `Tenant`, `AgencyAdmin`, `SuperAdmin`, so `applyUserRole` rejects `Investor`. The
-`/investor-dashboard` route is public today (`null` in `RouteAccess.table`). Proposed change,
-as one ticket:
+A request may evaluate at most 1000 rule expressions, and the full listing check (`listingShapeOk`:
+sizes, contact filter, image references, localized maps) of a large listing uses most of them. So:
 
-1. **Backend roles** (`backend/authz.js`): add `Investor` to `ASSIGNABLE_ROLES`. Keep it out of
-   `SELF_SERVICE_ROLES`, so it is only ever granted by a SuperAdmin through a custom claim, the
-   same as AgencyAdmin; a profile document can then never escalate to it. Update
-   the `setUserRole` tests in `backend/test/functions.test.js` and check `scripts/role_claims.js`.
-2. **Firestore rules** (`firestore.rules`): `currentRole()` already honours any claim, so no
-   change there. Add an `isInvestor()` helper and grant read-only access to exactly the
-   collections the investor dashboard reads, scoped by `investor_id == request.auth.uid` (the
-   multi-tenant isolation standard). Add rules tests for allowed reads and for every write and
-   cross-investor read being denied.
-3. **Gemini gateway** (`backend/gemini_gateway.js`): add `Investor` to `PORTAL_ROLES` only if
-   investors should use onboarding or OCR. Probably they should not, so give investor-facing AI
-   features their own role list instead of widening `PORTAL_ROLES`.
-4. **Flutter** (`frontend/lib/core/auth/trusted_role.dart`, `route_access.dart`): add
-   `TrustedRole.investor` to `all`, set `/investor-dashboard` to `{investor, superAdmin}`, and
-   return `/investor-dashboard` from `RouteAccess.homeFor`. Check the login redirect, header
-   navbar and role tests.
-5. **Seeding and tests**: give `investor@test.tashilaqar.com` the role in the seed set above,
-   and add `Investor` cases to the `setUserRole` tests in `backend/test/functions.test.js`.
+- A SuperAdmin edit of an existing `/Properties` doc validates only the keys that changed
+  (`listingEditOk`, from `diff().affectedKeys()`), not the whole doc. Admin and SuperAdmin
+  visibility changes (`is_published`, `moderation_hidden`) take the moderation path first.
+  Admin still cannot edit content, only verify and moderate.
+- The full check runs once, on a SuperAdmin create. A create also needs the owner's private doc at
+  `Users/{owner_id}/properties/{id}` and is refused while `PropertyModeration/{id}` says hidden.
+- `backend/test/admin_investor_rules.test.js` holds a maximum-size listing fixture (every text at its
+  cap, 30 amenities per language, 20 images). Any rule change must keep its create and edit tests green;
+  a budget overrun shows as `maximum of 1000 expressions` in the emulator log.
+- `processRentPayment` rejects a `period` earlier than the lease's start month (`startDate`,
+  `start_date`, `leaseStartDate` or `lease_start_date`); a lease with no readable start date keeps the
+  24-month window.
 
-## Open questions
+## Follow-ups
 
-- `agency@` and `admin@`: the backend knows `AgencyAdmin` and `SuperAdmin`. Decide whether
-  `admin@` is a second AgencyAdmin (needs its own `agency_id`), an alias for `SuperAdmin`, or a
-  new role. Until then it has no defined behaviour.
+- The Admin dashboard covers listings moderation and read-only users and agencies. There is no
+  Reports feature or collection in the app yet, so "handle reports" has nothing to act on; add it
+  with the reports feature. Maintenance escalation is enforced in `firestore.rules` and tested,
+  but has no screen in `/admin` yet.
+- `/fast-onboarding` is still limited to `Owner` and `AgencyAdmin` in the Flutter route table (as
+  before TAQ-91). The gateway already accepts `Admin` and `SuperAdmin` for onboarding and OCR.
+- `processRentPayment` records a payment but no money moves: there is no payment provider yet.
 - App Check for dev: register a dev reCAPTCHA site key before turning on `ENFORCE_APP_CHECK` in
   dev, as described in `docs/SECURITY_SETUP.md`.
 - Mobile: add an Android and an iOS app to `tashil-aqar-dev` and extend

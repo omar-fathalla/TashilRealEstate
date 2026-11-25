@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const { defineSecret, defineString, defineInt } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
@@ -10,31 +10,50 @@ const { appCheckEnforced } = require("./config");
 const { requireRole } = require("./authz");
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+// Server-side model setting. Change it with the GEMINI_MODEL param (backend/.env.<project>
+// or the environment) and redeploy; the client never picks the model.
+const GEMINI_MODEL = defineString("GEMINI_MODEL", { default: "gemini-3.5-flash" });
+
+// Thinking tokens count against maxOutputTokens, so a small limit can be spent on thinking and
+// leave a cut-off answer. The budget is set here, never by the client. 0 turns thinking off,
+// a positive value caps it, -1 sends no thinkingConfig (the model's own default).
+const GEMINI_THINKING_BUDGET = defineInt("GEMINI_THINKING_BUDGET", { default: 0 });
+const MAX_THINKING_BUDGET = 24576;
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const RATE_LIMIT_COLLECTION = "AiRateLimits";
 
-const ALLOWED_MODELS = new Set(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash";
+const ALLOWED_MODELS = new Set([
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+]);
 
-// Model ids the app's AI Engine Hub and older services still send. They all run on the
-// default model; anything not listed here or in ALLOWED_MODELS is rejected.
+// Model ids the app's AI Engine Hub and older services still send, including retired ones.
+// They all run on the configured default model; anything not listed here or in
+// ALLOWED_MODELS is rejected.
 const MODEL_ALIASES = {
-  "gemini-1.5-flash": DEFAULT_MODEL,
-  "gemini-2.0-flash": DEFAULT_MODEL,
-  "gemini-2.0-flash-vision": DEFAULT_MODEL,
-  "gemini-2.5-embed": DEFAULT_MODEL,
-  "gemini-3.6-flash": DEFAULT_MODEL,
-  "gemini-3.8-flash": DEFAULT_MODEL,
-  "gemini-3.8-pro": DEFAULT_MODEL,
-  "gemini-3.8-flagship": DEFAULT_MODEL,
-  "gemini-3.8-analyst": DEFAULT_MODEL,
-  "gemini-3.8-creative": DEFAULT_MODEL,
+  "gemini-1.5-flash": true,
+  "gemini-2.0-flash": true,
+  "gemini-2.0-flash-vision": true,
+  "gemini-2.5-flash": true,
+  "gemini-2.5-flash-lite": true,
+  "gemini-2.5-embed": true,
+  "gemini-3.6-flash": true,
+  "gemini-3.8-pro": true,
+  "gemini-3.8-flagship": true,
+  "gemini-3.8-analyst": true,
+  "gemini-3.8-creative": true,
 };
 
-// Listing a property and reading lease/ID documents belong to the owner and agency portals.
-// Investor is not a backend role yet; add it here once setUserRole can assign it.
-const PORTAL_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
+// Listing a property and reading lease/ID documents belong to the owner and agency portals,
+// and to platform staff who support them. Investor is deliberately not here: investors do not
+// list properties or hold leases, and OCR reads national IDs and contracts, so they have no use
+// for either feature and no business processing other people's documents. They keep every
+// visitor-level AI feature (valuation, search, market index, advisor) under the per-user quota.
+const PORTAL_ROLES = ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"];
 
 // `visitor`: reachable from public pages, so signed-out callers may use it under the
 // per-IP limit. `inline`: may carry base64 images or PDFs. `roles`: signed-in callers must
@@ -65,6 +84,7 @@ const CAPS = {
   contents: 24,
   partsPerContent: 16,
   functionDeclarations: 8,
+  minOutputTokens: 1024,
   maxOutputTokens: 4096,
 };
 
@@ -93,13 +113,51 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/** The server-configured model; an unset or non-allowlisted value falls back to the built-in default. */
+function configuredModel() {
+  let value;
+  try {
+    value = String(GEMINI_MODEL.value() || "").trim();
+  } catch (error) {
+    value = "";
+  }
+  if (ALLOWED_MODELS.has(value)) return value;
+  if (value) logger.warn("GEMINI_MODEL is not an allowed model; using the default", { configured: value, fallback: DEFAULT_MODEL });
+  return DEFAULT_MODEL;
+}
+
 function resolveModel(requested) {
-  if (requested === undefined || requested === null || requested === "") return DEFAULT_MODEL;
+  if (requested === undefined || requested === null || requested === "") return configuredModel();
   if (typeof requested !== "string") throw invalid("model must be a string.");
   const name = requested.trim();
   if (ALLOWED_MODELS.has(name)) return name;
-  if (Object.prototype.hasOwnProperty.call(MODEL_ALIASES, name)) return MODEL_ALIASES[name];
+  if (Object.prototype.hasOwnProperty.call(MODEL_ALIASES, name)) return configuredModel();
   throw invalid("This model is not allowed.");
+}
+
+/** The server-configured thinking budget; null means "send no thinkingConfig". */
+function configuredThinkingBudget() {
+  let value;
+  try {
+    value = GEMINI_THINKING_BUDGET.value();
+  } catch (error) {
+    value = 0;
+  }
+  if (value === -1) return null;
+  if (Number.isInteger(value) && value >= 0 && value <= MAX_THINKING_BUDGET) return value;
+  logger.warn("GEMINI_THINKING_BUDGET is invalid; using 0", { configured: value });
+  return 0;
+}
+
+/** Adds the server-owned thinking budget. Any thinkingConfig from the client was already dropped. */
+function applyThinkingBudget(body) {
+  const budget = configuredThinkingBudget();
+  if (budget === null) return body;
+  return { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: { thinkingBudget: budget } } };
+}
+
+function isModelNotFound(result) {
+  return result.status === 404;
 }
 
 function sanitizePart(part, feature, totals) {
@@ -160,17 +218,20 @@ function sanitizeGenerationConfig(config) {
   const out = {};
   const number = (key, min, max) => {
     if (config[key] === undefined) return;
-    const value = Number(config[key]);
-    if (!Number.isFinite(value) || value < min || value > max) throw invalid(`${key} is out of range.`);
+    const value = config[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) throw invalid(`${key} is out of range.`);
     out[key] = value;
   };
   number("temperature", 0, 2);
   number("topP", 0, 1);
   number("topK", 1, 100);
   if (config.maxOutputTokens !== undefined) {
-    const tokens = Math.floor(Number(config.maxOutputTokens));
-    if (!Number.isFinite(tokens) || tokens < 1) throw invalid("maxOutputTokens is out of range.");
-    out.maxOutputTokens = Math.min(tokens, CAPS.maxOutputTokens);
+    const tokens = config.maxOutputTokens;
+    // A real integer only: true, [2000], "2000" and 2000.5 all coerce to a number in JS.
+    if (typeof tokens !== "number" || !Number.isInteger(tokens) || tokens < 1) {
+      throw invalid("maxOutputTokens must be a positive integer.");
+    }
+    out.maxOutputTokens = Math.min(Math.max(tokens, CAPS.minOutputTokens), CAPS.maxOutputTokens);
   }
   if (config.responseMimeType !== undefined) {
     if (!RESPONSE_MIME_TYPES.has(config.responseMimeType)) throw invalid("responseMimeType is not allowed.");
@@ -360,7 +421,9 @@ async function handleGeminiGenerate(request) {
   if (FEATURES[feature].roles) await requireRole(request.auth, FEATURES[feature].roles);
 
   const model = resolveModel(data.model);
-  const { body, totals } = sanitizeRequest(feature, data.request);
+  const sanitized = sanitizeRequest(feature, data.request);
+  const { totals } = sanitized;
+  const body = applyThinkingBudget(sanitized.body);
 
   const key = GEMINI_API_KEY.value();
   if (!key) throw new HttpsError("failed-precondition", "AI is not configured.");
@@ -383,6 +446,10 @@ async function handleGeminiGenerate(request) {
     ms: deps.now() - started,
   };
   if (!result.ok || !isPlainObject(result.payload)) {
+    if (!result.ok && isModelNotFound(result)) {
+      logger.error("geminiGenerate model not found or retired; set GEMINI_MODEL to an available model", logEntry);
+      throw new HttpsError("unavailable", "The AI service is unavailable.");
+    }
     logger.warn("geminiGenerate upstream error", logEntry);
     throw upstreamError(result.ok ? 502 : result.status);
   }
@@ -412,6 +479,10 @@ module.exports = {
     CAPS,
     ALLOWED_MODELS,
     MODEL_ALIASES,
+    DEFAULT_MODEL,
+    configuredModel,
+    configuredThinkingBudget,
+    applyThinkingBudget,
     RATE_LIMIT_COLLECTION,
     resolveModel,
     sanitizeRequest,
