@@ -781,9 +781,10 @@ service cloud.firestore {
       );
     }
 
-    // A new request must name the lease it belongs to, and that lease must link exactly the
-    // tenant, owner and agency the request names. The caller must be that lease's tenant or owner,
-    // so nobody can address a request to a party they have no lease with. One get() on the lease.
+    // A new request must name the lease it belongs to, and that lease must be active and link
+    // exactly the tenant, owner and agency the request names. The caller must be that lease's
+    // tenant or owner, so nobody can address a request to a party they have no lease with. One get()
+    // on the lease.
     function maintenanceLinkedToLease() {
       let d = request.resource.data;
       let leaseId = d.get('lease_id', '');
@@ -798,17 +799,41 @@ service cloud.firestore {
         && d.get('tenant_id', '') == lease.get('tenant_id', '')
         && d.get('owner_id', '') == lease.get('owner_id', '')
         && d.get('agency_id', '') == lease.get('agency_id', '')
+        && lease.get('status', 'draft') == 'active'
         && (request.auth.uid == lease.get('tenant_id', '') || request.auth.uid == lease.get('owner_id', ''));
+    }
+
+    // A new request: a short title, an optional description, a category, at most three inline
+    // photos, and always the pending status. Parties and lease are checked separately.
+    function maintenanceCreateShapeOk(d) {
+      return d.keys().hasOnly(['lease_id', 'tenant_id', 'owner_id', 'agency_id', 'property_id', 'property_title',
+          'tenant_name', 'title', 'description', 'category', 'photos', 'status', 'created_at', 'updated_at'])
+        && d.get('tenant_name', '') is string && d.get('tenant_name', '').size() <= 100
+        && d.get('property_title', '') is string && d.get('property_title', '').size() <= 200
+        && d.get('title', '') is string && d.get('title', '').size() > 0 && d.get('title', '').size() <= 120
+        && d.get('description', '') is string && d.get('description', '').size() <= 2000
+        && d.get('category', 'other') in ['plumbing', 'electrical', 'ac', 'appliance', 'structural', 'cleaning', 'other']
+        && d.get('photos', []) is list && d.get('photos', []).size() <= 3
+        && d.get('status', '') == 'pending'
+        && d.get('created_at', request.time) == request.time
+        && d.get('updated_at', request.time) == request.time;
+    }
+
+    // The owner or the managing agency moves a request through its progress, and may add a note.
+    function maintenanceProgressOk() {
+      return changedKeys().hasOnly(['status', 'resolution_note', 'updated_at'])
+        && request.resource.data.get('status', '') in ['pending', 'in_progress', 'resolved']
+        && request.resource.data.get('resolution_note', '') is string
+        && request.resource.data.get('resolution_note', '').size() <= 1000;
     }
 
     match /Maintenance/{requestId} {
       allow read: if isPlatformStaff() || maintenanceParty();
       allow create: if isSuperAdmin()
-        || ((isTenant() || isOwner()) && maintenanceLinkedToLease());
+        || ((isTenant() || isOwner()) && maintenanceCreateShapeOk(request.resource.data) && maintenanceLinkedToLease());
       allow update: if isSuperAdmin()
         || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
-        || ((isOwner() || isAgencyAdmin()) && maintenanceParty()
-          && !changedKeys().hasAny(['tenant_id', 'owner_id', 'agency_id']));
+        || ((isOwner() || isAgencyAdmin()) && maintenanceParty() && maintenanceProgressOk());
       allow delete: if isSuperAdmin() || (isAgencyAdmin() && agencyManagesResource());
     }
   }
