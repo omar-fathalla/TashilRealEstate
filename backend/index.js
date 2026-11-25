@@ -972,3 +972,4 @@ exports.geminiGenerate = require("./gemini_gateway").geminiGenerate;
 // Rent payments through Paymob (TAQ-16). Off until PAYMENTS_ENABLED=true and the keys exist.
 exports.createRentPaymentIntent = require("./payments").createRentPaymentIntent;
 exports.paymobWebhook = require("./payments").paymobWebhook;
+exports.recordManualPayment = require("./payments").recordManualPayment;

@@ -637,3 +637,180 @@ test("TAQ-16: no code path lets a client or the callable write Completed or paid
   assert.equal(tx.paidAt, undefined);
   assert.equal(result.status, "pending");
 });
+
+// --- the split comes from Settings/payment_split ---
+
+test("TAQ-16: the split defaults to 2 / 8 / 90 when no setting exists, and is stored with the payment", async () => {
+  await intent({ leaseId: "lease-1" });
+  const [tx] = await transactions();
+  assert.deepEqual(tx.splitPercent, { platform: 2, agency: 8 });
+  assert.deepEqual(tx.splits, { platformFee: 160, agencyFee: 640, ownerPayout: 7200 });
+});
+
+test("TAQ-16: SuperAdmin's Settings/payment_split sets the split, and a client cannot send one", async () => {
+  await db.doc("Settings/payment_split").set({ platform_percent: 3.5, agency_percent: 6, updated_by: "root" });
+  await intent({ leaseId: "lease-1", splits: { platformFee: 0, agencyFee: 0, ownerPayout: 8000 }, platformPercent: 0, splitPercent: { platform: 0, agency: 0 } });
+  const [tx] = await transactions();
+  assert.deepEqual(tx.splitPercent, { platform: 3.5, agency: 6 });
+  assert.deepEqual(tx.splits, { platformFee: 280, agencyFee: 480, ownerPayout: 7240 });
+});
+
+test("TAQ-16: a changed setting applies to the next payment only; a pending one keeps the split it was created with", async () => {
+  const first = await intent({ leaseId: "lease-1" });
+  await db.doc("Settings/payment_split").set({ platform_percent: 10, agency_percent: 10, updated_by: "root" });
+  await intent({ leaseId: "lease-1" });
+  const second = await intent({ leaseId: "lease-1", period: monthsFromNow(-1) });
+  assert.deepEqual((await db.doc(`Transactions/${first.transactionId}`).get()).get("splits"), { platformFee: 160, agencyFee: 640, ownerPayout: 7200 });
+  assert.deepEqual((await db.doc(`Transactions/${second.transactionId}`).get()).get("splits"), { platformFee: 800, agencyFee: 800, ownerPayout: 6400 });
+  await webhook(gatewayObject(first));
+  assert.equal((await db.collection("Invoices").doc(`TASHIL-INV-${first.transactionId}`).get()).get("ownerPayout"), 7200);
+});
+
+test("TAQ-16: an invalid split setting stops the payment instead of being guessed", async () => {
+  for (const bad of [
+    { platform_percent: "2", agency_percent: 8 },
+    { platform_percent: -1, agency_percent: 8 },
+    { platform_percent: 60, agency_percent: 50 },
+    { platform_percent: 2 },
+    { platform_percent: null, agency_percent: 8 },
+  ]) {
+    await db.doc("Settings/payment_split").set({ ...bad, updated_by: "root" });
+    await assert.rejects(intent({ leaseId: "lease-1" }), (e) => e.code === "failed-precondition" && e.details.reason === "split_invalid", JSON.stringify(bad));
+  }
+  assert.equal((await transactions()).length, 0);
+  assert.equal(gateway.calls.length, 0);
+  await db.doc("Settings/payment_split").set({ platform_percent: 0, agency_percent: 0, updated_by: "root" });
+  await intent({ leaseId: "lease-1" });
+  assert.deepEqual((await transactions())[0].splits, { platformFee: 0, agencyFee: 0, ownerPayout: 8000 });
+});
+
+test("TAQ-16: the transaction keeps an audit trail of the gateway events", async () => {
+  const result = await intent({ leaseId: "lease-1" });
+  await webhook(gatewayObject(result, { success: false, id: 555002 }));
+  await webhook(gatewayObject(result));
+  const trail = (await db.doc(`Transactions/${result.transactionId}`).get()).get("auditTrail");
+  assert.deepEqual(trail.map((e) => e.action), ["intent_created", "gateway_failed", "gateway_paid"]);
+  assert.equal(trail[0].by, "tenant");
+  assert.equal(trail[2].by, "paymob_webhook");
+  assert.ok(trail.every((e) => e.at && typeof e.at.toDate === "function"));
+});
+
+// --- manual cash and bank-transfer payments ---
+
+const manual = (data, auth = caller("owner")) => fns.recordManualPayment.run({ data, auth });
+const today = () => new Date().toISOString().slice(0, 10);
+const cash = (extra = {}) => ({ leaseId: "lease-1", method: "cash", reference: "Receipt 118", paidOn: today(), ...extra });
+
+test("TAQ-16: the owner records a cash payment: paid, one recorded invoice, an audit entry and notifications", async () => {
+  const result = await manual(cash({ amount: 8000 }));
+  assert.equal(result.status, "paid");
+  assert.equal(result.transactionId, `lease-1_${monthsFromNow(0)}`);
+  const tx = (await db.doc(`Transactions/${result.transactionId}`).get()).data();
+  assert.equal(tx.status, "paid");
+  assert.equal(tx.method, "cash");
+  assert.equal(tx.reference, "Receipt 118");
+  assert.equal(tx.recordedBy, "owner");
+  assert.equal(tx.recordedByRole, "Owner");
+  assert.equal(tx.paidOn.toDate().toISOString().slice(0, 10), today());
+  assert.deepEqual(tx.splits, { platformFee: 0, agencyFee: 0, ownerPayout: 8000 });
+  assert.equal(tx.auditTrail.length, 1);
+  assert.equal(tx.auditTrail[0].action, "manual_payment_recorded");
+  assert.equal(tx.auditTrail[0].by, "owner");
+  assert.equal(tx.auditTrail[0].role, "Owner");
+  assert.equal(tx.auditTrail[0].method, "cash");
+  assert.equal(tx.auditTrail[0].reference, "Receipt 118");
+
+  const invoice = (await db.doc(`Invoices/${result.invoiceNumber}`).get()).data();
+  assert.equal(invoice.status, "Paid_Recorded");
+  assert.equal(invoice.paymentMethod, "cash");
+  assert.equal(invoice.paymentReference, "Receipt 118");
+  assert.equal(invoice.totalPaid, 8000);
+  assert.equal(invoice.tenant_id, "tenant");
+  assert.equal(invoice.issuedBy, "owner");
+  const tenantNote = await db.doc(`Users/tenant/notifications/pay_${result.transactionId}_tenant`).get();
+  assert.equal(tenantNote.get("type"), "rent_payment_receipt");
+  assert.equal((await db.doc(`Users/owner/notifications/pay_${result.transactionId}_owner`).get()).exists, false, "the recorder is not notified of their own entry");
+});
+
+test("TAQ-16: the managing agency and platform staff can record, and the owner is notified of their entry", async () => {
+  const agency = caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+  const staff = caller("root", { role: "SuperAdmin" });
+  const admin1 = caller("adm", { role: "Admin" });
+  for (const [who, period, method] of [[agency, monthsFromNow(-1), "bank_transfer"], [staff, monthsFromNow(-2), "cash"], [admin1, monthsFromNow(-3), "bank_transfer"]]) {
+    const r = await manual(cash({ period, method, reference: "TRF-1" }), who);
+    assert.equal(r.status, "paid");
+    const tx = (await db.doc(`Transactions/${r.transactionId}`).get()).data();
+    assert.equal(tx.recordedBy, who.uid);
+    assert.equal(tx.recordedByRole, who.token.role);
+    assert.equal((await db.doc(`Users/owner/notifications/pay_${r.transactionId}_owner`).get()).exists, true);
+  }
+});
+
+test("TAQ-16: the tenant, other owners, other agencies, investors and signed-out callers cannot record a payment", async () => {
+  await db.collection("Users").doc("inv").set({ role: "Investor" });
+  const denied = [
+    caller("tenant"),
+    caller("stranger"),
+    caller("agent2", { role: "AgencyAdmin", agency_id: "agency-2" }),
+    caller("inv"),
+    caller("nobody"),
+  ];
+  for (const who of denied) await expectCode(manual(cash(), who), "permission-denied");
+  await expectCode(fns.recordManualPayment.run({ data: cash() }), "unauthenticated");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-16: manual recording needs a real method, a reference and a valid date that is not in the future", async () => {
+  for (const method of [undefined, "", "card", "Cash", "paymob", 1]) await expectCode(manual(cash({ method })), "invalid-argument");
+  for (const reference of [undefined, "", "   ", 7, "x".repeat(101)]) await expectCode(manual(cash({ reference })), "invalid-argument");
+  const tomorrow2 = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  for (const paidOn of [undefined, "", "2026-13-01", "2026-02-30", "26-01-01", "2026/01/01", tomorrow2, 20260101, "2026-1-1"]) {
+    await expectCode(manual(cash({ paidOn })), "invalid-argument");
+  }
+  for (const amount of [1, -5, "8000", 8000.5]) await expectCode(manual(cash({ amount })), "invalid-argument");
+  assert.equal((await transactions()).length, 0);
+  assert.equal((await manual(cash({ paidOn: "2020-01-15" }))).status, "paid");
+});
+
+test("TAQ-16: a manual payment follows the same lease rules as a gateway one", async () => {
+  await db.collection("Leases").doc("lease-1").update({ status: "terminated" });
+  await assert.rejects(manual(cash()), (e) => e.code === "failed-precondition" && e.details.reason === "lease_not_active");
+  await db.collection("Leases").doc("lease-1").update({ status: "active" });
+  await expectCode(manual(cash({ period: monthsFromNow(-25) })), "invalid-argument");
+  await expectCode(manual(cash({ leaseId: "nope" })), "not-found");
+  assert.equal((await transactions()).length, 0);
+});
+
+test("TAQ-16: a month is paid once, whichever way it was paid", async () => {
+  await manual(cash());
+  await expectCode(manual(cash({ reference: "again" })), "already-exists");
+  await expectCode(intent({ leaseId: "lease-1" }), "already-exists");
+  const before = (await transactions())[0];
+  assert.equal(before.auditTrail.length, 1);
+  const gatewayFirst = await intent({ leaseId: "lease-1", period: monthsFromNow(-1) });
+  await webhook(gatewayObject(gatewayFirst));
+  await expectCode(manual(cash({ period: monthsFromNow(-1) })), "already-exists");
+});
+
+test("TAQ-16: recording over a pending checkout settles it, and a late gateway success is flagged as a duplicate", async () => {
+  const pending = await intent({ leaseId: "lease-1" });
+  const r = await manual(cash({ method: "bank_transfer", reference: "IBAN ref 9" }));
+  assert.equal(r.transactionId, pending.transactionId);
+  let tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
+  assert.equal(tx.status, "paid");
+  assert.equal(tx.method, "bank_transfer");
+  assert.deepEqual(tx.auditTrail.map((e) => e.action), ["intent_created", "manual_payment_recorded"]);
+  assert.equal((await webhook(gatewayObject(pending))).body.outcome, "duplicate_payment");
+  tx = (await db.doc(`Transactions/${pending.transactionId}`).get()).data();
+  assert.equal(tx.status, "paid");
+  assert.equal(tx.method, "bank_transfer");
+  assert.equal((await db.collection("Invoices").get()).size, 1);
+});
+
+test("TAQ-16: concurrent manual recordings for one month write one payment", async () => {
+  const results = await Promise.allSettled(Array.from({ length: 5 }, () => manual(cash())));
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  for (const r of results) if (r.status === "rejected") assert.equal(r.reason.code, "already-exists");
+  assert.equal((await db.collection("Invoices").get()).size, 1);
+  assert.equal((await transactions())[0].auditTrail.length, 1);
+});

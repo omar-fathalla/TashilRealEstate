@@ -197,7 +197,7 @@ Rent is paid through Paymob Unified Checkout (UAE). The app never decides that a
 
 ### Turning it on
 
-The gateway is off: `PAYMENTS_ENABLED=false` in `backend/.env`. While off, the callable answers
+The gateway is off: `PAYMENTS_ENABLED` is unset (the default is off). While off, the callable answers
 `failed-precondition` and the webhook answers `503`, and deploys do not bind the Paymob secrets, so a
 missing secret cannot block a deploy. To enable it for a project:
 
@@ -223,3 +223,15 @@ JavaScript's `join` do). A sandbox callback with a wrong-signature result would 
 
 Deploying this change also stops exporting `processRentPayment`: `firebase deploy` will offer to
 delete the old function on prod and dev. Nothing in the app calls it.
+
+### Payment split and manual payments (TAQ-16)
+
+- The platform and agency percentages come from `Settings/payment_split` (`platform_percent`,
+  `agency_percent`; the owner gets the rest). Only SuperAdmin can read or write it (rules), the
+  functions read it server-side when a payment is created, and the client never sends one. With no
+  document the split is 2 / 8 / 90; an invalid document stops payments (`split_invalid`) instead of
+  guessing. A payment keeps the split it was created with.
+- `recordManualPayment` lets the lease's owner, its managing agency, Admin or SuperAdmin record cash
+  or bank-transfer rent (method, reference, paid-on date). It settles the month the same way the
+  webhook does (invoice `Paid_Recorded`, receipt and owner notifications) and writes an `auditTrail`
+  entry on the transaction. No split is deducted because the money did not pass through the platform.

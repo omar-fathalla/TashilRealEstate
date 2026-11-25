@@ -107,10 +107,36 @@ function assertLeasePayable(lease, now = new Date()) {
   }
 }
 
-function splitsFor(amount) {
-  const platformFee = round2(amount * 0.02);
-  const agencyFee = round2(amount * 0.08);
+const DEFAULT_SPLIT = { platformPercent: 2, agencyPercent: 8 };
+const SPLIT_DOC = "payment_split";
+
+/**
+ * The platform/agency percentages of a payment, read on the server from `Settings/payment_split`
+ * (only SuperAdmin can write it). A missing document means the 2 / 8 defaults; a document that is
+ * not valid stops the payment instead of guessing. Nothing here ever comes from a client.
+ */
+async function loadSplitPercents() {
+  const snap = await admin.firestore().collection("Settings").doc(SPLIT_DOC).get();
+  if (!snap.exists) return { ...DEFAULT_SPLIT };
+  const platform = snap.get("platform_percent");
+  const agency = snap.get("agency_percent");
+  const valid = [platform, agency].every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 100) && platform + agency <= 100;
+  if (!valid) {
+    logger.error("Settings/payment_split is not valid");
+    throw new HttpsError("failed-precondition", "The payment split is not configured correctly.", { reason: "split_invalid" });
+  }
+  return { platformPercent: platform, agencyPercent: agency };
+}
+
+function splitsFor(amount, percents = DEFAULT_SPLIT) {
+  const platformFee = round2((amount * percents.platformPercent) / 100);
+  const agencyFee = round2((amount * percents.agencyPercent) / 100);
   return { platformFee, agencyFee, ownerPayout: round2(amount - platformFee - agencyFee) };
+}
+
+/** An audit entry: who did what, when. Appended to the transaction's `auditTrail`. */
+function auditEntry(action, actor, extra = {}) {
+  return { action, by: actor.uid, role: actor.role, at: Timestamp.now(), ...extra };
 }
 
 function currencyFor(lease) {
@@ -215,6 +241,7 @@ const createRentPaymentIntent = onCall(
       });
     }
     const amountCents = Math.round(due * 100);
+    const percents = await loadSplitPercents();
 
     const db = admin.firestore();
     const txRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
@@ -253,7 +280,8 @@ const createRentPaymentIntent = onCall(
         amount: due,
         amountCents,
         currencyCode: currency,
-        splits: splitsFor(due),
+        splits: splitsFor(due, percents),
+        splitPercent: { platform: percents.platformPercent, agency: percents.agencyPercent },
         status: "pending",
         gateway: "paymob",
         gatewayState: "creating",
@@ -262,10 +290,11 @@ const createRentPaymentIntent = onCall(
         updated_at: FieldValue.serverTimestamp(),
         userId: auth.uid,
       };
+      const created = auditEntry("intent_created", { uid: auth.uid, role: "Tenant" }, { attempt });
       if (snap.exists) {
-        t.update(txRef, { ...record, failureReason: FieldValue.delete() });
+        t.update(txRef, { ...record, failureReason: FieldValue.delete(), auditTrail: FieldValue.arrayUnion(created) });
       } else {
-        t.create(txRef, { ...record, createdAt: FieldValue.serverTimestamp() });
+        t.create(txRef, { ...record, createdAt: FieldValue.serverTimestamp(), auditTrail: [created] });
       }
       return { attempt };
     });
@@ -418,6 +447,7 @@ async function applyGatewayTransaction(obj) {
           failureReason: "declined",
           gatewayTransactionId: String(obj.id),
           updated_at: FieldValue.serverTimestamp(),
+          auditTrail: FieldValue.arrayUnion(auditEntry("gateway_failed", { uid: "paymob_webhook", role: "system" }, { gatewayTransactionId: String(obj.id) })),
         });
         return { outcome: "failed" };
       }
@@ -444,56 +474,183 @@ async function applyGatewayTransaction(obj) {
     }
 
     const leaseSnap = await t.get(db.collection("Leases").doc(tx.leaseId));
-    const lease = leaseSnap.exists ? leaseSnap.data() : {};
-    const now = Timestamp.now();
-    const invoiceNumber = `TASHIL-INV-${tx.transactionId}`;
-
-    t.update(txRef, {
-      status: "paid",
-      paidAt: now,
-      gatewayTransactionId: String(obj.id),
-      gatewayOrderId: orderId,
-      invoiceNumber,
-      gatewayState: "done",
-      failureReason: FieldValue.delete(),
-      updated_at: FieldValue.serverTimestamp(),
-    });
-    t.set(db.collection("Invoices").doc(invoiceNumber), {
-      invoiceNumber,
-      leaseId: tx.leaseId,
-      transactionId: tx.transactionId,
-      period: tx.period,
-      tenantName: lease.tenant_name || lease.tenantName || "",
-      propertyTitle: lease.property_title || lease.propertyTitle || "",
-      amount: tx.amount,
-      platformFee: tx.splits.platformFee,
-      agencyFee: tx.splits.agencyFee,
-      ownerPayout: tx.splits.ownerPayout,
-      vatAmount: 0,
-      totalPaid: tx.amount,
-      currencyCode: tx.currencyCode,
-      tenant_id: tx.tenant_id || null,
-      owner_id: tx.owner_id || null,
-      agency_id: tx.agency_id || null,
-      gatewayTransactionId: String(obj.id),
-      status: "Paid_Verified",
+    settlePaid(t, db, txRef, tx, leaseSnap.exists ? leaseSnap.data() : {}, {
+      invoiceStatus: "Paid_Verified",
       issuedBy: "paymob_webhook",
-      createdAt: FieldValue.serverTimestamp(),
+      txFields: { gatewayTransactionId: String(obj.id), gatewayOrderId: orderId, gatewayState: "done" },
+      invoiceExtra: { gatewayTransactionId: String(obj.id) },
+      audit: auditEntry("gateway_paid", { uid: "paymob_webhook", role: "system" }, { gatewayTransactionId: String(obj.id) }),
     });
-    const notify = (uid, kind) => {
-      if (!uid) return;
-      const id = `pay_${tx.transactionId}_${kind}`;
-      t.set(db.collection("Users").doc(uid).collection("notifications").doc(id), {
-        id,
-        recipientId: uid,
-        ...notificationFor(kind, tx, now),
-      });
-    };
-    notify(tx.tenant_id, "tenant");
-    if (tx.owner_id !== tx.tenant_id) notify(tx.owner_id, "owner");
     return { outcome: "paid", transactionId: txRef.id };
   });
 }
+
+/**
+ * Everything that happens when a payment becomes paid, gateway or manual: the transaction, one
+ * invoice with a deterministic id, and a notification for the tenant and the owner. It runs inside
+ * the caller's Firestore transaction, so it is all-or-nothing and a replay finds `paid` and stops
+ * before getting here.
+ */
+function settlePaid(t, db, txRef, tx, lease, { invoiceStatus, issuedBy, txFields, audit, invoiceExtra = {}, notifyOwner = true }) {
+  const now = Timestamp.now();
+  const invoiceNumber = `TASHIL-INV-${tx.transactionId}`;
+  t.update(txRef, {
+    status: "paid",
+    paidAt: now,
+    invoiceNumber,
+    failureReason: FieldValue.delete(),
+    updated_at: FieldValue.serverTimestamp(),
+    auditTrail: FieldValue.arrayUnion(audit),
+    ...txFields,
+  });
+  t.set(db.collection("Invoices").doc(invoiceNumber), {
+    invoiceNumber,
+    leaseId: tx.leaseId,
+    transactionId: tx.transactionId,
+    period: tx.period,
+    tenantName: lease.tenant_name || lease.tenantName || "",
+    propertyTitle: lease.property_title || lease.propertyTitle || "",
+    amount: tx.amount,
+    platformFee: tx.splits.platformFee,
+    agencyFee: tx.splits.agencyFee,
+    ownerPayout: tx.splits.ownerPayout,
+    vatAmount: 0,
+    totalPaid: tx.amount,
+    currencyCode: tx.currencyCode,
+    tenant_id: tx.tenant_id || null,
+    owner_id: tx.owner_id || null,
+    agency_id: tx.agency_id || null,
+    status: invoiceStatus,
+    issuedBy,
+    createdAt: FieldValue.serverTimestamp(),
+    ...invoiceExtra,
+  });
+  const notify = (uid, kind) => {
+    if (!uid) return;
+    const id = `pay_${tx.transactionId}_${kind}`;
+    t.set(db.collection("Users").doc(uid).collection("notifications").doc(id), {
+      id,
+      recipientId: uid,
+      ...notificationFor(kind, tx, now),
+    });
+  };
+  notify(tx.tenant_id, "tenant");
+  if (notifyOwner && tx.owner_id !== tx.tenant_id) notify(tx.owner_id, "owner");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Manual (cash / bank transfer) payments
+// ---------------------------------------------------------------------------------------------
+
+const MANUAL_METHODS = ["cash", "bank_transfer"];
+const REFERENCE_MAX = 100;
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function parsePaidOn(value, now) {
+  const match = typeof value === "string" ? DATE_ONLY.exec(value) : null;
+  const date = match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null;
+  if (!date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new HttpsError("invalid-argument", "paidOn must be a date in the form YYYY-MM-DD.");
+  }
+  if (date.getTime() > now + 24 * 60 * 60 * 1000) {
+    throw new HttpsError("invalid-argument", "paidOn cannot be in the future.");
+  }
+  return date;
+}
+
+/**
+ * Who may record a payment that happened outside the gateway: the lease's owner, the agency that
+ * manages it, or platform staff (Admin, SuperAdmin). Never the tenant.
+ */
+function assertCanRecordPayment(auth, role, lease) {
+  if (role === "SuperAdmin" || role === "Admin") return;
+  if (role === "Owner" && lease.owner_id && lease.owner_id === auth.uid) return;
+  const agencyId = auth.token && auth.token.agency_id;
+  if (role === "AgencyAdmin" && agencyId && lease.agency_id === agencyId) return;
+  throw new HttpsError("permission-denied", "You cannot record payments on this lease.");
+}
+
+const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"]);
+  const data = request.data || {};
+
+  const lease = await loadLease(data.leaseId);
+  assertCanRecordPayment(auth, role, lease);
+  if (!lease.tenant_id) throw new HttpsError("failed-precondition", "The lease has no tenant.");
+  assertLeasePayable(lease);
+
+  if (!MANUAL_METHODS.includes(data.method)) {
+    throw new HttpsError("invalid-argument", "method must be cash or bank_transfer.");
+  }
+  const reference = typeof data.reference === "string" ? data.reference.trim() : "";
+  if (!reference || reference.length > REFERENCE_MAX) {
+    throw new HttpsError("invalid-argument", `reference is required (up to ${REFERENCE_MAX} characters).`);
+  }
+  const now = deps.now();
+  const paidOn = parsePaidOn(data.paidOn, now);
+
+  const due = leaseAmount(lease);
+  if (data.amount !== undefined && data.amount !== null) {
+    if (typeof data.amount !== "number" || !Number.isFinite(data.amount) || data.amount <= 0) {
+      throw new HttpsError("invalid-argument", "amount must be a positive number.");
+    }
+    if (Math.abs(data.amount - due) > 0.005) {
+      throw new HttpsError("invalid-argument", "amount does not match the rent due on this lease.");
+    }
+  }
+  const period = paymentPeriod(data.period, new Date(now), lease);
+  const currency = currencyFor(lease);
+
+  const db = admin.firestore();
+  const txRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
+  const actor = { uid: auth.uid, role };
+  await db.runTransaction(async (t) => {
+    const snap = await t.get(txRef);
+    if (snap.exists && snap.get("status") === "paid") {
+      throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+        transactionId: txRef.id,
+        period,
+      });
+    }
+    const record = {
+      transactionId: txRef.id,
+      leaseId: lease.id,
+      period,
+      tenant_id: lease.tenant_id,
+      owner_id: lease.owner_id || "",
+      agency_id: lease.agency_id || "",
+      amount: due,
+      amountCents: Math.round(due * 100),
+      currencyCode: currency,
+      // Nothing passed through the platform, so nothing is deducted.
+      splits: { platformFee: 0, agencyFee: 0, ownerPayout: due },
+      method: data.method,
+      reference,
+      paidOn: Timestamp.fromDate(paidOn),
+      recordedBy: auth.uid,
+      recordedByRole: role,
+      gateway: "manual",
+      userId: auth.uid,
+    };
+    const audit = auditEntry("manual_payment_recorded", actor, { method: data.method, reference, paidOn: data.paidOn });
+    const txView = { ...record, status: "paid" };
+    if (snap.exists) {
+      t.update(txRef, { ...record, gatewayState: FieldValue.delete() });
+    } else {
+      t.create(txRef, { ...record, status: "pending", createdAt: FieldValue.serverTimestamp(), auditTrail: [] });
+    }
+    settlePaid(t, db, txRef, txView, lease, {
+      invoiceStatus: "Paid_Recorded",
+      issuedBy: auth.uid,
+      txFields: {},
+      audit,
+      invoiceExtra: { paymentMethod: data.method, paymentReference: reference, paidOn: data.paidOn, recordedByRole: role },
+      notifyOwner: auth.uid !== lease.owner_id,
+    });
+  });
+  return { success: true, status: "paid", transactionId: txRef.id, period, invoiceNumber: `TASHIL-INV-${txRef.id}` };
+});
 
 /** The webhook handler, separate from onRequest so tests can drive it with plain objects. */
 async function handlePaymobWebhook(req, res) {
@@ -541,6 +698,8 @@ const paymobWebhook = onRequest({ maxInstances: 10, secrets: paymentSecrets(), c
 
 module.exports = {
   createRentPaymentIntent,
+  recordManualPayment,
+  loadSplitPercents,
   paymobWebhook,
   handlePaymobWebhook,
   applyGatewayTransaction,

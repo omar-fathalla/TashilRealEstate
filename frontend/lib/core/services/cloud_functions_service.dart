@@ -40,6 +40,33 @@ class CloudFunctionsService {
     }
   }
 
+  /// Records a cash or bank-transfer rent payment (owner, managing agency or staff).
+  /// [paidOn] is a YYYY-MM-DD date.
+  Future<Map<String, dynamic>> recordManualPayment({
+    required String leaseId,
+    required String method,
+    required String reference,
+    required String paidOn,
+    String? period,
+    double? amount,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('recordManualPayment');
+      final response = await callable.call<Map<String, dynamic>>({
+        'leaseId': leaseId,
+        'method': method,
+        'reference': reference,
+        'paidOn': paidOn,
+        if (period != null) 'period': period,
+        if (amount != null) 'amount': amount,
+      });
+      return Map<String, dynamic>.from(response.data);
+    } catch (e) {
+      debugPrint('[CloudFunctionsService] Error calling recordManualPayment: $e');
+      rethrow;
+    }
+  }
+
   /// Sends a localized rental payment reminder push notification via backend Cloud Function.
   /// The server reads the tenant, amount, and currency from the lease document.
   Future<Map<String, dynamic>> sendRentalReminder({

@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } = require("firebase/firestore");
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } = require("firebase/firestore");
 
 let env;
 const ctx = {};
@@ -69,4 +69,43 @@ test("TAQ-16: gateway sessions (they hold checkout links) are unreadable and unw
     await assertFails(getDoc(doc(ctx[who], "PaymentSessions/9001")), who);
     await assertFails(setDoc(doc(ctx[who], "PaymentSessions/1"), { transactionId: "x" }), who);
   }
+});
+
+// --- Settings/payment_split ---
+
+const SPLIT = (db) => doc(db, "Settings/payment_split");
+const splitDoc = (extra = {}) => ({ platform_percent: 2, agency_percent: 8, updated_by: "sa", updated_at: serverTimestamp(), ...extra });
+
+test("TAQ-16: only SuperAdmin reads or writes the payment split setting", async () => {
+  await assertSucceeds(setDoc(SPLIT(ctx.sa), splitDoc()));
+  await assertSucceeds(getDoc(SPLIT(ctx.sa)));
+  await assertSucceeds(updateDoc(SPLIT(ctx.sa), { platform_percent: 3, agency_percent: 7, updated_by: "sa", updated_at: serverTimestamp() }));
+  for (const who of ["tenantA", "ownerA", "ag1", "admin", "unauth"]) {
+    await assertFails(setDoc(SPLIT(ctx[who]), splitDoc({ updated_by: who })), `${who} write`);
+    await assertFails(getDoc(SPLIT(ctx[who])), `${who} read`);
+  }
+});
+
+test("TAQ-16: the split setting must be two sane percentages stamped by the writer", async () => {
+  for (const bad of [
+    { platform_percent: "2" },
+    { platform_percent: -1 },
+    { agency_percent: 101 },
+    { platform_percent: 60, agency_percent: 50 },
+    { updated_by: "someone-else" },
+    { updated_at: new Date() },
+    { extra_field: 1 },
+  ]) {
+    await assertFails(setDoc(SPLIT(ctx.sa), splitDoc(bad)), JSON.stringify(bad));
+  }
+  const { agency_percent, ...missing } = splitDoc();
+  await assertFails(setDoc(SPLIT(ctx.sa), missing));
+  await assertSucceeds(setDoc(SPLIT(ctx.sa), splitDoc({ platform_percent: 0, agency_percent: 0 })));
+  await assertSucceeds(setDoc(SPLIT(ctx.sa), splitDoc({ platform_percent: 50.5, agency_percent: 49.5 })));
+});
+
+test("TAQ-16: SuperAdmin cannot create other settings documents or delete the split", async () => {
+  await assertFails(setDoc(doc(ctx.sa, "Settings/other"), splitDoc()));
+  await assertSucceeds(setDoc(SPLIT(ctx.sa), splitDoc()));
+  await assertFails(deleteDoc(SPLIT(ctx.sa)));
 });

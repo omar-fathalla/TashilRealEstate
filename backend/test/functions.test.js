@@ -139,7 +139,8 @@ test("TAQ-45: seedDatabase is no longer a deployed function", () => {
   const publicHttp = Object.keys(fns)
     .filter((name) => fns[name] && fns[name].__endpoint && fns[name].__endpoint.httpsTrigger)
     .sort();
-  assert.deepEqual(publicHttp, []);
+  // paymobWebhook is the one intended public endpoint (TAQ-16); it authenticates by HMAC signature.
+  assert.deepEqual(publicHttp, ["paymobWebhook"]);
 });
 
 // --- TAQ-20: syncMarketIndexManual ---
