@@ -589,3 +589,183 @@ test("TAQ-91: Owner, Tenant and AgencyAdmin behaviour is unchanged", async () =>
   await assertSucceeds(getDoc(doc(as("tenantA", { role: "Tenant" }), "Leases/lease-1")));
   await assertSucceeds(getDoc(doc(as("agent", CLAIMS.agency), "Leases/lease-1")));
 });
+
+// --- TAQ-101: staff edits of a large, sync-shaped listing stay inside the 1000-expression budget ---
+
+const BUDGET_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
+const bigImage = (n) => `https://firebasestorage.googleapis.com/v0/b/${BUDGET_PROJECT}.firebasestorage.app/o/listings%2Fbig%2Fphoto-${n}-with-a-long-descriptive-name.jpg?alt=media&token=0a1b2c3d-aaaa-bbbb-cccc-0123456789ab`;
+const words = (n, w) => Array.from({ length: n }, (_, i) => w[i % w.length]).join(" ").slice(0, n);
+
+// The largest listing syncOwnerPropertyToMarketplace can write: every text field at its cap, 30
+// amenities in each language, 20 images, agency attribution and every optional field present.
+const bigListing = {
+  id: "big",
+  owner_id: "ownerA",
+  agency_id: "agency-1",
+  countryCode: "AE",
+  currencyCode: "AED",
+  titles: { ar: words(200, ["شقة", "فاخرة", "مطلة", "على", "البحر"]), en: words(200, ["Luxury", "sea", "view", "flat"]), hi: words(200, ["शानदार", "समुद्र", "दृश्य", "फ्लैट"]) },
+  descriptions: { ar: words(4000, ["شقة", "واسعة", "بإطلالة", "رائعة"]), en: words(4000, ["Spacious", "bright", "apartment", "with", "balcony"]), hi: words(4000, ["विशाल", "उज्ज्वल", "अपार्टमेंट"]) },
+  locations: { ar: words(300, ["دبي", "مارينا", "برج"]), en: words(300, ["Dubai", "Marina", "Tower"]), hi: words(300, ["दुबई", "मरीना", "टावर"]) },
+  cityCode: "dubai",
+  propertyTypeCode: "apartment",
+  buildingName: words(200, ["Marina", "Tower", "Two"]),
+  pricePerMonth: 9000,
+  bedrooms: 3,
+  bathrooms: 2,
+  areaSqM: 185.5,
+  image: bigImage(0),
+  imageUrls: Array.from({ length: 20 }, (_, i) => bigImage(i)),
+  amenitiesMap: { ar: Array(30).fill("مسبح خاص"), en: Array(30).fill("Private pool"), hi: Array(30).fill("निजी पूल") },
+  isFurnished: true,
+  agencyNames: { ar: "تسهيل", en: "Tashil", hi: "तशील" },
+  agencyPhone: "+971 4 123 4567",
+  rating: 4,
+  isFeatured: false,
+  is_published: true,
+  status: "vacant",
+  updated_at: new Date("2026-01-01T00:00:00Z"),
+  verified: false,
+  moderation_hidden: false,
+};
+
+function superAdmin(uid = "root") {
+  const ctx = as(uid, CLAIMS.superAdmin);
+  ctx._uid = uid;
+  return ctx;
+}
+
+async function seedBig() {
+  await seed("Users/ownerA/properties/big", { owner_id: "ownerA" });
+  await seed("Properties/big", bigListing);
+}
+
+const STAFF_EDITS = [
+  ["rating", { rating: 4.5 }],
+  ["title (dotted path)", { "titles.en": "x" }],
+  ["price", { pricePerMonth: 9100 }],
+  ["verify", { verified: true }],
+  ["featuring", { isFeatured: true }],
+  ["status", { status: "rented" }],
+  ["description (dotted path)", { "descriptions.en": "A short new description" }],
+  ["images", { imageUrls: Array.from({ length: 20 }, (_, i) => bigImage(i + 100)) }],
+];
+
+for (const [name, change] of STAFF_EDITS) {
+  test(`TAQ-101: a SuperAdmin can edit the ${name} of a maximum-size listing`, async () => {
+    await seedBig();
+    const me = as("root", CLAIMS.superAdmin);
+    await assertSucceeds(updateDoc(doc(me, "Properties/big"), { ...change, updated_at: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(me, "Properties/big"), change));
+  });
+}
+
+test("TAQ-101: the /admin verify toggle works for SuperAdmin and Admin on a maximum-size listing", async () => {
+  await seedBig();
+  for (const me of [as("root", CLAIMS.superAdmin), as("admin1", CLAIMS.admin)]) {
+    await assertSucceeds(updateDoc(doc(me, "Properties/big"), { verified: true, updated_at: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(me, "Properties/big"), { verified: false, updated_at: serverTimestamp() }));
+  }
+});
+
+test("TAQ-101: a hide and a restore of a maximum-size listing work for SuperAdmin and Admin", async () => {
+  for (const me of [superAdmin(), admin()]) {
+    await testEnv.clearFirestore();
+    await seedBig();
+    await assertSucceeds(moderate(me, "big", { hidden: true, preHidePublished: true, isPublished: false }));
+    await assertSucceeds(moderate(me, "big", { hidden: false, preHidePublished: true }));
+  }
+});
+
+test("TAQ-101: an Admin still cannot edit content on a maximum-size listing", async () => {
+  await seedBig();
+  const me = as("admin1", CLAIMS.admin);
+  for (const [, change] of STAFF_EDITS.filter(([name]) => name !== "verify")) {
+    await assertFails(updateDoc(doc(me, "Properties/big"), { ...change, updated_at: serverTimestamp() }));
+  }
+});
+
+test("TAQ-101: the cheap SuperAdmin edit path still validates the keys it changes", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  const ref = doc(me, "Properties/big");
+  const bad = [
+    { rating: 6 }, { rating: -1 }, { rating: "5" },
+    { pricePerMonth: 0 }, { pricePerMonth: -5 }, { pricePerMonth: "9000" },
+    { areaSqM: 0 }, { bedrooms: 101 }, { bathrooms: -1 },
+    { isFeatured: "yes" }, { verified: 1 }, { isFurnished: "no" },
+    { status: "draft" }, { countryCode: "US" }, { currencyCode: "EGP" },
+    { "titles.en": "x".repeat(201) },
+    { "descriptions.en": "x".repeat(4001) },
+    { "locations.en": "x".repeat(301) },
+    { "titles.fr": "bonjour" },
+    { "titles.en": "call 0501234567" },
+    { "descriptions.en": "write me at me@example.com" },
+    { "locations.en": "wa.me/971501234567" },
+    { buildingName: "@owner_handle" },
+    { amenitiesMap: { ar: Array(31).fill("x"), en: [], hi: [] } },
+    { amenitiesMap: { ar: ["0 5 0 1 2 3 4 5 6 7"], en: [], hi: [] } },
+    { image: "https://evil.example/a.jpg" },
+    { image: "a.jpg b.jpg" },
+    { imageUrls: Array.from({ length: 21 }, (_, i) => bigImage(i)) },
+    { imageUrls: ["https://evil.example/a.jpg"] },
+    { imageUrls: "a.jpg" },
+    { agencyPhone: "1".repeat(31) },
+    { phone: "+971501234567" },
+    { whatsapp: "x" },
+    { tenant_name: "x" },
+    { owner_id: "mallory" },
+    { id: "other" },
+    { updated_at: "yesterday" },
+  ];
+  for (const change of bad) {
+    await assertFails(updateDoc(ref, change), JSON.stringify(change).slice(0, 80));
+  }
+});
+
+test("TAQ-101: visibility still cannot change outside the moderation batch, with any mix of keys", async () => {
+  await seedBig();
+  for (const me of [as("root", CLAIMS.superAdmin), as("admin1", CLAIMS.admin)]) {
+    const ref = doc(me, "Properties/big");
+    await assertFails(updateDoc(ref, { is_published: false }));
+    await assertFails(updateDoc(ref, { moderation_hidden: true }));
+    await assertFails(updateDoc(ref, { moderation_hidden: true, is_published: true }));
+    await assertFails(updateDoc(ref, { is_published: false, rating: 3 }));
+    await assertFails(updateDoc(ref, { moderation_hidden: true, pricePerMonth: 1 }));
+  }
+});
+
+test("TAQ-101: SuperAdmin cannot create a public doc while moderation holds it hidden, so delete and recreate fails", async () => {
+  await seed("Users/ownerA/properties/held", { owner_id: "ownerA" });
+  await seed("Properties/held", { ...live, id: "held", is_published: false, moderation_hidden: true });
+  await seed("PropertyModeration/held", { hidden: true, pre_hide_published: true, updated_by: "admin1" });
+  const me = as("root", CLAIMS.superAdmin);
+  await assertSucceeds(deleteDoc(doc(me, "Properties/held")));
+  await assertFails(setDoc(doc(me, "Properties/held"), { ...live, id: "held" }));
+  await assertFails(setDoc(doc(me, "Properties/held"), { ...live, id: "held", is_published: false, moderation_hidden: false }));
+  // once the hold is lifted the id is an ordinary one again
+  await assertSucceeds(updateDoc(doc(me, "PropertyModeration/held"), { hidden: false, pre_hide_published: true, updated_by: "root", updated_at: serverTimestamp() }));
+  await assertSucceeds(setDoc(doc(me, "Properties/held"), { ...live, id: "held" }));
+});
+
+test("TAQ-101: a SuperAdmin create needs the owner's private doc, and owner_id must be that owner", async () => {
+  await seed("Users/ownerA/properties/p1", { owner_id: "ownerA" });
+  const me = as("root", CLAIMS.superAdmin);
+  await assertFails(setDoc(doc(me, "Properties/nopriv"), { ...live, id: "nopriv" }));
+  await assertFails(setDoc(doc(me, "Properties/p1"), { ...live, id: "p1", owner_id: "ownerB" }));
+  await assertFails(setDoc(doc(me, "Properties/p1"), { ...live, id: "p1", owner_id: "" }));
+  await assertSucceeds(setDoc(doc(me, "Properties/p1"), { ...live, id: "p1", owner_id: "ownerA" }));
+});
+
+test("TAQ-101: a SuperAdmin can create a maximum-size listing", async () => {
+  await seed("Users/ownerA/properties/big", { owner_id: "ownerA" });
+  const me = as("root", CLAIMS.superAdmin);
+  await assertSucceeds(setDoc(doc(me, "Properties/big"), { ...bigListing, updated_at: serverTimestamp() }));
+});
+
+test("TAQ-101: Admin and owners still cannot create a listing", async () => {
+  await seed("Users/ownerA/properties/p2", { owner_id: "ownerA" });
+  for (const me of [as("admin1", CLAIMS.admin), as("ownerA", CLAIMS.owner)]) {
+    await assertFails(setDoc(doc(me, "Properties/p2"), { ...live, id: "p2" }));
+  }
+});

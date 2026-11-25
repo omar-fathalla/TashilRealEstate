@@ -38,6 +38,11 @@ test.after(async () => {
 
 test.beforeEach(async () => {
   await testEnv.clearFirestore();
+  // A SuperAdmin create is only allowed for a listing whose owner's private doc exists, so the
+  // creates below get past that check and exercise the value rules they are written for.
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner" });
+  });
 });
 
 function db(uid, claims) {
@@ -741,6 +746,9 @@ test("TAQ-57: in the prod project the prod bucket is accepted and other buckets 
     firestore: { rules: fs.readFileSync(path.join(__dirname, "../../firestore.rules"), "utf8") },
   });
   try {
+    await prodEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "Users/owner/properties/prop-1"), { owner_id: "owner" });
+    });
     const root = prodEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
     const ref = doc(root, "Properties/prop-1");
     await assertSucceeds(setDoc(ref, listing("owner", {
