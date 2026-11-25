@@ -296,6 +296,16 @@ function trustedHops(env = process.env) {
   return Number.isInteger(hops) && hops >= 1 && hops <= 5 ? hops : 1;
 }
 
+/**
+ * The local Functions emulator has no Google front end: nothing in front of it appends the
+ * caller's address, so every X-Forwarded-For entry was written by the client and a single
+ * forged entry would choose its own bucket. Under the emulator the header is ignored and the
+ * TCP peer is used (every local call shares one bucket).
+ */
+function forwardedForTrusted(env = process.env) {
+  return env.FUNCTIONS_EMULATOR !== "true";
+}
+
 function normalizeIp(value) {
   if (typeof value !== "string") return null;
   let ip = value.trim();
@@ -311,11 +321,13 @@ function normalizeIp(value) {
  * `trust proxy` it returns the left-most X-Forwarded-For entry, which the client chose.
  * Without enough trusted entries the TCP peer address is used instead.
  */
-function clientAddress(rawRequest, hops = trustedHops()) {
+function clientAddress(rawRequest, hops = trustedHops(), trustForwarded = forwardedForTrusted()) {
   const headers = (rawRequest && rawRequest.headers) || {};
   const header = headers["x-forwarded-for"];
   const value = Array.isArray(header) ? header.join(",") : header;
-  const entries = typeof value === "string" ? value.split(",").map((entry) => entry.trim()).filter(Boolean) : [];
+  const entries = trustForwarded && typeof value === "string"
+    ? value.split(",").map((entry) => entry.trim()).filter(Boolean)
+    : [];
   if (entries.length >= hops) {
     const ip = normalizeIp(entries[entries.length - hops]);
     if (ip) return { ip, source: "x-forwarded-for" };
@@ -326,8 +338,8 @@ function clientAddress(rawRequest, hops = trustedHops()) {
   return { ip: "unknown", source: "unknown" };
 }
 
-function clientIp(rawRequest, hops) {
-  return clientAddress(rawRequest, hops).ip;
+function clientIp(rawRequest, hops, trustForwarded) {
+  return clientAddress(rawRequest, hops, trustForwarded).ip;
 }
 
 // Rate-limit documents never store a raw IP: the id is an HMAC keyed with the server secret.
@@ -490,6 +502,7 @@ module.exports = {
     clientAddress,
     normalizeIp,
     trustedHops,
+    forwardedForTrusted,
     visitorBucket,
   },
 };

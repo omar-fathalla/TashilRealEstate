@@ -453,6 +453,30 @@ test("TAQ-77: behind one more trusted proxy the client is the second entry from 
   });
 });
 
+test("TAQ-83: the trusted hop is counted from the right, whatever the client put on the left", () => {
+  const forged = (n) => Array.from({ length: n }, (_, i) => `10.0.${i}.${i + 1}`).join(", ");
+  for (const hops of [1, 2, 3]) {
+    const header = `${forged(4)}, 203.0.113.7${", 35.191.0.1".repeat(hops - 1)}`;
+    assert.equal(gw.clientIp({ headers: { "x-forwarded-for": header }, socket: { remoteAddress: "169.254.1.1" } }, hops, true), "203.0.113.7");
+  }
+  // The same client-chosen prefix with a different last entry is a different visitor.
+  assert.equal(gw.clientIp({ headers: { "x-forwarded-for": `${forged(4)}, 203.0.113.8` } }, 1, true), "203.0.113.8");
+});
+
+test("TAQ-83: under the Functions emulator X-Forwarded-For is ignored, so one forged entry cannot pick a bucket", () => {
+  assert.equal(gw.forwardedForTrusted({}), true);
+  assert.equal(gw.forwardedForTrusted({ FUNCTIONS_EMULATOR: "true" }), false);
+  const peer = { remoteAddress: "127.0.0.1" };
+  assert.deepEqual(
+    gw.clientAddress({ headers: { "x-forwarded-for": "198.51.100.77" }, socket: peer }, 1, false),
+    { ip: "127.0.0.1", source: "socket" },
+  );
+  assert.deepEqual(
+    gw.clientAddress({ headers: { "x-forwarded-for": "198.51.100.77" }, socket: peer }, 1, true),
+    { ip: "198.51.100.77", source: "x-forwarded-for" },
+  );
+});
+
 test("TAQ-77: a forged X-Forwarded-For cannot buy a visitor fresh quota on its own", async () => {
   gw.deps.now = () => Date.UTC(2026, 10, 24, 11, 0, 0);
   const forged = (i) => ({
