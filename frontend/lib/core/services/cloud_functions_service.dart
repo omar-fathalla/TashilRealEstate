@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Enterprise Cloud Functions caller service for Tashil Real Estate.
-/// Connects client actions directly to backend v2 Cloud Functions with offline fallbacks.
+/// Connects client actions directly to backend v2 Cloud Functions. Failures are thrown, never faked.
 class CloudFunctionsService {
   static final CloudFunctionsService _instance = CloudFunctionsService._internal();
   factory CloudFunctionsService() => _instance;
@@ -67,8 +67,8 @@ class CloudFunctionsService {
     }
   }
 
-  /// Sends a localized rental payment reminder push notification via backend Cloud Function.
-  /// The server reads the tenant, amount, and currency from the lease document.
+  /// Sends a rent reminder to the lease's tenant (in-app notification). The server reads the
+  /// tenant, amount and currency from the lease. A failed call is thrown to the caller.
   Future<Map<String, dynamic>> sendRentalReminder({
     required String leaseId,
     required String dueDate,
@@ -81,17 +81,13 @@ class CloudFunctionsService {
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      debugPrint('[CloudFunctionsService] Notice: sendRentalReminder fallback ($e)');
-      return {
-        'success': true,
-        'messageId': 'msg_simulated_${DateTime.now().millisecondsSinceEpoch}',
-        'status': 'dispatched',
-        'isMockFallback': true,
-      };
+      debugPrint('[CloudFunctionsService] Error calling sendRentalReminder: $e');
+      rethrow;
     }
   }
 
   /// Triggers server-side digital rental invoice generation with payment split breakdown.
+  /// A failed call is thrown to the caller; no invoice number is ever made up on the client.
   Future<Map<String, dynamic>> generateRentalInvoiceReceipt({
     required String leaseId,
     required String tenantName,
@@ -108,13 +104,8 @@ class CloudFunctionsService {
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      debugPrint('[CloudFunctionsService] Notice: generateRentalInvoiceReceipt fallback ($e)');
-      return {
-        'success': true,
-        'invoiceNumber': 'INV-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-        'verificationHash': 'VHASH-9482918',
-        'isMockFallback': true,
-      };
+      debugPrint('[CloudFunctionsService] Error calling generateRentalInvoiceReceipt: $e');
+      rethrow;
     }
   }
 }
