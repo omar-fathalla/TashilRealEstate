@@ -68,3 +68,17 @@ test("TAQ-110: a lease created straight as an offer notifies the tenant", async 
   await run("l9", null, lease("pending_tenant_approval"));
   assert.equal((await notes("tenant")).length, 1);
 });
+
+test("TAQ-110: the agency admin who created the lease hears the tenant's decision too, once", async () => {
+  await run("l1", lease("pending_tenant_approval", { created_by: "agadmin" }), lease("active", { created_by: "agadmin" }));
+  await run("l2", lease("pending_tenant_approval", { created_by: "agadmin" }), lease("rejected", { created_by: "agadmin" }));
+  const agency = await notes("agadmin");
+  assert.deepEqual(agency.map((n) => n.type).sort(), ["lease_approved", "lease_rejected"]);
+  assert.ok(agency.every((n) => n.recipientId === "agadmin"));
+  assert.equal((await notes("owner")).length, 2);
+  await run("l3", lease("pending_tenant_approval", { created_by: "owner" }), lease("active", { created_by: "owner" }));
+  assert.equal((await notes("owner")).length, 3, "an owner who created the lease gets one notification");
+  await run("l4", lease("pending_tenant_approval", { created_by: "tenant" }), lease("active", { created_by: "tenant" }));
+  await run("l5", lease("pending_tenant_approval", { created_by: "a/b" }), lease("active", { created_by: "a/b" }));
+  assert.equal((await notes("tenant")).length, 0);
+});

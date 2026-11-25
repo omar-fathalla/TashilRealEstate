@@ -77,17 +77,19 @@ async function handleLeaseWrite(event) {
 
   const db = admin.firestore();
   const leaseId = event.params.leaseId;
-  let uid = "";
+  let recipients = [];
   let note = null;
   if (to === "pending_tenant_approval" && lease.tenant_id) {
-    uid = lease.tenant_id;
+    recipients = [lease.tenant_id];
     note = offerNotification(leaseId, lease);
   } else if (from === "pending_tenant_approval" && (to === "active" || to === "rejected") && lease.owner_id) {
-    uid = lease.owner_id;
+    // The manager who created the lease (an agency admin, usually) hears the decision too.
+    const creator = typeof lease.created_by === "string" && lease.created_by && !lease.created_by.includes("/") ? lease.created_by : "";
+    recipients = [lease.owner_id, creator].filter((uid, i, all) => uid && uid !== lease.tenant_id && all.indexOf(uid) === i);
     note = decisionNotification(leaseId, lease, to);
   }
-  if (!note || !uid) return null;
-  await db.collection("Users").doc(uid).collection("notifications").doc(note.id).set(note);
+  if (!note || !recipients.length) return null;
+  await Promise.all(recipients.map((uid) => db.collection("Users").doc(uid).collection("notifications").doc(note.id).set({ ...note, recipientId: uid })));
   return note.id;
 }
 
