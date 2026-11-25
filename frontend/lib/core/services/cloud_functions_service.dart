@@ -16,18 +16,22 @@ class CloudFunctionsService {
   }
 
   /// Records a rent payment for [leaseId]. The server only accepts the lease's tenant and the rent
-  /// on the lease: [amount] may be left out, and if it is sent it must equal that rent. Failures
+  /// on the lease: [amount] may be left out, and if it is sent it must equal that rent. [period]
+  /// (YYYY-MM) defaults to the current billing month; a lease can be paid once per period, and a
+  /// repeat fails with `already-exists` (the existing id is in the error details). Failures
   /// (not signed in, not the tenant, wrong amount, unknown lease) are thrown to the caller; a
   /// rejected payment is never reported as a success.
   Future<Map<String, dynamic>> processRentPayment({
     required String leaseId,
     double? amount,
+    String? period,
   }) async {
     try {
       final callable = functions.httpsCallable('processRentPayment');
       final response = await callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         if (amount != null) 'amount': amount,
+        if (period != null) 'period': period,
       });
       return Map<String, dynamic>.from(response.data);
     } catch (e) {

@@ -31,6 +31,32 @@ const ENFORCE_APP_CHECK = appCheckEnforced();
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
+const BILLING_PERIOD_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const PAYMENT_PERIODS_BACK = 24;
+
+const monthIndex = (year, month) => year * 12 + (month - 1);
+
+/** The billing month (UTC) of [now] as YYYY-MM. */
+function currentBillingPeriod(now = new Date()) {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * The month a payment is for: the caller's explicit `period` (YYYY-MM, from 24 months back to next
+ * month, so the key can neither be garbage nor reach arbitrarily far) or the current billing month.
+ */
+function paymentPeriod(value, now = new Date()) {
+  if (value === undefined || value === null) return currentBillingPeriod(now);
+  const match = typeof value === "string" ? BILLING_PERIOD_PATTERN.exec(value) : null;
+  if (!match) throw new HttpsError("invalid-argument", "period must be a month in the form YYYY-MM.");
+  const requested = monthIndex(Number(match[1]), Number(match[2]));
+  const current = monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  if (requested > current + 1 || requested < current - PAYMENT_PERIODS_BACK) {
+    throw new HttpsError("invalid-argument", "period is outside the months a payment can be recorded for.");
+  }
+  return value;
+}
+
 // Records a rent payment for a lease. Only the lease's tenant can pay it, and the amount is the
 // lease's own rent: a client may omit it or repeat it, but can never choose a different one. The
 // owner and the managing agency have no payment flow in the app (no call site), so they cannot
@@ -55,28 +81,48 @@ exports.processRentPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
     }
   }
 
+  const period = paymentPeriod(data.period);
   const countryCode = leaseCountry(lease);
   const platformFee = round2(due * 0.02);
   const agencyFee = round2(due * 0.08);
   const ownerPayout = round2(due - platformFee - agencyFee);
 
+  // One payment per lease and month: the id is deterministic and the record is create()d inside a
+  // transaction, so a retry, a double tap or two concurrent calls write exactly one transaction.
+  const db = admin.firestore();
+  const transactionRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
   try {
-    const transactionRef = admin.firestore().collection("Transactions").doc();
-    await transactionRef.set({
-      transactionId: transactionRef.id,
-      leaseId: lease.id,
-      tenant_id: lease.tenant_id,
-      owner_id: lease.owner_id || "",
-      agency_id: lease.agency_id || "",
-      amount: due,
-      currencyCode: countryCode === "AE" ? "AED" : "EGP",
-      splits: { platformFee, agencyFee, ownerPayout },
-      status: "Completed",
-      createdAt: FieldValue.serverTimestamp(),
-      userId: auth.uid,
+    await db.runTransaction(async (tx) => {
+      if ((await tx.get(transactionRef)).exists) {
+        throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+          transactionId: transactionRef.id,
+          period,
+        });
+      }
+      tx.create(transactionRef, {
+        transactionId: transactionRef.id,
+        leaseId: lease.id,
+        period,
+        tenant_id: lease.tenant_id,
+        owner_id: lease.owner_id || "",
+        agency_id: lease.agency_id || "",
+        amount: due,
+        currencyCode: countryCode === "AE" ? "AED" : "EGP",
+        splits: { platformFee, agencyFee, ownerPayout },
+        status: "Completed",
+        createdAt: FieldValue.serverTimestamp(),
+        userId: auth.uid,
+      });
     });
-    return { success: true, transactionId: transactionRef.id };
+    return { success: true, transactionId: transactionRef.id, period };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    if (error && (error.code === 6 || error.code === "already-exists")) {
+      throw new HttpsError("already-exists", `Rent for ${period} has already been paid on this lease.`, {
+        transactionId: transactionRef.id,
+        period,
+      });
+    }
     logger.error("Error processing rent payment", error);
     throw new HttpsError("internal", "Failed to process the payment.");
   }

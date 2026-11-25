@@ -350,6 +350,13 @@ test("TAQ-91: Admin and Investor cannot touch payments or the market index refre
 
 const tenantCaller = () => caller("tenant");
 
+/** YYYY-MM for the UTC month [offset] months from now. */
+function monthsFromNow(offset) {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 async function transactions() {
   return (await db.collection("Transactions").get()).docs.map((d) => d.data());
 }
@@ -377,7 +384,7 @@ test("TAQ-91 (UT e): the lease's tenant pays the lease's rent and the server wri
 
 test("TAQ-91 (UT e): the amount may be left out, and then the lease's rent is used", async () => {
   await fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: tenantCaller() });
-  await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: null }, auth: tenantCaller() });
+  await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: null, period: monthsFromNow(-1) }, auth: tenantCaller() });
   assert.deepEqual((await transactions()).map((t) => t.amount), [8000, 8000]);
 });
 
@@ -472,4 +479,87 @@ test("TAQ-91: the user directory carries the claim role next to the profile role
   assert.equal(byId.plain.claim_role, "");
   assert.equal("iban" in byId.claimed, false);
   assert.equal("national_id" in byId.claimed, false);
+});
+
+// --- TAQ-99: processRentPayment is idempotent per lease and month ---
+
+test("TAQ-99: the transaction id is the lease id and the billing month, and the record carries the period", async () => {
+  const result = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(result.transactionId, `lease-1_${monthsFromNow(0)}`);
+  assert.equal(result.period, monthsFromNow(0));
+  const snap = await db.collection("Transactions").doc(result.transactionId).get();
+  assert.equal(snap.get("period"), monthsFromNow(0));
+  assert.equal(snap.get("transactionId"), result.transactionId);
+});
+
+test("TAQ-99: a second payment for the same lease and month is ALREADY_EXISTS and writes nothing", async () => {
+  const first = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  const before = (await db.collection("Transactions").doc(first.transactionId).get()).data();
+  await assert.rejects(
+    fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() }),
+    (err) => {
+      assert.equal(err.code, "already-exists");
+      assert.equal(err.details.transactionId, first.transactionId);
+      return true;
+    },
+  );
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: tenantCaller() }), "already-exists");
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period: monthsFromNow(0) }, auth: tenantCaller() }), "already-exists");
+  const all = await transactions();
+  assert.equal(all.length, 1);
+  assert.deepEqual((await db.collection("Transactions").doc(first.transactionId).get()).data(), before, "the existing record is untouched");
+});
+
+test("TAQ-99: different months, and different leases, are separate payments", async () => {
+  await db.collection("Leases").doc("lease-2").set({ owner_id: "owner", tenant_id: "tenant", country_code: "AE", financialTerms: { monthlyRent: 3000 } });
+  const ids = [];
+  for (const [leaseId, period] of [["lease-1", undefined], ["lease-1", monthsFromNow(-1)], ["lease-1", monthsFromNow(1)], ["lease-2", undefined]]) {
+    const r = await fns.processRentPayment.run({ data: { leaseId, period }, auth: tenantCaller() });
+    ids.push(r.transactionId);
+  }
+  assert.equal(new Set(ids).size, 4);
+  assert.equal((await transactions()).length, 4);
+});
+
+test("TAQ-99: concurrent calls for the same lease and month create exactly one transaction", async () => {
+  const results = await Promise.allSettled(
+    Array.from({ length: 8 }, () => fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() })),
+  );
+  const ok = results.filter((r) => r.status === "fulfilled");
+  const rejected = results.filter((r) => r.status === "rejected");
+  assert.equal(ok.length, 1, JSON.stringify(results.map((r) => r.status === "rejected" ? r.reason.code : "ok")));
+  assert.equal(rejected.length, 7);
+  for (const r of rejected) assert.equal(r.reason.code, "already-exists", r.reason.message);
+  const all = await transactions();
+  assert.equal(all.length, 1);
+  assert.equal(all[0].transactionId, ok[0].value.transactionId);
+});
+
+test("TAQ-99: concurrent calls for different months all succeed", async () => {
+  const periods = [-3, -2, -1, 0, 1].map(monthsFromNow);
+  const results = await Promise.all(
+    periods.map((period) => fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() })),
+  );
+  assert.deepEqual(results.map((r) => r.period).sort(), [...periods].sort());
+  assert.equal((await transactions()).length, 5);
+});
+
+test("TAQ-99: a malformed or out-of-range period is INVALID_ARGUMENT", async () => {
+  for (const period of ["2026-13", "2026-00", "2026-1", "26-01", "2026/01", "2026-01-01", "abc", "", 202611, true, ["2026-11"], {}, monthsFromNow(2), monthsFromNow(-25), "1999-01", "9999-12"]) {
+    await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() }), "invalid-argument");
+  }
+  assert.equal((await transactions()).length, 0);
+  for (const period of [monthsFromNow(1), monthsFromNow(-24)]) {
+    await fns.processRentPayment.run({ data: { leaseId: "lease-1", period }, auth: tenantCaller() });
+  }
+  assert.equal((await transactions()).length, 2);
+});
+
+test("TAQ-99: a rejected call (wrong amount, other tenant) does not use up the month", async () => {
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 1 }, auth: tenantCaller() }), "invalid-argument");
+  await db.collection("Users").doc("tenant2").set({ role: "Tenant" });
+  await expectCode(fns.processRentPayment.run({ data: { leaseId: "lease-1" }, auth: caller("tenant2") }), "permission-denied");
+  assert.equal((await transactions()).length, 0);
+  const ok = await fns.processRentPayment.run({ data: { leaseId: "lease-1", amount: 8000 }, auth: tenantCaller() });
+  assert.equal(ok.success, true);
 });

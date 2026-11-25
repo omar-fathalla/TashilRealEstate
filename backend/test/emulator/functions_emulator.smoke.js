@@ -149,6 +149,17 @@ test("TAQ-91: processRentPayment runs in the Functions emulator, with clean erro
   assert.equal(tx.amount, 5000);
   assert.ok(tx.createdAt, "server timestamp missing");
 
+  const duplicate = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: 5000 });
+  assert.equal(duplicate.status, 409, JSON.stringify(duplicate.body));
+  const lastMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1));
+  const period = `${lastMonth.getUTCFullYear()}-${String(lastMonth.getUTCMonth() + 1).padStart(2, "0")}`;
+  const concurrent = await Promise.all(
+    [0, 1, 2, 3].map(() => callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", period })),
+  );
+  assert.equal(concurrent.filter((r) => r.status === 200).length, 1, JSON.stringify(concurrent.map((r) => r.status)));
+  assert.ok(concurrent.every((r) => r.status === 200 || r.status === 409), JSON.stringify(concurrent.map((r) => r.status)));
+  assert.equal((await db.collection("Transactions").where("leaseId", "==", "pay-lease").get()).size, 2);
+
   const wrongAmount = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: -999999 });
   assert.equal(wrongAmount.status, 400, JSON.stringify(wrongAmount.body));
   const text = await callable("processRentPayment", tenant.idToken, { leaseId: "pay-lease", amount: "abc" });
