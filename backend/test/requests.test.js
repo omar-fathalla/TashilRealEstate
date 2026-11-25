@@ -53,8 +53,11 @@ test.beforeEach(async () => {
     db.doc("Properties/hidden").set(listing({ is_published: false })),
     db.doc("Properties/held").set(listing({ moderation_hidden: true })),
     db.doc("Properties/noowner").set(listing({ owner_id: "" })),
-    db.doc("Users/owner/properties/p1").set({ title: "Marina Apartment" }),
+    db.doc("Users/owner/properties/p1").set({ title: "Marina Apartment", agency_id: "agency-1", countryCode: "AE" }),
   ]);
+  // The listing's owner is agency-1's account, as the sync trigger stamps agency_id from claims.
+  await admin.auth().createUser({ uid: "owner" });
+  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
 });
 test.after(() => {
   requests.deps.now = () => Date.now();
@@ -374,4 +377,59 @@ test("TAQ-112: two managers creating the lease at once produce one lease", async
   const results = await Promise.allSettled([createLease(), createLease(), createLease()]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   assert.equal((await db.collection("Leases").get()).size, 1);
+});
+
+// --- TAQ-110: lease exclusivity and ownership on the application path ---
+
+test("TAQ-110: a rented or unavailable listing takes no viewing requests or applications", async () => {
+  for (const status of ["rented", "unavailable"]) {
+    await db.doc("Properties/p1").update({ status });
+    await assert.rejects(view(), (e) => e.code === "failed-precondition" && e.details.reason === "listing_not_live", status);
+    await assert.rejects(apply(), (e) => e.code === "failed-precondition" && e.details.reason === "listing_not_live", status);
+  }
+  await db.doc("Properties/p1").update({ status: "available" });
+  assert.equal((await view()).status, "pending");
+});
+
+test("TAQ-110: no lease from an application when the property is not the owner's or not the agency's", async () => {
+  await approvedApplication();
+  await db.doc("Users/owner/properties/p1").delete();
+  await assert.rejects(createLease(), (e) => e.code === "failed-precondition" && e.details.reason === "property_not_found");
+  await db.doc("Users/owner/properties/p1").set({ title: "Marina Apartment", countryCode: "AE" });
+  await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the property doc does not name the agency");
+  await db.doc("Users/owner/properties/p1").set({ agency_id: "agency-1" }, { merge: true });
+  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-9" });
+  await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the owner's account is another agency");
+  await admin.auth().setCustomUserClaims("owner", { role: "Owner" });
+  await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the owner's account has no agency");
+  await db.doc("Properties/p1").update({ owner_id: "other" });
+  await assert.rejects(createLease(), (e) => e.details.reason === "property_not_found", "the listing changed hands");
+  assert.equal((await db.collection("Leases").get()).size, 0);
+  assert.equal((await db.doc("RentalApplications/p1_visitor").get()).get("lease_id"), undefined);
+});
+
+test("TAQ-110: no lease from an application while another live lease holds the property", async () => {
+  await approvedApplication();
+  await db.doc("Leases/other-lease").set({ status: "active", property_id: "p1", owner_id: "owner", tenant_id: "t2", agency_id: "agency-1", end_date: "2099-01-01" });
+  await db.doc("PropertyLeaseLocks/p1").set({ lease_id: "other-lease", property_id: "p1" });
+  await assert.rejects(createLease(), (e) => e.code === "failed-precondition" && e.details.reason === "property_already_leased");
+  await db.doc("Leases/other-lease").update({ status: "terminated" });
+  assert.equal((await createLease()).status, "draft", "a lock left by an ended lease does not block");
+});
+
+test("TAQ-110: an application is consumed by its lease; parallel calls from different managers create one", async () => {
+  await approvedApplication();
+  const results = await Promise.allSettled([
+    createLease(),
+    createLease(leaseInput(), caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" })),
+    createLease(leaseInput(), caller("root", { role: "SuperAdmin" })),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  for (const r of results.filter((x) => x.status === "rejected")) assert.equal(r.reason.code, "already-exists");
+  const app = (await db.doc("RentalApplications/p1_visitor").get()).data();
+  assert.equal(app.lease_id, "app_p1_visitor");
+  assert.ok(app.consumed_at);
+  await db.doc("Leases/app_p1_visitor").delete();
+  await assert.rejects(createLease(), (e) => e.code === "already-exists" && e.details.reason === "application_consumed", "deleting the lease does not free the application");
+  assert.equal((await db.collection("Leases").get()).size, 0);
 });

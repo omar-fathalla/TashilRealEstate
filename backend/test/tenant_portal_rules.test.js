@@ -92,7 +92,7 @@ test("TAQ-110: nobody else can touch another user's notifications, create them, 
   await assertFails(deleteDoc(doc(ctx.tenantA, "Users/tenantA/notifications/n1")));
 });
 
-test("TAQ-110: the tenant approves a pending lease offer and cannot approve one that is not pending", async () => {
+test("TAQ-110: the tenant cannot approve an offer directly (respondToLeaseOffer does), but may reject a pending one", async () => {
   await env.withSecurityRulesDisabled(async (c) => {
     await setDoc(doc(c.firestore(), "Leases/offer"), { tenant_id: "tenantA", owner_id: "ownerA", agency_id: "", property_id: "p1", status: "pending_tenant_approval", monthly_rent: 5000 });
     await setDoc(doc(c.firestore(), "Leases/draft"), { tenant_id: "tenantA", owner_id: "ownerA", agency_id: "", property_id: "p1", status: "draft", monthly_rent: 5000 });
@@ -100,5 +100,8 @@ test("TAQ-110: the tenant approves a pending lease offer and cannot approve one 
   await assertFails(updateDoc(doc(ctx.tenantA, "Leases/draft"), { status: "active" }));
   await assertFails(updateDoc(doc(ctx.tenantA, "Leases/offer"), { status: "active", monthly_rent: 1 }));
   await assertFails(updateDoc(doc(ctx.tenantB, "Leases/offer"), { status: "active" }));
-  await assertSucceeds(updateDoc(doc(ctx.tenantA, "Leases/offer"), { status: "active" }));
+  await assertFails(updateDoc(doc(ctx.tenantA, "Leases/offer"), { status: "active" }));
+  await assertFails(updateDoc(doc(ctx.tenantB, "Leases/offer"), { status: "rejected" }));
+  await assertFails(updateDoc(doc(ctx.tenantA, "Leases/draft"), { status: "rejected" }));
+  await assertSucceeds(updateDoc(doc(ctx.tenantA, "Leases/offer"), { status: "rejected" }));
 });

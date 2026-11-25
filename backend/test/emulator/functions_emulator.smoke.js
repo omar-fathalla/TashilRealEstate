@@ -163,9 +163,12 @@ test("TAQ-16: rent payment runs in the Functions emulator: pending first, paid o
     const tenant = await signUp("smoke-tenant@example.com");
     await db.doc(`Users/${tenant.uid}`).set({ role: "Tenant", full_name: "Smoke Tenant" });
     await db.doc("Users/smoke-owner-x").set({ role: "Owner" });
+    await db.doc("Users/smoke-owner-x/properties/pay-prop").set({ title: "Pay smoke", countryCode: "AE" });
     await db.doc("Leases/pay-lease").set({
       owner_id: "smoke-owner-x",
       tenant_id: tenant.uid,
+      agency_id: "",
+      property_id: "pay-prop",
       country_code: "AE",
       status: "active",
       financialTerms: { monthlyRent: 5000 },
@@ -275,4 +278,43 @@ test("TAQ-91: the moderation trigger keeps a hidden listing hidden when its owne
   assert.ok(back, "the sync did not recreate the public doc");
   assert.equal(back.is_published, false);
   assert.equal(back.moderation_hidden, true);
+});
+
+// --- TAQ-110: lease offer, acceptance under the property lock, and release, in the Functions emulator ---
+
+test("TAQ-110: two acceptances race for one property; one wins, and terminating it releases the lock", async () => {
+  const owner = await signUp("lease-owner@example.com", { role: "Owner" });
+  const t1 = await signUp("lease-t1@example.com", { role: "Tenant" });
+  const t2 = await signUp("lease-t2@example.com", { role: "Tenant" });
+  await db.doc(`Users/${owner.uid}/properties/lock-prop`).set({ title: "Lock smoke", countryCode: "AE" });
+  const offer = (tenantId) => callable("createLease", owner.idToken, {
+    propertyId: "lock-prop", tenantId, startDate: "2026-01-01", endDate: "2099-12-31", monthlyRent: 4000, sendOffer: true,
+  });
+  const o1 = await offer(t1.uid);
+  const o2 = await offer(t2.uid);
+  assert.equal(o1.status, 200, JSON.stringify(o1.body));
+  assert.equal(o2.status, 200, JSON.stringify(o2.body));
+
+  const [a1, a2] = await Promise.all([
+    callable("respondToLeaseOffer", t1.idToken, { leaseId: o1.body.result.leaseId, decision: "approve" }),
+    callable("respondToLeaseOffer", t2.idToken, { leaseId: o2.body.result.leaseId, decision: "approve" }),
+  ]);
+  const winners = [a1, a2].filter((r) => r.status === 200);
+  assert.equal(winners.length, 1, JSON.stringify([a1.body, a2.body]));
+  const loser = [a1, a2].find((r) => r.status !== 200);
+  assert.equal(loser.status, 400, JSON.stringify(loser.body));
+  assert.equal(loser.body.error.status, "FAILED_PRECONDITION");
+  assert.equal(loser.body.error.details.reason, "property_already_leased");
+  const winnerId = a1.status === 200 ? o1.body.result.leaseId : o2.body.result.leaseId;
+  assert.equal((await db.doc("PropertyLeaseLocks/lock-prop").get()).get("lease_id"), winnerId);
+
+  await db.doc(`Leases/${winnerId}`).update({ status: "terminated" });
+  const released = await waitFor(async () => !(await db.doc("PropertyLeaseLocks/lock-prop").get()).exists);
+  assert.ok(released, "the release trigger did not delete the lock");
+
+  const o3 = await offer(t2.uid);
+  assert.equal(o3.status, 200, JSON.stringify(o3.body));
+  const a3 = await callable("respondToLeaseOffer", t2.idToken, { leaseId: o3.body.result.leaseId, decision: "approve" });
+  assert.equal(a3.status, 200, JSON.stringify(a3.body));
+  assert.equal(a3.body.result.status, "active");
 });
