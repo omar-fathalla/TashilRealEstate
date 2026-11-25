@@ -38,6 +38,24 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
 Firestore and Storage App Check enforcement are separate switches in the Firebase console
 and are not affected by `ENFORCE_APP_CHECK`.
 
+## Listing photos (`storage.rules`)
+
+Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
+
+- The owner, a SuperAdmin and an Admin can always read and list them.
+- Anyone else can read a photo only while `/Properties/{propertyId}` exists, has
+  `is_published == true` and `moderation_hidden != true`, and has `owner_id == ownerUid`.
+  Unpublished, rented, moderation-hidden and deleted listings are refused. The rule costs one
+  Firestore read (Storage rules allow two per evaluation).
+- Owners cannot upload or replace photos while `PropertyModeration/{propertyId}` has
+  `hidden: true`. They can still delete them.
+- Download URLs with `&token=` are bearer links: Cloud Storage serves them without evaluating
+  the rules. A token URL handed out while a listing was live keeps working after it goes
+  offline, until the token is revoked (Firebase console, file details, "Revoke").
+  Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
+- The deployed project needs the Storage service agent to have Firestore read access for
+  cross-service rules (the console prompts for it on the first rules deploy).
+
 ## Visitor rate limits (`geminiGenerate`)
 
 Signed-out visitors may use the public AI features under a per-IP limit (10 calls a minute,
