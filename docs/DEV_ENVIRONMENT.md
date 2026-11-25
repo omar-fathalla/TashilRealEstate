@@ -154,6 +154,13 @@ This is the check described in `docs/SECURITY_SETUP.md` ("Visitor rate limits"),
 4. `firebase functions:log --only geminiGenerate --project dev` must show
    `ipSource: "x-forwarded-for"`. If every call says `socket`, the platform is not adding
    the header the way the code assumes.
+
+   The local Functions emulator ignores `X-Forwarded-For` altogether (nothing in front of it adds
+   the caller's IP), so locally `ipSource` is always `socket` and all calls share one bucket.
+   For a local probe that needs one bucket per forged header, set
+   `VISITOR_IP_EMULATOR_TRUST_XFF=true` in `backend/.env.local` (git-ignored). Deployed
+   functions ignore it, and it must never be set for dev or prod (`backend/.env`,
+   `backend/.env.<project id>`).
 5. From a second network (for example a phone hotspot), one call must succeed and create a
    second `ip_...` document. If it is rejected, every visitor shares one bucket (the hop count
    is too high, or a proxy address is being counted).

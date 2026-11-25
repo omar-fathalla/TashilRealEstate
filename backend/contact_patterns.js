@@ -12,8 +12,12 @@
  *  - " x " between numbers, "+" after a digit, and one ASCII letter between digits act as
  *    separators,
  *  - every run of separator characters (spaces, dashes, dots, slashes, commas, colons, |, *,
- *    #, apostrophes, middle dots, Arabic thousands/decimal marks, invisible characters, ...)
- *    becomes one `~`.
+ *    #, apostrophes, middle dots, ª º, Arabic thousands/decimal marks, invisible characters, ...)
+ *    becomes one `~`,
+ *  - then, after a digit, any run of up to 6 characters that are neither letters nor
+ *    digits (any symbol, emoji or punctuation: ☎ ★ → € ₹ 📞 、 ；) becomes `~`, as does a run of
+ *    superscripts or fractions (¹ ² ¼) between two decimal digits. Longer runs and the `§`
+ *    fences around amounts still break a number.
  * Phones are then matched by shape on that text, and again after MERGE_STEPS join 1-2 digit
  * groups to their neighbours (so "010 12 34 56 78" reads as one number):
  *  - trunk zero:  0 + 8-10 digits (EG/UAE mobiles and landlines), e.g. 050 123 4567
@@ -82,6 +86,7 @@ const SEPARATOR_CODE_POINTS = [
   0x2e, 0x2d, 0x2f, 0x5f, 0x5c, 0x28, 0x29, 0x7e, [0x2010, 0x2015], 0x2212, 0xfe63,
   0x2c, 0x7c, 0x3a, 0x2a, 0x23, 0x27, 0xb7, 0x2022, 0x66b, 0x66c,
   0x3b, 0x3d, 0x5e, 0x21, 0x26, 0x25, 0x24, 0x22, 0x5b, 0x5d, 0x7b, 0x7d, 0x3c, 0x3e, 0x3f,
+  0xaa, 0xba,
   0xff0d, 0xff0e, 0xff0f, 0xff3f, 0xff3c, 0xff08, 0xff09, 0xff0c, 0xff1a, 0xff5c,
 ];
 
@@ -212,6 +217,14 @@ const THOUSANDS_STEP = (() => {
   ];
 })();
 
+const SYMBOL_RUN_MAX = 6;
+// One replace() for both, to keep the rules' expression cost down. The number-form branch comes
+// first so "0~¹~1" is not split at the `~` before it.
+const SYMBOL_RUN_STEP = [
+  `(\\p{Nd})~?[\\p{No}\\p{Nl}]{1,${SYMBOL_RUN_MAX}}~?(\\p{Nd})|(${N})[^\\p{L}${N}${BREAK}]{1,${SYMBOL_RUN_MAX}}`,
+  "$1$3~$2",
+];
+
 /** replace() steps, in order: [RE2 pattern, replacement]. `$n` refers to capture group n. */
 const NORMALIZE_STEPS = [
   [RE2.set(IGNORABLE_CODE_POINTS), ""],
@@ -226,6 +239,15 @@ const NORMALIZE_STEPS = [
   // Any ASCII letter except O/o and l/I, which read as digits instead.
   [`(${N})[A-HJ-NP-Za-km-np-z](${N})`, "$1~$2"],
   [`${RE2.set(SEPARATOR_CODE_POINTS)}+`, "~"],
+  // Allowlist: after a digit, any run of up to SYMBOL_RUN_MAX characters that are neither
+  // letters nor digits (symbols, emoji, punctuation of any script) is one separator. Only the
+  // digit before the run is matched, so one pass covers one-digit groups; a longer run leaves
+  // its remainder in place, which no phone shape crosses. Between two decimal digits,
+  // superscripts, fractions and other non-decimal numbers (¹ ² ¼ ⅓) separate too; a run of them
+  // alone still reads as digits ("⁰⁵⁰¹²³⁴⁵⁶⁷"). Twice: that branch matches both digits, and
+  // replace() never overlaps, so one-digit groups (0¹1¹0¹1...) need a second pass.
+  SYMBOL_RUN_STEP,
+  SYMBOL_RUN_STEP,
 ];
 
 // Joins 1-2 digit groups to their neighbours: every `~` next to a short group is removed.

@@ -33,18 +33,46 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*|application/pdf|audio/.*');
     }
 
-    // Public listing photos. The owner may only write under a property that exists in their
-    // private Users/{ownerUid}/properties tree. Cross-service rules need the Storage service
-    // agent to have Firestore read access in the deployed project.
-    // Anyone may fetch a photo by its name; only the owner or a SuperAdmin may list a folder,
-    // so file names of unpublished properties are not enumerable.
+    // The listing behind a photo is live: its public /Properties doc exists, is published, is
+    // vacant (the only status sanitizeForMarketplace gives a live listing), is not held by
+    // moderation, and belongs to the owner in the photo's path. One Firestore read; a missing doc
+    // is null, so a deleted listing is refused. The trigger also sets is_published == false on
+    // rented, unpublished and held listings; the status check does not rely on that.
+    function listingLive(ownerUid, propertyId) {
+      let listing = firestore.get(/databases/(default)/documents/Properties/$(propertyId));
+      return listing != null
+        && listing.data.get('is_published', false) == true
+        && listing.data.get('status', 'unavailable') == 'vacant'
+        && listing.data.get('moderation_hidden', false) != true
+        && listing.data.get('owner_id', '') == ownerUid;
+    }
+
+    // PropertyModeration/{propertyId} holds the listing hidden. A missing doc means not hidden.
+    function moderationHeld(propertyId) {
+      let moderation = firestore.get(/databases/(default)/documents/PropertyModeration/$(propertyId));
+      return moderation != null && moderation.data.get('hidden', false) == true;
+    }
+
+    // Public listing photos, under the owner's uid and the property id.
+    //  - get (download, metadata, getDownloadURL): the owner, SuperAdmin and Admin always; anyone
+    //    else only while the listing is live (listingLive). Download URLs that carry a token are
+    //    bearer links served without these rules, so a URL issued while a listing was live keeps
+    //    working until its token is revoked.
+    //  - list: the owner, SuperAdmin, and Admin (who lists photos to moderate them, TAQ-91), so
+    //    file names of unpublished properties are not enumerable by anyone else.
+    //  - create/update: the owner, under a property in their private Users/{ownerUid}/properties
+    //    tree, and not while moderation holds the listing hidden.
+    //  - delete: SuperAdmin, Admin, or the owner of an existing private property (held or not).
+    // Each rule reads at most two Firestore documents (the Storage limit per evaluation). Cross-service
+    // rules need the Storage service agent to have Firestore read access in the deployed project.
     match /public/listings/{ownerUid}/{propertyId}/{fileName} {
-      allow get: if true;
+      allow get: if isSelf(ownerUid) || isSuperAdmin() || isAdmin() || listingLive(ownerUid, propertyId);
       allow list: if isSelf(ownerUid) || isSuperAdmin() || isAdmin();
       allow create, update: if isSelf(ownerUid)
-        && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId))
         && under10MB()
-        && request.resource.contentType.matches('image/(png|jpe?g|webp|gif)');
+        && request.resource.contentType.matches('image/(png|jpe?g|webp|gif)')
+        && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId))
+        && !moderationHeld(propertyId);
       allow delete: if isSuperAdmin() || isAdmin()
         || (isSelf(ownerUid)
           && firestore.exists(/databases/(default)/documents/Users/$(ownerUid)/properties/$(propertyId)));

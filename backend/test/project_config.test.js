@@ -219,6 +219,15 @@ test("TAQ-100 (F4 follow-up): backend/.secret*.json and backend/.env.* are ignor
   assert.deepEqual(tracked.filter((f) => /\.secret.*\.json$/.test(f)), [], "no secret json is tracked");
 });
 
+test("TAQ-87: connect-src names the two geocoding hosts the app calls, and the CSP stays report-only", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined);
+  const connect = headers["Content-Security-Policy-Report-Only"].match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
+  for (const origin of ["https://nominatim.openstreetmap.org", "https://ipwho.is"]) assert.ok(connect.includes(origin), origin);
+  const service = fs.readFileSync(path.join(__dirname, "../../frontend/lib/core/services/location/location_geocoding_service.dart"), "utf8");
+  for (const host of ["nominatim.openstreetmap.org", "ipwho.is"]) assert.ok(service.includes(`https://${host}/`), `${host} is used by the app`);
+});
+
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
 
 test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {
@@ -383,5 +392,15 @@ test("TAQ-88: the lockfile and firebase.json runtime agree with engines.node", (
     if (entry.runtime === undefined) continue;
     const major = Number(String(entry.runtime).replace(/^nodejs/, ""));
     assert.ok(major >= MIN_NODE_MAJOR, `firebase.json runtime ${entry.runtime} is too old`);
+  }
+});
+
+test("TAQ-83: the emulator-only XFF switch is never committed in a function env file", () => {
+  const root = path.join(__dirname, "../..");
+  const files = require("child_process").execFileSync("git", ["ls-files", "backend/.env*", "backend/**/.env*"], { cwd: root, encoding: "utf8" })
+    .split("\n").filter(Boolean);
+  assert.ok(files.includes("backend/.env"));
+  for (const file of files) {
+    assert.doesNotMatch(fs.readFileSync(path.join(root, file), "utf8"), /VISITOR_IP_EMULATOR_TRUST_XFF/, file);
   }
 });

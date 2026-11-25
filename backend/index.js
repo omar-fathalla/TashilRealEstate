@@ -509,6 +509,12 @@ function projectStorageBuckets() {
 
 /** The object path of an https download URL in this project's bucket, or null. */
 function projectStorageObject(ref) {
+  const located = projectStorageLocation(ref);
+  return located ? located.objectPath : null;
+}
+
+/** { host, bucket, objectPath } of an https download URL in this project's bucket, or null. */
+function projectStorageLocation(ref) {
   let url;
   try {
     url = new URL(ref);
@@ -523,10 +529,23 @@ function projectStorageObject(ref) {
       : null;
   if (!match || !projectStorageBuckets().includes(match[1])) return null;
   try {
-    return decodeURIComponent(match[2]);
+    return { host: url.hostname, bucket: match[1], objectPath: decodeURIComponent(match[2]) };
   } catch (_) {
     return null;
   }
+}
+
+/**
+ * The form a public listing stores an accepted image ref in. A Firebase Storage download URL
+ * loses its query: `&token=` makes a bearer link that Storage serves without its rules, so the
+ * public doc keeps only `?alt=media`, and every download is checked against storage.rules
+ * (a photo is served only while its listing is live).
+ */
+function publicImageRef(ref) {
+  const trimmed = ref.trim();
+  const located = trimmed.includes(":") ? projectStorageLocation(trimmed) : null;
+  if (!located || located.host !== "firebasestorage.googleapis.com") return trimmed;
+  return `https://firebasestorage.googleapis.com/v0/b/${located.bucket}/o/${encodeURIComponent(located.objectPath)}?alt=media`;
 }
 
 /**
@@ -593,7 +612,7 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
     : [data.image];
-  const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map((ref) => ref.trim());
+  const images = rawImages.filter(isPublicImageRef).slice(0, MARKETPLACE_MAX_IMAGES).map(publicImageRef);
 
   const listing = {
     id: propertyId || cleanText(data.id, 200),

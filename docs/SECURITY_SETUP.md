@@ -38,6 +38,30 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
 Firestore and Storage App Check enforcement are separate switches in the Firebase console
 and are not affected by `ENFORCE_APP_CHECK`.
 
+## Listing photos (`storage.rules`)
+
+Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
+
+- The owner, a SuperAdmin and an Admin can always read and list them.
+- Anyone else can read a photo only while `/Properties/{propertyId}` exists, has
+  `is_published == true`, `status == 'vacant'` and `moderation_hidden != true`, and has
+  `owner_id == ownerUid`.
+  Unpublished, rented, moderation-hidden and deleted listings are refused. The rule costs one
+  Firestore read (Storage rules allow two per evaluation).
+- Owners cannot upload or replace photos while `PropertyModeration/{propertyId}` has
+  `hidden: true`, and `firestore.rules` stops them adding new `imageUrls` / `image` refs to
+  `Users/{ownerUid}/properties/{propertyId}` for as long. They can still delete photos and
+  remove refs; SuperAdmin and Admin can delete photos for moderation.
+- Public listings store Storage photos as tokenless `...?alt=media` URLs: the sanitizer drops
+  `&token=` and `firestore.rules` rejects it, so every download goes through these rules.
+- Download URLs with `&token=` are bearer links: Cloud Storage serves them without evaluating
+  the rules. A token URL handed out while a listing was live keeps working after it goes
+  offline, until the token is revoked (Firebase console, file details, "Revoke"). Revoking on
+  unpublish/hide and reissuing on republish is TAQ-109.
+  Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
+- The deployed project needs the Storage service agent to have Firestore read access for
+  cross-service rules (the console prompts for it on the first rules deploy).
+
 ## Visitor rate limits (`geminiGenerate`)
 
 Signed-out visitors may use the public AI features under a per-IP limit (10 calls a minute,
@@ -56,6 +80,28 @@ entries, or a malformed one, the TCP peer address is used.
   Google's front end appends the caller's IP as the last entry.
 - Set `VISITOR_IP_TRUSTED_HOPS=2` (for example in `backend/.env.<project id>`) if an external
   Application Load Balancer or another trusted proxy appends one more entry after the client's.
+
+Behind Firebase Hosting: the app calls the callable on its `cloudfunctions.net` URL, not through
+a Hosting rewrite, so the default `1` applies and `firebase.json` has no function rewrite. If a
+Hosting `rewrites` rule to the function is ever added, Hosting's own proxy sits in front of
+Google's front end and the chain can be longer; do not guess. Deploy it to a non-prod project,
+send `X-Forwarded-For: 10.9.9.9` with a known source IP, read `ipSource` and the new `ip_…`
+document, and set `VISITOR_IP_TRUSTED_HOPS` to the position (from the right) of your own IP
+before sending any production traffic through that route.
+
+Local emulator: the Functions emulator has no front end that appends the caller, so every
+`X-Forwarded-For` entry would be client-written. When `FUNCTIONS_EMULATOR=true` the header is
+ignored and the TCP peer is used (`ipSource: "socket"`), so all local calls share one bucket and
+a forged header cannot pick its own. This is covered by `backend/test/gemini_gateway.test.js`.
+A local probe script that needs one bucket per simulated visitor can start the emulator with
+`VISITOR_IP_EMULATOR_TRUST_XFF=true` (for example in `backend/.env.local`), which trusts the
+last `X-Forwarded-For` entry again, or send each simulated visitor from a different source
+address. The switch is read only when `FUNCTIONS_EMULATOR` is exactly `true`, so it never
+changes a deployed function (tested in `backend/test/gemini_gateway.test.js`). Never set it on
+dev or prod anyway: keep it out of `backend/.env`, every `backend/.env.<project id>` and the
+function's runtime environment (`backend/test/project_config.test.js` fails if a committed env
+file names it).
+The emulator therefore cannot show the per-network behaviour in step 5 below; that needs a deploy.
 
 ### Verify on a non-prod deploy before production
 

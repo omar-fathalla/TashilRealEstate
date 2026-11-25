@@ -594,7 +594,7 @@ test("TAQ-91: Owner, Tenant and AgencyAdmin behaviour is unchanged", async () =>
 // --- TAQ-101: staff edits of a large, sync-shaped listing stay inside the 1000-expression budget ---
 
 const BUDGET_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
-const bigImage = (n) => `https://firebasestorage.googleapis.com/v0/b/${BUDGET_PROJECT}.firebasestorage.app/o/listings%2Fbig%2Fphoto-${n}-with-a-long-descriptive-name.jpg?alt=media&token=0a1b2c3d-aaaa-bbbb-cccc-0123456789ab`;
+const bigImage = (n) => `https://firebasestorage.googleapis.com/v0/b/${BUDGET_PROJECT}.firebasestorage.app/o/listings%2Fbig%2Fphoto-${n}-with-a-long-descriptive-name.jpg?alt=media`;
 const words = (n, w) => Array.from({ length: n }, (_, i) => w[i % w.length]).join(" ").slice(0, n);
 
 // The largest listing syncOwnerPropertyToMarketplace can write: every text field at its cap, 30
