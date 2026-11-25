@@ -280,7 +280,7 @@ test("TAQ-14: only the owner or a SuperAdmin can delete listing photos", async (
 test("TAQ-14: Firestore imageRefsOk accepts public/listings download URLs and rejects users/ ones", async () => {
   await seed((db) => deleteDoc(doc(db, "Properties/propA")));
   const bucket = `${projectId}.appspot.com`;
-  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media&token=abc`;
+  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/public%2Flistings%2FownerA%2FpropA%2Ffront.jpg?alt=media`;
   const privateUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/users%2FownerA%2Fkyc%2Fid.jpg?alt=media`;
   const listing = (imageUrls) => ({
     id: "propA",
@@ -297,6 +297,7 @@ test("TAQ-14: Firestore imageRefsOk accepts public/listings download URLs and re
   const db = testEnv.authenticatedContext("root", { role: "SuperAdmin" }).firestore();
   await assertSucceeds(setDoc(doc(db, "Properties/propA"), listing([publicUrl])));
   await assertFails(setDoc(doc(db, "Properties/propA"), listing([privateUrl])));
+  await assertFails(setDoc(doc(db, "Properties/propA"), listing([`${publicUrl}&token=abc`])));
 
   const { sanitizeForMarketplace } = require("../index");
   const sanitized = sanitizeForMarketplace({ ...listing([publicUrl, privateUrl]), image: privateUrl }, "ownerA", "propA");

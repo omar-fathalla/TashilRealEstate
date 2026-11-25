@@ -621,7 +621,7 @@ test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 const PROD_PROJECT = "tashil-proptech-os";
-const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media&token=t`;
+const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media`;
 
 test("TAQ-52: a well-formed listing is accepted", async () => {
   const root = db("root", { role: "SuperAdmin" });
@@ -693,6 +693,9 @@ test("TAQ-52: image references must be from this project's bucket or the app bun
     "assets/../secrets.png",
     "data:image/svg+xml;base64,PHN2Zz4=",
     "data:text/html;base64,PGgxPg==",
+    // A download token makes a bearer link that skips storage.rules.
+    `${PROJECT_IMAGE}&token=0a1b2c3d`,
+    PROJECT_IMAGE.replace("?alt=media", "?token=0a1b2c3d"),
   ];
   for (const image of badImages) {
     await assertFails(setDoc(ref, listing("owner", { image })), image);
