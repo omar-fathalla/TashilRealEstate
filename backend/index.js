@@ -607,6 +607,20 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
 }
 
 /**
+ * Whether a private listing may be live right now: the owner wants it public and available, holds
+ * a role that can publish, and has a positive rent. `refusal` says why not when it wants to be live.
+ */
+async function publishDecision(ownerId, data) {
+  const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
+  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "" };
+  const { role, agencyId } = await resolveUserAuthority(ownerId);
+  const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
+    : !hasPublishablePrice(data) ? "the rent is not a positive number"
+      : "";
+  return { wantsPublic, refusal, agencyId };
+}
+
+/**
  * Event-Driven Cloud Function: Automatically synchronizes owner property mutations
  * from the private tree (Users/{ownerId}/properties/{propertyId}) to the public
  * marketplace collection (/Properties/{propertyId}).
@@ -641,13 +655,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     const afterData = event.data.after.data();
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const wantsPublic = isPublished && rentalStatus === "available";
-    const { role: ownerRole, agencyId } = wantsPublic ? await resolveUserAuthority(ownerId) : { role: "", agencyId: "" };
-
-    const refusal = !wantsPublic ? ""
-      : !PUBLISHER_ROLES.includes(ownerRole) ? `owner [${ownerId}] has role [${ownerRole || "none"}]`
-        : !hasPublishablePrice(afterData) ? "the rent is not a positive number"
-          : "";
+    const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -706,29 +714,39 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
 );
 
 /**
- * Keeps the public listing in line with PropertyModeration. A hide always takes the public doc
- * offline, even if the moderation doc was written without the public doc. Lifting the hold only
- * clears the mirror: whether the listing goes back online is decided by the moderator's restore
- * write (which brings back the pre-hide value) or by the owner's next sync.
+ * Keeps the public listing in line with PropertyModeration.
+ *
+ * A hide always takes the public doc offline, even if the moderation doc was written without it.
+ *
+ * Lifting the hold (or deleting the moderation doc) is the only way a moderated listing goes back
+ * online, and it is decided here, never by a client write: the public doc is rebuilt from the
+ * owner's current private doc, and published only if the listing was live before the hide
+ * (pre_hide_published), the private doc still wants to be public and available, the rent is
+ * positive, and the owner still holds a publishing role. Otherwise the listing stays offline. This
+ * is what stops a restore from reviving a stale public doc (old price, lost role, unpublished).
  */
 exports.reconcilePropertyModeration = onDocumentWritten(
   `${MODERATION_COLLECTION}/{propertyId}`,
   async (event) => {
     const propertyId = event.params.propertyId;
+    const before = event.data && event.data.before;
     const after = event.data && event.data.after;
     const hidden = Boolean(after && after.exists && after.get("hidden") === true);
+    const wasHidden = Boolean(before && before.exists && before.get("hidden") === true);
+    const preHidePublished = Boolean(after && after.exists && after.get("pre_hide_published") === true);
     const db = admin.firestore();
     const ref = db.collection("Properties").doc(propertyId);
     try {
-      await db.runTransaction(async (tx) => {
-        const current = await tx.get(ref);
-        if (!current.exists) return;
-        if (hidden && (current.get("is_published") !== false || current.get("moderation_hidden") !== true)) {
-          tx.update(ref, { is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() });
-        } else if (!hidden && current.get("moderation_hidden") === true) {
-          tx.update(ref, { moderation_hidden: false, updated_at: FieldValue.serverTimestamp() });
+      const current = await ref.get();
+      if (!current.exists) return null;
+      if (hidden) {
+        if (current.get("is_published") !== false || current.get("moderation_hidden") !== true) {
+          await ref.update({ is_published: false, moderation_hidden: true, updated_at: FieldValue.serverTimestamp() });
         }
-      });
+        return null;
+      }
+      if (!wasHidden && current.get("moderation_hidden") !== true) return null;
+      await liftHold(db, propertyId, preHidePublished);
     } catch (err) {
       logger.error(`Error reconciling moderation for property [${propertyId}]`, err);
       throw err;
@@ -736,6 +754,33 @@ exports.reconcilePropertyModeration = onDocumentWritten(
     return null;
   }
 );
+
+async function liftHold(db, propertyId, preHidePublished) {
+  const ref = db.collection("Properties").doc(propertyId);
+  const ownerId = (await ref.get()).get("owner_id");
+  const privateSnap = ownerId && preHidePublished
+    ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
+    : null;
+  const privateData = privateSnap && privateSnap.exists ? privateSnap.data() : null;
+  const decision = privateData ? await publishDecision(ownerId, privateData) : null;
+  const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
+  if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);
+
+  await db.runTransaction(async (tx) => {
+    const current = await tx.get(ref);
+    const moderation = moderationFromSnap(await tx.get(db.collection(MODERATION_COLLECTION).doc(propertyId)));
+    if (!current.exists || current.get("owner_id") !== ownerId || moderation.hidden) return;
+    if (goLive) {
+      tx.set(ref, sanitizeForMarketplace(privateData, ownerId, propertyId, {
+        agencyId: decision.agencyId,
+        current: current.data(),
+        moderation: NOT_MODERATED,
+      }));
+    } else {
+      tx.update(ref, { is_published: false, moderation_hidden: false, updated_at: FieldValue.serverTimestamp() });
+    }
+  });
+}
 
 // Export helper for unit testing
 exports.sanitizeForMarketplace = sanitizeForMarketplace;

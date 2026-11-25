@@ -175,8 +175,12 @@ test("TAQ-91: an Admin can see every listing, including unpublished and hidden o
 
 const stamp = () => serverTimestamp();
 
-/** What the app's Admin dashboard writes: the moderation doc and the public doc in one batch. */
-function moderate(ctx, id, { hidden, preHidePublished, isPublished }) {
+/**
+ * What the app's Admin dashboard writes: the moderation doc and the public doc in one batch. A hide
+ * takes the listing offline; a restore only lifts the flag (the server republishes, see
+ * sync.test.js), so no client write ever sets is_published to true.
+ */
+function moderate(ctx, id, { hidden, preHidePublished, publicChange }) {
   const batch = writeBatch(ctx);
   batch.set(doc(ctx, `PropertyModeration/${id}`), {
     hidden,
@@ -184,7 +188,8 @@ function moderate(ctx, id, { hidden, preHidePublished, isPublished }) {
     updated_by: ctx._uid,
     updated_at: stamp(),
   });
-  batch.update(doc(ctx, `Properties/${id}`), { is_published: isPublished, moderation_hidden: hidden, updated_at: stamp() });
+  const change = publicChange || (hidden ? { is_published: false, moderation_hidden: true } : { moderation_hidden: false });
+  batch.update(doc(ctx, `Properties/${id}`), { ...change, updated_at: stamp() });
   return batch.commit();
 }
 
@@ -215,31 +220,95 @@ test("TAQ-91 (UT a/c): a hide writes the moderation doc together with the public
   });
 });
 
-test("TAQ-91 (UT c): hiding a never-published listing records false, and restoring cannot publish it", async () => {
+test("TAQ-91 (UT c): hiding a never-published listing records false, and a restore cannot publish it", async () => {
   await seed("Properties/offline", { ...live, id: "offline", is_published: false });
   const me = admin();
-  await assertFails(moderate(me, "offline", { hidden: true, preHidePublished: true, isPublished: false }));
-  await assertSucceeds(moderate(me, "offline", { hidden: true, preHidePublished: false, isPublished: false }));
-  await assertFails(moderate(me, "offline", { hidden: false, preHidePublished: false, isPublished: true }));
-  await assertSucceeds(moderate(me, "offline", { hidden: false, preHidePublished: false, isPublished: false }));
+  await assertFails(moderate(me, "offline", { hidden: true, preHidePublished: true }));
+  await assertSucceeds(moderate(me, "offline", { hidden: true, preHidePublished: false }));
+  await assertFails(moderate(me, "offline", { hidden: false, preHidePublished: false, publicChange: { is_published: true, moderation_hidden: false } }));
+  await assertSucceeds(moderate(me, "offline", { hidden: false, preHidePublished: false }));
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     assert.equal((await getDoc(doc(ctx.firestore(), "Properties/offline"))).data().is_published, false);
   });
 });
 
-test("TAQ-91 (UT c): restoring a listing that was live brings back is_published, only while vacant", async () => {
+test("TAQ-91 (UT c): a restore cannot rewrite the stored pre-hide value", async () => {
   const me = admin();
-  await assertFails(moderate(me, "hidden", { hidden: false, preHidePublished: true, isPublished: false }));
-  await assertSucceeds(moderate(me, "hidden", { hidden: false, preHidePublished: true, isPublished: true }));
-  await assertFails(moderate(admin(), "rented", { hidden: false, preHidePublished: true, isPublished: true }));
-  await assertSucceeds(moderate(admin(), "rented", { hidden: false, preHidePublished: true, isPublished: false }));
+  await assertFails(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: true }));
+  await assertSucceeds(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: false }));
+  await assertFails(moderate(admin(), "hidden", { hidden: false, preHidePublished: false }));
+  await assertSucceeds(moderate(admin(), "hidden", { hidden: false, preHidePublished: true }));
 });
 
-test("TAQ-91 (UT c): a restore cannot rewrite the stored pre-hide value to publish a never-live listing", async () => {
+// --- TAQ-98: a restore (or any visibility change) cannot republish a stale public doc ---
+
+/** The UT repro: published at 9000, hidden, restored, then the owner sets the price to 0. The sync
+ *  takes the listing offline but leaves the public price at 9000. */
+async function seedStaleOffline(id = "stale") {
+  await seed(`Properties/${id}`, { ...live, id, is_published: false, moderation_hidden: false, pricePerMonth: 9000 });
+  await seed(`PropertyModeration/${id}`, { hidden: false, pre_hide_published: true, updated_by: "admin1" });
+  await seed(`Users/ownerA/properties/${id}`, { owner_id: "ownerA", isPublished: true, rentalStatus: "available", pricePerMonth: 0 });
+}
+
+test("TAQ-98: an Admin cannot republish a stale public doc with an is_published-only update", async () => {
+  await seedStaleOffline();
   const me = admin();
-  await assertFails(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: true, isPublished: true }));
-  await assertFails(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: false, isPublished: true }));
-  await assertSucceeds(moderate(me, "hiddenDraft", { hidden: false, preHidePublished: false, isPublished: false }));
+  await assertFails(updateDoc(doc(me, "Properties/stale"), { is_published: true, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/stale"), { is_published: true }));
+  await assertFails(updateDoc(doc(me, "Properties/stale"), { is_published: true, moderation_hidden: false, updated_at: stamp() }));
+});
+
+test("TAQ-98: a SuperAdmin cannot republish a stale public doc directly either", async () => {
+  await seedStaleOffline();
+  const root = as("root", CLAIMS.superAdmin);
+  await assertFails(updateDoc(doc(root, "Properties/stale"), { is_published: true, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(root, "Properties/stale"), { is_published: true, moderation_hidden: false, updated_at: stamp() }));
+  await assertFails(setDoc(doc(root, "Properties/stale"), { ...live, id: "stale", moderation_hidden: true, is_published: true }));
+});
+
+test("TAQ-98: a batch with a moderation write still cannot set is_published to true", async () => {
+  await seedStaleOffline();
+  for (const me of [admin(), Object.assign(as("root", CLAIMS.superAdmin), { _uid: "root" })]) {
+    for (const hidden of [false, true]) {
+      await assertFails(moderate(me, "stale", { hidden, preHidePublished: true, publicChange: { is_published: true, moderation_hidden: hidden } }));
+    }
+  }
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    assert.equal((await getDoc(doc(ctx.firestore(), "Properties/stale"))).data().is_published, false);
+  });
+});
+
+test("TAQ-98: visibility flags only change in the same batch as a PropertyModeration write", async () => {
+  await seedStaleOffline();
+  const me = admin();
+  // moderation_hidden alone, no moderation write in the request
+  await assertFails(updateDoc(doc(me, "Properties/stale"), { moderation_hidden: true, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/live"), { is_published: false, updated_at: stamp() }));
+  await assertFails(updateDoc(doc(me, "Properties/live"), { is_published: false, moderation_hidden: true, updated_at: stamp() }));
+  // a moderation write that happened earlier (stale updated_at) does not count
+  await seed("PropertyModeration/live", { hidden: true, pre_hide_published: true, updated_by: "admin1", updated_at: new Date("2026-01-01") });
+  await assertFails(updateDoc(doc(me, "Properties/live"), { is_published: false, moderation_hidden: true, updated_at: stamp() }));
+  // the moderation write for a different listing does not count
+  const batch = writeBatch(me);
+  batch.set(doc(me, "PropertyModeration/hiddenDraft"), { hidden: true, pre_hide_published: false, updated_by: "admin1", updated_at: stamp() });
+  batch.update(doc(me, "Properties/stale"), { moderation_hidden: true, updated_at: stamp() });
+  await assertFails(batch.commit());
+  // while the matching batch is accepted
+  await assertSucceeds(moderate(me, "stale", { hidden: true, preHidePublished: false }));
+});
+
+test("TAQ-98: the moderation doc and the public mirror must agree in the batch", async () => {
+  const me = admin();
+  await assertFails(moderate(me, "live", { hidden: true, preHidePublished: true, publicChange: { is_published: false, moderation_hidden: false } }));
+  await assertFails(moderate(me, "live", { hidden: false, preHidePublished: false, publicChange: { is_published: false, moderation_hidden: true } }));
+  await assertSucceeds(moderate(me, "hidden", { hidden: false, preHidePublished: true }));
+});
+
+test("TAQ-98: a SuperAdmin hide and restore also go through the moderation batch", async () => {
+  const root = Object.assign(as("root", CLAIMS.superAdmin), { _uid: "root" });
+  await assertSucceeds(moderate(root, "live", { hidden: true, preHidePublished: true }));
+  await assertSucceeds(moderate(root, "live", { hidden: false, preHidePublished: true }));
+  await assertSucceeds(updateDoc(doc(root, "Properties/live"), { rating: 4, verified: true, updated_at: stamp() }));
 });
 
 test("TAQ-91 (QA a): the public doc cannot be hidden or restored without the matching moderation doc", async () => {
