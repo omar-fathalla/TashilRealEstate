@@ -15,6 +15,7 @@ const {
   getDocs,
   serverTimestamp,
   writeBatch,
+  deleteField,
 } = require("firebase/firestore");
 
 // TAQ-91: the Admin (platform staff) and Investor roles in firestore.rules.
@@ -636,7 +637,7 @@ function superAdmin(uid = "root") {
 }
 
 async function seedBig() {
-  await seed("Users/ownerA/properties/big", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/big", { owner_id: "ownerA", isPublished: true });
   await seed("Properties/big", bigListing);
 }
 
@@ -736,7 +737,7 @@ test("TAQ-101: visibility still cannot change outside the moderation batch, with
 });
 
 test("TAQ-101: SuperAdmin cannot create a public doc while moderation holds it hidden, so delete and recreate fails", async () => {
-  await seed("Users/ownerA/properties/held", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/held", { owner_id: "ownerA", isPublished: true });
   await seed("Properties/held", { ...live, id: "held", is_published: false, moderation_hidden: true });
   await seed("PropertyModeration/held", { hidden: true, pre_hide_published: true, updated_by: "admin1" });
   const me = as("root", CLAIMS.superAdmin);
@@ -749,7 +750,7 @@ test("TAQ-101: SuperAdmin cannot create a public doc while moderation holds it h
 });
 
 test("TAQ-101: a SuperAdmin create needs the owner's private doc, and owner_id must be that owner", async () => {
-  await seed("Users/ownerA/properties/p1", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/p1", { owner_id: "ownerA", isPublished: true });
   const me = as("root", CLAIMS.superAdmin);
   await assertFails(setDoc(doc(me, "Properties/nopriv"), { ...live, id: "nopriv" }));
   await assertFails(setDoc(doc(me, "Properties/p1"), { ...live, id: "p1", owner_id: "ownerB" }));
@@ -758,14 +759,155 @@ test("TAQ-101: a SuperAdmin create needs the owner's private doc, and owner_id m
 });
 
 test("TAQ-101: a SuperAdmin can create a maximum-size listing", async () => {
-  await seed("Users/ownerA/properties/big", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/big", { owner_id: "ownerA", isPublished: true });
   const me = as("root", CLAIMS.superAdmin);
   await assertSucceeds(setDoc(doc(me, "Properties/big"), { ...bigListing, updated_at: serverTimestamp() }));
 });
 
 test("TAQ-101: Admin and owners still cannot create a listing", async () => {
-  await seed("Users/ownerA/properties/p2", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/p2", { owner_id: "ownerA", isPublished: true });
   for (const me of [as("admin1", CLAIMS.admin), as("ownerA", CLAIMS.owner)]) {
     await assertFails(setDoc(doc(me, "Properties/p2"), { ...live, id: "p2" }));
   }
+});
+
+// --- TAQ-103: agencyNames, agencyPhone, agency_id, titles and image refs on SuperAdmin edits ---
+
+test("TAQ-103: a SuperAdmin cannot put contact info, oversize or wrongly typed values into agencyNames", async () => {
+  await seedBig();
+  const ref = doc(as("root", CLAIMS.superAdmin), "Properties/big");
+  for (const agencyNames of [
+    { en: "Call 01012345678" },
+    { en: "0 1 0 1 2 3 4 5 6 7 8" },
+    { ar: "wa.me/201012345678" },
+    { hi: "mail me@example.com" },
+    { en: "x".repeat(50000) },
+    { en: "x".repeat(201) },
+    { en: 5 },
+    { en: ["Tashil"] },
+    { en: null },
+    { fr: "Tashil" },
+    { en: "Tashil", phone: "x" },
+    5,
+    "Tashil",
+    ["Tashil"],
+    true,
+  ]) {
+    await assertFails(updateDoc(ref, { agencyNames, updated_at: serverTimestamp() }), JSON.stringify(agencyNames).slice(0, 60));
+  }
+  await assertFails(updateDoc(ref, { "agencyNames.en": "Call 01012345678" }));
+  await assertFails(updateDoc(ref, { "agencyNames.en": "x".repeat(50000) }));
+  await assertSucceeds(updateDoc(ref, { agencyNames: { ar: "تسهيل للعقارات", en: "Tashil Real Estate", hi: "तशील रियल एस्टेट" }, updated_at: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, { "agencyNames.en": "Tashil Properties" }));
+  await assertSucceeds(updateDoc(ref, { agencyNames: deleteField() }));
+});
+
+test("TAQ-103: a SuperAdmin create validates agencyNames the same way", async () => {
+  await seed("Users/ownerA/properties/an1", { owner_id: "ownerA", isPublished: true });
+  const ref = doc(as("root", CLAIMS.superAdmin), "Properties/an1");
+  const base = { ...live, id: "an1" };
+  for (const agencyNames of [{ en: "Call 01012345678" }, { en: "x".repeat(50000) }, { en: 5 }, { fr: "x" }, 5]) {
+    await assertFails(setDoc(ref, { ...base, agencyNames }), JSON.stringify(agencyNames).slice(0, 60));
+  }
+  await assertSucceeds(setDoc(ref, { ...base, agencyNames: { ar: "تسهيل", en: "Tashil", hi: "तशील" } }));
+});
+
+test("TAQ-103: agencyPhone and agency_id are shape-checked on SuperAdmin edits", async () => {
+  await seedBig();
+  const ref = doc(as("root", CLAIMS.superAdmin), "Properties/big");
+  for (const change of [
+    { agencyPhone: "call me on whatsapp" },
+    { agencyPhone: "wa.me/201012345678" },
+    { agencyPhone: "1".repeat(31) },
+    { agencyPhone: 971501234567 },
+    { agencyPhone: ["+971 4 123 4567"] },
+    { agency_id: 5 },
+    { agency_id: "a/b" },
+    { agency_id: "agency 1" },
+    { agency_id: "a".repeat(129) },
+    { agency_id: "Call 01012345678" },
+  ]) {
+    await assertFails(updateDoc(ref, change), JSON.stringify(change).slice(0, 60));
+  }
+  await assertSucceeds(updateDoc(ref, { agencyPhone: "+971 (4) 123-4567", agency_id: "agency-2" }));
+  await assertSucceeds(updateDoc(ref, { agencyPhone: "" , agency_id: "" }));
+});
+
+test("TAQ-103: titles cannot be deleted, and an image ref with a space is rejected on edit and create", async () => {
+  await seedBig();
+  const ref = doc(as("root", CLAIMS.superAdmin), "Properties/big");
+  await assertFails(updateDoc(ref, { titles: deleteField() }));
+  await assertSucceeds(updateDoc(ref, { titles: { en: "Still here" } }));
+  await assertFails(updateDoc(ref, { imageUrls: [`${bigImage(1)} ${bigImage(2)}`] }));
+  await assertFails(updateDoc(ref, { imageUrls: ["a.jpg b.jpg"] }));
+  await assertFails(updateDoc(ref, { image: "a.jpg b.jpg" }));
+  await assertSucceeds(updateDoc(ref, { imageUrls: [bigImage(1), bigImage(2)], image: bigImage(1) }));
+  await seed("Users/ownerA/properties/img1", { owner_id: "ownerA", isPublished: true });
+  const create = doc(as("root", CLAIMS.superAdmin), "Properties/img1");
+  await assertFails(setDoc(create, { ...live, id: "img1", imageUrls: ["a.jpg b.jpg"] }));
+  await assertFails(setDoc(create, { ...live, id: "img1", imageUrls: [`${bigImage(1)} ${bigImage(2)}`] }));
+  await assertSucceeds(setDoc(create, { ...live, id: "img1", imageUrls: [bigImage(1), bigImage(2)] }));
+});
+
+// Minimal docs: each denial below is decided by the rule, not by the expression budget. The same
+// doc is accepted for a SuperAdmin whose owner has a private doc, so the only difference is the actor.
+test("TAQ-103: minimal public docs are denied to every non-staff actor and accepted for a SuperAdmin", async () => {
+  await seed("Users/ownerA/properties/min1", { owner_id: "ownerA", isPublished: false });
+  await seed("Users/stranger", { role: "Owner" });
+  const mini = { id: "min1", owner_id: "ownerA", is_published: false, status: "unavailable" };
+  const actors = [
+    as("ownerA", CLAIMS.owner),
+    as("ownerA"),
+    as("stranger"),
+    as("tenantX", { role: "Tenant" }),
+    as("agent", CLAIMS.agency),
+    as("inv", CLAIMS.investor),
+    as("admin1", CLAIMS.admin),
+    testEnv.unauthenticatedContext().firestore(),
+  ];
+  for (const me of actors) {
+    await assertFails(setDoc(doc(me, "Properties/min1"), mini));
+    await assertFails(setDoc(doc(me, "Properties/min1"), { is_published: false }, { merge: true }));
+  }
+  await assertSucceeds(setDoc(doc(as("root", CLAIMS.superAdmin), "Properties/min1"), mini));
+  for (const me of actors) {
+    await assertFails(updateDoc(doc(me, "Properties/min1"), { status: "vacant" }));
+    await assertFails(setDoc(doc(me, "Properties/min1"), { ...mini, status: "vacant" }, { merge: true }));
+  }
+  await assertSucceeds(updateDoc(doc(as("root", CLAIMS.superAdmin), "Properties/min1"), { status: "vacant" }));
+});
+
+// --- TAQ-104: a live public doc needs a private listing its owner has published ---
+
+test("TAQ-104: a SuperAdmin cannot create a live public doc for an unpublished private listing", async () => {
+  const me = as("root", CLAIMS.superAdmin);
+  await seed("Users/ownerA/properties/np1", { owner_id: "ownerA", isPublished: false });
+  await seed("Users/ownerA/properties/np2", { owner_id: "ownerA" });
+  await seed("Users/ownerA/properties/np3", { owner_id: "ownerA", isPublished: true, rentalStatus: "rented" });
+  await seed("Users/ownerA/properties/np4", { owner_id: "ownerA", isPublished: "true" });
+  for (const id of ["np1", "np2", "np3", "np4"]) {
+    await assertFails(setDoc(doc(me, `Properties/${id}`), { ...live, id }), id);
+    await assertFails(setDoc(doc(me, `Properties/${id}`), { ...live, id, is_published: "true" }), id);
+  }
+  // created unpublished, it is fine, and it stays unpublished: no write can set is_published true
+  for (const id of ["np1", "np2", "np3", "np4"]) {
+    await assertSucceeds(setDoc(doc(me, `Properties/${id}`), { ...live, id, is_published: false }), id);
+    await assertFails(updateDoc(doc(me, `Properties/${id}`), { is_published: true }), id);
+  }
+});
+
+test("TAQ-104: a live create still works for a published, available private listing, and not for another owner's", async () => {
+  const me = as("root", CLAIMS.superAdmin);
+  await seed("Users/ownerA/properties/ok1", { owner_id: "ownerA", isPublished: true, rentalStatus: "available" });
+  await seed("Users/ownerB/properties/ok2", { owner_id: "ownerB", isPublished: true });
+  await assertSucceeds(setDoc(doc(me, "Properties/ok1"), { ...live, id: "ok1" }));
+  // ok2's private doc belongs to ownerB; claiming ownerA for it finds no private doc
+  await assertFails(setDoc(doc(me, "Properties/ok2"), { ...live, id: "ok2", owner_id: "ownerA" }));
+  await assertSucceeds(setDoc(doc(me, "Properties/ok2"), { ...live, id: "ok2", owner_id: "ownerB" }));
+});
+
+test("TAQ-104: Admin and the moderation batch are unchanged", async () => {
+  await seedBig();
+  await assertSucceeds(moderate(superAdmin(), "big", { hidden: true, preHidePublished: true, isPublished: false }));
+  await assertFails(setDoc(doc(superAdmin(), "Properties/big"), { ...bigListing, updated_at: serverTimestamp() }));
 });

@@ -32,7 +32,7 @@ test.beforeEach(async () => {
   await Promise.all([testEnv.clearFirestore(), testEnv.clearStorage()]);
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
-    await setDoc(doc(db, "Users/ownerA/properties/propA"), { owner_id: "ownerA" });
+    await setDoc(doc(db, "Users/ownerA/properties/propA"), { owner_id: "ownerA", isPublished: true });
     await setDoc(doc(db, "Users/ownerB/properties/propB"), { owner_id: "ownerB" });
     const storage = ctx.storage();
     await storage.ref("public/listings/ownerA/propA/front.jpg").put(bytes(16), { contentType: "image/jpeg" });
