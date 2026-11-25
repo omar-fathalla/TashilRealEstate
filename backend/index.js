@@ -980,3 +980,6 @@ exports.createLeaseFromApplication = require("./requests").createLeaseFromApplic
 exports.createRentPaymentIntent = require("./payments").createRentPaymentIntent;
 exports.paymobWebhook = require("./payments").paymobWebhook;
 exports.recordManualPayment = require("./payments").recordManualPayment;
+
+// Lease offer and decision notifications (TAQ-110).
+exports.notifyLeaseStatusChange = require("./lease_notifications").notifyLeaseStatusChange;

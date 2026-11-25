@@ -306,7 +306,7 @@ class RentReceiptDialog extends StatelessWidget {
                             _buildRow(
                               context,
                               loc.tr('payoutSettlementRef'),
-                              invoice.payoutReference ?? 'SETTLE-NBE-882194',
+                              invoice.payoutReference ?? '—',
                               isLtr: true,
                             ),
                             _buildDivider(context),

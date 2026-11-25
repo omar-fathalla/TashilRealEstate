@@ -42,6 +42,18 @@ class FakeBackend implements RequestsBackend {
     return Stream.value(applicationItems);
   }
 
+  String leaseStatus = 'draft';
+  final offers = <String>[];
+
+  @override
+  Stream<String> watchLeaseStatus(String leaseId) => Stream.value(leaseStatus);
+
+  @override
+  Future<void> sendLeaseOffer(String leaseId) async {
+    if (failWith != null) throw failWith!;
+    offers.add(leaseId);
+  }
+
   @override
   Future<Map<String, dynamic>> call(String function, Map<String, dynamic> data) async {
     calls.add(MapEntry(function, data));
@@ -233,6 +245,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(backend.calls.last.key, 'createLeaseFromApplication');
       expect(backend.calls.last.value, {'applicationId': 'p1_t1', 'startDate': '2026-07-01', 'endDate': '2027-06-30'});
+    });
+
+    testWidgets('a draft lease from an application can be offered to the tenant; later statuses have no send button', (tester) async {
+      final backend = FakeBackend()
+        ..applicationItems = const [
+          RentalApplicationItem(id: 'p1_t0', listingId: 'p1', applicantName: 'Sara', applicantPhone: '+971500000001', status: 'approved', leaseId: 'app_p1_t0'),
+        ];
+      await tester.pumpWidget(app(RequestsInboxView(key: UniqueKey(), service: RequestsService(backend: backend))));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Applications'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Send lease offer to tenant'));
+      await tester.pumpAndSettle();
+      expect(backend.offers, ['app_p1_t0']);
+      expect(find.text('The lease offer was sent to the tenant.'), findsOneWidget);
+
+      backend.leaseStatus = 'pending_tenant_approval';
+      await tester.pumpWidget(app(RequestsInboxView(key: UniqueKey(), service: RequestsService(backend: backend))));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Applications'));
+      await tester.pumpAndSettle();
+      expect(find.text('Send lease offer to tenant'), findsNothing);
+      expect(find.text('Offer sent, awaiting the tenant'), findsOneWidget);
     });
   });
 

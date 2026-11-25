@@ -68,7 +68,7 @@ void main() {
       expect(invoice.paidAt, isNotNull);
     });
 
-    test('Paying an invoice in RentCollectionService syncs back to PropertyLifecycleService installment', () async {
+    test('Adding an invoice in RentCollectionService creates an unpaid installment (there is no client-side payment)', () async {
       // Find or create an invoice with propertyId and monthKey
       final now = DateTime.now();
       final monthKey = '${now.year}-${(now.month + 2).toString().padLeft(2, '0')}';
@@ -114,20 +114,6 @@ void main() {
       final inst = prop.installments.firstWhere((i) => i.monthKey == monthKey);
       expect(inst.amount, equals(18000));
       expect(inst.isPaid, isFalse);
-
-      // Now pay the invoice through RentCollectionService
-      await rentService.payInvoice(
-        invoiceId: newInvoice.id,
-        paymentMethod: 'meeza_card',
-        transactionReference: 'REF-TX-SYNC-777',
-      );
-
-      // Verify that PropertyLifecycleService updated the installment to paid
-      final updatedProp = propertyService.propertiesNotifier.value.firstWhere((p) => p.id == testPropId);
-      final updatedInst = updatedProp.installments.firstWhere((i) => i.monthKey == monthKey);
-      expect(updatedInst.isPaid, isTrue);
-      expect(updatedInst.paymentMethod, equals('meeza_card'));
-      expect(updatedInst.notes, contains('REF-TX-SYNC-777'));
     });
   });
 }

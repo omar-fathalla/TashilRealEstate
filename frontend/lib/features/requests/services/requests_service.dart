@@ -17,6 +17,13 @@ abstract class RequestsBackend {
   Stream<List<ViewingRequestItem>> watchViewings(RequestScope scope);
   Stream<List<RentalApplicationItem>> watchApplications(RequestScope scope);
   Future<Map<String, dynamic>> call(String function, Map<String, dynamic> data);
+
+  /// The status of a lease ('' while it cannot be read), to decide which lease action to offer.
+  Stream<String> watchLeaseStatus(String leaseId);
+
+  /// Moves a draft lease to `pending_tenant_approval`. The rules allow only the lease's owner or
+  /// managing agency, and only from `draft`.
+  Future<void> sendLeaseOffer(String leaseId);
 }
 
 class FirebaseRequestsBackend implements RequestsBackend {
@@ -54,6 +61,23 @@ class FirebaseRequestsBackend implements RequestsBackend {
         .where(scope.field, isEqualTo: scope.value)
         .snapshots()
         .map((s) => s.docs.map((d) => RentalApplicationItem.fromMap(d.id, d.data())).toList());
+  }
+
+  @override
+  Stream<String> watchLeaseStatus(String leaseId) {
+    return FirebaseFirestore.instance
+        .collection('Leases')
+        .doc(leaseId)
+        .snapshots()
+        .map((s) => (s.data()?['status'] as String?) ?? '');
+  }
+
+  @override
+  Future<void> sendLeaseOffer(String leaseId) {
+    return FirebaseFirestore.instance.collection('Leases').doc(leaseId).update({
+      'status': 'pending_tenant_approval',
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -139,6 +163,10 @@ class RequestsService {
     });
     return (result['leaseId'] as String?) ?? '';
   }
+
+  Stream<String> watchLeaseStatus(String leaseId) => backend.watchLeaseStatus(leaseId);
+
+  Future<void> sendLeaseOffer(String leaseId) => backend.sendLeaseOffer(leaseId);
 
   /// The scope for the signed-in owner or agency admin, or null when nobody is signed in.
   Future<RequestScope?> inboxScope({required bool agency}) async {

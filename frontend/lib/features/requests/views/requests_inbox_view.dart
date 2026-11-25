@@ -145,31 +145,52 @@ class _RequestsInboxViewState extends State<RequestsInboxView> {
         return Column(
           children: [
             for (final item in items)
-              _RequestCard(
-                key: ValueKey('application_${item.id}'),
-                title: item.titleFor(locale.languageCode),
-                name: item.applicantName,
-                phone: item.applicantPhone,
-                status: item.status,
-                details: [
-                  if (item.moveInDate.isNotEmpty) '${loc.tr('rqMoveInDate')}: ${item.moveInDate}',
-                  '${loc.tr('rqOccupants')}: ${item.occupants}',
-                  if (item.message.isNotEmpty) item.message,
-                ],
-                busy: _busy.contains(item.id),
-                onWhatsApp: () => _openWhatsApp(item.applicantPhone, item.titleFor(locale.languageCode)),
-                actions: [
-                  if (item.isPending) ...[
-                    _Action(loc.tr('rqApprove'), Icons.check_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: true), 'rqApplicationApproved')),
-                    _Action(loc.tr('rqReject'), Icons.close_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: false), 'rqApplicationRejected'), outlined: true),
-                  ],
-                  if (item.canCreateLease) _Action(loc.tr('rqCreateLeaseDraft'), Icons.description_outlined, () => _createLease(item)),
-                  if (item.leaseId.isNotEmpty) _Action(loc.tr('rqLeaseDraftCreated'), Icons.task_alt_rounded, null, outlined: true),
-                ],
-              ),
+              if (item.leaseId.isEmpty)
+                _applicationCard(item, loc, locale, '')
+              else
+                StreamBuilder<String>(
+                  key: ValueKey('application_${item.id}'),
+                  stream: _service.watchLeaseStatus(item.leaseId),
+                  builder: (context, lease) => _applicationCard(item, loc, locale, lease.data ?? ''),
+                ),
           ],
         );
       },
+    );
+  }
+
+  Widget _applicationCard(RentalApplicationItem item, AppLocalizations loc, Locale locale, String leaseStatus) {
+    return _RequestCard(
+      key: ValueKey('application_card_${item.id}'),
+      title: item.titleFor(locale.languageCode),
+      name: item.applicantName,
+      phone: item.applicantPhone,
+      status: item.status,
+      details: [
+        if (item.moveInDate.isNotEmpty) '${loc.tr('rqMoveInDate')}: ${item.moveInDate}',
+        '${loc.tr('rqOccupants')}: ${item.occupants}',
+        if (item.message.isNotEmpty) item.message,
+      ],
+      busy: _busy.contains(item.id),
+      onWhatsApp: () => _openWhatsApp(item.applicantPhone, item.titleFor(locale.languageCode)),
+      actions: [
+        if (item.isPending) ...[
+          _Action(loc.tr('rqApprove'), Icons.check_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: true), 'rqApplicationApproved')),
+          _Action(loc.tr('rqReject'), Icons.close_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: false), 'rqApplicationRejected'), outlined: true),
+        ],
+        if (item.canCreateLease) _Action(loc.tr('rqCreateLeaseDraft'), Icons.description_outlined, () => _createLease(item)),
+        if (item.leaseId.isNotEmpty && leaseStatus == 'draft')
+          _Action(loc.tr('tnSendLeaseOffer'), Icons.send_rounded, () => _run(item.id, () => _service.sendLeaseOffer(item.leaseId), 'tnLeaseOfferSent')),
+        if (item.leaseId.isNotEmpty && leaseStatus != 'draft')
+          _Action(
+            leaseStatus.isEmpty
+                ? loc.tr('rqLeaseDraftCreated')
+                : loc.tr(leaseStatus == 'pending_tenant_approval' ? 'tnOfferAwaitingTenant' : 'tnLeaseStatus_$leaseStatus'),
+            Icons.task_alt_rounded,
+            null,
+            outlined: true,
+          ),
+      ],
     );
   }
 }
