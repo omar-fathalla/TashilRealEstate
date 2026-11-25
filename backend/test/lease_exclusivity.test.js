@@ -275,6 +275,62 @@ test("TAQ-110: the date range ends on the whole end day, and a future-start leas
   assert.equal(leaseLiveState({ ...l, status: "terminated" }, Date.UTC(2026, 0, 1)).live, false);
 });
 
+// --- the property is marked rented on activation (Q3) ---
+
+const silo = async (uid, id) => (await db.doc(`Users/${uid}/properties/${id}`).get()).data();
+
+test("TAQ-110: activation marks the private property rented and unpublished, in the same transaction as the lock", async () => {
+  await db.doc("Users/ownerA/properties/propA").set({ isPublished: true, rentalStatus: "available" }, { merge: true });
+  const id = (await create()).leaseId;
+  const other = (await create(input({ tenantId: "tenantB" }))).leaseId;
+  assert.equal((await silo("ownerA", "propA")).rentalStatus, "available", "an offer alone does not rent the property");
+  await respond(id, "approve", "tenantA");
+  const p = await silo("ownerA", "propA");
+  assert.equal(p.rentalStatus, "rented");
+  assert.equal(p.isPublished, false);
+  assert.equal(p.title, "Flat A", "other fields are untouched");
+  await reason(respond(other, "approve", "tenantB"), "failed-precondition", "property_already_leased");
+  assert.equal((await silo("ownerA", "propA")).rentalStatus, "rented");
+  await reason(create(input({ tenantId: "tenantC" })), "failed-precondition", "property_already_leased");
+  await respond(other, "reject", "tenantB");
+  assert.equal((await silo("ownerA", "propA")).rentalStatus, "rented");
+});
+
+test("TAQ-110: a rejected offer leaves the property as it was", async () => {
+  await db.doc("Users/ownerA/properties/propA").set({ isPublished: true, rentalStatus: "available" }, { merge: true });
+  const id = (await create()).leaseId;
+  await respond(id, "reject", "tenantA");
+  assert.deepEqual([(await silo("ownerA", "propA")).rentalStatus, (await silo("ownerA", "propA")).isPublished], ["available", true]);
+});
+
+test("TAQ-110: releasing the lock returns the property to available and does not republish it", async () => {
+  for (const end of [(ref) => ref.update({ status: "terminated" }), (ref) => ref.update({ status: "expired" }), (ref) => ref.delete()]) {
+    await db.doc("Users/ownerA/properties/propA").set({ isPublished: true, rentalStatus: "available" }, { merge: true });
+    const id = (await create()).leaseId;
+    await respond(id, "approve", "tenantA");
+    assert.equal(await writeLease(id, (ref) => ref.update({ notes: "x" })), null);
+    assert.equal((await silo("ownerA", "propA")).rentalStatus, "rented", "an active-to-active write changes nothing");
+    assert.equal(await writeLease(id, end), true);
+    const p = await silo("ownerA", "propA");
+    assert.equal(p.rentalStatus, "available");
+    assert.equal(p.isPublished, false, "the owner publishes again; nothing does it for them");
+  }
+});
+
+test("TAQ-110: releasing leaves a status the owner set by hand, and a lock another lease took over", async () => {
+  const id = (await create()).leaseId;
+  await respond(id, "approve", "tenantA");
+  await db.doc("Users/ownerA/properties/propA").update({ rentalStatus: "maintenance" });
+  assert.equal(await writeLease(id, (ref) => ref.update({ status: "terminated" })), true);
+  assert.equal((await silo("ownerA", "propA")).rentalStatus, "maintenance");
+
+  const a = (await create(input({ tenantId: "tenantB" }))).leaseId;
+  await respond(a, "approve", "tenantB");
+  await db.doc("Leases/old").set({ status: "active", property_id: "propA", owner_id: "ownerA", tenant_id: "tenantC", agency_id: "" });
+  assert.equal(await writeLease("old", (ref) => ref.update({ status: "terminated" })), false);
+  assert.equal((await silo("ownerA", "propA")).rentalStatus, "rented", "a lease that does not hold the lock cannot free the property");
+});
+
 // --- payments follow the same lock ---
 
 test("TAQ-110: a second active lease on a property cannot take payments; the lock holder can", async () => {
