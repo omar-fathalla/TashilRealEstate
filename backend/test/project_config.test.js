@@ -452,3 +452,15 @@ test("TAQ-136: the runbook's backfill commands for dev name the real dev project
   assert.throws(() => backfill.resolveTarget("dev"), /Refusing to run against/);
   assert.doesNotMatch(doc, /nothing in the repo holds the production project id/i);
 });
+
+// --- TAQ-138: the Android build needs the Gradle version Flutter 3.50 requires ---
+
+test("TAQ-138: the Gradle wrapper is at least 9.3.1 (Flutter 3.50.1 refuses 9.1.0)", () => {
+  const props = read("frontend/android/gradle/wrapper/gradle-wrapper.properties");
+  const version = props.match(/gradle-(\d+)\.(\d+)(?:\.(\d+))?-(?:all|bin)\.zip/);
+  assert.ok(version, "distributionUrl names a Gradle version");
+  const [major, minor, patch] = [version[1], version[2], version[3] || "0"].map(Number);
+  const atLeast = (a, b, c) => major > a || (major === a && (minor > b || (minor === b && patch >= c)));
+  assert.ok(atLeast(9, 3, 1), `Gradle ${major}.${minor}.${patch} is older than 9.3.1`);
+  assert.ok(!atLeast(9, 6, 0), "Flutter 3.50 supports Gradle up to 9.5.0; check the Flutter pin before raising it");
+});
