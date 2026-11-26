@@ -33,6 +33,7 @@ class RequestListingSheet extends StatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      enableDrag: false,
       useSafeArea: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -123,7 +124,10 @@ class _RequestListingSheetState extends State<RequestListingSheet> {
         final signedIn = _service.isSignedIn;
         // The keyboard inset pads the outside of the scroll view, so the scroll area ends above the
         // keyboard and an error can be scrolled into view on a small screen.
-        return Padding(
+        // Closing while the request is being sent would hide whether it went through (TAQ-140).
+        return PopScope(
+          canPop: !_sending,
+          child: Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Center(
             child: ConstrainedBox(
@@ -217,6 +221,7 @@ class _RequestListingSheetState extends State<RequestListingSheet> {
               ),
               ),
             ),
+          ),
           ),
         );
       },
