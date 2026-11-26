@@ -434,3 +434,21 @@ test("TAQ-130: the backfill runbook orders indexes, functions with rules, dry ru
   }
   assert.ok(!doc.includes(JSON.parse(read(".firebaserc")).projects.prod), "no real production id in the runbook");
 });
+
+// --- TAQ-136: the runbook's dev rehearsal commands are ones the script accepts ---
+
+test("TAQ-136: the runbook's backfill commands for dev name the real dev project, never the alias", () => {
+  const backfill = require("../scripts/backfill_property_owners");
+  const doc = read("docs/PROPERTY_REGISTRY_BACKFILL.md");
+  const dev = JSON.parse(read(".firebaserc")).projects.dev;
+  const commands = doc.split("\n").filter((l) => l.startsWith("node scripts/backfill_property_owners.js"));
+  assert.ok(commands.length >= 3);
+  for (const line of commands) {
+    const argv = line.replace(/\s+#.*$/, "").split(/\s+/).slice(2);
+    const { project } = backfill.parseArgs(argv);
+    assert.equal(project, dev, line);
+    assert.equal(backfill.resolveTarget(project), dev, line);
+  }
+  assert.throws(() => backfill.resolveTarget("dev"), /Refusing to run against/);
+  assert.doesNotMatch(doc, /nothing in the repo holds the production project id/i);
+});

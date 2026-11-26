@@ -2,11 +2,21 @@
 
 Property docs created before the registry (`PropertyOwners/{propertyId}`) have no entry. Until the
 backfill registers them, leases and payments on those ids fail closed (`property_not_registered`).
-This runbook is for the person with production access. Nothing here deploys or writes by itself, and
-nothing in the repo holds the production project id: use the `prod` alias of `.firebaserc`.
+This runbook is for the person with production access. Nothing here deploys or writes by itself. The
+production project id is not secret and is in the repo (`.firebaserc` under `prod`, the native
+Firebase configs and `frontend/lib/firebase_options.dart`), so read it from the `prod` alias of
+`.firebaserc` rather than copying it into docs, scripts or tests.
 
-**Running any step on production needs Mohamed's explicit OK.** Rehearse the same steps on
-`tashil-aqar-dev` first (`--project dev`, and no `--prod` / `BACKFILL_PROD_OK` for the backfill).
+**Running any step on production needs Mohamed's explicit OK.** Rehearse the same steps on the dev
+project first. The Firebase CLI accepts the alias (`--project dev`), but the backfill script wants the
+real project id, `tashil-aqar-dev`, and refuses the alias. No `--prod` and no `BACKFILL_PROD_OK` for dev:
+
+```bash
+cd backend
+node scripts/backfill_property_owners.js --project tashil-aqar-dev                       # dry run
+node scripts/backfill_property_owners.js --project tashil-aqar-dev --fix-id-fields --write  # only if idFieldIssues is not 0
+node scripts/backfill_property_owners.js --project tashil-aqar-dev --overrides overrides.json --write
+```
 
 The commands below use `P` for the production project id, set in your shell only:
 
