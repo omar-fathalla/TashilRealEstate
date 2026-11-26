@@ -42,6 +42,15 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
 
    Without the define, release web builds skip App Check instead of sending tokens made
    with an invalid key.
+
+   The hosting CSP (`firebase.json`, report-only today) already allows what reCAPTCHA
+   Enterprise loads (TAQ-155): `https://www.google.com/recaptcha/` and
+   `https://www.gstatic.com/recaptcha/` for the script, `https://www.google.com/recaptcha/` and
+   `https://recaptcha.google.com/recaptcha/` for its frames, and `https://www.google.com/recaptcha/`
+   for its network calls, plus `https://www.recaptcha.net/recaptcha/` as the fallback host Google
+   uses where `google.com` is unreachable. `recaptchaenterprise.googleapis.com` is not listed: the
+   browser never calls it (assessments are server side). Check the CSP report for violations
+   from a release web build with the real key before enforcing the CSP.
 6. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
    should be "verified" before enforcing.
 7. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
