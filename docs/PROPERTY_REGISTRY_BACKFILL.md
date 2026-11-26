@@ -1,37 +1,114 @@
-# Property owner registry: production backfill (TAQ-125, TAQ-126)
+# Property owner registry: production backfill (TAQ-125, TAQ-126, TAQ-128, TAQ-129, TAQ-130)
 
 Property docs created before the registry (`PropertyOwners/{propertyId}`) have no entry. Until the
 backfill registers them, leases and payments on those ids fail closed (`property_not_registered`).
 This runbook is for the person with production access. Nothing here deploys or writes by itself, and
 nothing in the repo holds the production project id: use the `prod` alias of `.firebaserc`.
 
+**Running any step on production needs Mohamed's explicit OK.** Rehearse the same steps on
+`tashil-aqar-dev` first (`--project dev`, and no `--prod` / `BACKFILL_PROD_OK` for the backfill).
+
+The commands below use `P` for the production project id, set in your shell only:
+
+```bash
+P=<prod project id>   # never commit it
+```
+
 ## Order of the production rollout
 
-Run the steps in this order and do not leave a gap between 2 and 3.
+Run the steps in this order, each one only after the previous one finished.
 
-1. Deploy Firestore indexes: `firebase deploy --only firestore:indexes --project prod`. The new
-   collection-group index on `properties.id` must be built before the functions use it (TAQ-126).
-2. Deploy functions: `firebase deploy --only functions --project prod`.
-3. Run the backfill right away: dry run, review the report, then `--write` (below). Until it ends,
-   the sync trigger refuses to claim an id that another owner already holds privately, so the window
-   cannot be used to take over a legacy id; it only leaves old ids unregistered.
-4. Deploy Firestore and Storage rules: `firebase deploy --only firestore:rules,storage --project prod`.
-5. Deploy hosting: `firebase deploy --only hosting --project prod`.
+1. **Indexes, then wait until every index is READY.**
+
+   ```bash
+   firebase deploy --only firestore:indexes --project prod
+   ```
+
+   If the CLI offers to delete indexes that are not in `firestore.indexes.json`, answer **No**. Then
+   check the state until nothing is building. Both commands must show `READY` only:
+
+   ```bash
+   # composite indexes: must print nothing (every index is READY)
+   gcloud firestore indexes composite list --project="$P" --filter="state!=READY" \
+     --format="table(name.basename(),queryScope,state)"
+   # the collection-group field index on properties.id (TAQ-126): every row READY
+   gcloud firestore indexes fields describe id --collection-group=properties --project="$P" \
+     --flatten=indexConfig.indexes --format="table(indexConfig.indexes.queryScope,indexConfig.indexes.state)"
+   ```
+
+   The sync trigger's rival-holder check queries `properties.id` across all owners. If the index is
+   still building, that query fails and the trigger fails closed: no private-doc create is claimed or
+   synced until the index is ready. So the functions must not go out before the index is READY.
+
+2. **Functions and rules together**, in one command:
+
+   ```bash
+   firebase deploy --only functions,firestore:rules,storage --project prod
+   ```
+
+   Rules ship with the functions, not after the backfill. With the old rules still live, a client can
+   create a private doc on an id that is already registered, and write or clear `id_conflict`, so a
+   gap between the two deploys is a window for taking over ids. The new claim check in the sync
+   trigger runs only when a private doc is created; docs that already existed before this deploy are
+   not re-checked by it. The backfill report (step 3) is what catches those.
+
+3. **Backfill dry run.** It must show `idFieldIssues: 0` before any `--write` (TAQ-128):
+
+   ```bash
+   cd backend
+   BACKFILL_PROD_OK="$P" node scripts/backfill_property_owners.js --prod --project "$P"
+   ```
+
+   If `idFieldIssues` is not 0, fix the fields, then repeat the dry run until it is:
+
+   ```bash
+   BACKFILL_PROD_OK="$P" node scripts/backfill_property_owners.js --prod --project "$P" --fix-id-fields --write
+   ```
+
+   `--write` refuses to register anything (exit 2) while `idFieldIssues` is not 0. Review the rest of
+   the report ([Reading the report](#reading-the-report)) and get the owner decision for the shared ids
+   ([Ids held by more than one owner](#ids-held-by-more-than-one-owner)).
+
+4. **Backfill `--write`, with the overrides file.** Dry-run the overrides first, then write:
+
+   ```bash
+   # dry run with the overrides: check "overridden" and that nothing is refused
+   BACKFILL_PROD_OK="$P" node scripts/backfill_property_owners.js --prod --project "$P" --overrides overrides.json
+   # write: registers the single-landlord ids and the overridden ones
+   BACKFILL_PROD_OK="$P" node scripts/backfill_property_owners.js --prod --project "$P" --overrides overrides.json --write
+   ```
+
+   Without an overrides file, `--write` registers only the single-landlord ids and leaves the shared
+   ids unregistered (leases and payments on them stay refused). Run the dry run once more afterwards:
+   `toRegister` should be 0 and the overridden ids appear under `registeredToHolder`, not
+   `registeredToOther`.
+
+5. **Hosting:**
+
+   ```bash
+   firebase deploy --only hosting --project prod
+   ```
+
+6. **Smoke check.** Read-only checks first; anything that writes uses the demo or test accounts only,
+   and none of them is deleted.
+   - Firebase console > Functions > Logs: no errors from `syncOwnerPropertyToMarketplace`,
+     `reconcilePropertyModeration` or `revokePhotoTokensOnOffline` since the deploy, and no
+     `FAILED_PRECONDITION` index errors.
+   - Firestore: `AdminAlerts` has no new `PROPERTY_ID_CONFLICT` alert you cannot explain.
+   - Signed out, the marketplace lists published listings and their photos load.
+   - With a test owner account: create a listing; `PropertyOwners/{its id}` appears with
+     `claimed_by: "create"`. Send a lease offer on a backfilled id of that account; it is not refused
+     with `property_not_registered`.
+   - A final backfill dry run shows `toRegister: 0`, `idFieldIssues: 0`, and no `registeredToOther`
+     row you did not expect.
 
 ## Running the backfill
 
 Run from `backend/`, with application default credentials for the production project. The dry run only
 reads (`roles/datastore.viewer` is enough). `--write` also needs permission to create documents in
-`PropertyOwners` (for example `roles/datastore.user`). No Firebase Auth access is needed: roles come
-from the `Users/{uid}` profile docs.
-
-```bash
-# 1. dry run: prints the target project first, then a summary and the full JSON report
-BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id>
-
-# 2. write, only after the report was reviewed
-BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id> --write
-```
+`PropertyOwners` and, with `--fix-id-fields`, to update `Users/{uid}/properties` docs (for example
+`roles/datastore.user`). No Firebase Auth access is needed: roles come from the `Users/{uid}` profile
+docs.
 
 Guard: the production project needs `--prod`, `BACKFILL_PROD_OK` equal to the project id, and `--write`
 to write. Without them the script exits with code 2 before reading anything. `--prod` is refused on
@@ -65,39 +142,38 @@ The report holds counts and ids only.
 The sync trigger finds the other holders of an id through the `id` field of their private docs. A
 legacy doc with no `id` field, or one that differs from the doc id, is invisible to that check, so
 another owner could claim its id while it is unregistered. The dry run lists such docs under
-`idFieldIssues`, and `--write` refuses to register anything until that list is empty. To fix them:
-
-```bash
-BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id> --fix-id-fields --write
-```
-
-This sets `id` to the doc id on the listed docs and changes nothing else. It registers nothing.
-Each update fires the sync trigger like any edit of the doc. Run the dry run again afterwards; it must
-show `idFieldIssues: 0`.
+`idFieldIssues`, and `--write` refuses to register anything until that list is empty.
+`--fix-id-fields --write` (step 3) sets `id` to the doc id on the listed docs and changes nothing
+else. It registers nothing. Each update fires the sync trigger like any edit of the doc.
 
 ## Ids held by more than one owner
 
-Seed data such as `prop-ae-101`, `prop-ae-102` and `prop-eg-101` to `prop-eg-104` can exist under two
-accounts (for example an agency admin and a super admin). The backfill leaves them unregistered, so
-leases and payments on them stay refused until someone decides. To resolve one, pass an explicit
-overrides file naming the holder, a JSON object of `propertyId: ownerUid`:
+The production audit found 6 ids under two accounts each, the agency admin and the super admin:
+`prop-ae-101`, `prop-ae-102`, `prop-eg-101`, `prop-eg-102`, `prop-eg-103` and `prop-eg-104`. The backfill
+never picks an owner for them. **Someone who knows the data (the property owner, or Mohamed) must
+decide, for each of the 6, which uid owns it.** Until then the id stays unregistered and leases and
+payments on it are refused. Write the decision into an overrides file, a JSON object of
+`propertyId: ownerUid`, kept outside the repo:
 
 ```json
-{ "prop-ae-101": "<uid of the real owner>" }
+{
+  "prop-ae-101": "<uid of the real owner>",
+  "prop-ae-102": "<uid of the real owner>"
+}
 ```
 
-```bash
-BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id> --overrides overrides.json
-```
+Leave an id out to keep it unregistered. Apply the file with step 4 (dry run with `--overrides`, then
+`--overrides ... --write`). After the write, the other holder's copy is an `id_conflict` candidate:
+the next time that copy is written, the sync trigger flags it and it stops syncing. If both copies
+are the same seed listing, the owner may want to delete the other copy once the override is in.
 
 An override is refused when the id is not shared by two or more landlords, when the named uid is not a
 holder, when it is a Tenant or Investor or its doc is flagged `id_conflict`, or when the public listing
-belongs to another holder. A bad file is refused before any write. Do not commit the
-overrides file.
+belongs to another holder. A bad file is refused before any write. Do not commit the overrides file.
 
 ## Tests
 
-`backend/test/registry_scripts.test.js` covers the guard, the dry run, the conflict report and the
-batched write on the fake project id `qa-fake-prod-xyz`; `backend/test/property_owners.test.js` covers
+`backend/test/registry_scripts.test.js` covers the guard, the dry run, the conflict report, the id
+field fix, override validation and the batched write on the fake project id `qa-fake-prod-xyz`; `backend/test/property_owners.test.js` covers
 the claim refusal and leases and payments after the backfill on the emulator. No test uses the real
 production project id.

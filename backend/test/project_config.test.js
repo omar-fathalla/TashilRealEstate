@@ -405,3 +405,32 @@ test("TAQ-83: the emulator-only XFF switch is never committed in a function env 
     assert.doesNotMatch(fs.readFileSync(path.join(root, file), "utf8"), /VISITOR_IP_EMULATOR_TRUST_XFF/, file);
   }
 });
+
+// --- TAQ-130: the registry backfill runbook ---
+
+test("TAQ-130: the backfill runbook orders indexes, functions with rules, dry run, write, hosting, smoke", () => {
+  const doc = read("docs/PROPERTY_REGISTRY_BACKFILL.md");
+  const order = doc.slice(doc.indexOf("## Order of the production rollout"), doc.indexOf("## Running the backfill"));
+  const steps = [
+    "firebase deploy --only firestore:indexes --project prod",
+    "gcloud firestore indexes composite list",
+    "gcloud firestore indexes fields describe id --collection-group=properties",
+    "firebase deploy --only functions,firestore:rules,storage --project prod",
+    "idFieldIssues: 0",
+    "--fix-id-fields --write",
+    "--overrides overrides.json --write",
+    "firebase deploy --only hosting --project prod",
+    "Smoke check",
+  ];
+  let at = -1;
+  for (const step of steps) {
+    const next = order.indexOf(step, at + 1);
+    assert.ok(next > at, `"${step}" is missing or out of order`);
+    at = next;
+  }
+  assert.doesNotMatch(order, /--only firestore:rules,storage --project prod/, "rules no longer go out after the backfill");
+  for (const id of ["prop-ae-101", "prop-ae-102", "prop-eg-101", "prop-eg-102", "prop-eg-103", "prop-eg-104"]) {
+    assert.ok(doc.includes(id), `${id} is named for the owner decision`);
+  }
+  assert.ok(!doc.includes(JSON.parse(read(".firebaserc")).projects.prod), "no real production id in the runbook");
+});
