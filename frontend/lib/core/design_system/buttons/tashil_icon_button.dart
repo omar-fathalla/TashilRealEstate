@@ -12,6 +12,9 @@ enum TashilIconButtonVariant {
 /// Type 3: Official Material Design 3 Icon Button component.
 ///
 /// Implements standard, filled, tonal, outlined, and shaded close circular icon buttons.
+///
+/// The visible circle keeps its [size], but every variant pads its tap target to the M3 minimum of
+/// 48dp on all platforms (desktop and web themes default to a shrink-wrapped target).
 class TashilIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;
@@ -143,6 +146,7 @@ class TashilIconButton extends StatelessWidget {
           minimumSize: WidgetStatePropertyAll(Size(size, size)),
           fixedSize: WidgetStatePropertyAll(Size(size, size)),
           padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
       );
     }
@@ -161,6 +165,7 @@ class TashilIconButton extends StatelessWidget {
           highlightColor: colorScheme.primary.withValues(alpha: 0.12),
           constraints: BoxConstraints.tightFor(width: size, height: size),
           padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.padded),
         );
         break;
 
@@ -181,6 +186,7 @@ class TashilIconButton extends StatelessWidget {
             minimumSize: Size(size, size),
             fixedSize: Size(size, size),
             padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.padded,
           ),
         );
         break;
@@ -198,6 +204,7 @@ class TashilIconButton extends StatelessWidget {
             minimumSize: Size(size, size),
             fixedSize: Size(size, size),
             padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.padded,
           ),
         );
         break;
@@ -227,6 +234,7 @@ class TashilIconButton extends StatelessWidget {
             minimumSize: WidgetStatePropertyAll(Size(size, size)),
             fixedSize: WidgetStatePropertyAll(Size(size, size)),
             padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+            tapTargetSize: MaterialTapTargetSize.padded,
           ),
         );
         break;

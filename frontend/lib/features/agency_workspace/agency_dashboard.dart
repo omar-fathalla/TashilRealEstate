@@ -13,6 +13,9 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/drawer/tashil_navigation_drawer.dart';
 import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_navigation_rail.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'services/agency_identity.dart';
+import 'widgets/agency_profile_dialog.dart';
 import 'views/overview_view.dart';
 import 'views/properties_view.dart';
 import 'views/crm_view.dart';
@@ -25,7 +28,10 @@ import 'package:tashil_real_estate/features/requests/views/requests_inbox_view.d
 import 'package:tashil_real_estate/features/maintenance/views/maintenance_views.dart';
 
 class AgencyDashboard extends StatefulWidget {
-  const AgencyDashboard({super.key});
+  /// Where the signed-in account and its agency come from; tests pass a fake.
+  final AgencyIdentitySource? identitySource;
+
+  const AgencyDashboard({super.key, this.identitySource});
 
   @override
   State<AgencyDashboard> createState() => _AgencyDashboardState();
@@ -34,6 +40,22 @@ class AgencyDashboard extends StatefulWidget {
 class _AgencyDashboardState extends State<AgencyDashboard> {
   int _selectedIndex = 0;
   bool _isSidebarCollapsed = false;
+  final ValueNotifier<AgencyIdentity> _identity = ValueNotifier(AgencyIdentity.empty);
+  late final AgencyIdentitySource _identitySource = widget.identitySource ?? FirebaseAgencyIdentitySource();
+
+  @override
+  void initState() {
+    super.initState();
+    _identitySource.load().then((identity) {
+      if (mounted) _identity.value = identity;
+    }).catchError((Object _) {});
+  }
+
+  @override
+  void dispose() {
+    _identity.dispose();
+    super.dispose();
+  }
 
   final List<Widget> _views = [
     const OverviewView(),
@@ -289,11 +311,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const TashilDivider.middleInset(height: 16.0),
-                TashilDrawerProfileTile(
-                  initials: 'AG',
-                  displayName: loc.tr('agencyWorkspace'),
-                  roleSubtitle: loc.tr('roleAgency'),
-                  isCollapsed: false,
+                _identityTile(
+                  loc: loc,
                   onTap: () => _showAgencyProfileDialog(context, loc, colorScheme),
                 ),
               ],
@@ -310,12 +329,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                   child: CircleAvatar(
                     radius: 18.0,
                     backgroundColor: colorScheme.primaryContainer,
-                    child: Text(
-                      'AG',
-                      style: TextStyle(
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer,
+                    child: ValueListenableBuilder<AgencyIdentity>(
+                      valueListenable: _identity,
+                      builder: (context, identity, _) => Text(
+                        _initialsOf(identity, loc),
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
                   ),
@@ -325,253 +347,61 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
     );
   }
 
-  /// Interactive Agency Profile Menu Dialog
-  void _showAgencyProfileDialog(
-    BuildContext context,
-    AppLocalizations loc,
-    ColorScheme colorScheme,
-  ) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return Dialog(
-          backgroundColor: colorScheme.surface,
-          surfaceTintColor: colorScheme.surfaceTint,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Profile Identity Header
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: colorScheme.primary,
-                        child: Text(
-                          'AG',
-                          style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    loc.tr('agencyWorkspace'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.5,
-                                      color: colorScheme.onSurface,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.verified_rounded,
-                                  size: 16,
-                                  color: colorScheme.primary,
-                                ),
-                              ],
-                            ),
-                            Text(
-                              loc.tr('roleAgency'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TashilIconButton.standard(
-                        icon: Icons.close_rounded,
-                        size: 34,
-                        iconSize: 18,
-                        onPressed: () => Navigator.of(dialogCtx).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+  String _initialsOf(AgencyIdentity identity, AppLocalizations loc) =>
+      identity.initials.isEmpty ? loc.tr('roleAgency').characters.first : identity.initials;
 
-                  // Agency Portfolio Summary Chips
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildProfileStat(
-                          label: loc.tr('properties'),
-                          value: '120',
-                          colorScheme: colorScheme,
-                        ),
-                        Container(width: 1, height: 20, color: colorScheme.outlineVariant),
-                        _buildProfileStat(
-                          label: loc.tr('leases'),
-                          value: '85',
-                          colorScheme: colorScheme,
-                        ),
-                        Container(width: 1, height: 20, color: colorScheme.outlineVariant),
-                        _buildProfileStat(
-                          label: loc.tr('crm'),
-                          value: '15',
-                          colorScheme: colorScheme,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 8),
-
-                  // Menu Actions
-                  _buildProfileMenuItem(
-                    icon: Icons.dashboard_outlined,
-                    title: loc.tr('dashboard'),
-                    colorScheme: colorScheme,
-                    onTap: () {
-                      Navigator.of(dialogCtx).pop();
-                      setState(() => _selectedIndex = 0);
-                    },
-                  ),
-                  _buildProfileMenuItem(
-                    icon: Icons.tune_rounded,
-                    title: loc.tr('settings'),
-                    colorScheme: colorScheme,
-                    onTap: () {
-                      Navigator.of(dialogCtx).pop();
-                      AppSettingsDialog.show(context);
-                    },
-                  ),
-                  _buildProfileMenuItem(
-                    icon: Icons.travel_explore_rounded,
-                    title: loc.tr('browseAsVisitor'),
-                    colorScheme: colorScheme,
-                    onTap: () {
-                      Navigator.of(dialogCtx).pop();
-                      context.go('/');
-                    },
-                  ),
-                  _buildProfileMenuItem(
-                    icon: Icons.security_rounded,
-                    title: loc.tr('accountSecurity'),
-                    colorScheme: colorScheme,
-                    onTap: () {
-                      Navigator.of(dialogCtx).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(loc.tr('roleAgency')),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 6),
-                  const TashilDivider.middleInset(),
-                  const SizedBox(height: 6),
-                  _buildProfileMenuItem(
-                    icon: Icons.logout_rounded,
-                    title: loc.tr('logout'),
-                    colorScheme: colorScheme,
-                    isDestructive: true,
-                    onTap: () async {
-                      Navigator.of(dialogCtx).pop();
-                      await FirebaseAuthService().signOut();
-                      if (context.mounted) context.go('/login');
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+  /// The profile tile of the drawer: the signed-in person and their agency, never placeholders.
+  Widget _identityTile({required AppLocalizations loc, required VoidCallback onTap}) {
+    return ValueListenableBuilder<AgencyIdentity>(
+      valueListenable: _identity,
+      builder: (context, identity, _) {
+        final agencyName = identity.agencyNameFor(Localizations.localeOf(context).languageCode);
+        return TashilDrawerProfileTile(
+          initials: _initialsOf(identity, loc),
+          displayName: identity.personName.isEmpty ? loc.tr('agencyWorkspace') : identity.personName,
+          roleSubtitle: agencyName.isEmpty ? loc.tr('roleAgency') : agencyName,
+          isCollapsed: false,
+          onTap: onTap,
         );
       },
     );
   }
 
-  Widget _buildProfileStat({
-    required String label,
-    required String value,
-    required ColorScheme colorScheme,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10.5,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileMenuItem({
-    required IconData icon,
-    required String title,
-    required ColorScheme colorScheme,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
-    final itemColor = isDestructive ? colorScheme.error : colorScheme.onSurface;
-    final iconColor = isDestructive ? colorScheme.error : colorScheme.onSurfaceVariant;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        child: Row(
-          children: [
-            Icon(icon, size: 19, color: iconColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: isDestructive ? FontWeight.bold : FontWeight.w500,
-                  color: itemColor,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 16,
-              color: isDestructive
-                  ? colorScheme.error.withAlpha(120)
-                  : colorScheme.outlineVariant,
-            ),
-          ],
-        ),
+  /// The agency account menu, built from the signed-in account and its agency (TAQ-153).
+  void _showAgencyProfileDialog(BuildContext context, AppLocalizations loc, ColorScheme colorScheme) {
+    final identity = _identity.value;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AgencyProfileDialog(
+        identity: identity,
+        onDashboard: () {
+          Navigator.of(dialogCtx).pop();
+          setState(() => _selectedIndex = 0);
+        },
+        onSettings: () {
+          Navigator.of(dialogCtx).pop();
+          AppSettingsDialog.show(context);
+        },
+        onBrowse: () {
+          Navigator.of(dialogCtx).pop();
+          context.go('/');
+        },
+        onSecurity: () async {
+          Navigator.of(dialogCtx).pop();
+          final sent = await showAgencyPasswordResetDialog(
+            context,
+            email: identity.email,
+            send: _identitySource.sendPasswordReset,
+          );
+          if (sent && context.mounted) {
+            TashilSnackBar.showSuccess(context: context, message: loc.tr('securityResetSent'));
+          }
+        },
+        onLogout: () async {
+          Navigator.of(dialogCtx).pop();
+          await FirebaseAuthService().signOut();
+          if (context.mounted) context.go('/login');
+        },
       ),
     );
   }
@@ -857,11 +687,8 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       ],
       footer: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: TashilDrawerProfileTile(
-          initials: 'AG',
-          displayName: loc.tr('agencyWorkspace'),
-          roleSubtitle: loc.tr('roleAgency'),
-          isCollapsed: false,
+        child: _identityTile(
+          loc: loc,
           onTap: () {
             Navigator.pop(context);
             _showAgencyProfileDialog(context, loc, colorScheme);
