@@ -22,6 +22,7 @@ if (!admin.apps.length) {
 const { requireAuth, requireRole, resolveRole } = require("./authz");
 const { verifyLeaseProperty, readPropertyLock, alreadyLeased } = require("./leases");
 const { appCheckEnforced } = require("./config");
+const { containsContact } = require("./contact_filter");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
 
@@ -61,6 +62,11 @@ function requirePhone(value) {
 function optionalMessage(value) {
   if (value === undefined || value === null || value === "") return "";
   if (typeof value !== "string") throw new HttpsError("invalid-argument", "message must be text.");
+  // Contacts are rejected, not redacted: a visitor and an owner talk through the platform until a
+  // lease exists. The check runs on the text as sent, so truncation cannot hide a number.
+  if (containsContact(value)) {
+    throw new HttpsError("invalid-argument", "Messages cannot contain phone numbers, emails or links.", { reason: "contact_in_message" });
+  }
   return cleanText(value, 500);
 }
 
