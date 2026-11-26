@@ -52,8 +52,24 @@ run fails, resume with `--cursor <last printed id>`; ids already registered are 
 | `publicOwnerMismatch` | The public listing names another owner than the holder | Review; never registered |
 | `nonLandlordOwner` | The only holder is a Tenant or Investor | Never registered |
 | `overridden` | Ids resolved by the overrides file | Registered with `claimed_by: backfill-override` |
+| `idFieldIssues` | Private docs whose `id` field is missing or differs from the doc id | Must be 0 before `--write`; fix with `--fix-id-fields --write` |
 
 The report holds counts and ids only.
+
+## Private docs without a matching `id` field (TAQ-128)
+
+The sync trigger finds the other holders of an id through the `id` field of their private docs. A
+legacy doc with no `id` field, or one that differs from the doc id, is invisible to that check, so
+another owner could claim its id while it is unregistered. The dry run lists such docs under
+`idFieldIssues`, and `--write` refuses to register anything until that list is empty. To fix them:
+
+```bash
+BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id> --fix-id-fields --write
+```
+
+This sets `id` to the doc id on the listed docs and changes nothing else. It registers nothing.
+Each update fires the sync trigger like any edit of the doc. Run the dry run again afterwards; it must
+show `idFieldIssues: 0`.
 
 ## Ids held by more than one owner
 

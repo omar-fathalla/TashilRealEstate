@@ -377,6 +377,31 @@ test("TAQ-126: a fresh id still claims, and an id only the same owner holds is n
   assert.equal(await registry("mine-1"), "ownerA");
 });
 
+test("TAQ-128: a legacy private doc without an id field is listed by the backfill; once fixed, another owner's create is flagged", async () => {
+  const backfill = require("../scripts/backfill_property_owners");
+  await siloRef("ownerA", "legacy-noid").set(listing({ isPublished: false }));
+
+  const quiet = async (argv) => {
+    const log = console.log;
+    console.log = () => {};
+    try {
+      return await backfill.main(argv, {}, { db });
+    } finally {
+      console.log = log;
+    }
+  };
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  assert.deepEqual(plan.idFieldIssues, [{ property_id: "legacy-noid", owner_id: "ownerA", id_field: "missing" }]);
+  assert.equal(await quiet(["--project", projectId, "--fix-id-fields", "--write"]), 0);
+  assert.equal((await doc("Users/ownerA/properties/legacy-noid")).id, "legacy-noid");
+  assert.equal(await registry("legacy-noid"), "", "fixing does not register");
+
+  await ownerWrites("ownerB", "legacy-noid", listing({ id: "legacy-noid" }));
+  assert.equal(await flagged("ownerB", "legacy-noid"), true, "the fixed legacy doc is now seen as a holder");
+  assert.equal(await registry("legacy-noid"), "");
+  assert.equal(await doc("Properties/legacy-noid"), null);
+});
+
 // --- TAQ-125: end to end, the legacy data works after the backfill ---
 
 test("TAQ-125: legacy leases and payments fail closed until the backfill, then work", async () => {

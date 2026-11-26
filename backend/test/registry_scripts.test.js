@@ -49,7 +49,8 @@ async function seedMixed() {
   await user("ownerB", "Owner");
   await user("agency", "AgencyAdmin");
   await user("tenantT", "Tenant");
-  const set = (p, data) => db.doc(p).set(data);
+  // Private docs carry `id` like every app-written doc (TAQ-128); the other paths are left as given.
+  const set = (p, data) => db.doc(p).set(p.startsWith("Users/") ? { id: p.split("/").pop(), ...data } : data);
   await set("Users/ownerA/properties/solo-a", { title: "x", rentalStatus: "available" });
   await set("Users/agency/properties/solo-agency", { title: "x", rentalStatus: "Rented" });
   await set("Properties/solo-agency", { owner_id: "agency" });
@@ -71,9 +72,10 @@ async function seedMixed() {
 // --- backfill guard ---
 
 test("TAQ-110 N-1: the backfill accepts demo- projects and tashil-aqar-dev only", () => {
-  const base = { project: "demo-x", write: false, prod: false, batchSize: 100, cursor: "", overrides: "" };
+  const base = { project: "demo-x", write: false, prod: false, fixIdFields: false, batchSize: 100, cursor: "", overrides: "" };
   assert.deepEqual(backfill.parseArgs(["--project", "demo-x"]), base);
   assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--write"]), { ...base, write: true });
+  assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--fix-id-fields", "--write"]), { ...base, write: true, fixIdFields: true });
   assert.deepEqual(backfill.parseArgs(["--project", "p", "--prod", "--batch-size=7", "--cursor", "c1", "--overrides", "o.json"]), { ...base, project: "p", prod: true, batchSize: 7, cursor: "c1", overrides: "o.json" });
   for (const bad of ["0", "401", "x", "1.5"]) assert.throws(() => backfill.parseArgs(["--project", "p", "--batch-size", bad]), /--batch-size/);
   assert.throws(() => backfill.parseArgs([]), /--project is required/);
@@ -337,7 +339,7 @@ test("TAQ-125: the prod dry run lists the 6 shared seed ids as multi-owner confl
   assert.equal(report.mode, "dry-run");
   assert.deepEqual(report.counts, {
     privateDocs: 14, ids: 8, alreadyRegistered: 0, toRegister: 2, multipleOwners: 6, publicOwnerMismatch: 0,
-    nonLandlordOwner: 0, registeredToOther: 0, idConflictCandidates: 12, overridden: 0,
+    nonLandlordOwner: 0, registeredToOther: 0, idConflictCandidates: 12, overridden: 0, idFieldIssues: 0,
   });
   assert.deepEqual(report.multipleOwners.map((x) => x.property_id), [...shared].sort());
   for (const m of report.multipleOwners) assert.deepEqual(m.owners, ["agency", "root"]);
@@ -483,4 +485,71 @@ test("TAQ-125: writes go in batches with a cursor, resume after a failure, and s
   assert.deepEqual(resumed.skipped.sort(), ["b4", "b5"], "registered meanwhile, or the private doc is gone");
   assert.equal(resumed.registered, 1);
   assert.deepEqual(await registry(), { b1: "ownerA", b2: "ownerA", b3: "ownerA", b4: "someone" });
+});
+
+// --- TAQ-128: private docs without a matching `id` field ---
+
+test("TAQ-128: the dry run lists private docs with a missing or mismatched id field", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerB").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/no-id").set({ title: "legacy" });
+  await db.doc("Users/ownerB/properties/wrong-id").set({ id: "something-else", title: "legacy" });
+  await db.doc("Users/ownerB/properties/null-id").set({ id: null, title: "legacy" });
+  await db.doc("Users/ownerA/properties/good").set({ id: "good" });
+  const r = await runMain(["--project", "demo-x"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  const report = jsonReport(r.out);
+  assert.equal(report.counts.idFieldIssues, 3);
+  assert.deepEqual(report.idFieldIssues, [
+    { property_id: "no-id", owner_id: "ownerA", id_field: "missing" },
+    { property_id: "null-id", owner_id: "ownerB", id_field: "missing" },
+    { property_id: "wrong-id", owner_id: "ownerB", id_field: "mismatch" },
+  ]);
+  assert.match(r.out, /missing or mismatched id field .*: 3/);
+  assert.match(r.out, /run with --fix-id-fields --write, then dry-run again/);
+  assert.deepEqual(await registry(), {}, "a dry run writes nothing");
+  assert.equal((await db.doc("Users/ownerA/properties/no-id").get()).get("id"), undefined);
+});
+
+test("TAQ-128: --write refuses to register while id field issues remain; --fix-id-fields --write fixes only the id", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/no-id").set({ title: "legacy", rentalStatus: "available" });
+  await db.doc("Users/ownerA/properties/good").set({ id: "good" });
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+
+  const refused = await runMain(["--project", FAKE_PROD, "--prod", "--write"], env);
+  assert.equal(refused.code, 2);
+  assert.match(refused.err, /Refusing to register: 1 private docs have a missing or mismatched id field/);
+  assert.deepEqual(await registry(), {}, "nothing is registered, not even the clean id");
+
+  const fixed = await runMain(["--project", FAKE_PROD, "--prod", "--fix-id-fields", "--write"], env);
+  assert.equal(fixed.code, 0, fixed.err);
+  assert.match(fixed.out, /^Target project: qa-fake-prod-xyz \(PROD, WRITE: will fix id fields only\)/);
+  assert.match(fixed.out, /Fixed the id field on 1 private docs\./);
+  assert.deepEqual(await registry(), {}, "fixing registers nothing");
+  assert.deepEqual((await db.doc("Users/ownerA/properties/no-id").get()).data(), { id: "no-id", title: "legacy", rentalStatus: "available" });
+
+  const dry = await runMain(["--project", FAKE_PROD, "--prod"], env);
+  assert.equal(jsonReport(dry.out).counts.idFieldIssues, 0);
+  const again = await runMain(["--project", FAKE_PROD, "--prod", "--fix-id-fields", "--write"], env);
+  assert.match(again.out, /Fixed the id field on 0 private docs\./, "idempotent");
+
+  const wrote = await runMain(["--project", FAKE_PROD, "--prod", "--write"], env);
+  assert.equal(wrote.code, 0, wrote.err);
+  assert.deepEqual(await registry(), { good: "ownerA", "no-id": "ownerA" });
+});
+
+test("TAQ-128: fixing skips docs deleted or fixed meanwhile and never touches other fields", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  for (const id of ["a1", "a2", "a3"]) await db.doc(`Users/ownerA/properties/${id}`).set({ title: id });
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  assert.equal(plan.idFieldIssues.length, 3);
+  await db.doc("Users/ownerA/properties/a2").delete();
+  await db.doc("Users/ownerA/properties/a3").update({ id: "a3" });
+  const batches = [];
+  const result = await backfill.fixIdFields(db, plan, { batchSize: 2, onBatch: (b) => batches.push(b) });
+  assert.deepEqual(result, { fixed: 1, skipped: ["ownerA/a2", "ownerA/a3"] });
+  assert.equal(batches.length, 2);
+  assert.equal((await db.doc("Users/ownerA/properties/a2").get()).exists, false, "a deleted doc is not re-created");
+  assert.deepEqual((await db.doc("Users/ownerA/properties/a1").get()).data(), { title: "a1", id: "a1" });
 });
