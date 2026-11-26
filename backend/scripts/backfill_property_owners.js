@@ -8,9 +8,11 @@
  *  - the id appears under one `Users/{uid}/properties/{id}` only,
  *  - that uid's role can publish (Owner, AgencyAdmin, SuperAdmin),
  *  - no public listing exists for the id, or it belongs to the same uid.
- * Everything else is reported and left alone, to be resolved by hand: ids under more than one owner,
- * ids whose public listing names another owner, ids whose only holder cannot let property, and ids
- * already registered to someone other than a holder (`registeredToOther`, marked for review).
+ * Holders flagged `id_conflict` and Tenant or Investor holders never count (TAQ-129); they are listed
+ * on their own. Everything else is reported and left alone, to be resolved by hand: ids under more
+ * than one owner, ids whose public listing names another owner, ids no landlord holds, and ids already
+ * registered to someone who is not a landlord holder (`registeredToOther`, marked for review). Ids
+ * registered to one of several holders, as an override leaves them, are `registeredToHolder`.
  * `idConflictCandidates` lists the private docs the sync trigger would flag `id_conflict` once they
  * are written again. Nothing is deleted or flagged by this script, and it never overwrites an entry.
  *
@@ -35,9 +37,9 @@
  * summary and then the whole report as JSON; counts and ids only.
  *
  * Ids held by more than one owner are never registered automatically. To resolve one, pass
- * `--overrides <file.json>` with `{ "<propertyId>": "<ownerUid>" }` naming one of its holders; the
- * file is checked against the live data before anything is written and refused if an entry does not
- * fit. Without an entry the id stays unregistered (the sync trigger flags any later create of it).
+ * `--overrides <file.json>` with `{ "<propertyId>": "<ownerUid>" }` naming one of its landlord holders;
+ * the file is checked against the live data before anything is written and refused if an entry does
+ * not fit (a Tenant, an Investor or an id_conflict doc is refused). Without an entry the id stays unregistered (the sync trigger flags any later create of it).
  * Firebase Auth is not used: the backfill needs only Firestore read access (`roles/datastore.viewer`
  * for the dry run), so it runs under an identity that cannot read Auth.
  *
@@ -138,22 +140,49 @@ async function scanPrivateProperties(db, { pageSize = SCAN_PAGE } = {}) {
  * Whether [uid] may hold a private property: false for a Tenant or Investor profile. It reads only
  * Firestore (`Users/{uid}.role`); Firebase Auth is never called, so the backfill also runs under an
  * identity that cannot read Auth. A missing or other profile role counts as a landlord (AgencyAdmin
- * and SuperAdmin roles live in claims, not in the profile).
+ * and SuperAdmin roles live in claims, not in the profile); `profile` says whether a profile exists.
  */
 async function isLandlord(db, uid, cache) {
   if (!cache.has(uid)) {
     const profile = await db.collection("Users").doc(uid).get();
     const role = profile.exists && typeof profile.get("role") === "string" ? profile.get("role") : "";
-    cache.set(uid, { role, landlord: !NON_LANDLORD_ROLES.includes(role) });
+    cache.set(uid, { role, landlord: !NON_LANDLORD_ROLES.includes(role), profile: profile.exists });
   }
   return cache.get(uid);
 }
 
 /**
+ * Splits the holders of one id (TAQ-129). Only `landlords` count as owners: a doc the sync trigger
+ * flagged `id_conflict` never owns its id, and a Tenant or Investor cannot let property, so neither
+ * keeps a real owner's id unregistered or can be named in an override. A holder without a profile
+ * still counts: it may be a claims-only admin, and dropping it could hand the id to the other holder.
+ */
+async function splitHolders(db, list, roles) {
+  const result = { landlords: [], flagged: [], nonLandlord: [], noProfile: [] };
+  for (const uid of [...new Set(list.map((h) => h.ownerId))].sort()) {
+    if (list.filter((h) => h.ownerId === uid).every((h) => h.idConflict)) {
+      result.flagged.push(uid);
+      continue;
+    }
+    const { role, landlord, profile } = await isLandlord(db, uid, roles);
+    if (!landlord) {
+      result.nonLandlord.push({ owner_id: uid, role });
+      continue;
+    }
+    if (!profile) result.noProfile.push(uid);
+    result.landlords.push(uid);
+  }
+  return result;
+}
+
+/**
  * Sorts every private property id into what the backfill would register and what needs a person.
- * Reads only. `holders` comes from scanPrivateProperties. `registeredToOther` rows carry
- * `review: true`; `idConflictCandidates` are the private docs that conflict with the registry or
- * with other holders (the sync trigger flags them `id_conflict` when they are next created).
+ * Reads only. `holders` comes from scanPrivateProperties. Holders flagged `id_conflict` and Tenant or
+ * Investor holders are reported (`flaggedHolders`, `nonLandlordHolders`) and never count as owners.
+ * `registeredToOther` rows (registered to someone who is not a landlord holder) carry `review: true`;
+ * `registeredToHolder` rows are registered to one of several holders, as an override leaves them.
+ * `idConflictCandidates` are the private docs that conflict with the registry or with other holders
+ * (the sync trigger flags them `id_conflict` when they are next created).
  */
 async function classify(db, holders, { overrides = {} } = {}) {
   const plan = {
@@ -165,15 +194,22 @@ async function classify(db, holders, { overrides = {} } = {}) {
     publicOwnerMismatch: [],
     nonLandlordOwner: [],
     registeredToOther: [],
+    registeredToHolder: [],
     idConflictCandidates: [],
     overridden: [],
     idFieldIssues: [],
+    flaggedHolders: [],
+    nonLandlordHolders: [],
+    holdersWithoutProfile: [],
   };
   const roles = new Map();
   for (const [propertyId, uid] of Object.entries(overrides)) {
-    const owners = [...new Set((holders.get(propertyId) || []).map((h) => h.ownerId))];
-    if (owners.length < 2) throw new Error(`Override for "${propertyId}" refused: the id is not held by more than one owner. Overrides only resolve multi-owner ids.`);
-    if (!owners.includes(uid)) throw new Error(`Override for "${propertyId}" refused: "${uid}" does not hold that id (holders: ${owners.sort().join(", ")}).`);
+    const split = await splitHolders(db, holders.get(propertyId) || [], roles);
+    if (split.flagged.includes(uid)) throw new Error(`Override for "${propertyId}" refused: the doc of "${uid}" is flagged id_conflict, so it cannot own the id.`);
+    const tenantLike = split.nonLandlord.find((h) => h.owner_id === uid);
+    if (tenantLike) throw new Error(`Override for "${propertyId}" refused: "${uid}" is ${tenantLike.role === "Investor" ? "an" : "a"} ${tenantLike.role}; only a landlord (Owner, AgencyAdmin, SuperAdmin) can own an id.`);
+    if (split.landlords.length < 2) throw new Error(`Override for "${propertyId}" refused: the id is not held by more than one owner (id_conflict docs and Tenant or Investor holders do not count). Overrides only resolve multi-owner ids.`);
+    if (!split.landlords.includes(uid)) throw new Error(`Override for "${propertyId}" refused: "${uid}" does not hold that id (holders: ${split.landlords.join(", ")}).`);
   }
   const candidate = (propertyId, ownerId, reason) => plan.idConflictCandidates.push({ property_id: propertyId, owner_id: ownerId, reason });
   for (const propertyId of [...holders.keys()].sort()) {
@@ -182,17 +218,30 @@ async function classify(db, holders, { overrides = {} } = {}) {
     for (const h of list) {
       if (h.idField !== "ok") plan.idFieldIssues.push({ property_id: propertyId, owner_id: h.ownerId, id_field: h.idField });
     }
-    const owners = [...new Set(list.map((h) => h.ownerId))].sort();
+    const split = await splitHolders(db, list, roles);
+    const owners = split.landlords;
+    for (const uid of split.flagged) plan.flaggedHolders.push({ property_id: propertyId, owner_id: uid });
+    for (const uid of split.noProfile) plan.holdersWithoutProfile.push({ property_id: propertyId, owner_id: uid });
+    if (owners.length) {
+      for (const h of split.nonLandlord) plan.nonLandlordHolders.push({ property_id: propertyId, ...h });
+    }
     const reg = await db.collection(REGISTRY).doc(propertyId).get();
     const registered = reg.exists ? reg.get("owner_id") || "" : "";
     if (registered) {
-      const others = owners.filter((uid) => uid !== registered && !list.find((h) => h.ownerId === uid && h.idConflict));
-      if (others.length || !owners.includes(registered)) {
+      const others = owners.filter((uid) => uid !== registered);
+      if (!owners.includes(registered)) {
         plan.registeredToOther.push({ property_id: propertyId, registered_owner_id: registered, holders: owners, review: true });
         for (const uid of others) candidate(propertyId, uid, "registered_to_other");
+      } else if (others.length) {
+        plan.registeredToHolder.push({ property_id: propertyId, registered_owner_id: registered, claimed_by: reg.get("claimed_by") || "", other_holders: others });
+        for (const uid of others) candidate(propertyId, uid, "registered_to_other_holder");
       } else {
         plan.alreadyRegistered += 1;
       }
+      continue;
+    }
+    if (!owners.length) {
+      for (const h of split.nonLandlord) plan.nonLandlordOwner.push({ property_id: propertyId, ...h });
       continue;
     }
     if (owners.length > 1) {
@@ -216,11 +265,6 @@ async function classify(db, holders, { overrides = {} } = {}) {
     if (publicOwner && publicOwner !== ownerId) {
       plan.publicOwnerMismatch.push({ property_id: propertyId, owner_id: ownerId, public_owner_id: publicOwner });
       candidate(propertyId, ownerId, "public_owner_mismatch");
-      continue;
-    }
-    const { role, landlord } = await isLandlord(db, ownerId, roles);
-    if (!landlord) {
-      plan.nonLandlordOwner.push({ property_id: propertyId, owner_id: ownerId, role });
       continue;
     }
     plan.toRegister.push({ property_id: propertyId, owner_id: ownerId });
@@ -253,9 +297,13 @@ function counts(plan) {
     publicOwnerMismatch: plan.publicOwnerMismatch.length,
     nonLandlordOwner: plan.nonLandlordOwner.length,
     registeredToOther: plan.registeredToOther.length,
+    registeredToHolder: plan.registeredToHolder.length,
     idConflictCandidates: plan.idConflictCandidates.length,
     overridden: plan.overridden.length,
     idFieldIssues: plan.idFieldIssues.length,
+    flaggedHolders: plan.flaggedHolders.length,
+    nonLandlordHolders: plan.nonLandlordHolders.length,
+    holdersWithoutProfile: plan.holdersWithoutProfile.length,
   };
 }
 
@@ -352,10 +400,14 @@ function printSummary(plan) {
   const report = [
     ["Under more than one owner (left unregistered; resolve by hand)", plan.multipleOwners],
     ["Public listing names another owner (left unregistered)", plan.publicOwnerMismatch],
-    ["Only holder cannot let property (left unregistered)", plan.nonLandlordOwner],
-    ["Registered to someone other than a holder (REVIEW; left as is)", plan.registeredToOther],
+    ["No landlord holder: only a Tenant or Investor holds it (left unregistered)", plan.nonLandlordOwner],
+    ["Registered to someone who is not a landlord holder (REVIEW; left as is)", plan.registeredToOther],
+    ["Registered to one of several holders, e.g. by an override (expected; the other holders are id_conflict candidates)", plan.registeredToHolder],
     ["Resolved by an explicit owner override (registered to the named owner)", plan.overridden],
     ["id_conflict candidates (private docs that conflict; nothing is flagged by this script)", plan.idConflictCandidates],
+    ["Ignored holders: docs flagged id_conflict (never count as owners)", plan.flaggedHolders],
+    ["Ignored holders: Tenant or Investor beside a landlord (never count as owners)", plan.nonLandlordHolders],
+    ["Holders without a Users profile (counted as landlords; check who they are)", plan.holdersWithoutProfile],
     ["Private docs with a missing or mismatched id field (must be 0 before --write; fix with --fix-id-fields --write)", plan.idFieldIssues],
   ];
   for (const [label, list] of report) {
