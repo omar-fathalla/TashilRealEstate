@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { mock } = require("node:test");
 const admin = require("firebase-admin");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -204,6 +205,7 @@ test("TAQ-8: only a SuperAdmin claim can assign roles", async () => {
 
 test("TAQ-9: setUserRole writes the role and agency as custom claims", async () => {
   await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
   const adminCaller = caller("root", { role: "SuperAdmin" });
   await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin" }, auth: adminCaller }), "invalid-argument");
   await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "Overlord" }, auth: adminCaller }), "invalid-argument");
@@ -219,6 +221,88 @@ test("TAQ-9: setUserRole writes the role and agency as custom claims", async () 
   await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: adminCaller });
   user = await admin.auth().getUser("target");
   assert.deepEqual(user.customClaims, { role: "Owner" });
+});
+
+// --- TAQ-148: the agency of an AgencyAdmin ---
+
+test("TAQ-148: AgencyAdmin needs an agency that exists, with a valid id", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "no_such_agency" }, auth: root }), "failed-precondition");
+  for (const bad of ["a/b", "a b", "x".repeat(129), "..", "agency;1", 7, {}]) {
+    await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: bad }, auth: root }), "invalid-argument");
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims || {}, {}, "nothing was written");
+  assert.equal((await db.collection("Users").doc("target").get()).exists, false, "no profile was written");
+
+  await db.collection("Agencies").doc("real_agency-1").set({ name: "Real" });
+  await fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "real_agency-1" }, auth: root });
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "AgencyAdmin", agency_id: "real_agency-1" });
+});
+
+test("TAQ-148: the error says why, so the app can show a translated message", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await assert.rejects(
+    fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "ghost" }, auth: root }),
+    (err) => err.details && err.details.reason === "agency_not_found",
+  );
+  await assert.rejects(
+    fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "a/b" }, auth: root }),
+    (err) => err.details && err.details.reason === "agency_id_invalid",
+  );
+});
+
+test("TAQ-148: removing AgencyAdmin clears agency_id on the claim and the profile and revokes tokens", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "agency-1" }, auth: root });
+  assert.equal((await db.collection("Users").doc("target").get()).get("agency_id"), "agency-1");
+
+  const revoke = mock.method(admin.auth(), "revokeRefreshTokens");
+  try {
+    await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: root });
+    assert.deepEqual(revoke.mock.calls.map((c) => c.arguments[0]), ["target"]);
+  } finally {
+    revoke.mock.restore();
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "Owner" });
+  const profile = (await db.collection("Users").doc("target").get()).data();
+  assert.equal(profile.role, "Owner");
+  assert.equal("agency_id" in profile, false, "the stale agency is gone from the profile");
+});
+
+test("TAQ-148: moving to another agency revokes tokens; repeating the same assignment does not", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
+  await db.collection("Agencies").doc("agency-2").set({ name: "Agency Two" });
+  const root = caller("root", { role: "SuperAdmin" });
+  const run = (agencyId) => fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId }, auth: root });
+
+  const revoke = mock.method(admin.auth(), "revokeRefreshTokens");
+  try {
+    await run("agency-1");
+    assert.equal(revoke.mock.callCount(), 1, "a new role revokes");
+    await run("agency-1");
+    assert.equal(revoke.mock.callCount(), 1, "nothing changed");
+    await run("agency-2");
+    assert.equal(revoke.mock.callCount(), 2, "a different agency revokes");
+  } finally {
+    revoke.mock.restore();
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "AgencyAdmin", agency_id: "agency-2" });
+  assert.equal((await db.collection("Users").doc("target").get()).get("agency_id"), "agency-2");
+});
+
+test("TAQ-148: revoking tokens moves the user's tokensValidAfterTime", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  const before = (await admin.auth().getUser("target")).tokensValidAfterTime;
+  await new Promise((r) => setTimeout(r, 1100));
+  await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: root });
+  const after = (await admin.auth().getUser("target")).tokensValidAfterTime;
+  assert.notEqual(after, before);
 });
 
 // --- TAQ-91: Admin and Investor roles ---
