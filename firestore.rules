@@ -184,7 +184,7 @@ service cloud.firestore {
       return !(field in data) || (data[field] is map && data[field].keys().hasOnly(['ar', 'en', 'hi']));
     }
 
-    // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number, a
+    // Mirrors stripContacts() in backend/contact_filter.js. Rejects text that holds a phone number, a
     // messaging/social link or @handle, or an email address once obvious obfuscation is looked
     // through. Phone shapes (trunk zero, bare EG/UAE mobiles, country codes, +/00 prefixes;
     // digits of any script; O/l/I between digits; grouped digits) and the link patterns are
