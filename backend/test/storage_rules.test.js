@@ -168,6 +168,21 @@ test("M-1: a moderation-hidden listing's photo is not public, even if is_publish
   await expectStaffAndOwnerRead();
 });
 
+test("TAQ-131: moderation_hidden stored as the string 'true' hides the photo, as in firestore.rules", async () => {
+  await setPublic({ is_published: true, moderation_hidden: "true" });
+  await expectHiddenFromPublic("hidden as a string");
+  await expectStaffAndOwnerRead();
+  await setPublic({ is_published: true, moderation_hidden: "false" });
+  await assertSucceeds(anon().ref(PHOTO).getDownloadURL(), "only true and 'true' mean hidden");
+  await setPublic({ is_published: "true", moderation_hidden: false });
+  await expectHiddenFromPublic("is_published as a string is not published");
+});
+
+test("TAQ-131: a moderation doc with hidden as the string 'true' blocks uploads like hidden: true", async () => {
+  await seed((db) => setDoc(doc(db, "PropertyModeration/propA"), { hidden: "true" }));
+  await assertFails(as("ownerA").ref("public/listings/ownerA/propA/new.jpg").put(bytes(16), jpeg));
+});
+
 test("M-1: a rented listing's photo is not public, even with a stale is_published flag", async () => {
   await setPublic({ is_published: false, moderation_hidden: false, status: "rented" });
   await expectHiddenFromPublic("rented");

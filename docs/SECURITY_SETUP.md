@@ -56,14 +56,26 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
 Firestore and Storage App Check enforcement are separate switches in the Firebase console
 and are not affected by `ENFORCE_APP_CHECK`.
 
+## Public listings (`firestore.rules`, TAQ-131)
+
+- A visitor can `get` a `/Properties` doc only when it is published and `moderation_hidden` is
+  neither `true` nor `'true'`. Owners, their agency and platform staff can always read it.
+- List queries check `is_published` only. Rules are not filters: also testing `moderation_hidden`
+  would refuse the marketplace query (`is_published == true`), and adding a
+  `moderation_hidden == false` filter would drop public docs that lack the field. No write can make
+  a doc both published and hidden instead: a SuperAdmin create with both is refused, Admin and
+  SuperAdmin visibility changes can only set `is_published` to false, and the sync trigger sets
+  `is_published = !moderation_hidden`.
+
 ## Listing photos (`storage.rules`)
 
 Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
 
 - The owner, a SuperAdmin and an Admin can always read and list them.
 - Anyone else can read a photo only while `/Properties/{propertyId}` exists, has
-  `is_published == true`, `status == 'vacant'` and `moderation_hidden != true`, and has
-  `owner_id == ownerUid`.
+  `is_published == true`, `status == 'vacant'` and `moderation_hidden` neither `true` nor the
+  string `'true'`, and has `owner_id == ownerUid`. `firestore.rules` treats the string the same
+  way (TAQ-131).
   Unpublished, rented, moderation-hidden and deleted listings are refused. The rule costs one
   Firestore read (Storage rules allow two per evaluation).
 - Owners cannot upload or replace photos while `PropertyModeration/{propertyId}` has

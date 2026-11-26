@@ -812,3 +812,32 @@ test("TAQ-17: lease parties can read; outsiders cannot write leases", async () =
   await assertSucceeds(updateDoc(doc(agency, "Leases/lease-1"), { monthly_rent: 5200 }));
   await assertFails(updateDoc(doc(agency, "Leases/lease-1"), { agency_id: "agency-2" }));
 });
+
+// --- TAQ-131: a published listing that moderation holds hidden is not public ---
+
+test("TAQ-131: a visitor cannot get a listing that is published and moderation-hidden; staff and the owner still can", async () => {
+  await seed("Properties/pub-1", listing("owner", { id: "pub-1" }));
+  await seed("Properties/both-1", listing("owner", { id: "both-1", moderation_hidden: true }));
+  await seed("Properties/str-1", listing("owner", { id: "str-1", moderation_hidden: "true" }));
+  await seed("Properties/false-1", listing("owner", { id: "false-1", moderation_hidden: false }));
+  for (const reader of [anonDb(), db("stranger"), db("tenant", { role: "Tenant" })]) {
+    await assertSucceeds(getDoc(doc(reader, "Properties/pub-1")));
+    await assertSucceeds(getDoc(doc(reader, "Properties/false-1")));
+    await assertFails(getDoc(doc(reader, "Properties/both-1")));
+    await assertFails(getDoc(doc(reader, "Properties/str-1")), "the string 'true' counts as hidden");
+  }
+  for (const reader of [db("owner", { role: "Owner" }), db("root", { role: "SuperAdmin" }), db("admin1", { role: "Admin" })]) {
+    await assertSucceeds(getDoc(doc(reader, "Properties/both-1")));
+  }
+  await assertSucceeds(getDocs(query(collection(anonDb(), "Properties"), where("is_published", "==", true))), "the marketplace query still works");
+});
+
+test("TAQ-131: a SuperAdmin cannot create a listing that is both published and moderation-hidden", async () => {
+  const sa = db("root", { role: "SuperAdmin" });
+  await assertFails(setDoc(doc(sa, "Properties/prop-1"), listing("owner", { moderation_hidden: true })));
+  await assertFails(setDoc(doc(sa, "Properties/prop-1"), listing("owner", { moderation_hidden: "true" })), "not a bool");
+  await assertSucceeds(setDoc(doc(sa, "Properties/prop-1"), listing("owner", { is_published: false, moderation_hidden: true })));
+  await testEnv.clearFirestore();
+  await seed("Users/owner/properties/prop-1", { owner_id: "owner", isPublished: true });
+  await assertSucceeds(setDoc(doc(sa, "Properties/prop-1"), listing("owner", { moderation_hidden: false })));
+});
