@@ -1,5 +1,5 @@
 /**
- * Contact patterns shared by the marketplace sanitizer (backend/index.js) and
+ * Contact patterns shared by the marketplace sanitizer (backend/contact_filter.js) and
  * firestore.rules, so both reject exactly the same text. firestore.rules embeds the
  * generated block (`npm run gen:contact-rules`); test/contact_patterns.test.js fails when
  * the two drift apart. The sanitizer runs the very same RE2 sources, translated to JS.
