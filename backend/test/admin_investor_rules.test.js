@@ -911,3 +911,85 @@ test("TAQ-104: Admin and the moderation batch are unchanged", async () => {
   await assertSucceeds(moderate(superAdmin(), "big", { hidden: true, preHidePublished: true, isPublished: false }));
   await assertFails(setDoc(doc(superAdmin(), "Properties/big"), { ...bigListing, updated_at: serverTimestamp() }));
 });
+
+// --- TAQ-105: a full edit of the largest listing (every editable key changes at once) ---
+
+const fullEdit = () => ({
+  agency_id: "agency-2",
+  countryCode: "EG",
+  currencyCode: "EGP",
+  titles: { ar: words(200, ["شقة", "جديدة", "مطلة", "على", "النيل"]), en: words(200, ["New", "Nile", "view", "flat"]), hi: words(200, ["नई", "नील", "दृश्य", "फ्लैट"]) },
+  descriptions: { ar: words(4000, ["شقة", "مجددة", "بإطلالة", "جميلة"]), en: words(4000, ["Renovated", "airy", "apartment", "with", "terrace"]), hi: words(4000, ["नवीनीकृत", "हवादार", "अपार्टमेंट"]) },
+  locations: { ar: words(300, ["القاهرة", "الزمالك", "برج"]), en: words(300, ["Cairo", "Zamalek", "Tower"]), hi: words(300, ["काहिरा", "ज़मालेक", "टावर"]) },
+  cityCode: "cairo",
+  propertyTypeCode: "villa",
+  buildingName: words(200, ["Zamalek", "Tower", "One"]),
+  pricePerMonth: 9500,
+  bedrooms: 4,
+  bathrooms: 3,
+  areaSqM: 210.5,
+  image: bigImage(200),
+  imageUrls: Array.from({ length: 20 }, (_, i) => bigImage(i + 200)),
+  amenitiesMap: { ar: Array.from({ length: 30 }, (_, i) => `ميزة ${i}`), en: Array.from({ length: 30 }, (_, i) => `Feature ${i}`), hi: Array.from({ length: 30 }, (_, i) => `सुविधा ${i}`) },
+  isFurnished: false,
+  agencyNames: { ar: "تسهيل للعقارات", en: "Tashil Estates", hi: "तशील एस्टेट" },
+  agencyPhone: "+20 100 123 4567",
+  rating: 3.5,
+  isFeatured: true,
+  status: "rented",
+  verified: true,
+});
+
+test("TAQ-105: a SuperAdmin can change every editable key of a maximum-size listing in one update", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  await assertSucceeds(updateDoc(doc(me, "Properties/big"), { ...fullEdit(), updated_at: serverTimestamp() }));
+});
+
+test("TAQ-105: the widest edits that take the per-field path (6 keys) fit the budget on a maximum-size listing", async () => {
+  const e = fullEdit();
+  const pick = (keys) => Object.fromEntries(keys.map((k) => [k, e[k]]));
+  const widest = [
+    ["descriptions", "amenitiesMap", "imageUrls", "image", "titles", "locations"],
+    ["descriptions", "amenitiesMap", "imageUrls", "titles", "locations", "agencyNames"],
+    ["descriptions", "amenitiesMap", "titles", "locations", "agencyNames", "buildingName"],
+    ["descriptions", "amenitiesMap", "imageUrls", "image", "agencyNames", "cityCode"],
+  ];
+  for (const keys of widest) {
+    await seedBig();
+    const me = as("root", CLAIMS.superAdmin);
+    await assertSucceeds(updateDoc(doc(me, "Properties/big"), { ...pick(keys), updated_at: serverTimestamp() }), keys.join(","));
+  }
+});
+
+// Seven or more changed keys validate the whole resulting doc (the same checks as a create), so
+// these edits must still be refused for the same reasons as on the per-field path.
+test("TAQ-105: a wide edit (7+ keys) is still validated, and still limited to the editable keys", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  const ref = doc(me, "Properties/big");
+  const wide = { rating: 2, pricePerMonth: 8000, bedrooms: 5, bathrooms: 4, areaSqM: 150, isFeatured: true, isFurnished: false };
+  const bad = [
+    { pricePerMonth: 0 }, { pricePerMonth: -5 }, { rating: 6 }, { bedrooms: 101 }, { areaSqM: 0 },
+    { status: "draft" }, { countryCode: "US" }, { currencyCode: "EGP" }, { verified: 1 },
+    { "titles.en": "call 0501234567" }, { "descriptions.en": "write me at me@example.com" }, { "locations.en": "wa.me/971501234567" },
+    { buildingName: "@owner_handle" }, { "titles.fr": "bonjour" }, { "titles.en": "x".repeat(201) }, { "descriptions.en": "x".repeat(4001) },
+    { amenitiesMap: { ar: Array(31).fill("x"), en: [], hi: [] } },
+    { amenitiesMap: { ar: ["0 5 0 1 2 3 4 5 6 7"], en: [], hi: [] } },
+    { image: "https://evil.example/a.jpg" }, { image: "a.jpg b.jpg" },
+    { imageUrls: Array.from({ length: 21 }, (_, i) => bigImage(i)) }, { imageUrls: ["https://evil.example/a.jpg"] },
+    { agencyPhone: "1".repeat(31) }, { agencyNames: { ar: "x".repeat(201), en: "", hi: "" } },
+    { phone: "+971501234567" }, { tenant_name: "x" }, { owner_id: "mallory" }, { id: "other" }, { updated_at: "yesterday" },
+    { is_published: false }, { moderation_hidden: true },
+  ];
+  for (const change of bad) {
+    await assertFails(updateDoc(ref, { ...wide, ...change }), JSON.stringify(change).slice(0, 80));
+  }
+  await assertSucceeds(updateDoc(ref, { ...wide, "titles.en": "A short new title" }));
+});
+
+test("TAQ-105: an Admin (not SuperAdmin) still cannot make a wide content edit", async () => {
+  await seedBig();
+  const me = as("admin1", CLAIMS.admin);
+  await assertFails(updateDoc(doc(me, "Properties/big"), { ...fullEdit(), updated_at: serverTimestamp() }));
+});
