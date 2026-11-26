@@ -916,3 +916,6 @@ exports.notifyLeaseStatusChange = require("./lease_notifications").notifyLeaseSt
 exports.createLease = require("./leases").createLease;
 exports.respondToLeaseOffer = require("./leases").respondToLeaseOffer;
 exports.releasePropertyLeaseLock = require("./leases").releasePropertyLeaseLock;
+
+// Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
+exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;

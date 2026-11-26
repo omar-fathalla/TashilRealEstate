@@ -74,8 +74,17 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
   `&token=` and `firestore.rules` rejects it, so every download goes through these rules.
 - Download URLs with `&token=` are bearer links: Cloud Storage serves them without evaluating
   the rules. A token URL handed out while a listing was live keeps working after it goes
-  offline, until the token is revoked (Firebase console, file details, "Revoke"). Revoking on
-  unpublish/hide and reissuing on republish is TAQ-109.
+  offline unless the token is replaced. The `revokePhotoTokensOnOffline` function
+  (`backend/listing_photos.js`, TAQ-109) watches `Properties/{propertyId}`: when a listing stops
+  being live by the same check as `listingLive` (unpublished, rented, made unavailable, held by
+  moderation, deleted, or handed to another owner) it replaces the `firebaseStorageDownloadTokens`
+  of every object under `public/listings/{owner}/{propertyId}/` that has one, and it does so again
+  when the listing goes live. The replacement is a single fresh token, which drops the old ones in
+  Cloud Storage. The Storage emulator appends instead of replacing, so the emulator test checks
+  what is written, not that an old link stops working. The function's service account needs
+  `storage.objects.update` on the default bucket (the default compute account has it). A listing
+  that was offline when this function was deployed keeps any token issued earlier until its next
+  change of state; revoke those once in the console if needed.
   Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
 - The deployed project needs the Storage service agent to have Firestore read access for
   cross-service rules (the console prompts for it on the first rules deploy).
