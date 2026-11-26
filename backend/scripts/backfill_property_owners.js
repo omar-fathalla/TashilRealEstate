@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Backfill of the property owner registry (TAQ-110, N-1). Dev and demo projects only.
+ * Backfill of the property owner registry (TAQ-110 N-1, TAQ-125). Dry run by default.
  *
  * Property docs created before the registry have no `PropertyOwners/{propertyId}` entry, so leases
  * and payments on them fail closed (`property_not_registered`). This script registers each id that
@@ -10,84 +10,141 @@
  *  - no public listing exists for the id, or it belongs to the same uid.
  * Everything else is reported and left alone, to be resolved by hand: ids under more than one owner,
  * ids whose public listing names another owner, ids whose only holder cannot let property, and ids
- * already registered to someone other than a holder. Nothing is deleted or flagged.
+ * already registered to someone other than a holder (`registeredToOther`, marked for review).
+ * `idConflictCandidates` lists the private docs the sync trigger would flag `id_conflict` once they
+ * are written again. Nothing is deleted or flagged by this script, and it never overwrites an entry.
  *
+ *   # dev / demo
  *   node scripts/backfill_property_owners.js --project tashil-aqar-dev            # dry run
  *   node scripts/backfill_property_owners.js --project tashil-aqar-dev --write    # register
  *
- * Only demo- projects and tashil-aqar-dev are accepted; any other project is refused before anything
- * is read. Credentials come from Application Default Credentials or the emulator environment.
+ *   # production (dry run first; read-only wrapper, so it cannot write)
+ *   BACKFILL_PROD_OK=<prod id> node scripts/backfill_property_owners.js --prod --project <prod id>
+ *   # production write: only after the dry run was reviewed
+ *   BACKFILL_PROD_OK=<prod id> node scripts/backfill_property_owners.js --prod --project <prod id> --write
+ *
+ * Production (the `prod` alias in .firebaserc) needs `--prod`, `BACKFILL_PROD_OK` equal to the project
+ * id, and, to write, `--write`. Any other project is refused before anything is read, and `--prod` is
+ * refused on any project that is not production. The target is printed first. The dry run prints a
+ * summary and then the whole report as JSON; counts and ids only.
+ *
+ * Ids held by more than one owner are never registered automatically. To resolve one, pass
+ * `--overrides <file.json>` with `{ "<propertyId>": "<ownerUid>" }` naming one of its holders; the
+ * file is checked against the live data before anything is written and refused if an entry does not
+ * fit. Without an entry the id stays unregistered (the sync trigger flags any later create of it).
+ * Firebase Auth is not used: the backfill needs only Firestore read access (`roles/datastore.viewer`
+ * for the dry run), so it runs under an identity that cannot read Auth.
+ *
+ * `--write` registers in batches (`--batch-size`, default 100, at most 400) and prints the last id of
+ * each batch as the cursor. It is idempotent: an id registered meanwhile is skipped. If a run stops,
+ * start it again; `--cursor <id>` skips ids up to and including that one. The plan is recomputed from
+ * live data on every run. See docs/PROPERTY_REGISTRY_BACKFILL.md for the production run order.
+ *
+ * Credentials come from Application Default Credentials or the emulator environment variables.
  */
 const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { FieldValue, FieldPath } = require("firebase-admin/firestore");
+const { readOnly } = require("./read_only");
+const { prodProjectsFromConfig } = require("./prod_projects");
 
 const DEV_PROJECTS = ["tashil-aqar-dev"];
 const REGISTRY = "PropertyOwners";
-const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
+const NON_LANDLORD_ROLES = ["Tenant", "Investor"];
+const DEFAULT_BATCH = 100;
+const MAX_BATCH = 400;
+const SCAN_PAGE = 500;
 
 function parseArgs(argv) {
-  const args = { project: "", write: false };
+  const args = { project: "", write: false, prod: false, batchSize: DEFAULT_BATCH, cursor: "", overrides: "" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
     else if (arg.startsWith("--project=")) args.project = arg.slice("--project=".length);
     else if (arg === "--write") args.write = true;
+    else if (arg === "--prod") args.prod = true;
+    else if (arg === "--batch-size") args.batchSize = Number(argv[++i]);
+    else if (arg.startsWith("--batch-size=")) args.batchSize = Number(arg.slice("--batch-size=".length));
+    else if (arg === "--overrides") args.overrides = argv[++i] || "";
+    else if (arg.startsWith("--overrides=")) args.overrides = arg.slice("--overrides=".length);
+    else if (arg === "--cursor") args.cursor = argv[++i] || "";
+    else if (arg.startsWith("--cursor=")) args.cursor = arg.slice("--cursor=".length);
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!args.project) throw new Error("--project is required.");
+  if (!Number.isInteger(args.batchSize) || args.batchSize < 1 || args.batchSize > MAX_BATCH) {
+    throw new Error(`--batch-size must be a whole number from 1 to ${MAX_BATCH}.`);
+  }
   return args;
 }
 
-function resolveTarget(project) {
+/**
+ * The project the backfill may touch. demo- projects and the dev project need nothing more.
+ * Production (one of [prodProjects]) needs [prod] (--prod) and [confirm] (BACKFILL_PROD_OK) equal to
+ * the project id; [prod] on any other project is refused. Anything else is refused.
+ */
+function resolveTarget(project, { prod = false, confirm = "", prodProjects = prodProjectsFromConfig() } = {}) {
+  const isProd = typeof project === "string" && prodProjects.includes(project);
+  if (isProd) {
+    if (!prod) throw new Error(`Refusing to run against "${project}": it is the production project. Pass --prod and set BACKFILL_PROD_OK=${project}.`);
+    if (confirm !== project) throw new Error(`Refusing to run against "${project}": set BACKFILL_PROD_OK=${project} to confirm the production backfill.`);
+    return project;
+  }
+  if (prod) throw new Error(`Refusing to run against "${project}": --prod is only for the production project.`);
   if (typeof project === "string" && (project.startsWith("demo-") || DEV_PROJECTS.includes(project))) return project;
-  throw new Error(`Refusing to run against "${project}": the registry backfill runs on demo- projects and ${DEV_PROJECTS.join(", ")} only.`);
+  throw new Error(`Refusing to run against "${project}": the registry backfill runs on demo- projects, ${DEV_PROJECTS.join(", ")} and, with --prod, the production project.`);
 }
 
 /**
  * Every private property doc, grouped by id: Map<propertyId, [{ ownerId, rentalStatus, idConflict }]>.
  * Only docs at Users/{uid}/properties/{id} count; other `properties` subcollections are ignored.
  */
-async function scanPrivateProperties(db) {
+async function scanPrivateProperties(db, { pageSize = SCAN_PAGE } = {}) {
   const byId = new Map();
-  const snap = await db.collectionGroup("properties").get();
-  for (const d of snap.docs) {
-    const usersDoc = d.ref.parent.parent;
-    if (!usersDoc || !usersDoc.parent || usersDoc.parent.id !== "Users" || usersDoc.parent.parent) continue;
-    const rental = d.get("rentalStatus");
-    const holders = byId.get(d.id) || [];
-    holders.push({
-      ownerId: usersDoc.id,
-      rentalStatus: typeof rental === "string" ? rental.trim().toLowerCase() : "",
-      idConflict: d.get("id_conflict") === true,
-    });
-    byId.set(d.id, holders);
+  let last = null;
+  for (;;) {
+    let query = db.collectionGroup("properties").orderBy(FieldPath.documentId()).limit(pageSize);
+    if (last) query = query.startAfter(last);
+    const snap = await query.get();
+    for (const d of snap.docs) {
+      const usersDoc = d.ref.parent.parent;
+      if (!usersDoc || !usersDoc.parent || usersDoc.parent.id !== "Users" || usersDoc.parent.parent) continue;
+      const rental = d.get("rentalStatus");
+      const holders = byId.get(d.id) || [];
+      holders.push({
+        ownerId: usersDoc.id,
+        rentalStatus: typeof rental === "string" ? rental.trim().toLowerCase() : "",
+        idConflict: d.get("id_conflict") === true,
+      });
+      byId.set(d.id, holders);
+    }
+    if (snap.docs.length < pageSize) break;
+    last = snap.docs[snap.docs.length - 1];
   }
   return byId;
 }
 
-async function roleOf(auth, db, uid, cache) {
-  if (cache.has(uid)) return cache.get(uid);
-  let claims = {};
-  try {
-    claims = (await auth.getUser(uid)).customClaims || {};
-  } catch (err) {
-    if (err.code !== "auth/user-not-found") throw err;
-  }
-  let role = typeof claims.role === "string" ? claims.role : "";
-  if (!role) {
+/**
+ * Whether [uid] may hold a private property: false for a Tenant or Investor profile. It reads only
+ * Firestore (`Users/{uid}.role`); Firebase Auth is never called, so the backfill also runs under an
+ * identity that cannot read Auth. A missing or other profile role counts as a landlord (AgencyAdmin
+ * and SuperAdmin roles live in claims, not in the profile).
+ */
+async function isLandlord(db, uid, cache) {
+  if (!cache.has(uid)) {
     const profile = await db.collection("Users").doc(uid).get();
-    const profileRole = profile.exists ? profile.get("role") : "";
-    role = ["Owner", "Tenant", "Investor"].includes(profileRole) ? profileRole : "";
+    const role = profile.exists && typeof profile.get("role") === "string" ? profile.get("role") : "";
+    cache.set(uid, { role, landlord: !NON_LANDLORD_ROLES.includes(role) });
   }
-  cache.set(uid, role);
-  return role;
+  return cache.get(uid);
 }
 
 /**
  * Sorts every private property id into what the backfill would register and what needs a person.
- * Reads only. `holders` comes from scanPrivateProperties.
+ * Reads only. `holders` comes from scanPrivateProperties. `registeredToOther` rows carry
+ * `review: true`; `idConflictCandidates` are the private docs that conflict with the registry or
+ * with other holders (the sync trigger flags them `id_conflict` when they are next created).
  */
-async function classify(db, auth, holders) {
+async function classify(db, holders, { overrides = {} } = {}) {
   const plan = {
     privateDocs: 0,
     ids: holders.size,
@@ -97,21 +154,45 @@ async function classify(db, auth, holders) {
     publicOwnerMismatch: [],
     nonLandlordOwner: [],
     registeredToOther: [],
+    idConflictCandidates: [],
+    overridden: [],
   };
   const roles = new Map();
-  for (const [propertyId, list] of holders) {
+  for (const [propertyId, uid] of Object.entries(overrides)) {
+    const owners = [...new Set((holders.get(propertyId) || []).map((h) => h.ownerId))];
+    if (owners.length < 2) throw new Error(`Override for "${propertyId}" refused: the id is not held by more than one owner. Overrides only resolve multi-owner ids.`);
+    if (!owners.includes(uid)) throw new Error(`Override for "${propertyId}" refused: "${uid}" does not hold that id (holders: ${owners.sort().join(", ")}).`);
+  }
+  const candidate = (propertyId, ownerId, reason) => plan.idConflictCandidates.push({ property_id: propertyId, owner_id: ownerId, reason });
+  for (const propertyId of [...holders.keys()].sort()) {
+    const list = holders.get(propertyId);
     plan.privateDocs += list.length;
     const owners = [...new Set(list.map((h) => h.ownerId))].sort();
     const reg = await db.collection(REGISTRY).doc(propertyId).get();
     const registered = reg.exists ? reg.get("owner_id") || "" : "";
     if (registered) {
       const others = owners.filter((uid) => uid !== registered && !list.find((h) => h.ownerId === uid && h.idConflict));
-      if (others.length || !owners.includes(registered)) plan.registeredToOther.push({ property_id: propertyId, registered_owner_id: registered, holders: owners });
-      else plan.alreadyRegistered += 1;
+      if (others.length || !owners.includes(registered)) {
+        plan.registeredToOther.push({ property_id: propertyId, registered_owner_id: registered, holders: owners, review: true });
+        for (const uid of others) candidate(propertyId, uid, "registered_to_other");
+      } else {
+        plan.alreadyRegistered += 1;
+      }
       continue;
     }
     if (owners.length > 1) {
-      plan.multipleOwners.push({ property_id: propertyId, owners });
+      const chosen = Object.prototype.hasOwnProperty.call(overrides, propertyId) ? overrides[propertyId] : "";
+      if (!chosen) {
+        plan.multipleOwners.push({ property_id: propertyId, owners });
+        for (const uid of owners) candidate(propertyId, uid, "multiple_owners");
+        continue;
+      }
+      const pubSnap = await db.collection("Properties").doc(propertyId).get();
+      const pubOwner = pubSnap.exists ? pubSnap.get("owner_id") || "" : "";
+      if (pubOwner && pubOwner !== chosen) throw new Error(`Override for "${propertyId}" refused: its public listing belongs to "${pubOwner}".`);
+      plan.overridden.push({ property_id: propertyId, owner_id: chosen, other_holders: owners.filter((u) => u !== chosen) });
+      for (const uid of owners.filter((u) => u !== chosen)) candidate(propertyId, uid, "override_other_holder");
+      plan.toRegister.push({ property_id: propertyId, owner_id: chosen, override: true });
       continue;
     }
     const [ownerId] = owners;
@@ -119,10 +200,11 @@ async function classify(db, auth, holders) {
     const publicOwner = pub.exists ? pub.get("owner_id") || "" : "";
     if (publicOwner && publicOwner !== ownerId) {
       plan.publicOwnerMismatch.push({ property_id: propertyId, owner_id: ownerId, public_owner_id: publicOwner });
+      candidate(propertyId, ownerId, "public_owner_mismatch");
       continue;
     }
-    const role = await roleOf(auth, db, ownerId, roles);
-    if (!PUBLISHER_ROLES.includes(role)) {
+    const { role, landlord } = await isLandlord(db, ownerId, roles);
+    if (!landlord) {
       plan.nonLandlordOwner.push({ property_id: propertyId, owner_id: ownerId, role });
       continue;
     }
@@ -131,34 +213,97 @@ async function classify(db, auth, holders) {
   return plan;
 }
 
-/** Registers [plan.toRegister]; an id registered meanwhile is skipped, never overwritten. */
-async function applyPlan(db, plan) {
-  let registered = 0;
-  const skipped = [];
-  for (const { property_id: propertyId, owner_id: ownerId } of plan.toRegister) {
-    const ref = db.collection(REGISTRY).doc(propertyId);
-    const done = await db.runTransaction(async (t) => {
-      const reg = await t.get(ref);
-      if (reg.exists) return false;
-      t.create(ref, { owner_id: ownerId, property_id: propertyId, claimed_at: FieldValue.serverTimestamp(), claimed_by: "backfill" });
-      return true;
-    });
-    if (done) registered += 1;
-    else skipped.push(propertyId);
+/**
+ * Reads the per-id owner override file: a JSON object `{ "<propertyId>": "<ownerUid>" }`. An override
+ * only resolves an id held by more than one owner, in favour of one of its holders; classify refuses
+ * anything else. Without a file, multi-owner ids are never registered.
+ */
+function loadOverrides(file) {
+  if (!file) return {};
+  const data = JSON.parse(require("fs").readFileSync(file, "utf8"));
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("The overrides file must be a JSON object of propertyId: ownerUid.");
+  for (const [id, uid] of Object.entries(data)) {
+    if (typeof uid !== "string" || !uid.trim() || !id.trim() || id.includes("/") || uid.includes("/")) throw new Error(`Invalid override entry "${id}".`);
   }
-  return { registered, skipped };
+  return data;
 }
 
-function printPlan(plan) {
-  console.log(`Private property docs: ${plan.privateDocs} (${plan.ids} ids)`);
-  console.log(`Already registered: ${plan.alreadyRegistered}`);
-  console.log(`To register (single landlord): ${plan.toRegister.length}`);
+function counts(plan) {
+  return {
+    privateDocs: plan.privateDocs,
+    ids: plan.ids,
+    alreadyRegistered: plan.alreadyRegistered,
+    toRegister: plan.toRegister.length,
+    multipleOwners: plan.multipleOwners.length,
+    publicOwnerMismatch: plan.publicOwnerMismatch.length,
+    nonLandlordOwner: plan.nonLandlordOwner.length,
+    registeredToOther: plan.registeredToOther.length,
+    idConflictCandidates: plan.idConflictCandidates.length,
+    overridden: plan.overridden.length,
+  };
+}
+
+/**
+ * Registers [plan.toRegister] in batches of [batchSize], one transaction per batch, in property id
+ * order, skipping ids up to and including [cursor]. Inside the transaction each id is checked again:
+ * one already registered meanwhile, whose private doc is gone or whose public listing now names
+ * someone else is skipped, never overwritten. [onBatch] receives each finished batch (its last id is
+ * the resume cursor). If a batch fails, the error has `.cursor` set to the last finished id.
+ */
+async function applyPlan(db, plan, { batchSize = DEFAULT_BATCH, cursor = "", onBatch = () => {} } = {}) {
+  const todo = [...plan.toRegister].sort((a, b) => (a.property_id < b.property_id ? -1 : 1)).filter((r) => !cursor || r.property_id > cursor);
+  let registered = 0;
+  const skipped = [];
+  let lastCursor = cursor;
+  for (let i = 0; i < todo.length; i += batchSize) {
+    const batch = todo.slice(i, i + batchSize);
+    try {
+      const result = await db.runTransaction(async (t) => {
+        const refs = batch.flatMap((r) => [
+          db.collection(REGISTRY).doc(r.property_id),
+          db.collection("Users").doc(r.owner_id).collection("properties").doc(r.property_id),
+          db.collection("Properties").doc(r.property_id),
+        ]);
+        const snaps = await t.getAll(...refs);
+        const done = [];
+        const skippedNow = [];
+        batch.forEach((r, k) => {
+          const [reg, silo, pub] = snaps.slice(k * 3, k * 3 + 3);
+          const publicOwner = pub.exists ? pub.get("owner_id") || "" : "";
+          if (reg.exists || !silo.exists || (publicOwner && publicOwner !== r.owner_id)) {
+            skippedNow.push(r.property_id);
+            return;
+          }
+          t.create(reg.ref, { owner_id: r.owner_id, property_id: r.property_id, claimed_at: FieldValue.serverTimestamp(), claimed_by: r.override ? "backfill-override" : "backfill" });
+          done.push(r.property_id);
+        });
+        return { done, skippedNow };
+      });
+      registered += result.done.length;
+      skipped.push(...result.skippedNow);
+      lastCursor = batch[batch.length - 1].property_id;
+      onBatch({ registered: result.done.length, skipped: result.skippedNow.length, cursor: lastCursor });
+    } catch (err) {
+      err.cursor = lastCursor;
+      throw err;
+    }
+  }
+  return { registered, skipped, cursor: lastCursor };
+}
+
+function printSummary(plan) {
+  const c = counts(plan);
+  console.log(`Private property docs: ${c.privateDocs} (${c.ids} ids)`);
+  console.log(`Already registered: ${c.alreadyRegistered}`);
+  console.log(`To register (single landlord): ${c.toRegister}`);
   for (const r of plan.toRegister) console.log(`  ${r.property_id} -> ${r.owner_id}`);
   const report = [
     ["Under more than one owner (left unregistered; resolve by hand)", plan.multipleOwners],
     ["Public listing names another owner (left unregistered)", plan.publicOwnerMismatch],
     ["Only holder cannot let property (left unregistered)", plan.nonLandlordOwner],
-    ["Registered to someone other than a holder (left as is)", plan.registeredToOther],
+    ["Registered to someone other than a holder (REVIEW; left as is)", plan.registeredToOther],
+    ["Resolved by an explicit owner override (registered to the named owner)", plan.overridden],
+    ["id_conflict candidates (private docs that conflict; nothing is flagged by this script)", plan.idConflictCandidates],
   ];
   for (const [label, list] of report) {
     console.log(`${label}: ${list.length}`);
@@ -166,26 +311,56 @@ function printPlan(plan) {
   }
 }
 
-async function main(argv) {
+/**
+ * Runs the CLI. [deps] lets tests inject the Firestore instance and the production
+ * project list. Returns the process exit code: 0 done, 2 refused.
+ */
+async function main(argv, env = process.env, deps = {}) {
   const args = parseArgs(argv);
-  console.log(`Target project: ${args.project} (${args.write ? "WRITE: will register ids" : "dry run: no writes"})`);
+  const mode = args.write ? "WRITE: will register ids" : "dry run: no writes";
+  console.log(`Target project: ${args.project} (${args.prod ? "PROD, " : ""}${mode})`);
   let projectId;
   try {
-    projectId = resolveTarget(args.project);
+    projectId = resolveTarget(args.project, { prod: args.prod, confirm: env.BACKFILL_PROD_OK || "", prodProjects: deps.prodProjects });
   } catch (err) {
     console.error(err.message);
     return 2;
   }
-  if (!admin.apps.length) admin.initializeApp({ projectId });
-  const db = admin.firestore();
-  const plan = await classify(db, admin.auth(), await scanPrivateProperties(db));
-  printPlan(plan);
+  let db = deps.db;
+  if (!db) {
+    if (!admin.apps.length) admin.initializeApp({ projectId });
+    db = admin.firestore();
+  }
+  // The scan, the classification and every dry run go through the read-only wrapper; only the
+  // write step below gets the real instance.
+  const reader = readOnly(db);
+  let plan;
+  try {
+    plan = await classify(reader, await scanPrivateProperties(reader), { overrides: loadOverrides(args.overrides) });
+  } catch (err) {
+    console.error(err.message);
+    return 2;
+  }
+  printSummary(plan);
+  console.log("JSON report:");
+  console.log(JSON.stringify({ project: projectId, mode: args.write ? "write" : "dry-run", counts: counts(plan), ...plan }, null, 2));
   if (!args.write) {
-    console.log("Dry run. Re-run with --write to register the ids listed above.");
+    console.log("Dry run. Re-run with --write to register the ids listed under \"To register\".");
     return 0;
   }
-  const { registered, skipped } = await applyPlan(db, plan);
-  console.log(`Registered ${registered} ids.${skipped.length ? ` Skipped (registered meanwhile): ${skipped.join(", ")}` : ""}`);
+  try {
+    const { registered, skipped, cursor } = await applyPlan(db, plan, {
+      batchSize: args.batchSize,
+      cursor: args.cursor,
+      onBatch: (b) => console.log(`Batch done: registered ${b.registered}, skipped ${b.skipped}, cursor=${b.cursor}`),
+    });
+    console.log(`Registered ${registered} ids.${skipped.length ? ` Skipped (changed meanwhile): ${skipped.join(", ")}` : ""}`);
+    if (cursor) console.log(`Last cursor: ${cursor}`);
+  } catch (err) {
+    console.error(`Backfill stopped: ${err.message || err}`);
+    console.error(`Run it again to continue (it is idempotent), or resume with --cursor ${err.cursor || ""}`);
+    return 1;
+  }
   return 0;
 }
 
@@ -196,4 +371,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, resolveTarget, scanPrivateProperties, classify, applyPlan, PUBLISHER_ROLES };
+module.exports = { parseArgs, resolveTarget, scanPrivateProperties, classify, applyPlan, counts, loadOverrides, main };

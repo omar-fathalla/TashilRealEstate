@@ -66,6 +66,24 @@ async function registeredOwner(t, db, propertyId) {
 }
 
 /**
+ * The uids (other than [ownerId]) with an unflagged private doc for [propertyId], found through the
+ * `id` field every app-written private doc carries (collection group query on `properties.id`, see
+ * the fieldOverride in firestore.indexes.json). A failed query throws, so the trigger fails closed
+ * (nothing is claimed or synced) instead of claiming blind. Docs without an `id` field are not seen
+ * here; the backfill covers them.
+ */
+async function otherPrivateHolders(t, db, ownerId, propertyId) {
+  const snap = await t.get(db.collectionGroup("properties").where("id", "==", propertyId));
+  const uids = [];
+  for (const d of snap.docs) {
+    const users = d.ref.parent.parent;
+    if (d.id !== propertyId || !users || !users.parent || users.parent.id !== "Users" || users.parent.parent) continue;
+    if (users.id !== ownerId && d.get("id_conflict") !== true) uids.push(users.id);
+  }
+  return uids.sort();
+}
+
+/**
  * Runs for every write to a private property doc, before the marketplace sync. Returns
  * `{ blocked }`: true when the doc must not sync (it is, or has just been, marked id_conflict).
  *  - create by a publishing role (Owner, AgencyAdmin, SuperAdmin), id free and no other owner's
@@ -73,6 +91,8 @@ async function registeredOwner(t, db, propertyId) {
  *  - id registered to someone else, or created over another owner's real public listing (an
  *    unpublished placeholder [isPlaceholder] does not count): the doc is marked id_conflict and
  *    an alert is raised once.
+ *  - id not registered and another owner's private doc already has it (TAQ-126, not yet backfilled):
+ *    the same flag; the newcomer never claims a legacy id.
  *  - id not registered and not a create (a doc older than the registry): left for the backfill.
  */
 async function claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder = async () => false }) {
@@ -85,13 +105,18 @@ async function claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder =
     const reg = await t.get(ref);
     const silo = await t.get(priv);
     const pub = await t.get(pubRef);
+    // Before the backfill, a legacy private-only id has no registry entry. A create of that id by
+    // someone else must not claim it while the real owner's private doc exists (TAQ-126).
+    const rivals = created && !reg.exists
+      ? await otherPrivateHolders(t, db, ownerId, propertyId)
+      : [];
     if (!silo.exists) return { blocked: true, conflict: false };
     if (silo.get("id_conflict") === true) return { blocked: true, conflict: false };
     const regOwner = reg.exists ? reg.get("owner_id") : "";
     const publicOwner = pub.exists ? pub.get("owner_id") || "" : "";
     const othersPublic = Boolean(publicOwner && publicOwner !== ownerId && !(await isPlaceholder(pub)));
     if (regOwner === ownerId) return { blocked: false, conflict: false };
-    if (regOwner || (created && othersPublic)) {
+    if (regOwner || rivals.length || (created && othersPublic)) {
       t.update(priv, { id_conflict: true, id_conflict_at: FieldValue.serverTimestamp() });
       t.set(db.collection(ALERTS).doc(`property_id_conflict_${propertyId}_${ownerId}`), {
         type: "PROPERTY_ID_CONFLICT",
@@ -100,9 +125,10 @@ async function claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder =
         claimant_id: ownerId,
         registered_owner_id: regOwner || "",
         public_owner_id: publicOwner,
+        private_holder_ids: rivals,
         created_at: FieldValue.serverTimestamp(),
       });
-      return { blocked: true, conflict: true, regOwner, publicOwner };
+      return { blocked: true, conflict: true, regOwner, publicOwner, rivals };
     }
     if (canClaim) {
       t.create(ref, { owner_id: ownerId, property_id: propertyId, claimed_at: FieldValue.serverTimestamp(), claimed_by: "create" });
@@ -112,7 +138,7 @@ async function claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder =
   });
   if (result.conflict) {
     logger.warn("Property id already belongs to another owner; private doc flagged id_conflict", {
-      propertyId, claimantId: ownerId, registeredOwnerId: result.regOwner || "", publicOwnerId: result.publicOwner || "",
+      propertyId, claimantId: ownerId, registeredOwnerId: result.regOwner || "", publicOwnerId: result.publicOwner || "", privateHolderIds: result.rivals || [],
     });
   }
   return result;

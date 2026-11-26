@@ -348,3 +348,61 @@ test("TAQ-110: createLease refuses rent with more than 2 decimals", async () => 
     assert.equal((await doc(`Leases/${leaseId}`)).monthly_rent, Math.round(monthlyRent * 100) / 100);
   }
 });
+
+// --- TAQ-126: a private-only legacy id cannot be claimed by someone else before the backfill ---
+
+test("TAQ-126: creating an id that another owner already holds privately is flagged, never claimed or published", async () => {
+  await siloRef("ownerA", "legacy-priv").set(listing({ id: "legacy-priv", isPublished: false }));
+  assert.equal(await registry("legacy-priv"), "", "the legacy doc predates the registry");
+
+  await ownerWrites("ownerB", "legacy-priv", listing({ id: "legacy-priv" }));
+  assert.equal(await flagged("ownerB", "legacy-priv"), true);
+  assert.equal(await registry("legacy-priv"), "", "the attacker did not claim the id");
+  assert.equal(await doc("Properties/legacy-priv"), null, "nothing is published");
+  const alerts = await db.collection("AdminAlerts").get();
+  assert.ok(alerts.docs.some((d) => (d.get("private_holder_ids") || []).includes("ownerA")), "an admin alert names the private holder");
+
+  const backfill = require("../scripts/backfill_property_owners");
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  assert.equal(plan.toRegister.some((r) => r.property_id === "legacy-priv" && r.owner_id === "ownerA"), false, "two holders: the backfill leaves it for review");
+});
+
+test("TAQ-126: a fresh id still claims, and an id only the same owner holds is not blocked", async () => {
+  await ownerWrites("ownerB", "fresh-1", listing({ id: "fresh-1" }));
+  assert.equal(await registry("fresh-1"), "ownerB");
+  assert.equal(await flagged("ownerB", "fresh-1"), false);
+  await siloRef("ownerA", "mine-1").set(listing({ id: "mine-1" }));
+  await siloRef("ownerA", "mine-1").delete();
+  await ownerWrites("ownerA", "mine-1", listing({ id: "mine-1" }));
+  assert.equal(await registry("mine-1"), "ownerA");
+});
+
+// --- TAQ-125: end to end, the legacy data works after the backfill ---
+
+test("TAQ-125: legacy leases and payments fail closed until the backfill, then work", async () => {
+  const backfill = require("../scripts/backfill_property_owners");
+  await siloRef("ownerA", "legacy-e2e").set(listing({ id: "legacy-e2e" }));
+  await forgedActiveLease("legacy-e2e-lease", "ownerA", "legacy-e2e", "tenantA");
+  await siloRef("ownerA", "legacy-e2e-2").set(listing({ id: "legacy-e2e-2" }));
+  await forgedActiveLease("legacy-e2e-lease-2", "ownerA", "legacy-e2e-2", "tenantB");
+  await reason(offer("ownerA", "legacy-e2e"), "failed-precondition", "property_not_registered");
+  await reason(payIntent("legacy-e2e-lease", "tenantA"), "failed-precondition", "property_not_registered");
+
+  const log = console.log;
+  console.log = () => {};
+  let code;
+  try {
+    code = await backfill.main(["--project", projectId, "--write"], {}, { db });
+  } finally {
+    console.log = log;
+  }
+  assert.equal(code, 0);
+  assert.equal(await registry("legacy-e2e"), "ownerA");
+
+  assert.equal((await payIntent("legacy-e2e-lease", "tenantA")).status, "pending");
+  assert.ok(await manualPay("legacy-e2e-lease-2", "ownerA"));
+  await db.doc("Leases/legacy-e2e-lease").update({ status: "ended" });
+  await db.doc("Leases/legacy-e2e-lease-2").update({ status: "ended" });
+  const { leaseId } = await offer("ownerA", "legacy-e2e", "tenantB");
+  assert.equal((await respond(leaseId, "tenantB")).status, "active");
+});
