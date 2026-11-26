@@ -8,6 +8,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../models/request_models.dart';
 import '../services/requests_service.dart';
+import '../widgets/request_inline_error.dart';
 
 /// The owner's or agency's inbox of viewing requests and rental applications (TAQ-112).
 /// Confirm, decline, approve and reject go through the server so the requester is notified.
@@ -38,6 +39,23 @@ class _RequestsInboxViewState extends State<RequestsInboxView> {
     } finally {
       if (mounted) setState(() => _busy.remove(id));
     }
+  }
+
+  /// Confirm, decline, approve or reject with an optional note to the requester. The dialog sends
+  /// the answer itself and shows a rejection (for example a note with a phone number) inside the
+  /// dialog, so it stays open with the note kept (TAQ-132). [onSend] gets the trimmed note.
+  Future<void> _respond({
+    required String actionLabel,
+    required String successKey,
+    required Future<void> Function(String note) onSend,
+  }) async {
+    final loc = AppLocalizations.of(context);
+    final sent = await showDialog<bool>(
+      context: context,
+      builder: (_) => _RespondDialog(actionLabel: actionLabel, onSend: onSend),
+    );
+    if (!mounted) return;
+    if (sent == true) TashilSnackBar.showSuccess(context: context, message: loc.tr(successKey));
   }
 
   Future<void> _openWhatsApp(String phone, String title) async {
@@ -125,8 +143,8 @@ class _RequestsInboxViewState extends State<RequestsInboxView> {
                 onWhatsApp: () => _openWhatsApp(item.requesterPhone, item.titleFor(locale.languageCode)),
                 actions: item.isPending
                     ? [
-                        _Action(loc.tr('rqConfirm'), Icons.check_rounded, () => _run(item.id, () => _service.respondToViewing(item.id, confirm: true), 'rqViewingConfirmed')),
-                        _Action(loc.tr('rqDecline'), Icons.close_rounded, () => _run(item.id, () => _service.respondToViewing(item.id, confirm: false), 'rqViewingDeclined'), outlined: true),
+                        _Action(loc.tr('rqConfirm'), Icons.check_rounded, () => _respond(actionLabel: loc.tr('rqConfirm'), successKey: 'rqViewingConfirmed', onSend: (note) => _service.respondToViewing(item.id, confirm: true, note: note))),
+                        _Action(loc.tr('rqDecline'), Icons.close_rounded, () => _respond(actionLabel: loc.tr('rqDecline'), successKey: 'rqViewingDeclined', onSend: (note) => _service.respondToViewing(item.id, confirm: false, note: note)), outlined: true),
                       ]
                     : const [],
               ),
@@ -175,8 +193,8 @@ class _RequestsInboxViewState extends State<RequestsInboxView> {
       onWhatsApp: () => _openWhatsApp(item.applicantPhone, item.titleFor(locale.languageCode)),
       actions: [
         if (item.isPending) ...[
-          _Action(loc.tr('rqApprove'), Icons.check_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: true), 'rqApplicationApproved')),
-          _Action(loc.tr('rqReject'), Icons.close_rounded, () => _run(item.id, () => _service.decideApplication(item.id, approve: false), 'rqApplicationRejected'), outlined: true),
+          _Action(loc.tr('rqApprove'), Icons.check_rounded, () => _respond(actionLabel: loc.tr('rqApprove'), successKey: 'rqApplicationApproved', onSend: (note) => _service.decideApplication(item.id, approve: true, note: note))),
+          _Action(loc.tr('rqReject'), Icons.close_rounded, () => _respond(actionLabel: loc.tr('rqReject'), successKey: 'rqApplicationRejected', onSend: (note) => _service.decideApplication(item.id, approve: false, note: note)), outlined: true),
         ],
         if (item.canCreateLease) _Action(loc.tr('rqCreateLeaseDraft'), Icons.description_outlined, () => _createLease(item)),
         if (item.leaseId.isNotEmpty && leaseStatus == 'draft')
@@ -327,6 +345,88 @@ class _Empty extends StatelessWidget {
       child: Center(
         child: Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ),
+    );
+  }
+}
+
+class _RespondDialog extends StatefulWidget {
+  final String actionLabel;
+  final Future<void> Function(String note) onSend;
+  const _RespondDialog({required this.actionLabel, required this.onSend});
+
+  @override
+  State<_RespondDialog> createState() => _RespondDialogState();
+}
+
+class _RespondDialogState extends State<_RespondDialog> {
+  final _note = TextEditingController();
+  final _errorKey = GlobalKey();
+  bool _sending = false;
+  String? _error;
+
+  bool get _contactError => _error == 'rqContactInMessage';
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final navigator = Navigator.of(context);
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      await widget.onSend(_note.text.trim());
+      if (mounted) navigator.pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = requestErrorKey(e);
+      });
+      revealInlineError(_errorKey);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(widget.actionLabel),
+      scrollable: true,
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _note,
+              maxLines: 3,
+              maxLength: 500,
+              onChanged: (_) {
+                if (_contactError) setState(() => _error = null);
+              },
+              decoration: InputDecoration(
+                labelText: loc.tr('rqResponseNoteOptional'),
+                errorText: _contactError ? loc.tr('rqContactInMessageField') : null,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              RequestInlineError(key: _errorKey, message: loc.tr(_error!)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TashilButton(label: loc.tr('cancel'), variant: TashilButtonVariant.text, onPressed: _sending ? null : () => Navigator.of(context).pop(false)),
+        TashilButton(label: widget.actionLabel, isLoading: _sending, onPressed: _sending ? null : _submit),
+      ],
     );
   }
 }
