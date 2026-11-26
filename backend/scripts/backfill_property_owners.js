@@ -14,8 +14,14 @@
  * `idConflictCandidates` lists the private docs the sync trigger would flag `id_conflict` once they
  * are written again. Nothing is deleted or flagged by this script, and it never overwrites an entry.
  *
+ * `idFieldIssues` lists private docs whose `id` field is missing or differs from the doc id (TAQ-128).
+ * The sync trigger finds other holders of an id through that field only, so such a doc's id could be
+ * claimed by someone else while it is unregistered. `--write` refuses to register anything while the
+ * list is not empty; `--fix-id-fields --write` sets `id` to the doc id on those docs and nothing else.
+ *
  *   # dev / demo
  *   node scripts/backfill_property_owners.js --project tashil-aqar-dev            # dry run
+ *   node scripts/backfill_property_owners.js --project tashil-aqar-dev --fix-id-fields --write  # if the dry run lists id field issues
  *   node scripts/backfill_property_owners.js --project tashil-aqar-dev --write    # register
  *
  *   # production (dry run first; read-only wrapper, so it cannot write)
@@ -55,13 +61,14 @@ const MAX_BATCH = 400;
 const SCAN_PAGE = 500;
 
 function parseArgs(argv) {
-  const args = { project: "", write: false, prod: false, batchSize: DEFAULT_BATCH, cursor: "", overrides: "" };
+  const args = { project: "", write: false, prod: false, fixIdFields: false, batchSize: DEFAULT_BATCH, cursor: "", overrides: "" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
     else if (arg.startsWith("--project=")) args.project = arg.slice("--project=".length);
     else if (arg === "--write") args.write = true;
     else if (arg === "--prod") args.prod = true;
+    else if (arg === "--fix-id-fields") args.fixIdFields = true;
     else if (arg === "--batch-size") args.batchSize = Number(argv[++i]);
     else if (arg.startsWith("--batch-size=")) args.batchSize = Number(arg.slice("--batch-size=".length));
     else if (arg === "--overrides") args.overrides = argv[++i] || "";
@@ -95,7 +102,9 @@ function resolveTarget(project, { prod = false, confirm = "", prodProjects = pro
 }
 
 /**
- * Every private property doc, grouped by id: Map<propertyId, [{ ownerId, rentalStatus, idConflict }]>.
+ * Every private property doc, grouped by id:
+ * Map<propertyId, [{ ownerId, rentalStatus, idConflict, idField }]>. `idField` is "ok" when the doc's
+ * `id` field equals the doc id, "missing" when it has none, and "mismatch" otherwise.
  * Only docs at Users/{uid}/properties/{id} count; other `properties` subcollections are ignored.
  */
 async function scanPrivateProperties(db, { pageSize = SCAN_PAGE } = {}) {
@@ -109,11 +118,13 @@ async function scanPrivateProperties(db, { pageSize = SCAN_PAGE } = {}) {
       const usersDoc = d.ref.parent.parent;
       if (!usersDoc || !usersDoc.parent || usersDoc.parent.id !== "Users" || usersDoc.parent.parent) continue;
       const rental = d.get("rentalStatus");
+      const idValue = d.get("id");
       const holders = byId.get(d.id) || [];
       holders.push({
         ownerId: usersDoc.id,
         rentalStatus: typeof rental === "string" ? rental.trim().toLowerCase() : "",
         idConflict: d.get("id_conflict") === true,
+        idField: idValue === d.id ? "ok" : idValue === undefined || idValue === null ? "missing" : "mismatch",
       });
       byId.set(d.id, holders);
     }
@@ -156,6 +167,7 @@ async function classify(db, holders, { overrides = {} } = {}) {
     registeredToOther: [],
     idConflictCandidates: [],
     overridden: [],
+    idFieldIssues: [],
   };
   const roles = new Map();
   for (const [propertyId, uid] of Object.entries(overrides)) {
@@ -167,6 +179,9 @@ async function classify(db, holders, { overrides = {} } = {}) {
   for (const propertyId of [...holders.keys()].sort()) {
     const list = holders.get(propertyId);
     plan.privateDocs += list.length;
+    for (const h of list) {
+      if (h.idField !== "ok") plan.idFieldIssues.push({ property_id: propertyId, owner_id: h.ownerId, id_field: h.idField });
+    }
     const owners = [...new Set(list.map((h) => h.ownerId))].sort();
     const reg = await db.collection(REGISTRY).doc(propertyId).get();
     const registered = reg.exists ? reg.get("owner_id") || "" : "";
@@ -240,7 +255,44 @@ function counts(plan) {
     registeredToOther: plan.registeredToOther.length,
     idConflictCandidates: plan.idConflictCandidates.length,
     overridden: plan.overridden.length,
+    idFieldIssues: plan.idFieldIssues.length,
   };
+}
+
+/**
+ * Sets `id` to the doc id on every doc in [plan.idFieldIssues], in transactions of [batchSize] docs.
+ * Each doc is read again first: one deleted meanwhile, or already fixed, is skipped. Nothing else on
+ * the doc changes. Each update fires the sync trigger like any other edit of the doc.
+ */
+async function fixIdFields(db, plan, { batchSize = DEFAULT_BATCH, onBatch = () => {} } = {}) {
+  const todo = [...plan.idFieldIssues].sort((a, b) => (a.property_id === b.property_id
+    ? (a.owner_id < b.owner_id ? -1 : 1)
+    : (a.property_id < b.property_id ? -1 : 1)));
+  let fixed = 0;
+  const skipped = [];
+  for (let i = 0; i < todo.length; i += batchSize) {
+    const batch = todo.slice(i, i + batchSize);
+    const result = await db.runTransaction(async (t) => {
+      const refs = batch.map((r) => db.collection("Users").doc(r.owner_id).collection("properties").doc(r.property_id));
+      const snaps = await t.getAll(...refs);
+      const done = [];
+      const skippedNow = [];
+      snaps.forEach((snap, k) => {
+        const r = batch[k];
+        if (!snap.exists || snap.get("id") === r.property_id) {
+          skippedNow.push(`${r.owner_id}/${r.property_id}`);
+          return;
+        }
+        t.update(snap.ref, { id: r.property_id });
+        done.push(`${r.owner_id}/${r.property_id}`);
+      });
+      return { done, skippedNow };
+    });
+    fixed += result.done.length;
+    skipped.push(...result.skippedNow);
+    onBatch({ fixed: result.done.length, skipped: result.skippedNow.length });
+  }
+  return { fixed, skipped };
 }
 
 /**
@@ -304,6 +356,7 @@ function printSummary(plan) {
     ["Registered to someone other than a holder (REVIEW; left as is)", plan.registeredToOther],
     ["Resolved by an explicit owner override (registered to the named owner)", plan.overridden],
     ["id_conflict candidates (private docs that conflict; nothing is flagged by this script)", plan.idConflictCandidates],
+    ["Private docs with a missing or mismatched id field (must be 0 before --write; fix with --fix-id-fields --write)", plan.idFieldIssues],
   ];
   for (const [label, list] of report) {
     console.log(`${label}: ${list.length}`);
@@ -317,7 +370,7 @@ function printSummary(plan) {
  */
 async function main(argv, env = process.env, deps = {}) {
   const args = parseArgs(argv);
-  const mode = args.write ? "WRITE: will register ids" : "dry run: no writes";
+  const mode = !args.write ? "dry run: no writes" : args.fixIdFields ? "WRITE: will fix id fields only" : "WRITE: will register ids";
   console.log(`Target project: ${args.project} (${args.prod ? "PROD, " : ""}${mode})`);
   let projectId;
   try {
@@ -345,8 +398,29 @@ async function main(argv, env = process.env, deps = {}) {
   console.log("JSON report:");
   console.log(JSON.stringify({ project: projectId, mode: args.write ? "write" : "dry-run", counts: counts(plan), ...plan }, null, 2));
   if (!args.write) {
-    console.log("Dry run. Re-run with --write to register the ids listed under \"To register\".");
+    console.log(plan.idFieldIssues.length
+      ? `Dry run. ${plan.idFieldIssues.length} private docs have a missing or mismatched id field: run with --fix-id-fields --write, then dry-run again; --write refuses until this is 0.`
+      : "Dry run. Re-run with --write to register the ids listed under \"To register\".");
     return 0;
+  }
+  if (args.fixIdFields) {
+    try {
+      const { fixed, skipped } = await fixIdFields(db, plan, {
+        batchSize: args.batchSize,
+        onBatch: (b) => console.log(`Batch done: fixed ${b.fixed}, skipped ${b.skipped}`),
+      });
+      console.log(`Fixed the id field on ${fixed} private docs.${skipped.length ? ` Skipped (changed meanwhile): ${skipped.join(", ")}` : ""}`);
+      console.log("Nothing was registered. Run the dry run again; it must show 0 id field issues before --write.");
+    } catch (err) {
+      console.error(`Fixing id fields stopped: ${err.message || err}`);
+      console.error("Run it again to continue (it is idempotent).");
+      return 1;
+    }
+    return 0;
+  }
+  if (plan.idFieldIssues.length) {
+    console.error(`Refusing to register: ${plan.idFieldIssues.length} private docs have a missing or mismatched id field, so the sync trigger cannot see them as holders. Run with --fix-id-fields --write first, then dry-run again.`);
+    return 2;
   }
   try {
     const { registered, skipped, cursor } = await applyPlan(db, plan, {
@@ -371,4 +445,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, resolveTarget, scanPrivateProperties, classify, applyPlan, counts, loadOverrides, main };
+module.exports = { parseArgs, resolveTarget, scanPrivateProperties, classify, applyPlan, fixIdFields, counts, loadOverrides, main };
