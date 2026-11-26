@@ -452,10 +452,23 @@ service cloud.firestore {
     // (TAQ-105). The editable-key limit applies to both.
     // `c` is the changed-key set of this update. Fields it leaves out are not checked again, and
     // each stored value is read once into a local: every get() and string join costs expressions.
+    //
+    // The whole-doc check reads a missing key as its default (no titles, no image, no status), so it
+    // cannot tell a deleted required key from an untouched one. The wide path therefore also
+    // requires every protected key that this update touches to stay present and valid, as the
+    // per-field path does (TAQ-134): titles, image, imageUrls and status cannot be deleted at any
+    // key count.
     function listingEditOk(c) {
       return c.hasOnly(listingEditableKeys())
         && ((c.size() <= 6 && listingEditFieldsOk(c))
-          || (c.size() > 6 && listingValuesOk(request.resource.data)));
+          || (c.size() > 6 && listingValuesOk(request.resource.data) && protectedKeysKept(c, request.resource.data)));
+    }
+
+    function protectedKeysKept(c, d) {
+      return (!('titles' in c) || ('titles' in d && d.titles is map))
+        && (!('image' in c) || ('image' in d && d.image is string))
+        && (!('imageUrls' in c) || ('imageUrls' in d && d.imageUrls is list))
+        && (!('status' in c) || ('status' in d && d.status in ['vacant', 'rented', 'unavailable']));
     }
 
     function listingEditFieldsOk(c) {
