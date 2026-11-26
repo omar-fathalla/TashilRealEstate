@@ -58,7 +58,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       ),
       const PropertiesView(),
       const CrmView(),
-      const LeasesManagementView(),
+      LeasesManagementView(controller: _portfolio),
       const RentCollectionView(),
       const FinancialKpiDashboardView(role: FinancialPortalRole.agency),
       const InvestorDashboardView(),

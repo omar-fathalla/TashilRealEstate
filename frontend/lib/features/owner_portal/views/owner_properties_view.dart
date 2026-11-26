@@ -7,7 +7,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/features/smart_valuation/smart_valuation_dialog.dart';
-import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
+import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_dialog.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
@@ -348,7 +348,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
         SmartValuationDialog.show(context);
         break;
       case PropertyQuickAction.lease:
-        LeaseBuilderWizardDialog.show(context);
+        openLeaseCreation(context);
         break;
     }
   }
