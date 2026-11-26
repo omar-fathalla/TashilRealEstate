@@ -4,29 +4,47 @@
 
 The callables `sendRentalReminder`, `generateRentalInvoiceReceipt`, and `setUserRole` can
 require a valid Firebase App Check token. Enforcement is **off by default** because the web
-build has no registered reCAPTCHA key yet; turning it on before a key ships would block every
+build ships without a reCAPTCHA site key yet; turning it on before a key ships would block every
 web user. Sign-in and role checks apply whether or not App Check is enforced.
 
 ### What is needed to turn it on
 
-1. **A reCAPTCHA v3 site key** for the production web domains (for example `tashilaqar.com`
-   and the Firebase Hosting domains). Create it in the reCAPTCHA admin console, then register
-   the web app in Firebase console > App Check with the reCAPTCHA v3 provider and that key's
-   **secret**. The secret stays in the Firebase console and never goes into this repo. The
-   site key is public, but it is still passed at build time rather than committed.
-2. **Android and Apple**: enable Play Integrity and DeviceCheck/App Attest for the mobile
-   apps in App Check, if the mobile apps call these functions.
-3. **Build the web app with the site key**:
+1. **Web: a reCAPTCHA Enterprise site key** for the production web domains (for example
+   `tashilaqar.com` and the Firebase Hosting domains). Register the web app in Firebase console
+   > App Check with the **reCAPTCHA Enterprise** provider and that key. The app uses
+   `ReCaptchaEnterpriseProvider`; a reCAPTCHA v3 provider cannot attest with an Enterprise key.
+   Any secret stays in the Firebase / Google Cloud consoles and never goes into this repo. The
+   site key is public, but it is passed at build time rather than committed.
+2. **iOS**: the app `com.tashil.realestate` (Team ID `TX5G7GZL6T`) is registered for **App
+   Attest** in App Check. The app activates `AppleAppAttestWithDeviceCheckFallbackProvider`
+   (App Attest, with DeviceCheck on devices that lack it). DeviceCheck is **not** registered in
+   the console, so those devices stay unverified until it is. `ios/Runner/Runner.entitlements`
+   (Release and Profile) sets `com.apple.developer.devicecheck.appattest-environment` to
+   `production`; `ios/Runner/RunnerDebug.entitlements` (Debug) sets it to `development`.
+   Enable the App Attest capability on the App ID `com.tashil.realestate` in the Apple
+   developer account if it is not already on, or signing fails.
+3. **Android**: the app activates `AndroidPlayIntegrityProvider`. Play Integrity is registered
+   only for the Firebase app `ae.tashilaqar.app`
+   (`1:534001947779:android:6ae6cd3ce53bcb8e7ff7b6`). The repo still builds as
+   `com.example.tashil_real_estate`, so **Android App Check only verifies once the app ships as
+   `ae.tashilaqar.app` with a real release signing key**. Renaming the package and signing are
+   a separate ticket. Until then Android tokens are not verified, which is harmless while
+   enforcement is off.
+4. **Debug builds** use the App Check debug providers on every platform.
+5. **Build with the site key**. Release builds need the define only for web; mobile builds
+   ignore it:
 
    ```bash
    flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=<site key>
+   flutter build ipa --release
+   flutter build appbundle --release
    ```
 
    Without the define, release web builds skip App Check instead of sending tokens made
-   with an invalid key. Debug builds use the App Check debug provider.
-4. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
+   with an invalid key.
+6. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
    should be "verified" before enforcing.
-5. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
+7. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
    production deploy, for example in `backend/.env.<production project id>`:
 
    ```bash

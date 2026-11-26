@@ -32,7 +32,7 @@ cd frontend
 flutter build web --release \
   --dart-define=FIREBASE_ENV=dev \
   --dart-define=DEV_FIREBASE_WEB_API_KEY=<dev web key> \
-  --dart-define=RECAPTCHA_SITE_KEY=<dev site key, once App Check is set up for dev>
+  --dart-define=RECAPTCHA_SITE_KEY=<dev reCAPTCHA Enterprise site key, once App Check is set up for dev>
 ```
 
 Check the output for stray keys. The scan accepts the prod keys from `firebase_options.dart`
@@ -320,7 +320,7 @@ sizes, contact filter, image references, localized maps) of a large listing uses
   before TAQ-91). The gateway already accepts `Admin` and `SuperAdmin` for onboarding and OCR.
 - Online payment is wired to Paymob (UAE) but switched off until the keys exist; Egyptian leases
   cannot be paid online yet (the gateway is the UAE one).
-- App Check for dev: register a dev reCAPTCHA site key before turning on `ENFORCE_APP_CHECK` in
+- App Check for dev: register a dev reCAPTCHA Enterprise site key before turning on `ENFORCE_APP_CHECK` in
   dev, as described in `docs/SECURITY_SETUP.md`.
 - Mobile: add an Android and an iOS app to `tashil-aqar-dev` and extend
   `firebase_options_dev.dart` before building dev mobile apps.
