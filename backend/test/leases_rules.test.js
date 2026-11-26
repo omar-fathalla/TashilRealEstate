@@ -391,22 +391,45 @@ test("TAQ-13: a lease with no status counts as a draft (older documents)", async
 
 // --- delete ---
 
-test("TAQ-13: an owner deletes their own draft lease only; the agency deletes any lease but an active one; SuperAdmin keeps delete", async () => {
+test("TAQ-13/146: an owner and the managing agency delete a draft lease only; SuperAdmin keeps delete", async () => {
   await seed({
     "Leases/d": lease(),
     "Leases/a": lease({ status: "active" }),
     "Leases/g": agencyLease(),
+    "Leases/gd": agencyLease(),
     "Leases/ga": agencyLease({ status: "active" }),
-    "Leases/gt": agencyLease({ status: "terminated" }),
   });
   await assertSucceeds(deleteDoc(L(ctx.ownerA, "d")));
   await assertFails(deleteDoc(L(ctx.ownerA, "a")));
   await assertFails(deleteDoc(L(ctx.tenantA, "a")));
-  await assertSucceeds(deleteDoc(L(ctx.ag1, "g")));
-  await assertFails(deleteDoc(L(ctx.ag1, "ga")), "an agency ends an active lease before deleting it");
-  await assertFails(deleteDoc(L(ctx.ag2, "gt")));
-  await assertSucceeds(deleteDoc(L(ctx.ag1, "gt")));
+  await assertSucceeds(deleteDoc(L(ctx.ag1, "g")), "the agency deletes its own draft");
+  await assertFails(deleteDoc(L(ctx.ag2, "gd")), "another agency cannot delete it");
+  await assertFails(deleteDoc(L(ctx.ownerA, "gd")), "the owner does not delete an agency-managed lease");
+  await assertFails(deleteDoc(L(ctx.ag1, "ga")), "an active lease is never deleted by the agency");
   await assertSucceeds(deleteDoc(L(ctx.sa, "a")));
+});
+
+test("TAQ-146: the agency cannot delete offered, rejected, expired or terminated leases; SuperAdmin can", async () => {
+  const statuses = ["pending_tenant_approval", "rejected", "expired", "terminated", "active"];
+  const docs = {};
+  for (const status of statuses) {
+    docs[`Leases/${status}`] = agencyLease({ status });
+    docs[`Leases/own_${status}`] = lease({ status });
+  }
+  await seed(docs);
+  for (const status of statuses) {
+    await assertFails(deleteDoc(L(ctx.ag1, status)), `agency deletes ${status}`);
+    await assertFails(deleteDoc(L(ctx.ownerA, `own_${status}`)), `owner deletes ${status}`);
+  }
+  await assertSucceeds(deleteDoc(L(ctx.sa, "terminated")), "SuperAdmin break-glass");
+  await assertSucceeds(deleteDoc(L(ctx.sa, "pending_tenant_approval")));
+});
+
+test("TAQ-146: an offer is withdrawn by moving it back to draft, which can then be deleted", async () => {
+  await seed({ "Leases/o": agencyLease({ status: "pending_tenant_approval" }) });
+  await assertFails(deleteDoc(L(ctx.ag1, "o")), "an offer under the tenant is not deleted");
+  await assertSucceeds(updateDoc(L(ctx.ag1, "o"), { status: "draft" }));
+  await assertSucceeds(deleteDoc(L(ctx.ag1, "o")));
 });
 
 test("TAQ-110: PropertyLeaseLocks are server-only and AdminAlerts are read by platform staff only", async () => {

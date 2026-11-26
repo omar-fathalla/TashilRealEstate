@@ -775,10 +775,11 @@ service cloud.firestore {
         isSuperAdmin()
         || ((agencyManagesResource() || ownerManagesLease()) && leaseEditOk())
         || tenantDecidesLease());
-      // An active lease is ended (terminated / expired) before it can be deleted, except by SuperAdmin.
+      // Only a draft can be deleted, by its owner or its managing agency (TAQ-146). An offer the tenant
+      // can see is pulled back to draft first (leaseEditOk allows it); finished leases stay as the
+      // record that invoices, payments and requests point to. SuperAdmin keeps break-glass delete.
       allow delete: if isSuperAdmin()
-        || (agencyManagesResource() && resource.data.get('status', 'draft') != 'active')
-        || (ownerManagesLease() && resource.data.get('status', 'draft') == 'draft');
+        || ((agencyManagesResource() || ownerManagesLease()) && resource.data.get('status', 'draft') == 'draft');
     }
 
     // 4a0. PropertyOwners (TAQ-110)
@@ -984,7 +985,9 @@ service cloud.firestore {
       allow update: if isSuperAdmin()
         || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
         || ((isOwner() || isAgencyAdmin()) && maintenanceParty() && maintenanceProgressOk());
-      allow delete: if isSuperAdmin() || (isAgencyAdmin() && agencyManagesResource());
+      // A complaint is a record for the tenant, the owner and platform staff: parties close it by
+      // resolving it, and only SuperAdmin can erase one (TAQ-146).
+      allow delete: if isSuperAdmin();
     }
   }
 }
