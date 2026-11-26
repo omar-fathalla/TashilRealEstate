@@ -5,8 +5,9 @@
  * storage.rules, so a URL issued while a listing was live keeps working after the listing goes
  * offline. This trigger replaces the tokens of every object under
  * public/listings/{owner}/{property}/ when the listing stops being live (unpublished, rented,
- * held by moderation, deleted, or handed to another owner), and again when it goes live, so a
- * link issued in between does not outlive the state it was issued in.
+ * held by moderation, deleted, or handed to another owner), and again when it goes live or
+ * changes hands while live (the new owner's folder is rotated too, TAQ-139), so a link issued in
+ * between does not outlive the state it was issued in.
  *
  * "Live" is the check in storage.rules (`listingLive`): published, vacant, not held, and owned by
  * the owner in the photo's path. Listings store photo URLs without tokens (the sanitizer strips
@@ -69,7 +70,9 @@ const revokePhotoTokensOnOffline = onDocumentWritten("Properties/{propertyId}", 
 
   const owners = new Set();
   if (wasLive && (!isLive || before.owner_id !== after.owner_id)) owners.add(before.owner_id);
-  if (isLive && !wasLive) owners.add(after.owner_id);
+  // The new owner's links from before the handover (a link issued while the listing was theirs
+  // earlier, or one planted under their path) must not outlive it either.
+  if (isLive && (!wasLive || before.owner_id !== after.owner_id)) owners.add(after.owner_id);
   if (owners.size === 0) return null;
 
   for (const ownerId of owners) {

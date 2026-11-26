@@ -97,6 +97,9 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
   `storage.objects.update` on the default bucket (the default compute account has it). A listing
   that was offline when this function was deployed keeps any token issued earlier until its next
   change of state; revoke those once in the console if needed.
+  When a live listing changes owner, the tokens under the old owner's folder and under the new
+  owner's folder for that property id are both replaced (TAQ-139), so a link the new owner (or
+  anyone holding one for that path) had before the handover does not survive it.
   Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
 - The deployed project needs the Storage service agent to have Firestore read access for
   cross-service rules (the console prompts for it on the first rules deploy).
