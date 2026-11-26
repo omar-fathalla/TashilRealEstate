@@ -74,10 +74,11 @@ const unchanged = async () => {
 
 test("TAQ-109: isLiveListing is the storage.rules live check", () => {
   assert.equal(photos.isLiveListing(live), true);
-  for (const patch of [{ is_published: false }, { is_published: "true" }, { status: "rented" }, { status: undefined }, { moderation_hidden: true }, { owner_id: "" }, { owner_id: undefined }]) {
+  for (const patch of [{ is_published: false }, { is_published: "true" }, { status: "rented" }, { status: undefined }, { moderation_hidden: true }, { moderation_hidden: "true" }, { owner_id: "" }, { owner_id: undefined }]) {
     assert.equal(photos.isLiveListing({ ...live, ...patch }), false, JSON.stringify(patch));
   }
   assert.equal(photos.isLiveListing(null), false);
+  assert.equal(photos.isLiveListing({ ...live, moderation_hidden: "false" }), true, "only true and 'true' mean hidden, as in storage.rules");
 });
 
 for (const [name, after] of [

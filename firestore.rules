@@ -345,7 +345,14 @@ service cloud.firestore {
 
     function listingModerationHidden(propertyId) {
       return exists(moderationPath(propertyId))
-        && get(moderationPath(propertyId)).data.get('hidden', false) == true;
+        && get(moderationPath(propertyId)).data.get('hidden', false) in [true, 'true'];
+    }
+
+    // A published listing that moderation holds hidden is not public, whatever the order the two
+    // flags were written in. The string 'true' counts as hidden, as in storage.rules (TAQ-131).
+    function publiclyVisible(d) {
+      return d.get('is_published', false) == true
+        && !(d.get('moderation_hidden', false) in [true, 'true']);
     }
 
     // True only when this very request also writes PropertyModeration/{propertyId}: the moderation
@@ -522,6 +529,7 @@ service cloud.firestore {
       let d = request.resource.data;
       return d.keys().hasOnly(publicListingFields())
         && d.get('id', propertyId) == propertyId
+        && !(d.get('is_published', false) == true && d.get('moderation_hidden', false) == true)
         && listingValuesOk(d);
     }
 
@@ -544,9 +552,20 @@ service cloud.firestore {
     }
 
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read published listings. Unpublished
-      // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
-      allow read: if resource.data.get('is_published', false) == true
+      // Anyone (including unauthenticated visitors) can read published listings that moderation
+      // does not hold hidden. Unpublished or hidden ones are visible only to their owner, agency,
+      // or platform staff.
+      allow get: if publiclyVisible(resource.data)
+        || isPlatformStaff()
+        || ownsListing()
+        || agencyManagesResource();
+      // Rules are not filters: a list rule that also tested moderation_hidden would refuse the
+      // marketplace query (`is_published == true`) outright, and filtering on
+      // `moderation_hidden == false` would drop public docs that lack the field. Lists therefore
+      // check is_published only; no write can make a doc both published and hidden
+      // (listingShapeOk on create, adminVisibilityOk on visibility changes, and the sync trigger,
+      // which sets is_published = !moderation_hidden).
+      allow list: if resource.data.get('is_published', false) == true
         || isPlatformStaff()
         || ownsListing()
         || agencyManagesResource();

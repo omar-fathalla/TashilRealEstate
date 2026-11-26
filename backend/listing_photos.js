@@ -34,6 +34,7 @@ function isLiveListing(data) {
     && data.is_published === true
     && (data.status === undefined ? "unavailable" : data.status) === "vacant"
     && data.moderation_hidden !== true
+    && data.moderation_hidden !== "true"
     && typeof data.owner_id === "string"
     && data.owner_id !== "";
 }

@@ -36,21 +36,22 @@ service firebase.storage {
     // The listing behind a photo is live: its public /Properties doc exists, is published, is
     // vacant (the only status sanitizeForMarketplace gives a live listing), is not held by
     // moderation, and belongs to the owner in the photo's path. One Firestore read; a missing doc
-    // is null, so a deleted listing is refused. The trigger also sets is_published == false on
+    // is null, so a deleted listing is refused. A `moderation_hidden` stored as the string 'true'
+    // counts as hidden, as in firestore.rules. The trigger also sets is_published == false on
     // rented, unpublished and held listings; the status check does not rely on that.
     function listingLive(ownerUid, propertyId) {
       let listing = firestore.get(/databases/(default)/documents/Properties/$(propertyId));
       return listing != null
         && listing.data.get('is_published', false) == true
         && listing.data.get('status', 'unavailable') == 'vacant'
-        && listing.data.get('moderation_hidden', false) != true
+        && !(listing.data.get('moderation_hidden', false) in [true, 'true'])
         && listing.data.get('owner_id', '') == ownerUid;
     }
 
     // PropertyModeration/{propertyId} holds the listing hidden. A missing doc means not hidden.
     function moderationHeld(propertyId) {
       let moderation = firestore.get(/databases/(default)/documents/PropertyModeration/$(propertyId));
-      return moderation != null && moderation.data.get('hidden', false) == true;
+      return moderation != null && moderation.data.get('hidden', false) in [true, 'true'];
     }
 
     // Public listing photos, under the owner's uid and the property id.
