@@ -126,10 +126,27 @@ test("TAQ-109: a first publish (no earlier doc) rotates, a plain edit of a live 
   assert.equal(writes.length, 2);
 });
 
-test("TAQ-109: handing a live listing to another owner rotates the old owner's photos", async () => {
+test("TAQ-109/TAQ-139: handing a live listing to another owner rotates both owners' photos for the property", async () => {
   await change(live, { ...live, owner_id: "owner2" });
+  assert.deepEqual(writes.map((w) => w.name).sort(), [PHOTO2, PHOTO, OTHER_OWNER].sort());
+  const written = writes.find((w) => w.name === OTHER_OWNER);
+  assert.match(written.metadata.metadata[TOKEN_KEY], /^rotated-\d$/, "the new owner's folder gets one new token (the emulator appends it; Storage replaces)");
+  assert.ok((await tokens(OTHER_OWNER)).some((t) => t.startsWith("rotated-")));
+  assert.deepEqual(await tokens(OTHER_PROPERTY), ["other-prop"], "other properties are untouched");
+});
+
+test("TAQ-139: a handover to an owner while the listing is not live rotates only the old owner", async () => {
+  await change(live, { ...live, owner_id: "owner2", is_published: false });
   assert.deepEqual(writes.map((w) => w.name).sort(), [PHOTO2, PHOTO].sort());
   assert.deepEqual(await tokens(OTHER_OWNER), ["other-owner"]);
+  writes = [];
+  await change({ ...live, owner_id: "owner2", is_published: false }, { ...live, owner_id: "owner2" });
+  assert.deepEqual(writes.map((w) => w.name), [OTHER_OWNER], "it rotates for the new owner when it goes live");
+});
+
+test("TAQ-139: a handover to an owner with no photos for the property rotates nothing for them", async () => {
+  await change(live, { ...live, owner_id: "owner3" });
+  assert.deepEqual(writes.map((w) => w.name).sort(), [PHOTO2, PHOTO].sort());
 });
 
 test("TAQ-109: rotation errors are raised so the failure is visible", async () => {
