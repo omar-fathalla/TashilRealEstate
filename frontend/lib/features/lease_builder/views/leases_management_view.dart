@@ -14,6 +14,9 @@ import 'package:tashil_real_estate/features/lease_builder/services/legal_clauses
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/lease_document_view.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/signature_pad_dialog.dart';
+import 'package:tashil_real_estate/features/lease_builder/views/real_leases_view.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_data_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
 
@@ -27,20 +30,37 @@ import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_p
 /// 6. Trilingual Purity & Parity (Arabic RTL, English LTR, Hindi LTR).
 /// 7. 100% Responsiveness across Mobile, Tablet, and Desktop.
 class LeasesManagementView extends StatefulWidget {
-  const LeasesManagementView({super.key});
+  /// The portfolio data to show when someone is signed in. The agency dashboard passes its own;
+  /// otherwise the view watches the signed-in owner's leases itself.
+  final PortfolioController? controller;
+  final PortfolioDataService? service;
+
+  const LeasesManagementView({super.key, this.controller, this.service});
 
   @override
   State<LeasesManagementView> createState() => _LeasesManagementViewState();
 }
 
 class _LeasesManagementViewState extends State<LeasesManagementView> {
-  late List<LeaseContractModel> _contracts;
+  late List<LeaseContractModel> _contracts = const [];
+  late final bool _serverBacked = (widget.service ?? PortfolioDataService.instance).isSignedIn;
+  PortfolioController? _ownController;
   String _selectedFilter = 'all'; // 'all', 'active', 'pending_signatures'
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    if (_serverBacked) {
+      if (widget.controller == null) {
+        _ownController = PortfolioController(
+          data: widget.service,
+          agencyOnly: false,
+          includeRequests: false,
+        )..start();
+      }
+      return;
+    }
     _syncContracts();
     LegalClausesService().contractsNotifier.addListener(_syncContracts);
     PropertyLifecycleService().propertiesNotifier.addListener(_syncContracts);
@@ -48,8 +68,11 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
 
   @override
   void dispose() {
-    LegalClausesService().contractsNotifier.removeListener(_syncContracts);
-    PropertyLifecycleService().propertiesNotifier.removeListener(_syncContracts);
+    if (!_serverBacked) {
+      LegalClausesService().contractsNotifier.removeListener(_syncContracts);
+      PropertyLifecycleService().propertiesNotifier.removeListener(_syncContracts);
+    }
+    _ownController?.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -204,6 +227,12 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_serverBacked) {
+      return RealLeasesView(
+        controller: widget.controller ?? _ownController!,
+        service: widget.service,
+      );
+    }
     final loc = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;

@@ -1,9 +1,120 @@
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/portfolio/services/rent_schedule_builder.dart';
+import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 
 class FinancialKpiService {
   static final FinancialKpiService _instance = FinancialKpiService._internal();
   factory FinancialKpiService() => _instance;
   FinancialKpiService._internal();
+
+  static const List<Map<String, String>> _monthNames = [
+    {'ar': 'يناير', 'en': 'Jan', 'hi': 'जनवरी'},
+    {'ar': 'فبراير', 'en': 'Feb', 'hi': 'फरवरी'},
+    {'ar': 'مارس', 'en': 'Mar', 'hi': 'मार्च'},
+    {'ar': 'أبريل', 'en': 'Apr', 'hi': 'अप्रैल'},
+    {'ar': 'مايو', 'en': 'May', 'hi': 'मई'},
+    {'ar': 'يونيو', 'en': 'Jun', 'hi': 'जून'},
+    {'ar': 'يوليو', 'en': 'Jul', 'hi': 'जुलाई'},
+    {'ar': 'أغسطس', 'en': 'Aug', 'hi': 'अगस्त'},
+    {'ar': 'سبتمبر', 'en': 'Sep', 'hi': 'सितंबर'},
+    {'ar': 'أكتوبر', 'en': 'Oct', 'hi': 'अक्टूबर'},
+    {'ar': 'نوفمبر', 'en': 'Nov', 'hi': 'नवंबर'},
+    {'ar': 'ديسمبر', 'en': 'Dec', 'hi': 'दिसंबर'},
+  ];
+
+  /// How many invoices the real-data summary would be built from, for the empty state.
+  static int realInvoiceCount(PortfolioSnapshot snapshot, String countryCode, {DateTime? now}) =>
+      RentScheduleBuilder.build(snapshot, now: now).where((i) => i.countryCode == countryCode).length;
+
+  /// The summary for a manager's own leases and payments. Every figure is computed from the real
+  /// rows; deductions are what the server withheld from paid rent (platform and agency fees).
+  FinancialKpiSummary summaryFromPortfolio({
+    required FinancialPortalRole role,
+    required String countryCode,
+    required PortfolioSnapshot snapshot,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final rows = RentScheduleBuilder.build(snapshot, now: today).where((i) => i.countryCode == countryCode).toList();
+    final paid = rows.where((i) => i.status == 'paid').toList();
+    final pending = rows.where((i) => i.status == 'due_soon').toList();
+    final overdue = rows.where((i) => i.status == 'overdue').toList();
+    double sum(Iterable<RentInvoiceModel> l, double Function(RentInvoiceModel) f) => l.fold(0.0, (a, b) => a + f(b));
+
+    final invoiced = sum(rows, (i) => i.baseAmount);
+    final collected = sum(paid, (i) => i.baseAmount);
+    final owed = sum(overdue, (i) => i.baseAmount);
+    final pendingAmount = sum(pending, (i) => i.baseAmount);
+    final toOwners = sum(paid, (i) => i.netPayoutToOwner);
+    double pct(double part, double whole) => whole > 0 ? part / whole * 100 : 0.0;
+
+    final history = <MonthlyCashFlowPoint>[];
+    final propertiesWithLeases = snapshot.leases.where((l) => l.isActive || l.isEnded).map((l) => l.propertyId).where((id) => id.isNotEmpty).toSet();
+    for (var back = 5; back >= 0; back--) {
+      final monthStart = DateTime(today.year, today.month - back, 1);
+      final monthEnd = DateTime(monthStart.year, monthStart.month + 1, 0);
+      final inMonth = paid.where((i) => i.paidAt != null && i.paidAt!.year == monthStart.year && i.paidAt!.month == monthStart.month).toList();
+      final gross = sum(inMonth, (i) => i.baseAmount);
+      final deductions = gross - sum(inMonth, (i) => i.netPayoutToOwner);
+      final occupied = snapshot.leases.where((l) {
+        if (!l.isActive && !l.isEnded) return false;
+        final start = DateTime.tryParse(l.startDate.length >= 10 ? l.startDate.substring(0, 10) : '');
+        final end = DateTime.tryParse(l.endDate.length >= 10 ? l.endDate.substring(0, 10) : '');
+        if (start == null || start.isAfter(monthEnd)) return false;
+        return end == null || !end.isBefore(monthStart);
+      }).map((l) => l.propertyId).where((id) => id.isNotEmpty).toSet();
+      history.add(MonthlyCashFlowPoint(
+        localizedMonth: _monthNames[monthStart.month - 1],
+        grossIncome: gross,
+        operationalExpenses: deductions,
+        netProfit: gross - deductions,
+        occupancyRate: pct(occupied.length.toDouble(), propertiesWithLeases.length.toDouble()),
+      ));
+    }
+
+    int daysLate(RentInvoiceModel i) => today.difference(i.dueDate).inDays;
+    ArrearsAgingBucket bucket(Map<String, String> label, bool Function(int) test) {
+      final inBucket = overdue.where((i) => test(daysLate(i))).toList();
+      final amount = sum(inBucket, (i) => i.baseAmount);
+      return ArrearsAgingBucket(
+        localizedRange: label,
+        amount: amount,
+        invoiceCount: inBucket.length,
+        accumulatedPenalties: 0,
+        percentageOfTotalArrears: pct(amount, owed),
+      );
+    }
+
+    return FinancialKpiSummary(
+      role: role,
+      countryCode: countryCode,
+      totalGrossInvoiced: invoiced,
+      totalCollectedNet: toOwners,
+      totalOverdueArrears: owed,
+      collectionEfficiencyRate: pct(collected, invoiced),
+      grossRentalYield: null,
+      netProfitMargin: pct(toOwners, collected),
+      cashFlowHistory: history,
+      statusDistribution: InvoiceStatusDistribution(
+        paidAmount: collected,
+        paidCount: paid.length,
+        paidPercentage: pct(collected, invoiced),
+        pendingAmount: pendingAmount,
+        pendingCount: pending.length,
+        pendingPercentage: pct(pendingAmount, invoiced),
+        overdueAmount: owed,
+        overdueCount: overdue.length,
+        overduePercentage: pct(owed, invoiced),
+      ),
+      arrearsAging: [
+        bucket({'ar': '1 - 15 يوم', 'en': '1 - 15 Days', 'hi': '1 - 15 दिन'}, (d) => d <= 15),
+        bucket({'ar': '16 - 30 يوم', 'en': '16 - 30 Days', 'hi': '16 - 30 दिन'}, (d) => d > 15 && d <= 30),
+        bucket({'ar': 'أكثر من 30 يوم', 'en': '30+ Days', 'hi': '30+ दिन'}, (d) => d > 30),
+      ],
+      invoiceCount: rows.length,
+    );
+  }
 
   FinancialKpiSummary getFinancialSummary({
     required FinancialPortalRole role,

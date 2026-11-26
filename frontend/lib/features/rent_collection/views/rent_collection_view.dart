@@ -4,6 +4,8 @@ import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dar
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/dialogs/tashil_dialogs.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
+import 'package:tashil_real_estate/core/design_system/empty_state/tashil_empty_state.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
 import 'package:tashil_real_estate/core/design_system/motion/tashil_motion.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -11,6 +13,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/theme/theme_palette_controller.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/portfolio/services/rent_schedule_builder.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
@@ -34,11 +38,16 @@ class RentCollectionView extends StatefulWidget {
   final bool? showBackButton;
   final bool showTrashButtonInHeader;
 
+  /// When given, the screen shows the real leases and payments of that portfolio (the signed-in
+  /// manager's own scope) instead of the local property installments.
+  final PortfolioController? portfolio;
+
   const RentCollectionView({
     super.key,
     this.onBack,
     this.showBackButton,
     this.showTrashButtonInHeader = false,
+    this.portfolio,
   });
 
   @override
@@ -55,16 +64,36 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   @override
   void initState() {
     super.initState();
-    _syncInvoices();
+    final portfolio = widget.portfolio;
     PropertyLifecycleService().propertiesNotifier.addListener(_syncInvoices);
+    if (portfolio != null) {
+      portfolio.addListener(_applyPortfolio);
+      _applyPortfolio();
+    } else {
+      _syncInvoices();
+    }
   }
 
   void _syncInvoices() {
     _service.syncFromProperties();
   }
 
+  void _applyPortfolio() {
+    final snapshot = widget.portfolio!.snapshot;
+    if (snapshot.isReady) {
+      _service.applyServerInvoices(RentScheduleBuilder.build(snapshot));
+    } else if (snapshot.load == PortfolioLoad.signedOut) {
+      _service.syncFromProperties();
+    }
+  }
+
   @override
   void dispose() {
+    final portfolio = widget.portfolio;
+    if (portfolio != null) {
+      portfolio.removeListener(_applyPortfolio);
+      _service.leaveServerMode(signedIn: true);
+    }
     PropertyLifecycleService().propertiesNotifier.removeListener(_syncInvoices);
     _searchCtrl.dispose();
     super.dispose();
@@ -72,6 +101,50 @@ class _RentCollectionViewState extends State<RentCollectionView> {
 
   @override
   Widget build(BuildContext context) {
+    final portfolio = widget.portfolio;
+    if (portfolio == null) return _buildContent(context);
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LocaleController.currentLocale,
+      builder: (context, _, __) => ListenableBuilder(
+        listenable: portfolio,
+        builder: (context, _) => _buildFromPortfolio(context, portfolio),
+      ),
+    );
+  }
+
+  Widget _buildFromPortfolio(BuildContext context, PortfolioController portfolio) {
+    final loc = AppLocalizations.of(context);
+    final snapshot = portfolio.snapshot;
+    Widget? gate;
+    if (snapshot.isLoading) {
+      gate = const Center(child: TashilLoadingIndicator());
+    } else if (snapshot.load == PortfolioLoad.error) {
+      gate = TashilEmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: loc.tr('ovLoadFailedTitle'),
+        message: loc.tr('ovLoadFailedMessage'),
+        primaryActionLabel: loc.tr('ovRetry'),
+        primaryActionIcon: Icons.refresh_rounded,
+        onPrimaryAction: portfolio.start,
+      );
+    } else if (snapshot.load == PortfolioLoad.noAgency) {
+      gate = TashilEmptyState(
+        icon: Icons.business_outlined,
+        title: loc.tr('ovNoAgencyTitle'),
+        message: loc.tr('ovNoAgencyMessage'),
+      );
+    } else if (snapshot.load != PortfolioLoad.signedOut && RentScheduleBuilder.build(snapshot).isEmpty) {
+      gate = TashilEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: loc.tr('rcEmptyTitle'),
+        message: loc.tr('rcEmptyMessage'),
+      );
+    }
+    if (gate == null) return _buildContent(context);
+    return Scaffold(backgroundColor: Colors.transparent, body: gate);
+  }
+
+  Widget _buildContent(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;

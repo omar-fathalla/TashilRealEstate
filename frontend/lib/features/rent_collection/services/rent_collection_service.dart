@@ -33,6 +33,45 @@ class RentCollectionService {
   static const String _permanentlyDeletedKey = 'tashil_permanently_deleted_invoices_v1';
 
   bool _isSyncing = false;
+  bool _serverMode = false;
+
+  /// True while the list comes from the real leases and payments of the signed-in manager.
+  bool get serverMode => _serverMode;
+
+  /// Replaces the list with rows built from the real leases and payments. The invoices derived
+  /// from local property installments (and the sample ones) are dropped while this is active.
+  /// Trash and reminder counters stay local, keyed by invoice id.
+  void applyServerInvoices(List<RentInvoiceModel> fresh) {
+    _serverMode = true;
+    final previous = {for (final inv in invoicesNotifier.value) inv.id: inv};
+    final next = <RentInvoiceModel>[];
+    for (final inv in fresh) {
+      final key = (inv.propertyId != null && inv.monthKey != null) ? '${inv.propertyId}_${inv.monthKey}' : null;
+      if (_permanentlyDeletedInvoices.contains(inv.id) || (key != null && _permanentlyDeletedInvoices.contains(key))) continue;
+      var row = inv;
+      final before = previous[inv.id];
+      if (before != null) {
+        row = row.copyWith(
+          reminderCount: before.reminderCount,
+          lastReminderSentAt: before.lastReminderSentAt,
+          legalWarningIssued: before.legalWarningIssued,
+          notes: before.notes,
+        );
+      }
+      final deletedAt = _softDeletedInvoices[inv.id] ?? (key != null ? _softDeletedInvoices[key] : null);
+      if (deletedAt != null) row = row.copyWith(isDeleted: true, deletedAt: deletedAt);
+      next.add(row);
+    }
+    invoicesNotifier.value = next;
+  }
+
+  /// Leaves the real-data mode (the screen closed); signed-in users start from an empty list again.
+  void leaveServerMode({required bool signedIn}) {
+    if (!_serverMode) return;
+    _serverMode = false;
+    invoicesNotifier.value = signedIn ? <RentInvoiceModel>[] : _generateSampleInvoices();
+    syncFromProperties();
+  }
   bool _isPurging = false;
 
   void _loadPersistedDeletedState() {
@@ -363,7 +402,7 @@ class RentCollectionService {
   ///
   /// Maps all rented properties and their installments directly into live rent invoices.
   void syncFromProperties() {
-    if (_isSyncing) return;
+    if (_serverMode || _isSyncing) return;
     _isSyncing = true;
     try {
       purgeExpiredDeletedInvoices();
@@ -574,10 +613,12 @@ class RentCollectionService {
 
       // Persist soft-deleted state to Firestore for linked property installment
       if (current.propertyId != null && current.monthKey != null) {
+        if (!_serverMode) {
         PropertyLifecycleService().softDeleteInstallmentForProperty(
           propertyId: current.propertyId!,
           monthKey: current.monthKey!,
         );
+      }
       }
     }
   }
@@ -607,10 +648,12 @@ class RentCollectionService {
 
       // Restore linked property installment in Firestore
       if (current.propertyId != null && current.monthKey != null) {
+        if (!_serverMode) {
         PropertyLifecycleService().restoreInstallmentForProperty(
           propertyId: current.propertyId!,
           monthKey: current.monthKey!,
         );
+      }
       }
     }
   }
@@ -635,10 +678,12 @@ class RentCollectionService {
 
       // Also clean up linked property installment and persist to Firestore
       if (invoice.propertyId != null && invoice.monthKey != null) {
+        if (!_serverMode) {
         PropertyLifecycleService().removeInstallmentForProperty(
           propertyId: invoice.propertyId!,
           monthKey: invoice.monthKey!,
         );
+      }
       }
     }
   }
@@ -656,10 +701,12 @@ class RentCollectionService {
       if (inv.propertyId != null && inv.monthKey != null) {
         _softDeletedInvoices.remove('${inv.propertyId}_${inv.monthKey}');
         _permanentlyDeletedInvoices.add('${inv.propertyId}_${inv.monthKey}');
+        if (!_serverMode) {
         PropertyLifecycleService().removeInstallmentForProperty(
           propertyId: inv.propertyId!,
           monthKey: inv.monthKey!,
         );
+      }
       }
     }
     _savePersistedDeletedState();
@@ -688,10 +735,12 @@ class RentCollectionService {
           if (inv.propertyId != null && inv.monthKey != null) {
             _softDeletedInvoices.remove('${inv.propertyId}_${inv.monthKey}');
             _permanentlyDeletedInvoices.add('${inv.propertyId}_${inv.monthKey}');
-            PropertyLifecycleService().removeInstallmentForProperty(
+            if (!_serverMode) {
+        PropertyLifecycleService().removeInstallmentForProperty(
               propertyId: inv.propertyId!,
               monthKey: inv.monthKey!,
             );
+      }
           }
         }
         _savePersistedDeletedState();
@@ -725,12 +774,14 @@ class RentCollectionService {
 
       // Sync updated installment amount / due date with PropertyLifecycleService
       if (current.propertyId != null && current.monthKey != null) {
+        if (!_serverMode) {
         PropertyLifecycleService().addOrUpdateInstallmentForProperty(
           propertyId: current.propertyId!,
           monthKey: current.monthKey!,
           dueDate: dueDate ?? current.dueDate,
           amount: baseAmount ?? current.baseAmount,
         );
+      }
       }
     }
   }
@@ -780,12 +831,14 @@ class RentCollectionService {
 
     // If attached to a property, ensure the installment exists in PropertyLifecycleService
     if (invoice.propertyId != null && invoice.monthKey != null) {
-      PropertyLifecycleService().addOrUpdateInstallmentForProperty(
+      if (!_serverMode) {
+        PropertyLifecycleService().addOrUpdateInstallmentForProperty(
         propertyId: invoice.propertyId!,
         monthKey: invoice.monthKey!,
         dueDate: invoice.dueDate,
         amount: invoice.baseAmount,
       );
+      }
     }
   }
 }
