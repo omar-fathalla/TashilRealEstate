@@ -449,6 +449,14 @@ const CONTACT_TEXTS = [
   "@someone_99",
 ];
 
+const LOOSE_CONTACT_TEXTS = [
+  "zero five zero one two three four five six seven",
+  "qa @ example . com",
+  "qa@example dot com",
+  "https://example.org/flat",
+  "www.example.com",
+];
+
 async function expectContactRejected(promise) {
   await assert.rejects(promise, (e) => {
     assert.equal(e.code, "invalid-argument");
@@ -458,7 +466,7 @@ async function expectContactRejected(promise) {
 }
 
 test("TAQ-117: requestViewing and applyForRental reject a contact in the message and write nothing", async () => {
-  for (const text of CONTACT_TEXTS) {
+  for (const text of [...CONTACT_TEXTS, ...LOOSE_CONTACT_TEXTS]) {
     await expectContactRejected(view({ message: text }));
     await expectContactRejected(apply({ message: text }));
   }
@@ -479,4 +487,18 @@ test("TAQ-117: respondToViewingRequest and decideRentalApplication reject a cont
   assert.equal((await db.doc("RentalApplications/p1_visitor").get()).get("status"), "pending");
   const ok = await fns.respondToViewingRequest.run({ data: { requestId, decision: "confirmed", note: "Saturday 5pm" }, auth: caller("owner") });
   assert.equal(ok.status, "confirmed");
+});
+
+test("TAQ-133: the requester name is contact-checked too, and nothing is written", async () => {
+  for (const name of ["QA qa.user@example.com 0501234567", "Sam zero five zero one two three four five six seven", "Sam www.example.com"]) {
+    for (const call of [view, apply]) {
+      await assert.rejects(call({ name }), (e) => {
+        assert.equal(e.code, "invalid-argument");
+        assert.equal(e.details && e.details.reason, "contact_in_name");
+        return true;
+      });
+    }
+  }
+  assert.equal((await db.collection("ViewingRequests").get()).size, 0);
+  assert.equal((await db.collection("RentalApplications").get()).size, 0);
 });

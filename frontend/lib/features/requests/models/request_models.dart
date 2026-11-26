@@ -155,6 +155,7 @@ String requestErrorKey(Object error) {
   if (reason == 'property_not_registered' || reason == 'property_id_conflict') return 'rqPropertyNotVerified';
   if (reason == 'rent_precision') return 'rqRentPrecision';
   if (reason == 'contact_in_message') return 'rqContactInMessage';
+  if (reason == 'contact_in_name') return 'rqContactInName';
   final text = error.toString();
   if (text.contains('listing_not_live')) return 'rqListingUnavailable';
   if (text.contains('duplicate_pending') || text.contains('duplicate_application')) return 'rqDuplicate';
