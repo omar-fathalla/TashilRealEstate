@@ -37,7 +37,9 @@ class FinancialKpiSummaryGrid extends StatelessWidget {
       _buildCard(
         title: loc.tr('grossInvoicedTotalKpi'),
         value: '${CurrencyFormatter.formatAmount(summary.totalGrossInvoiced, langCode: lang)} $currency',
-        subtitle: '${loc.tr('grossRentalYield')}: ${summary.grossRentalYield.toStringAsFixed(1)}%',
+        subtitle: summary.grossRentalYield == null
+            ? '${loc.tr('totalInvoicesCount')}: ${summary.invoiceCount} ${loc.tr('invoicesWord')}'
+            : '${loc.tr('grossRentalYield')}: ${summary.grossRentalYield!.toStringAsFixed(1)}%',
         icon: Icons.receipt_long_rounded,
         color: colorScheme.primary,
         bgColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
