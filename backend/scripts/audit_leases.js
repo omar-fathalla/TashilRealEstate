@@ -27,10 +27,10 @@
  * Any other project is refused. Credentials come from Application Default Credentials or the
  * emulator environment variables.
  */
-const fs = require("fs");
-const path = require("path");
 const admin = require("firebase-admin");
 const { scanPrivateProperties } = require("./backfill_property_owners");
+const { readOnly } = require("./read_only");
+const { prodProjectsFromConfig } = require("./prod_projects");
 
 const DEV_PROJECTS = ["tashil-aqar-dev"];
 const LOCKS = "PropertyLeaseLocks";
@@ -49,16 +49,6 @@ function parseArgs(argv) {
   return args;
 }
 
-/** The production project ids: the `prod` alias in .firebaserc. */
-function prodProjectsFromConfig(file = path.join(__dirname, "../../.firebaserc")) {
-  try {
-    const prod = JSON.parse(fs.readFileSync(file, "utf8")).projects.prod;
-    return typeof prod === "string" && prod ? [prod] : [];
-  } catch (_) {
-    return [];
-  }
-}
-
 /**
  * The project the audit may run on. Without [prodReadOnly]: demo- projects and the dev project.
  * With it: only a production project, and only when [confirm] (AUDIT_PROD_OK) names it exactly.
@@ -75,44 +65,6 @@ function resolveTarget(project, { prodReadOnly = false, confirm = "", prodProjec
   }
   if (project.startsWith("demo-") || DEV_PROJECTS.includes(project)) return project;
   throw new Error(`Refusing project "${project}": the lease audit runs on demo- projects and ${DEV_PROJECTS.join(", ")} only.`);
-}
-
-const WRITE_METHOD = /^(set|update|delete|create|add|import|revoke|generate|commit|batch|runTransaction|bulkWriter|recursiveDelete)/;
-const proxies = new WeakMap();
-const targets = new WeakMap();
-
-/**
- * A read-only view of a Firestore or Auth instance and of everything reached through it (refs,
- * snapshots, query results). Every write method throws; assigning or deleting properties throws.
- */
-function readOnly(value) {
-  if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
-  if (targets.has(value)) return value;
-  if (typeof value.then === "function") return value.then(readOnly);
-  if (Array.isArray(value)) return value.map(readOnly);
-  if (proxies.has(value)) return proxies.get(value);
-  const refuse = (what) => {
-    throw new Error(`Read-only audit: ${what} is not allowed.`);
-  };
-  const proxy = new Proxy(value, {
-    get(target, prop) {
-      if (typeof prop === "string" && WRITE_METHOD.test(prop)) return () => refuse(prop);
-      const v = Reflect.get(target, prop, target);
-      const own = Object.getOwnPropertyDescriptor(target, prop);
-      // Proxy invariant: a frozen data property must be returned as is.
-      if (own && !own.configurable && !own.writable) return v;
-      if (typeof v !== "function") return readOnly(v);
-      return (...args) => readOnly(v.apply(target, args.map((a) => (typeof a === "function"
-        ? (...xs) => a(...xs.map(readOnly))
-        : targets.get(a) || a))));
-    },
-    set: (_, prop) => refuse(`setting ${String(prop)}`),
-    defineProperty: (_, prop) => refuse(`defining ${String(prop)}`),
-    deleteProperty: (_, prop) => refuse(`deleting ${String(prop)}`),
-  });
-  proxies.set(value, proxy);
-  targets.set(proxy, value);
-  return proxy;
 }
 
 function rentProblem(lease) {
