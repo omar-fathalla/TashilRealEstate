@@ -92,6 +92,9 @@ test("TAQ-45: seed.js seeds the demo accounts into the emulator and keeps existi
     assert.deepEqual(user.customClaims, expected);
   }
 
+  const agency = await admin.firestore().collection("Agencies").doc(DEMO_AGENCY_ID).get();
+  assert.equal(agency.exists, true, "the demo agency exists, so setUserRole accepts it (TAQ-148)");
+
   const second = run();
   assert.equal(second.status, 0, second.stdout + second.stderr);
   assert.match(second.stdout, /exists, keeping its password/);

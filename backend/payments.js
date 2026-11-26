@@ -826,6 +826,7 @@ module.exports = {
   createRentPaymentIntent,
   recordManualPayment,
   loadSplitPercents,
+  splitsFor,
   paymobWebhook,
   handlePaymobWebhook,
   applyGatewayTransaction,

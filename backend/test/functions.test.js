@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { mock } = require("node:test");
 const admin = require("firebase-admin");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -127,9 +128,53 @@ test("TAQ-17: invoice amounts and VAT are computed from the lease", async () => 
   assert.equal(invoice.currencyCode, "AED");
   assert.equal(invoice.tenantName, "Lease Tenant");
   assert.equal(invoice.status, "Issued");
-  assert.equal(invoice.vatAmount, (8000 * 0.025 + 8000 * 0.08) * 0.05);
+  assert.equal(invoice.platformFee, 160, "the default 2% platform split, same as the payment flow");
+  assert.equal(invoice.agencyFee, 640, "the default 8% agency split");
+  assert.equal(invoice.vatAmount, (160 + 640) * 0.05);
   assert.equal(invoice.owner_id, "owner");
   assert.equal(invoice.tenant_id, "tenant");
+});
+
+test("TAQ-147: a lease without an agency has no agency fee on its invoice", async () => {
+  await db.collection("Leases").doc("lease-solo").set({
+    owner_id: "owner",
+    tenant_id: "tenant",
+    agency_id: "",
+    country_code: "AE",
+    tenant_name: "Solo Tenant",
+    financialTerms: { monthlyRent: 5000 },
+  });
+  const result = await fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-solo" }, auth: caller("owner") });
+  const invoice = (await db.collection("Invoices").doc(result.invoiceNumber).get()).data();
+  assert.equal(invoice.agencyFee, 0);
+  assert.equal(invoice.platformFee, 100);
+  assert.equal(invoice.vatAmount, 100 * 0.05, "VAT only on the platform fee");
+  assert.equal(invoice.totalPaid, 5000 + 5);
+  assert.equal(invoice.agency_id, null);
+  assert.deepEqual(invoice.splitPercent, { platform: 2, agency: 0 });
+});
+
+test("TAQ-147: the fee split comes from Settings/payment_split", async () => {
+  await db.collection("Settings").doc("payment_split").set({ platform_percent: 3, agency_percent: 10 });
+  const result = await fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: caller("owner") });
+  const invoice = (await db.collection("Invoices").doc(result.invoiceNumber).get()).data();
+  assert.equal(invoice.platformFee, 240);
+  assert.equal(invoice.agencyFee, 800);
+  assert.deepEqual(invoice.splitPercent, { platform: 3, agency: 10 });
+});
+
+test("TAQ-147: an invalid split setting stops the invoice instead of guessing", async () => {
+  await db.collection("Settings").doc("payment_split").set({ platform_percent: 60, agency_percent: 60 });
+  await expectCode(fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: caller("owner") }), "failed-precondition");
+  assert.equal((await db.collection("Invoices").get()).size, 0);
+});
+
+test("TAQ-147: invoices issued in the same moment get different ids", async () => {
+  const auth = caller("owner");
+  const results = await Promise.all([1, 2, 3, 4, 5].map(() => fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth })));
+  const numbers = new Set(results.map((r) => r.invoiceNumber));
+  assert.equal(numbers.size, 5);
+  assert.equal((await db.collection("Invoices").get()).size, 5);
 });
 
 // --- TAQ-45: no public endpoint can create accounts or grant claims ---
@@ -204,6 +249,7 @@ test("TAQ-8: only a SuperAdmin claim can assign roles", async () => {
 
 test("TAQ-9: setUserRole writes the role and agency as custom claims", async () => {
   await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
   const adminCaller = caller("root", { role: "SuperAdmin" });
   await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin" }, auth: adminCaller }), "invalid-argument");
   await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "Overlord" }, auth: adminCaller }), "invalid-argument");
@@ -219,6 +265,88 @@ test("TAQ-9: setUserRole writes the role and agency as custom claims", async () 
   await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: adminCaller });
   user = await admin.auth().getUser("target");
   assert.deepEqual(user.customClaims, { role: "Owner" });
+});
+
+// --- TAQ-148: the agency of an AgencyAdmin ---
+
+test("TAQ-148: AgencyAdmin needs an agency that exists, with a valid id", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "no_such_agency" }, auth: root }), "failed-precondition");
+  for (const bad of ["a/b", "a b", "x".repeat(129), "..", "agency;1", 7, {}]) {
+    await expectCode(fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: bad }, auth: root }), "invalid-argument");
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims || {}, {}, "nothing was written");
+  assert.equal((await db.collection("Users").doc("target").get()).exists, false, "no profile was written");
+
+  await db.collection("Agencies").doc("real_agency-1").set({ name: "Real" });
+  await fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "real_agency-1" }, auth: root });
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "AgencyAdmin", agency_id: "real_agency-1" });
+});
+
+test("TAQ-148: the error says why, so the app can show a translated message", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await assert.rejects(
+    fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "ghost" }, auth: root }),
+    (err) => err.details && err.details.reason === "agency_not_found",
+  );
+  await assert.rejects(
+    fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "a/b" }, auth: root }),
+    (err) => err.details && err.details.reason === "agency_id_invalid",
+  );
+});
+
+test("TAQ-148: removing AgencyAdmin clears agency_id on the claim and the profile and revokes tokens", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
+  const root = caller("root", { role: "SuperAdmin" });
+  await fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId: "agency-1" }, auth: root });
+  assert.equal((await db.collection("Users").doc("target").get()).get("agency_id"), "agency-1");
+
+  const revoke = mock.method(admin.auth(), "revokeRefreshTokens");
+  try {
+    await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: root });
+    assert.deepEqual(revoke.mock.calls.map((c) => c.arguments[0]), ["target"]);
+  } finally {
+    revoke.mock.restore();
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "Owner" });
+  const profile = (await db.collection("Users").doc("target").get()).data();
+  assert.equal(profile.role, "Owner");
+  assert.equal("agency_id" in profile, false, "the stale agency is gone from the profile");
+});
+
+test("TAQ-148: moving to another agency revokes tokens; repeating the same assignment does not", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  await db.collection("Agencies").doc("agency-1").set({ name: "Agency One" });
+  await db.collection("Agencies").doc("agency-2").set({ name: "Agency Two" });
+  const root = caller("root", { role: "SuperAdmin" });
+  const run = (agencyId) => fns.setUserRole.run({ data: { uid: "target", role: "AgencyAdmin", agencyId }, auth: root });
+
+  const revoke = mock.method(admin.auth(), "revokeRefreshTokens");
+  try {
+    await run("agency-1");
+    assert.equal(revoke.mock.callCount(), 1, "a new role revokes");
+    await run("agency-1");
+    assert.equal(revoke.mock.callCount(), 1, "nothing changed");
+    await run("agency-2");
+    assert.equal(revoke.mock.callCount(), 2, "a different agency revokes");
+  } finally {
+    revoke.mock.restore();
+  }
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "AgencyAdmin", agency_id: "agency-2" });
+  assert.equal((await db.collection("Users").doc("target").get()).get("agency_id"), "agency-2");
+});
+
+test("TAQ-148: revoking tokens moves the user's tokensValidAfterTime", async () => {
+  await admin.auth().createUser({ uid: "target" });
+  const root = caller("root", { role: "SuperAdmin" });
+  const before = (await admin.auth().getUser("target")).tokensValidAfterTime;
+  await new Promise((r) => setTimeout(r, 1100));
+  await fns.setUserRole.run({ data: { uid: "target", role: "Owner" }, auth: root });
+  const after = (await admin.auth().getUser("target")).tokensValidAfterTime;
+  assert.notEqual(after, before);
 });
 
 // --- TAQ-91: Admin and Investor roles ---

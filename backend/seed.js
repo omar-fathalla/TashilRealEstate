@@ -166,6 +166,14 @@ async function seed(target) {
   const generated = [];
   let failures = 0;
 
+  // setUserRole only accepts an agency that exists, so the demo agency gets its document first.
+  // An existing document is left as it is.
+  const agencyRef = db.collection('Agencies').doc(DEMO_AGENCY_ID);
+  if (!(await agencyRef.get()).exists) {
+    await agencyRef.set({ name: 'Tashil Demo Agency', countryCode: 'AE', updated_at: require('firebase-admin/firestore').FieldValue.serverTimestamp() });
+    console.log(`Created demo agency ${DEMO_AGENCY_ID}`);
+  }
+
   for (const u of users) {
     try {
       let password = testSet ? target.passwords[u.key] : target.password;
