@@ -26,6 +26,7 @@ const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
 const { stripContacts } = require("./contact_filter");
 const { claimOrCheckOwner, registeredOwner } = require("./property_owners");
+const { loadSplitPercents, splitsFor } = require("./payments");
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -116,14 +117,19 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
   const amount = leaseAmount(lease);
   const currencyCode = leaseCountry(lease) === "AE" ? "AED" : "EGP";
 
-  const platformFee = amount * 0.025; // 2.5% platform fee
-  const agencyFee = amount * 0.08;   // 8% agency fee
+  // The same split the payment flow charges (Settings/payment_split, set by SuperAdmin). A lease no
+  // agency manages has no agency fee. TAQ-147.
+  const hasAgency = typeof lease.agency_id === "string" && lease.agency_id !== "";
+  const percents = await loadSplitPercents();
+  const { platformFee, agencyFee: splitAgencyFee } = splitsFor(amount, percents);
+  const agencyFee = hasAgency ? splitAgencyFee : 0;
   const vatRate = currencyCode === "AED" ? 0.05 : 0.14;
   const vatAmount = (platformFee + agencyFee) * vatRate;
   const totalPaid = amount + vatAmount;
 
-  const invoiceNumber = `TASHIL-INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
   const db = admin.firestore();
+  // A Firestore auto id as the suffix, so two invoices issued in the same moment never collide.
+  const invoiceNumber = `TASHIL-INV-${new Date().getFullYear()}-${db.collection("Invoices").doc().id}`;
   const invoiceRef = db.collection("Invoices").doc(invoiceNumber);
 
   const invoiceData = {
@@ -133,6 +139,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
     amount: amount,
     platformFee: platformFee,
     agencyFee: agencyFee,
+    splitPercent: { platform: percents.platformPercent, agency: hasAgency ? percents.agencyPercent : 0 },
     vatAmount: vatAmount,
     totalPaid: totalPaid,
     currencyCode: currencyCode,

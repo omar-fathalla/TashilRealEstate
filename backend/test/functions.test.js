@@ -127,9 +127,53 @@ test("TAQ-17: invoice amounts and VAT are computed from the lease", async () => 
   assert.equal(invoice.currencyCode, "AED");
   assert.equal(invoice.tenantName, "Lease Tenant");
   assert.equal(invoice.status, "Issued");
-  assert.equal(invoice.vatAmount, (8000 * 0.025 + 8000 * 0.08) * 0.05);
+  assert.equal(invoice.platformFee, 160, "the default 2% platform split, same as the payment flow");
+  assert.equal(invoice.agencyFee, 640, "the default 8% agency split");
+  assert.equal(invoice.vatAmount, (160 + 640) * 0.05);
   assert.equal(invoice.owner_id, "owner");
   assert.equal(invoice.tenant_id, "tenant");
+});
+
+test("TAQ-147: a lease without an agency has no agency fee on its invoice", async () => {
+  await db.collection("Leases").doc("lease-solo").set({
+    owner_id: "owner",
+    tenant_id: "tenant",
+    agency_id: "",
+    country_code: "AE",
+    tenant_name: "Solo Tenant",
+    financialTerms: { monthlyRent: 5000 },
+  });
+  const result = await fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-solo" }, auth: caller("owner") });
+  const invoice = (await db.collection("Invoices").doc(result.invoiceNumber).get()).data();
+  assert.equal(invoice.agencyFee, 0);
+  assert.equal(invoice.platformFee, 100);
+  assert.equal(invoice.vatAmount, 100 * 0.05, "VAT only on the platform fee");
+  assert.equal(invoice.totalPaid, 5000 + 5);
+  assert.equal(invoice.agency_id, null);
+  assert.deepEqual(invoice.splitPercent, { platform: 2, agency: 0 });
+});
+
+test("TAQ-147: the fee split comes from Settings/payment_split", async () => {
+  await db.collection("Settings").doc("payment_split").set({ platform_percent: 3, agency_percent: 10 });
+  const result = await fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: caller("owner") });
+  const invoice = (await db.collection("Invoices").doc(result.invoiceNumber).get()).data();
+  assert.equal(invoice.platformFee, 240);
+  assert.equal(invoice.agencyFee, 800);
+  assert.deepEqual(invoice.splitPercent, { platform: 3, agency: 10 });
+});
+
+test("TAQ-147: an invalid split setting stops the invoice instead of guessing", async () => {
+  await db.collection("Settings").doc("payment_split").set({ platform_percent: 60, agency_percent: 60 });
+  await expectCode(fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth: caller("owner") }), "failed-precondition");
+  assert.equal((await db.collection("Invoices").get()).size, 0);
+});
+
+test("TAQ-147: invoices issued in the same moment get different ids", async () => {
+  const auth = caller("owner");
+  const results = await Promise.all([1, 2, 3, 4, 5].map(() => fns.generateRentalInvoiceReceipt.run({ data: { leaseId: "lease-1" }, auth })));
+  const numbers = new Set(results.map((r) => r.invoiceNumber));
+  assert.equal(numbers.size, 5);
+  assert.equal((await db.collection("Invoices").get()).size, 5);
 });
 
 // --- TAQ-45: no public endpoint can create accounts or grant claims ---
