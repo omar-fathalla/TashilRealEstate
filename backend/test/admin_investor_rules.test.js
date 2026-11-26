@@ -993,3 +993,52 @@ test("TAQ-105: an Admin (not SuperAdmin) still cannot make a wide content edit",
   const me = as("admin1", CLAIMS.admin);
   await assertFails(updateDoc(doc(me, "Properties/big"), { ...fullEdit(), updated_at: serverTimestamp() }));
 });
+
+// --- TAQ-134: the protected keys cannot be deleted at any key count ---
+
+const PROTECTED_KEYS = ["titles", "image", "imageUrls", "status"];
+const wideSeven = () => ({ rating: 2, pricePerMonth: 8000, bedrooms: 5, bathrooms: 4, areaSqM: 150, isFeatured: true, isFurnished: false });
+
+test("TAQ-134: with more than 6 changed keys, deleting titles, image, imageUrls or status is refused, one at a time", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  const ref = doc(me, "Properties/big");
+  assert.equal(Object.keys(wideSeven()).length, 7);
+  for (const key of PROTECTED_KEYS) {
+    await assertFails(updateDoc(ref, { ...wideSeven(), [key]: deleteField() }), `wide edit deleting ${key}`);
+  }
+  await assertFails(updateDoc(ref, { ...wideSeven(), titles: deleteField(), image: deleteField(), imageUrls: deleteField(), status: deleteField() }), "all four");
+  await assertSucceeds(updateDoc(ref, wideSeven()), "the same wide edit without a deletion still works");
+});
+
+test("TAQ-134: a wide edit may still replace a protected key with a valid value, and not with an invalid one", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  const ref = doc(me, "Properties/big");
+  for (const bad of [{ titles: "plain string" }, { titles: null }, { image: null }, { image: 5 }, { imageUrls: null }, { imageUrls: "a.jpg" }, { status: null }, { status: "draft" }]) {
+    await assertFails(updateDoc(ref, { ...wideSeven(), ...bad }), JSON.stringify(bad));
+  }
+  await assertSucceeds(updateDoc(ref, { ...wideSeven(), image: "front.jpg", imageUrls: ["front.jpg", "back.jpg"], status: "rented", "titles.en": "Renamed" }));
+});
+
+test("TAQ-134: with 6 changed keys or fewer, deleting a protected key is refused too", async () => {
+  await seedBig();
+  const me = as("root", CLAIMS.superAdmin);
+  const ref = doc(me, "Properties/big");
+  const five = { rating: 2, pricePerMonth: 8000, bedrooms: 5, bathrooms: 4, areaSqM: 150 };
+  for (const key of PROTECTED_KEYS) {
+    await assertFails(updateDoc(ref, { [key]: deleteField() }), `1 key deleting ${key}`);
+    await assertFails(updateDoc(ref, { ...five, [key]: deleteField() }), `6 keys deleting ${key}`);
+  }
+  await assertSucceeds(updateDoc(ref, five));
+});
+
+test("TAQ-134: a full edit of the maximum-size listing still fits the budget, and deleting a protected key in it is refused", async () => {
+  const me = as("root", CLAIMS.superAdmin);
+  await seedBig();
+  await assertSucceeds(updateDoc(doc(me, "Properties/big"), { ...fullEdit(), updated_at: serverTimestamp() }));
+  for (const key of PROTECTED_KEYS) {
+    await seedBig();
+    await assertFails(updateDoc(doc(me, "Properties/big"), { ...fullEdit(), [key]: deleteField(), updated_at: serverTimestamp() }), `full edit deleting ${key}`);
+  }
+});
