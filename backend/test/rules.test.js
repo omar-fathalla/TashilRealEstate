@@ -620,7 +620,7 @@ test("TAQ-51: a SuperAdmin can still moderate listings directly", async () => {
 // --- TAQ-52: direct listing writes are value-checked ---
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT || "demo-tashil-test";
-const PROD_PROJECT = "tashil-proptech-os";
+const PROD_PROJECT = "qa-fake-prod-xyz";
 const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${PROJECT_ID}.firebasestorage.app/o/listings%2Fprop-1%2Fa.jpg?alt=media`;
 
 test("TAQ-52: a well-formed listing is accepted", async () => {
@@ -758,7 +758,7 @@ test("TAQ-57: in the prod project the prod bucket is accepted and other buckets 
       image: FOREIGN_PROJECT_IMAGE(PROD_PROJECT),
       imageUrls: [
         FOREIGN_PROJECT_IMAGE(PROD_PROJECT),
-        "https://storage.googleapis.com/tashil-proptech-os.appspot.com/listings/b.webp",
+        `https://storage.googleapis.com/${PROD_PROJECT}.appspot.com/listings/b.webp`,
       ],
     })));
     await assertFails(setDoc(ref, listing("owner", { image: FOREIGN_PROJECT_IMAGE(PROJECT_ID) })));

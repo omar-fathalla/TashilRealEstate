@@ -31,15 +31,15 @@ test("TAQ-45: seed.js has no default project", () => {
 });
 
 test("TAQ-45: seed.js refuses the production project without emulators", () => {
-  assert.throws(() => resolveSeedTarget(["--project", "tashil-proptech-os"], {}), /Refusing to seed/);
-  assert.throws(() => resolveSeedTarget([], { GCLOUD_PROJECT: "tashil-proptech-os" }), /Refusing to seed/);
+  assert.throws(() => resolveSeedTarget(["--project", "qa-fake-prod-xyz"], {}), /Refusing to seed/);
+  assert.throws(() => resolveSeedTarget([], { GCLOUD_PROJECT: "qa-fake-prod-xyz" }), /Refusing to seed/);
   // Only the Firestore emulator attached means Auth would still hit the live project.
   assert.throws(
-    () => resolveSeedTarget(["--project", "tashil-proptech-os"], { FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080" }),
+    () => resolveSeedTarget(["--project", "qa-fake-prod-xyz"], { FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080" }),
     /Refusing to seed/,
   );
   assert.throws(
-    () => resolveSeedTarget(["--project", "tashil-proptech-os"], {
+    () => resolveSeedTarget(["--project", "qa-fake-prod-xyz"], {
       FIRESTORE_EMULATOR_HOST: "firestore.example.com:8080",
       FIREBASE_AUTH_EMULATOR_HOST: "auth.example.com:9099",
     }),
@@ -49,11 +49,11 @@ test("TAQ-45: seed.js refuses the production project without emulators", () => {
 
 test("TAQ-45: a live project needs the explicit flag and a password from the environment", () => {
   assert.throws(
-    () => resolveSeedTarget(["--project", "tashil-proptech-os", "--allow-live-project"], {}),
+    () => resolveSeedTarget(["--project", "qa-fake-prod-xyz", "--allow-live-project"], {}),
     /SEED_DEMO_PASSWORD/,
   );
   const target = resolveSeedTarget(
-    ["--project", "tashil-proptech-os", "--allow-live-project"],
+    ["--project", "qa-fake-prod-xyz", "--allow-live-project"],
     { SEED_DEMO_PASSWORD: "a-long-enough-secret" },
   );
   assert.equal(target.live, true);
@@ -62,17 +62,17 @@ test("TAQ-45: a live project needs the explicit flag and a password from the env
 
 test("TAQ-45: demo projects and loopback emulators are allowed", () => {
   assert.equal(resolveSeedTarget(["--project", "demo-tashil-dev"], {}).live, false);
-  assert.equal(resolveSeedTarget(["--project=tashil-proptech-os"], emulatorEnv).live, false);
+  assert.equal(resolveSeedTarget(["--project=qa-fake-prod-xyz"], emulatorEnv).live, false);
 });
 
 test("TAQ-45: running seed.js against production exits before touching Firebase", () => {
-  const result = spawnSync(process.execPath, [SEED, "--project", "tashil-proptech-os"], {
+  const result = spawnSync(process.execPath, [SEED, "--project", "qa-fake-prod-xyz"], {
     env: liveEnv(),
     encoding: "utf8",
     timeout: 20000,
   });
   assert.equal(result.status, 2, result.stdout + result.stderr);
-  assert.match(result.stderr, /Refusing to seed "tashil-proptech-os"/);
+  assert.match(result.stderr, /Refusing to seed "qa-fake-prod-xyz"/);
   assert.doesNotMatch(result.stdout, /Creating user|Seeded/);
 });
 
