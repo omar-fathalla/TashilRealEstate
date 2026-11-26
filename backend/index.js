@@ -926,3 +926,6 @@ exports.releasePropertyLeaseLock = require("./leases").releasePropertyLeaseLock;
 
 // Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
 exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;
+
+// A listing held hidden by moderation is never published, whoever wrote the doc (TAQ-135).
+exports.holdHiddenListingsOffline = require("./hidden_listing_guard").holdHiddenListingsOffline;
