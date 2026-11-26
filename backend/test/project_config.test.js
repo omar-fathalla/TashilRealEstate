@@ -229,6 +229,28 @@ test("TAQ-87: connect-src names the two geocoding hosts the app calls, and the C
   for (const host of ["nominatim.openstreetmap.org", "ipwho.is"]) assert.ok(service.includes(`https://${host}/`), `${host} is used by the app`);
 });
 
+// --- TAQ-155: web App Check (reCAPTCHA Enterprise) must not be blocked once the CSP is enforced ---
+
+test("TAQ-155: the CSP allows the reCAPTCHA Enterprise script, its challenge frames and its network calls", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined, "the CSP stays report-only");
+  const csp = Object.fromEntries(headers["Content-Security-Policy-Report-Only"].split(";").map((d) => {
+    const [name, ...values] = d.trim().split(/\s+/);
+    return [name, values];
+  }));
+  const want = {
+    "script-src": ["https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+    "connect-src": ["https://www.google.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+    "frame-src": ["https://www.google.com/recaptcha/", "https://recaptcha.google.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+  };
+  for (const [directive, origins] of Object.entries(want)) {
+    for (const origin of origins) assert.ok(csp[directive].includes(origin), `${directive} lacks ${origin}`);
+  }
+  assert.ok(!csp["script-src"].includes("'unsafe-inline'") && !csp["script-src"].includes("'unsafe-eval'"), "script-src stays strict");
+  assert.ok(!csp["connect-src"].includes("*") && !csp["frame-src"].includes("*"), "no wildcard sources");
+  assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
+});
+
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
 
 test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {
