@@ -13,6 +13,10 @@ import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.d
 import 'package:tashil_real_estate/core/design_system/drawer/tashil_navigation_drawer.dart';
 import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_navigation_rail.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
+import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_stats.dart';
 import 'views/overview_view.dart';
 import 'views/properties_view.dart';
 import 'views/crm_view.dart';
@@ -25,7 +29,10 @@ import 'package:tashil_real_estate/features/requests/views/requests_inbox_view.d
 import 'package:tashil_real_estate/features/maintenance/views/maintenance_views.dart';
 
 class AgencyDashboard extends StatefulWidget {
-  const AgencyDashboard({super.key});
+  /// The portfolio data source. Tests pass one backed by fakes; the app uses the Firebase one.
+  final PortfolioController? portfolio;
+
+  const AgencyDashboard({super.key, this.portfolio});
 
   @override
   State<AgencyDashboard> createState() => _AgencyDashboardState();
@@ -35,17 +42,43 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
   int _selectedIndex = 0;
   bool _isSidebarCollapsed = false;
 
-  final List<Widget> _views = [
-    const OverviewView(),
-    const PropertiesView(),
-    const CrmView(),
-    const LeasesManagementView(),
-    const RentCollectionView(),
-    const FinancialKpiDashboardView(role: FinancialPortalRole.agency),
-    const InvestorDashboardView(),
-    const RequestsInboxView(agency: true),
-    const MaintenanceManagerView(agency: true),
-  ];
+  late final PortfolioController _portfolio;
+  late final List<Widget> _views;
+
+  @override
+  void initState() {
+    super.initState();
+    _portfolio = widget.portfolio ?? PortfolioController();
+    _portfolio.start();
+    _views = [
+      OverviewView(
+        controller: _portfolio,
+        onNavigate: (tab) => setState(() => _selectedIndex = tab),
+        onAddProperty: () => FastPropertyOnboardingDialog.show(context),
+      ),
+      const PropertiesView(),
+      const CrmView(),
+      const LeasesManagementView(),
+      const RentCollectionView(),
+      const FinancialKpiDashboardView(role: FinancialPortalRole.agency),
+      const InvestorDashboardView(),
+      const RequestsInboxView(agency: true),
+      const MaintenanceManagerView(agency: true),
+    ];
+  }
+
+  @override
+  void dispose() {
+    if (widget.portfolio == null) _portfolio.dispose();
+    super.dispose();
+  }
+
+  PortfolioStats _stats() {
+    final real = PropertyLifecycleService().propertiesNotifier.value.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id)).toList();
+    return PortfolioStats.compute(_portfolio.snapshot, real, countryCode: CountryController.countryCode, now: DateTime.now());
+  }
+
+  static String? _badge(int n) => n > 0 ? '$n' : null;
 
   @override
   Widget build(BuildContext context) {
@@ -57,10 +90,13 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           builder: (context, country, _) {
             final loc = AppLocalizations.of(context);
 
-            return ResponsiveLayout(
-              mobileBody: _buildMobileLayout(context, loc),
-              desktopBody: _buildDesktopLayout(context, loc),
-              tabletBody: _buildMobileLayout(context, loc),
+            return ListenableBuilder(
+              listenable: Listenable.merge([_portfolio, PropertyLifecycleService().propertiesNotifier]),
+              builder: (context, _) => ResponsiveLayout(
+                mobileBody: _buildMobileLayout(context, loc),
+                desktopBody: _buildDesktopLayout(context, loc),
+                tabletBody: _buildMobileLayout(context, loc),
+              ),
             );
           },
         );
@@ -205,7 +241,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.apartment_outlined,
           selectedIcon: Icons.apartment_rounded,
           label: loc.tr('properties'),
-          badgeCount: '120',
+          badgeCount: _badge(_stats().properties),
           isSelected: _selectedIndex == 1,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 1),
@@ -222,7 +258,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.description_outlined,
           selectedIcon: Icons.description_rounded,
           label: loc.tr('leases'),
-          badgeCount: '85',
+          badgeCount: _badge(_stats().activeLeases),
           isSelected: _selectedIndex == 3,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 3),
@@ -231,7 +267,6 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.payments_outlined,
           selectedIcon: Icons.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
-          badgeCount: '3',
           isSelected: _selectedIndex == 4,
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 4),
@@ -420,19 +455,19 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
                       children: [
                         _buildProfileStat(
                           label: loc.tr('properties'),
-                          value: '120',
+                          value: '${_stats().properties}',
                           colorScheme: colorScheme,
                         ),
                         Container(width: 1, height: 20, color: colorScheme.outlineVariant),
                         _buildProfileStat(
                           label: loc.tr('leases'),
-                          value: '85',
+                          value: '${_stats().activeLeases}',
                           colorScheme: colorScheme,
                         ),
                         Container(width: 1, height: 20, color: colorScheme.outlineVariant),
                         _buildProfileStat(
-                          label: loc.tr('crm'),
-                          value: '15',
+                          label: loc.tr('rqInboxTitle'),
+                          value: '${_stats().newViewings + _stats().pendingApplications}',
                           colorScheme: colorScheme,
                         ),
                       ],
@@ -743,7 +778,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.apartment_outlined,
           selectedIcon: Icons.apartment_rounded,
           label: loc.tr('properties'),
-          badgeCount: '120',
+          badgeCount: _badge(_stats().properties),
           isSelected: _selectedIndex == 1,
           onTap: () {
             Navigator.pop(context);
@@ -764,7 +799,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.description_outlined,
           selectedIcon: Icons.description_rounded,
           label: loc.tr('leases'),
-          badgeCount: '85',
+          badgeCount: _badge(_stats().activeLeases),
           isSelected: _selectedIndex == 3,
           onTap: () {
             Navigator.pop(context);
@@ -775,7 +810,6 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           icon: Icons.payments_outlined,
           selectedIcon: Icons.payments_rounded,
           label: loc.tr('rentCollectionTitle'),
-          badgeCount: '3',
           isSelected: _selectedIndex == 4,
           onTap: () {
             Navigator.pop(context);
