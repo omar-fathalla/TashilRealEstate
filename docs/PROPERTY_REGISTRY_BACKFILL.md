@@ -46,11 +46,15 @@ run fails, resume with `--cursor <last printed id>`; ids already registered are 
 | Field | Meaning | Action |
 | --- | --- | --- |
 | `toRegister` | One landlord holds the id and no public listing names someone else | Registered by `--write` |
-| `multipleOwners` | The id exists under more than one owner | Never auto-assigned; needs an override |
+| `multipleOwners` | The id exists under more than one landlord | Never auto-assigned; needs an override |
 | `idConflictCandidates` | Private docs that would be flagged `id_conflict` (multiple owners, or registered to another owner) | Review by hand |
-| `registeredToOther` | Already registered to a uid that is not a holder | Marked for review; never touched |
+| `registeredToOther` | Already registered to a uid that is not a landlord holder of the id | REVIEW; never touched |
+| `registeredToHolder` | Registered to one of several landlord holders, as an override leaves it (`claimed_by` shows how) | Expected after an override; the other holders are `id_conflict` candidates |
 | `publicOwnerMismatch` | The public listing names another owner than the holder | Review; never registered |
-| `nonLandlordOwner` | The only holder is a Tenant or Investor | Never registered |
+| `nonLandlordOwner` | No landlord holds the id; only a Tenant or Investor does | Never registered |
+| `flaggedHolders` | Docs already flagged `id_conflict` | Never count as holders, so a squatter's flagged copy does not block the owner |
+| `nonLandlordHolders` | Tenant or Investor docs beside a landlord's doc | Never count as holders |
+| `holdersWithoutProfile` | Holders with no `Users/{uid}` profile | Counted as landlords (claims-only admins have no profile role); check who they are |
 | `overridden` | Ids resolved by the overrides file | Registered with `claimed_by: backfill-override` |
 | `idFieldIssues` | Private docs whose `id` field is missing or differs from the doc id | Must be 0 before `--write`; fix with `--fix-id-fields --write` |
 
@@ -86,8 +90,9 @@ overrides file naming the holder, a JSON object of `propertyId: ownerUid`:
 BACKFILL_PROD_OK=<prod project id> node scripts/backfill_property_owners.js --prod --project <prod project id> --overrides overrides.json
 ```
 
-An override is refused when the id is not shared, when the named uid is not a holder, or when the
-public listing belongs to another holder. A bad file is refused before any write. Do not commit the
+An override is refused when the id is not shared by two or more landlords, when the named uid is not a
+holder, when it is a Tenant or Investor or its doc is flagged `id_conflict`, or when the public listing
+belongs to another holder. A bad file is refused before any write. Do not commit the
 overrides file.
 
 ## Tests

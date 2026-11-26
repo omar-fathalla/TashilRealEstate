@@ -364,7 +364,8 @@ test("TAQ-126: creating an id that another owner already holds privately is flag
 
   const backfill = require("../scripts/backfill_property_owners");
   const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
-  assert.equal(plan.toRegister.some((r) => r.property_id === "legacy-priv" && r.owner_id === "ownerA"), false, "two holders: the backfill leaves it for review");
+  assert.deepEqual(plan.toRegister.filter((r) => r.property_id === "legacy-priv"), [{ property_id: "legacy-priv", owner_id: "ownerA" }],
+    "the flagged copy does not count as a holder (TAQ-129), so the backfill registers the real owner");
 });
 
 test("TAQ-126: a fresh id still claims, and an id only the same owner holds is not blocked", async () => {
@@ -400,6 +401,27 @@ test("TAQ-128: a legacy private doc without an id field is listed by the backfil
   assert.equal(await flagged("ownerB", "legacy-noid"), true, "the fixed legacy doc is now seen as a holder");
   assert.equal(await registry("legacy-noid"), "");
   assert.equal(await doc("Properties/legacy-noid"), null);
+});
+
+test("TAQ-129: a legacy id squatted after the deploy is registered to the real owner by the backfill, no override needed", async () => {
+  const backfill = require("../scripts/backfill_property_owners");
+  await siloRef("ownerA", "legacy-sq").set(listing({ id: "legacy-sq" }));
+  await ownerWrites("ownerB", "legacy-sq", listing({ id: "legacy-sq" }));
+  assert.equal(await flagged("ownerB", "legacy-sq"), true);
+
+  const log = console.log;
+  console.log = () => {};
+  let code;
+  try {
+    code = await backfill.main(["--project", projectId, "--write"], {}, { db });
+  } finally {
+    console.log = log;
+  }
+  assert.equal(code, 0);
+  assert.equal(await registry("legacy-sq"), "ownerA");
+  await reason(offer("ownerB", "legacy-sq"), "failed-precondition", "property_id_conflict");
+  const { leaseId } = await offer("ownerA", "legacy-sq");
+  assert.equal((await respond(leaseId, "tenantA")).status, "active");
 });
 
 // --- TAQ-125: end to end, the legacy data works after the backfill ---
