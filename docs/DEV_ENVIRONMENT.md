@@ -228,6 +228,7 @@ How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91)
   write) once per project. It prints its target project first and refuses any project id that does
   not start with `demo-` unless `--confirm-project=<that id>` is also given (even for a dry run). It records `pre_hide_published: false`, so such a listing is not
   published automatically when restored.
+- **Property owner registry**: ids created before the registry are registered by `backend/scripts/backfill_property_owners.js` (dry run by default; production needs `--prod`, `BACKFILL_PROD_OK` and `--write`). The production run order is in `docs/PROPERTY_REGISTRY_BACKFILL.md`.
 - **Maintenance requests** must carry `lease_id`, and that lease must link the request's
   `tenant_id`, `owner_id` and `agency_id` (empty on both sides when the lease has no agency).
   Only the lease's tenant or owner can create one.
