@@ -475,14 +475,28 @@ test("TAQ-136: the runbook's backfill commands for dev name the real dev project
   assert.doesNotMatch(doc, /nothing in the repo holds the production project id/i);
 });
 
-// --- TAQ-138: the Android build needs the Gradle version Flutter 3.50 requires ---
+// --- TAQ-138: the Android build needs the Gradle and Android Gradle Plugin versions Flutter 3.50 requires ---
+
+const versionParts = (text) => text.split(".").map((n) => Number(n) || 0);
+const compareVersions = (a, b) => {
+  const [x, y] = [versionParts(a), versionParts(b)];
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+  return 0;
+};
+const gradleVersion = () => read("frontend/android/gradle/wrapper/gradle-wrapper.properties").match(/gradle-(\d+\.\d+(?:\.\d+)?)-(?:all|bin)\.zip/)[1];
+const agpVersion = () => read("frontend/android/settings.gradle.kts").match(/id\("com\.android\.application"\) version "([\d.]+)"/)[1];
 
 test("TAQ-138: the Gradle wrapper is at least 9.3.1 (Flutter 3.50.1 refuses 9.1.0)", () => {
-  const props = read("frontend/android/gradle/wrapper/gradle-wrapper.properties");
-  const version = props.match(/gradle-(\d+)\.(\d+)(?:\.(\d+))?-(?:all|bin)\.zip/);
-  assert.ok(version, "distributionUrl names a Gradle version");
-  const [major, minor, patch] = [version[1], version[2], version[3] || "0"].map(Number);
-  const atLeast = (a, b, c) => major > a || (major === a && (minor > b || (minor === b && patch >= c)));
-  assert.ok(atLeast(9, 3, 1), `Gradle ${major}.${minor}.${patch} is older than 9.3.1`);
-  assert.ok(!atLeast(9, 6, 0), "Flutter 3.50 supports Gradle up to 9.5.0; check the Flutter pin before raising it");
+  const gradle = gradleVersion();
+  assert.ok(compareVersions(gradle, "9.3.1") >= 0, `Gradle ${gradle} is older than 9.3.1`);
+  assert.ok(compareVersions(gradle, "9.6.0") < 0, "Flutter 3.50 supports Gradle up to 9.5.0; check the Flutter pin before raising it");
 });
+
+test("TAQ-138: the Android Gradle Plugin is at least 9.1.1 (flutter build apk fails on 9.0.1) and fits the Gradle wrapper", () => {
+  const agp = agpVersion();
+  assert.ok(compareVersions(agp, "9.1.1") >= 0, `AGP ${agp} is older than the 9.1.1 that Flutter 3.50.1 builds with`);
+  // Flutter's AGP to minimum-Gradle table (flutter_tools gradle_utils.dart).
+  const minGradle = compareVersions(agp, "9.3.0") >= 0 ? "9.5.0" : compareVersions(agp, "9.2.0") >= 0 ? "9.4.1" : "9.3.1";
+  assert.ok(compareVersions(gradleVersion(), minGradle) >= 0, `AGP ${agp} needs Gradle ${minGradle} or newer; the wrapper has ${gradleVersion()}`);
+});
+
