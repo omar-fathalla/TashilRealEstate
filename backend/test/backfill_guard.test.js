@@ -36,23 +36,23 @@ test("TAQ-100: demo- projects need no confirmation", () => {
 });
 
 test("TAQ-100: any other project is refused without an exactly matching --confirm-project", () => {
-  for (const project of ["tashil-proptech-os", "my-project", "Demo-x", "xdemo-x", "demo", "x-demo-y"]) {
+  for (const project of ["qa-fake-prod-xyz", "my-project", "Demo-x", "xdemo-x", "demo", "x-demo-y"]) {
     assert.throws(() => resolveTarget({ project, confirmProject: "" }), /not a demo- project/, project);
     assert.throws(() => resolveTarget({ project, confirmProject: "other" }), /got --confirm-project=other/, project);
     assert.throws(() => resolveTarget({ project, confirmProject: `${project} ` }), /not a demo- project/, project);
     assert.throws(() => resolveTarget({ project, confirmProject: project.toUpperCase() + "x" }), /not a demo- project/, project);
   }
   assert.deepEqual(resolveTarget({ project: "my-project", confirmProject: "my-project" }), { projectId: "my-project", demo: false });
-  assert.equal(resolveTarget({ project: "tashil-proptech-os", confirmProject: "tashil-proptech-os" }).demo, false);
+  assert.equal(resolveTarget({ project: "qa-fake-prod-xyz", confirmProject: "qa-fake-prod-xyz" }).demo, false);
 });
 
 test("TAQ-100: the CLI prints the target first and exits 2 for a real project without confirmation, touching nothing", () => {
   // The Firestore host points nowhere: if the script got past the guard it would fail or hang here.
   const env = { FIRESTORE_EMULATOR_HOST: "127.0.0.1:1" };
   for (const args of [
-    ["--project", "tashil-proptech-os"],
-    ["--project", "tashil-proptech-os", "--apply"],
-    ["--project=some-real-project", "--confirm-project=tashil-proptech-os"],
+    ["--project", "qa-fake-prod-xyz"],
+    ["--project", "qa-fake-prod-xyz", "--apply"],
+    ["--project=some-real-project", "--confirm-project=qa-fake-prod-xyz"],
     ["--project", "some-real-project", "--confirm-project", ""],
   ]) {
     const result = run(args, env);
@@ -61,8 +61,8 @@ test("TAQ-100: the CLI prints the target first and exits 2 for a real project wi
     assert.match(result.stderr, /Refusing to run against/);
     assert.doesNotMatch(result.stdout, /hidden listing/);
   }
-  const first = run(["--project", "tashil-proptech-os", "--apply"], env).stdout.split("\n")[0];
-  assert.equal(first, "Target project: tashil-proptech-os (APPLY: will write)");
+  const first = run(["--project", "qa-fake-prod-xyz", "--apply"], env).stdout.split("\n")[0];
+  assert.equal(first, "Target project: qa-fake-prod-xyz (APPLY: will write)");
 });
 
 test("TAQ-100: the CLI dry-runs a demo- project by default and writes only with --apply", async () => {

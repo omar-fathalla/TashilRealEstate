@@ -1,0 +1,486 @@
+// TAQ-110 N-1 / N-3: the registry backfill (dev and demo only, dry run by default, conflicts are
+// report-only) and the lease audit's read-only production mode. Guard tests use the fake id
+// qa-fake-prod-xyz; the real production id is never passed to either script here.
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { spawnSync } = require("child_process");
+const admin = require("firebase-admin");
+
+if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+  throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
+}
+
+const backfill = require("../scripts/backfill_property_owners");
+const auditScript = require("../scripts/audit_leases");
+
+const projectId = process.env.GCLOUD_PROJECT;
+if (!admin.apps.length) admin.initializeApp({ projectId });
+const db = admin.firestore();
+const FAKE_PROD = "qa-fake-prod-xyz";
+const NOWHERE = { FIRESTORE_EMULATOR_HOST: "127.0.0.1:1", FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:1" };
+
+const run = (script, args, env = {}) => spawnSync(process.execPath, [path.join(__dirname, "../scripts", script), ...args], {
+  encoding: "utf8",
+  timeout: 30000,
+  env: { ...process.env, ...env },
+});
+
+async function clearAll() {
+  await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${projectId}/databases/(default)/documents`, { method: "DELETE" });
+  await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/emulator/v1/projects/${projectId}/accounts`, { method: "DELETE" });
+}
+
+async function user(uid, role) {
+  await admin.auth().createUser({ uid });
+  await admin.auth().setCustomUserClaims(uid, { role });
+  await db.doc(`Users/${uid}`).set({ role });
+}
+
+test.beforeEach(clearAll);
+
+const registry = async () => Object.fromEntries((await db.collection("PropertyOwners").get()).docs.map((d) => [d.id, d.get("owner_id")]));
+
+/** One of each case the backfill sorts ids into. */
+async function seedMixed() {
+  await user("ownerA", "Owner");
+  await user("ownerB", "Owner");
+  await user("agency", "AgencyAdmin");
+  await user("tenantT", "Tenant");
+  const set = (p, data) => db.doc(p).set(data);
+  await set("Users/ownerA/properties/solo-a", { title: "x", rentalStatus: "available" });
+  await set("Users/agency/properties/solo-agency", { title: "x", rentalStatus: "Rented" });
+  await set("Properties/solo-agency", { owner_id: "agency" });
+  await set("Users/ownerA/properties/shared", { title: "x" });
+  await set("Users/ownerB/properties/shared", { title: "x" });
+  await set("Users/ownerB/properties/pub-mismatch", { title: "x" });
+  await set("Properties/pub-mismatch", { owner_id: "ownerA" });
+  await set("Users/tenantT/properties/tenant-only", { title: "x" });
+  await set("Users/ownerA/properties/done", { title: "x" });
+  await set("PropertyOwners/done", { owner_id: "ownerA" });
+  await set("Users/ownerB/properties/other-reg", { title: "x" });
+  await set("PropertyOwners/other-reg", { owner_id: "ownerA" });
+  await set("Users/ownerA/properties/flagged-ok", { title: "x" });
+  await set("Users/ownerB/properties/flagged-ok", { title: "x", id_conflict: true });
+  await set("PropertyOwners/flagged-ok", { owner_id: "ownerA" });
+  await set("Agencies/ag1/properties/not-a-user-tree", { title: "ignored" });
+}
+
+// --- backfill guard ---
+
+test("TAQ-110 N-1: the backfill accepts demo- projects and tashil-aqar-dev only", () => {
+  const base = { project: "demo-x", write: false, prod: false, batchSize: 100, cursor: "", overrides: "" };
+  assert.deepEqual(backfill.parseArgs(["--project", "demo-x"]), base);
+  assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--write"]), { ...base, write: true });
+  assert.deepEqual(backfill.parseArgs(["--project", "p", "--prod", "--batch-size=7", "--cursor", "c1", "--overrides", "o.json"]), { ...base, project: "p", prod: true, batchSize: 7, cursor: "c1", overrides: "o.json" });
+  for (const bad of ["0", "401", "x", "1.5"]) assert.throws(() => backfill.parseArgs(["--project", "p", "--batch-size", bad]), /--batch-size/);
+  assert.throws(() => backfill.parseArgs([]), /--project is required/);
+  assert.throws(() => backfill.parseArgs(["--project", "demo-x", "--apply"]), /Unknown argument/);
+  assert.equal(backfill.resolveTarget("demo-tashil-test"), "demo-tashil-test");
+  assert.equal(backfill.resolveTarget("tashil-aqar-dev"), "tashil-aqar-dev");
+  for (const project of [FAKE_PROD, "Demo-x", "xdemo-x", "tashil-aqar-dev ", "tashil-aqar-dev2", "", undefined]) {
+    assert.throws(() => backfill.resolveTarget(project), /Refusing to run against/, String(project));
+  }
+});
+
+test("TAQ-110 N-1: the backfill CLI refuses any other project before reading or writing anything", () => {
+  for (const args of [["--project", FAKE_PROD], ["--project", FAKE_PROD, "--write"], [`--project=${FAKE_PROD}`, "--write"]]) {
+    const result = run("backfill_property_owners.js", args, NOWHERE);
+    assert.equal(result.status, 2, `${args.join(" ")}: ${result.stdout}${result.stderr}`);
+    assert.match(result.stdout, new RegExp(`^Target project: ${FAKE_PROD} `));
+    assert.match(result.stderr, /Refusing to run against/);
+    assert.doesNotMatch(result.stdout, /Private property docs/);
+  }
+});
+
+// --- backfill on the emulator ---
+
+test("TAQ-110 N-1: the backfill registers single-landlord ids and only reports conflicts", async () => {
+  await seedMixed();
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  assert.equal(plan.privateDocs, 10, "docs outside Users/{uid}/properties are ignored");
+  assert.deepEqual(plan.toRegister.map((x) => `${x.property_id}:${x.owner_id}`).sort(), ["solo-a:ownerA", "solo-agency:agency"]);
+  assert.deepEqual(plan.multipleOwners, [{ property_id: "shared", owners: ["ownerA", "ownerB"] }]);
+  assert.deepEqual(plan.publicOwnerMismatch, [{ property_id: "pub-mismatch", owner_id: "ownerB", public_owner_id: "ownerA" }]);
+  assert.deepEqual(plan.nonLandlordOwner, [{ property_id: "tenant-only", owner_id: "tenantT", role: "Tenant" }]);
+  assert.deepEqual(plan.registeredToOther, [{ property_id: "other-reg", registered_owner_id: "ownerA", holders: ["ownerB"], review: true }]);
+  assert.equal(plan.alreadyRegistered, 2, "a flagged copy beside the registered owner's doc is already handled");
+
+  const before = await registry();
+  const dry = run("backfill_property_owners.js", ["--project", projectId]);
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.match(dry.stdout, new RegExp(`^Target project: ${projectId} \\(dry run: no writes\\)`));
+  assert.match(dry.stdout, /To register \(single landlord\): 2/);
+  assert.match(dry.stdout, /Under more than one owner .*: 1/);
+  assert.match(dry.stdout, /Dry run\. Re-run with --write/);
+  assert.deepEqual(await registry(), before, "the default is a dry run");
+
+  const wrote = run("backfill_property_owners.js", ["--project", projectId, "--write"]);
+  assert.equal(wrote.status, 0, wrote.stderr);
+  assert.match(wrote.stdout, /Registered 2 ids\./);
+  assert.deepEqual(await registry(), { ...before, "solo-a": "ownerA", "solo-agency": "agency" });
+  assert.equal((await db.doc("PropertyOwners/solo-a").get()).get("claimed_by"), "backfill");
+  for (const id of ["shared", "pub-mismatch", "tenant-only"]) {
+    assert.equal((await db.doc(`PropertyOwners/${id}`).get()).exists, false, `${id} stays unregistered`);
+  }
+  assert.equal((await db.doc("Users/ownerB/properties/shared").get()).get("id_conflict"), undefined, "nothing is flagged");
+  assert.equal((await db.doc("Users/ownerB/properties/pub-mismatch").get()).exists, true, "nothing is deleted");
+
+  const again = run("backfill_property_owners.js", ["--project", projectId, "--write"]);
+  assert.match(again.stdout, /Registered 0 ids\./);
+});
+
+test("TAQ-110 N-1: the backfill never overwrites an id registered meanwhile", async () => {
+  await user("ownerA", "Owner");
+  await db.doc("Users/ownerA/properties/late").set({ title: "x" });
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  await db.doc("PropertyOwners/late").set({ owner_id: "someone" });
+  assert.deepEqual(await backfill.applyPlan(db, plan), { registered: 0, skipped: ["late"], cursor: "late" });
+  assert.equal((await db.doc("PropertyOwners/late").get()).get("owner_id"), "someone");
+});
+
+// --- N-3: the read-only production audit ---
+
+test("TAQ-110 N-3: --prod-read-only runs only on the production project and only with AUDIT_PROD_OK naming it", () => {
+  const prodProjects = [FAKE_PROD];
+  assert.deepEqual(auditScript.parseArgs(["--project", FAKE_PROD, "--prod-read-only"]), { project: FAKE_PROD, prodReadOnly: true });
+  assert.equal(auditScript.resolveTarget(FAKE_PROD, { prodReadOnly: true, confirm: FAKE_PROD, prodProjects }), FAKE_PROD);
+  assert.throws(() => auditScript.resolveTarget(FAKE_PROD, { prodReadOnly: true, confirm: "", prodProjects }), /AUDIT_PROD_OK/);
+  assert.throws(() => auditScript.resolveTarget(FAKE_PROD, { prodReadOnly: true, confirm: "yes", prodProjects }), /AUDIT_PROD_OK/);
+  assert.throws(() => auditScript.resolveTarget(FAKE_PROD, { prodReadOnly: true, confirm: `${FAKE_PROD} `, prodProjects }), /AUDIT_PROD_OK/);
+  assert.throws(() => auditScript.resolveTarget(FAKE_PROD, { prodProjects }), /runs on demo- projects/, "production needs the read-only flag");
+  for (const project of ["tashil-aqar-dev", "demo-x", "other"]) {
+    assert.throws(() => auditScript.resolveTarget(project, { prodReadOnly: true, confirm: project, prodProjects }), /only for the production project/);
+  }
+  assert.throws(() => auditScript.resolveTarget(FAKE_PROD, { prodReadOnly: true, confirm: FAKE_PROD, prodProjects: [] }), /only for the production project/);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rc-"));
+  fs.writeFileSync(path.join(dir, ".firebaserc"), JSON.stringify({ projects: { prod: FAKE_PROD, dev: "tashil-aqar-dev" } }));
+  assert.deepEqual(auditScript.prodProjectsFromConfig(path.join(dir, ".firebaserc")), [FAKE_PROD]);
+  assert.deepEqual(auditScript.prodProjectsFromConfig(path.join(dir, "missing")), []);
+});
+
+test("TAQ-110 N-3: the audit CLI refuses a project that is not production in read-only mode, reading nothing", () => {
+  for (const [args, env] of [
+    [["--project", FAKE_PROD, "--prod-read-only"], { AUDIT_PROD_OK: FAKE_PROD }],
+    [["--project", FAKE_PROD], { AUDIT_PROD_OK: FAKE_PROD }],
+    [["--project", "tashil-aqar-dev", "--prod-read-only"], { AUDIT_PROD_OK: "tashil-aqar-dev" }],
+  ]) {
+    const result = run("audit_leases.js", args, { ...NOWHERE, ...env });
+    assert.equal(result.status, 1, `${args.join(" ")}: ${result.stdout}${result.stderr}`);
+    assert.match(result.stderr, /Refusing project/);
+    assert.equal(result.stdout, "");
+  }
+});
+
+test("TAQ-110 N-3: the read-only wrapper throws on every write method of Firestore and Auth", async () => {
+  await user("ownerA", "Owner");
+  await db.doc("Users/ownerA/properties/p1").set({ title: "x" });
+  await db.doc("Leases/l1").set({ status: "active", owner_id: "ownerA", property_id: "p1" });
+  const ro = auditScript.readOnly(db);
+  const roAuth = auditScript.readOnly(admin.auth());
+  const col = ro.collection("Leases");
+  const ref = ro.doc("Leases/l1");
+  const snap = await col.get();
+  const docSnap = await ref.get();
+  const group = await ro.collectionGroup("properties").get();
+  const viaForEach = [];
+  snap.forEach((d) => viaForEach.push(d));
+  const reachable = {
+    db: ro, collection: col, query: col.where("status", "==", "active"), doc: ref, nested: ro.collection("Users").doc("ownerA").collection("properties").doc("p1"),
+    snapRef: snap.docs[0].ref, forEachRef: viaForEach[0].ref, docSnapRef: docSnap.ref, groupRef: group.docs[0].ref,
+    parent: ref.parent, refFirestore: ref.firestore, snapQuery: snap.query,
+  };
+  const writes = ["set", "update", "delete", "create", "add", "batch", "runTransaction", "bulkWriter", "recursiveDelete"];
+  for (const [name, target] of Object.entries(reachable)) {
+    for (const method of writes) {
+      assert.throws(() => target[method]({ x: 1 }), /Read-only audit/, `${name}.${method}`);
+    }
+  }
+  for (const method of ["setCustomUserClaims", "createUser", "updateUser", "deleteUser", "deleteUsers", "importUsers", "revokeRefreshTokens", "createCustomToken", "generatePasswordResetLink", "createSessionCookie"]) {
+    assert.throws(() => roAuth[method]("ownerA", {}), /Read-only audit/, `auth.${method}`);
+  }
+  assert.throws(() => { ro.settings = {}; }, /Read-only audit/);
+  assert.throws(() => { delete ref.id; }, /Read-only audit/);
+
+  assert.equal(docSnap.get("status"), "active", "reads still work");
+  assert.equal(snap.size, 1);
+  assert.equal((await roAuth.getUser("ownerA")).customClaims.role, "Owner");
+  assert.deepEqual((await ro.getAll(ro.doc("Leases/l1"))).map((d) => d.id), ["l1"]);
+  assert.equal((await db.doc("Leases/l1").get()).get("x"), undefined, "nothing was written");
+});
+
+test("TAQ-110 N-3: the audit gives the same report through the wrapper; the production view is counts and ids only", async () => {
+  await seedMixed();
+  const base = { status: "active", agency_id: "", country_code: "AE", start_date: "2026-01-01", end_date: "2099-12-31", tenant_name: "Secret Tenant", tenant_phone: "+971500000000" };
+  await db.doc("Leases/live").set({ ...base, owner_id: "ownerA", tenant_id: "t1", property_id: "solo-a", monthly_rent: 7777 });
+  await db.doc("Leases/squat").set({ ...base, owner_id: "ownerB", tenant_id: "t2", property_id: "other-reg", monthly_rent: 8888 });
+  await db.doc("PropertyLeaseLocks/solo-a").set({ lease_id: "live", property_id: "solo-a" });
+  await db.doc("PropertyLeaseLocks/other-reg").set({ lease_id: "squat", property_id: "other-reg" });
+
+  const raw = await auditScript.audit(db, admin.auth());
+  const wrapped = await auditScript.audit(auditScript.readOnly(db), auditScript.readOnly(admin.auth()));
+  assert.deepEqual(JSON.parse(JSON.stringify(wrapped)), JSON.parse(JSON.stringify(raw)));
+
+  assert.deepEqual(raw.idsUnderMultipleOwners.map((x) => x.property_id).sort(), ["flagged-ok", "shared"]);
+  assert.deepEqual(raw.publicOwnerMismatch.map((x) => x.property_id), ["pub-mismatch"]);
+  assert.deepEqual(raw.unregisteredIds, ["pub-mismatch", "shared", "solo-a", "solo-agency", "tenant-only"]);
+  assert.deepEqual(raw.lockOwnerNotRegistered.map((x) => x.property_id), ["other-reg", "solo-a"]);
+  assert.deepEqual(raw.rentalStatusAll, { available: 1, rented: 1, "(unset)": 8 });
+  assert.deepEqual(raw.rentalStatusLiveLeased, { available: 1, "(unset)": 1 });
+
+  const prod = JSON.stringify(auditScript.idsOnly(raw));
+  for (const secret of ["Secret Tenant", "+971500000000", "7777", "8888", "tenant_name", "owner_id", "t1", "t2"]) {
+    assert.ok(!prod.includes(secret), `production output leaks ${secret}`);
+  }
+  const view = auditScript.idsOnly(raw);
+  assert.equal(view.leases, 2);
+  assert.deepEqual(view.statusCounts, { active: 2 });
+  assert.equal(view.locks, 2);
+  assert.equal(view.unregisteredIds, 5);
+  assert.deepEqual(view.lockOwnerNotRegistered, ["other-reg", "solo-a"]);
+  assert.deepEqual(view.rentalStatusAll, raw.rentalStatusAll);
+});
+
+// --- TAQ-125: production-capable, guarded backfill ---
+
+/** Runs the CLI function in-process with the console captured. */
+async function runMain(argv, env = {}, deps = {}) {
+  const out = [];
+  const err = [];
+  const log = console.log;
+  const error = console.error;
+  console.log = (...a) => out.push(a.join(" "));
+  console.error = (...a) => err.push(a.join(" "));
+  try {
+    const code = await backfill.main(argv, env, { db, prodProjects: [FAKE_PROD], ...deps });
+    return { code, out: out.join("\n"), err: err.join("\n") };
+  } finally {
+    console.log = log;
+    console.error = error;
+  }
+}
+
+const jsonReport = (out) => JSON.parse(out.slice(out.indexOf("JSON report:") + "JSON report:".length, out.lastIndexOf("}") + 1));
+
+/** The production audit's shape: 4 owners, 8 ids, 6 under both the agency admin and the super admin. */
+async function seedProdLike() {
+  // No Firebase Auth users at all: the backfill must not need Auth.
+  const profile = (uid, role) => db.doc(`Users/${uid}`).set({ role });
+  await Promise.all([profile("ownerA", "Owner"), profile("ownerB", "Owner"), profile("agency", "AgencyAdmin"), profile("root", "SuperAdmin")]);
+  const shared = ["prop-ae-101", "prop-ae-102", "prop-eg-101", "prop-eg-102", "prop-eg-103", "prop-eg-104"];
+  for (const id of shared) {
+    await db.doc(`Users/agency/properties/${id}`).set({ id, title: "seed" });
+    await db.doc(`Users/root/properties/${id}`).set({ id, title: "seed" });
+  }
+  await db.doc("Users/ownerA/properties/pub-a").set({ id: "pub-a", title: "A", rentalStatus: "available" });
+  await db.doc("Users/ownerB/properties/pub-b").set({ id: "pub-b", title: "B" });
+  await db.doc("Properties/pub-a").set({ owner_id: "ownerA", is_published: true });
+  await db.doc("Properties/pub-b").set({ owner_id: "ownerB", is_published: true });
+  return shared;
+}
+
+test("TAQ-125: production needs --prod, BACKFILL_PROD_OK equal to the project id, and --write to write", async () => {
+  const prodProjects = [FAKE_PROD];
+  assert.equal(backfill.resolveTarget(FAKE_PROD, { prod: true, confirm: FAKE_PROD, prodProjects }), FAKE_PROD);
+  assert.throws(() => backfill.resolveTarget(FAKE_PROD, { prodProjects }), /Pass --prod/);
+  assert.throws(() => backfill.resolveTarget(FAKE_PROD, { prod: true, prodProjects }), /BACKFILL_PROD_OK/);
+  for (const confirm of ["yes", "true", `${FAKE_PROD} `, FAKE_PROD.toUpperCase(), "demo-x"]) {
+    assert.throws(() => backfill.resolveTarget(FAKE_PROD, { prod: true, confirm, prodProjects }), /BACKFILL_PROD_OK/, confirm);
+  }
+  for (const project of ["tashil-aqar-dev", "demo-x", "other"]) {
+    assert.throws(() => backfill.resolveTarget(project, { prod: true, confirm: project, prodProjects }), /only for the production project/, project);
+  }
+  assert.throws(() => backfill.resolveTarget(FAKE_PROD, { prod: true, confirm: FAKE_PROD, prodProjects: [] }), /only for the production project/);
+  assert.equal(backfill.resolveTarget("demo-x", { prodProjects }), "demo-x");
+
+  const base = ["--project", FAKE_PROD];
+  for (const [argv, env, expected] of [
+    [base, {}, /Pass --prod/],
+    [[...base, "--write"], {}, /Pass --prod/],
+    [[...base, "--prod"], {}, /BACKFILL_PROD_OK/],
+    [[...base, "--prod", "--write"], { BACKFILL_PROD_OK: "other" }, /BACKFILL_PROD_OK/],
+    [["--project", "demo-x", "--prod"], { BACKFILL_PROD_OK: "demo-x" }, /only for the production project/],
+  ]) {
+    await seedProdLike();
+    const before = await registry();
+    const r = await runMain(argv, env);
+    assert.equal(r.code, 2, `${argv.join(" ")}: ${r.err}`);
+    assert.match(r.out, new RegExp(`^Target project: ${argv[1]} `), "the target is printed first");
+    assert.match(r.err, expected);
+    assert.doesNotMatch(r.out, /Private property docs/, "nothing is read when refused");
+    assert.deepEqual(await registry(), before);
+  }
+});
+
+test("TAQ-125: the prod CLI refuses without the flags or env before reading (real process, fake id)", () => {
+  // .firebaserc names the real prod id, so the fake id is not production there: it is refused outright.
+  for (const [args, env] of [[["--project", FAKE_PROD, "--prod"], { BACKFILL_PROD_OK: FAKE_PROD }], [["--project", FAKE_PROD, "--prod", "--write"], {}]]) {
+    const result = run("backfill_property_owners.js", args, { ...NOWHERE, ...env });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stdout, new RegExp(`^Target project: ${FAKE_PROD} \\(PROD, `));
+    assert.match(result.stderr, /Refusing to run against/);
+  }
+});
+
+test("TAQ-125: the prod dry run lists the 6 shared seed ids as multi-owner conflicts and writes nothing", async () => {
+  const shared = await seedProdLike();
+  const before = JSON.stringify(await registry());
+  const r = await runMain(["--project", FAKE_PROD, "--prod"], { BACKFILL_PROD_OK: FAKE_PROD });
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, new RegExp(`^Target project: ${FAKE_PROD} \\(PROD, dry run: no writes\\)`));
+  assert.match(r.out, /Dry run\. Re-run with --write/);
+  assert.doesNotMatch(r.out, /Batch done/);
+  const report = jsonReport(r.out);
+  assert.equal(report.mode, "dry-run");
+  assert.deepEqual(report.counts, {
+    privateDocs: 14, ids: 8, alreadyRegistered: 0, toRegister: 2, multipleOwners: 6, publicOwnerMismatch: 0,
+    nonLandlordOwner: 0, registeredToOther: 0, idConflictCandidates: 12, overridden: 0,
+  });
+  assert.deepEqual(report.multipleOwners.map((x) => x.property_id), [...shared].sort());
+  for (const m of report.multipleOwners) assert.deepEqual(m.owners, ["agency", "root"]);
+  assert.deepEqual(report.toRegister.map((x) => `${x.property_id}:${x.owner_id}`), ["pub-a:ownerA", "pub-b:ownerB"]);
+  assert.equal(report.idConflictCandidates.filter((c) => c.reason === "multiple_owners").length, 12);
+  assert.equal(JSON.stringify(await registry()), before, "a dry run writes nothing");
+  assert.equal((await db.collection("AdminAlerts").get()).size, 0);
+});
+
+test("TAQ-125: --write registers the single-owner and public ids and never assigns the multi-owner ones", async () => {
+  const shared = await seedProdLike();
+  const argv = ["--project", FAKE_PROD, "--prod", "--write"];
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+  const r = await runMain(argv, env);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, new RegExp(`^Target project: ${FAKE_PROD} \\(PROD, WRITE`));
+  assert.match(r.out, /Registered 2 ids\./);
+  assert.match(r.out, /Last cursor: pub-b/);
+  assert.deepEqual(await registry(), { "pub-a": "ownerA", "pub-b": "ownerB" });
+  for (const id of shared) assert.equal((await db.doc(`PropertyOwners/${id}`).get()).exists, false, id);
+  assert.equal((await db.doc("Users/root/properties/prop-ae-101").get()).get("id_conflict"), undefined, "nothing is flagged");
+  assert.equal((await db.collection("AdminAlerts").get()).size, 0);
+  const docs = (await db.collectionGroup("properties").get()).size;
+  assert.equal(docs, 14, "nothing is deleted");
+
+  const again = await runMain(argv, env);
+  assert.match(again.out, /Registered 0 ids\./, "idempotent");
+  assert.deepEqual(await registry(), { "pub-a": "ownerA", "pub-b": "ownerB" });
+});
+
+test("TAQ-125: an explicit per-id override resolves a shared id; bad entries are refused before any write", async () => {
+  await seedProdLike();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ov-"));
+  const file = (data) => {
+    const f = path.join(dir, `o-${Math.random()}.json`);
+    fs.writeFileSync(f, JSON.stringify(data));
+    return f;
+  };
+  const argv = (f) => ["--project", FAKE_PROD, "--prod", "--write", "--overrides", f];
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+
+  for (const [bad, expected] of [
+    [{ "prop-ae-101": "ownerA" }, /does not hold that id/],
+    [{ "pub-a": "ownerA" }, /not held by more than one owner/],
+    [{ "no-such-id": "agency" }, /not held by more than one owner/],
+    [["x"], /JSON object/],
+    [{ "prop-ae-101": "" }, /Invalid override/],
+  ]) {
+    const r = await runMain(argv(file(bad)), env);
+    assert.equal(r.code, 2, JSON.stringify(bad));
+    assert.match(r.err, expected);
+    assert.deepEqual(await registry(), {}, "a refused override file writes nothing");
+  }
+
+  const f = file({ "prop-ae-101": "agency", "prop-eg-104": "root" });
+  const dry = await runMain(["--project", FAKE_PROD, "--prod", "--overrides", f], env);
+  const report = jsonReport(dry.out);
+  assert.equal(report.counts.overridden, 2);
+  assert.equal(report.counts.multipleOwners, 4, "the other 4 stay unresolved");
+  assert.deepEqual(await registry(), {}, "the dry run still writes nothing");
+
+  const wrote = await runMain(argv(f), env);
+  assert.equal(wrote.code, 0, wrote.err);
+  assert.deepEqual(await registry(), { "pub-a": "ownerA", "pub-b": "ownerB", "prop-ae-101": "agency", "prop-eg-104": "root" });
+  assert.equal((await db.doc("PropertyOwners/prop-ae-101").get()).get("claimed_by"), "backfill-override");
+  assert.equal((await db.doc("PropertyOwners/pub-a").get()).get("claimed_by"), "backfill");
+  assert.equal((await db.doc("PropertyOwners/prop-eg-101").get()).exists, false);
+});
+
+test("TAQ-125: an override is refused when the public listing belongs to another holder", async () => {
+  await seedProdLike();
+  await db.doc("Properties/prop-ae-102").set({ owner_id: "root" });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ov-"));
+  const f = path.join(dir, "o.json");
+  fs.writeFileSync(f, JSON.stringify({ "prop-ae-102": "agency" }));
+  const r = await runMain(["--project", FAKE_PROD, "--prod", "--write", "--overrides", f], { BACKFILL_PROD_OK: FAKE_PROD });
+  assert.equal(r.code, 2);
+  assert.match(r.err, /public listing belongs to "root"/);
+  assert.deepEqual(await registry(), {});
+});
+
+test("TAQ-125: the backfill needs no Firebase Auth and tenants and investors never get an id", async () => {
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await db.doc("Users/inv").set({ role: "Investor" });
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  for (const [uid, id] of [["tenantT", "t-1"], ["inv", "i-1"], ["ownerA", "o-1"]]) await db.doc(`Users/${uid}/properties/${id}`).set({ id });
+  const r = await runMain(["--project", "demo-x", "--write"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  assert.deepEqual(await registry(), { "o-1": "ownerA" });
+  assert.deepEqual(jsonReport(r.out).nonLandlordOwner.map((x) => x.role).sort(), ["Investor", "Tenant"]);
+  assert.equal((await admin.auth().listUsers()).users.length, 0, "no Auth user was needed");
+});
+
+test("TAQ-125: registeredToOther rows are marked for review and listed as id_conflict candidates", async () => {
+  await seedMixed();
+  const r = await runMain(["--project", "demo-x"], {}, { prodProjects: [] });
+  const report = jsonReport(r.out);
+  assert.deepEqual(report.registeredToOther, [{ property_id: "other-reg", registered_owner_id: "ownerA", holders: ["ownerB"], review: true }]);
+  assert.match(r.out, /REVIEW; left as is\): 1/);
+  assert.ok(report.idConflictCandidates.some((c) => c.property_id === "other-reg" && c.owner_id === "ownerB" && c.reason === "registered_to_other"));
+  assert.ok(report.idConflictCandidates.some((c) => c.property_id === "pub-mismatch" && c.reason === "public_owner_mismatch"));
+  assert.equal(report.idConflictCandidates.filter((c) => c.property_id === "shared").length, 2);
+});
+
+test("TAQ-125: writes go in batches with a cursor, resume after a failure, and skip ids that changed meanwhile", async () => {
+  await user("ownerA", "Owner");
+  const ids = ["b1", "b2", "b3", "b4", "b5"];
+  for (const id of ids) await db.doc(`Users/ownerA/properties/${id}`).set({ id });
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db, { pageSize: 2 }));
+  assert.equal(plan.ids, 5, "paged scan sees every doc");
+
+  const batches = [];
+  const first = await backfill.applyPlan(db, plan, { batchSize: 2, onBatch: (b) => batches.push(b.cursor) });
+  assert.deepEqual(batches, ["b2", "b4", "b5"]);
+  assert.equal(first.registered, 5);
+
+  await clearAll();
+  await user("ownerA", "Owner");
+  for (const id of ids) await db.doc(`Users/ownerA/properties/${id}`).set({ id });
+  let calls = 0;
+  const flaky = new Proxy(db, {
+    get(target, prop) {
+      if (prop === "runTransaction") {
+        return (fn) => {
+          calls += 1;
+          if (calls === 2) return Promise.reject(new Error("deadline exceeded"));
+          return target.runTransaction(fn);
+        };
+      }
+      const v = target[prop];
+      return typeof v === "function" ? v.bind(target) : v;
+    },
+  });
+  await assert.rejects(backfill.applyPlan(flaky, plan, { batchSize: 2 }), (err) => {
+    assert.equal(err.cursor, "b2", "the cursor is the last finished batch");
+    return true;
+  });
+  assert.deepEqual(Object.keys(await registry()).sort(), ["b1", "b2"]);
+
+  await db.doc("PropertyOwners/b4").set({ owner_id: "someone" });
+  await db.doc("Users/ownerA/properties/b5").delete();
+  const resumed = await backfill.applyPlan(db, plan, { batchSize: 2, cursor: "b2" });
+  assert.deepEqual(resumed.skipped.sort(), ["b4", "b5"], "registered meanwhile, or the private doc is gone");
+  assert.equal(resumed.registered, 1);
+  assert.deepEqual(await registry(), { b1: "ownerA", b2: "ownerA", b3: "ownerA", b4: "someone" });
+});

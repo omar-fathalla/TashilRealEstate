@@ -17,6 +17,7 @@ import 'package:tashil_real_estate/core/services/firestore_service.dart';
 import 'package:tashil_real_estate/core/services/location/gps_service.dart';
 import 'package:tashil_real_estate/core/services/location/location_geocoding_service.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
+import 'package:tashil_real_estate/core/utils/property_ids.dart';
 import 'package:tashil_real_estate/core/widgets/public_header_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tashil_real_estate/core/services/storage/property_draft_cache_service.dart';
@@ -510,7 +511,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final propId = isEditing ? widget.existingPropertyId! : 'prop-${DateTime.now().millisecondsSinceEpoch}';
+      final propId = isEditing ? widget.existingPropertyId! : newPropertyId();
       final cityCode = deriveCityCode(
         city: _draft.city,
         district: _draft.district,
@@ -686,7 +687,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         setState(() => _isSubmitting = false);
         TashilSnackBar.showError(
           context: context,
-          message: 'Error publishing listing: $e',
+          message: loc.tr(propertySaveErrorKey(e, creating: !isEditing)),
         );
       }
     }

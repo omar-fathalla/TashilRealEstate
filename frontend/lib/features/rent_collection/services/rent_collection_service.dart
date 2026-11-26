@@ -475,7 +475,7 @@ class RentCollectionService {
             transactionReference: inst.transactionRef ?? existing.transactionReference,
             payoutStatus: isPaid ? 'transferred_to_owner' : 'pending',
             payoutReference: isPaid
-                ? (existing.payoutReference ?? (inst.transactionRef != null ? 'SETTLE-${inst.transactionRef}' : 'SETTLE-NBE-882194'))
+                ? (existing.payoutReference ?? (inst.transactionRef != null ? 'SETTLE-${inst.transactionRef}' : null))
                 : null,
             payoutSettledAt: isPaid ? (inst.paidAt ?? existing.payoutSettledAt ?? now) : null,
             isDeleted: isSoftDeleted || existing.isDeleted,
@@ -513,10 +513,10 @@ class RentCollectionService {
             status: invoiceStatus,
             paidAt: isPaid ? (inst.paidAt ?? now) : null,
             paymentMethod: isPaid ? (inst.paymentMethod ?? 'card') : null,
-            transactionReference: isPaid ? (inst.transactionRef ?? 'PAY-MEEZA-994821') : null,
+            transactionReference: isPaid ? inst.transactionRef : null,
             platformFeePercent: 1.5,
             payoutStatus: isPaid ? 'transferred_to_owner' : 'pending',
-            payoutReference: isPaid ? (inst.transactionRef != null ? 'SETTLE-${inst.transactionRef}' : 'SETTLE-NBE-882194') : null,
+            payoutReference: isPaid && inst.transactionRef != null ? 'SETTLE-${inst.transactionRef}' : null,
             payoutSettledAt: isPaid ? (inst.paidAt ?? now) : null,
             isDeleted: isSoftDeleted,
             deletedAt: deletedAt,
@@ -741,67 +741,6 @@ class RentCollectionService {
     } catch (_) {
       return null;
     }
-  }
-
-  /// Execute payment & automated split payout.
-  ///
-  /// Synchronizes directly with [PropertyLifecycleService] if linked to a property installment.
-  Future<RentInvoiceModel> payInvoice({
-    required String invoiceId,
-    required String paymentMethod,
-    required String transactionReference,
-  }) async {
-    // Simulate gateway processing
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final now = DateTime.now();
-    final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
-    final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
-
-    if (index == -1) {
-      throw Exception('Invoice not found: $invoiceId');
-    }
-
-    final current = updatedList[index];
-    final isUAE = current.countryCode == 'AE';
-    final bankPrefix = isUAE ? 'SETTLE-ENBD' : 'SETTLE-NBE';
-    final randomSuffix = (100000 + (now.millisecondsSinceEpoch % 900000)).toString();
-    final payoutRef = '$bankPrefix-$randomSuffix';
-
-    final paidInvoice = current.copyWith(
-      status: 'paid',
-      paidAt: now,
-      paymentMethod: paymentMethod,
-      transactionReference: transactionReference,
-      payoutStatus: 'transferred_to_owner',
-      payoutReference: payoutRef,
-      payoutSettledAt: now,
-    );
-
-    updatedList[index] = paidInvoice;
-    invoicesNotifier.value = updatedList;
-
-    // Two-way synchronization: update the property installment in PropertyLifecycleService
-    if (current.propertyId != null && current.monthKey != null) {
-      InstallmentPaymentStatus instStatus;
-      if (paymentMethod.contains('cash')) {
-        instStatus = InstallmentPaymentStatus.paidCash;
-      } else if (paymentMethod.contains('wire') || paymentMethod.contains('bank')) {
-        instStatus = InstallmentPaymentStatus.paidBankWire;
-      } else {
-        instStatus = InstallmentPaymentStatus.paidOnline;
-      }
-
-      await PropertyLifecycleService().recordInstallmentPayment(
-        propertyId: current.propertyId!,
-        monthKey: current.monthKey!,
-        status: instStatus,
-        paymentMethod: paymentMethod,
-        notes: 'سداد عبر بوابة تحصيل الإيجار - مرجع $transactionReference',
-      );
-    }
-
-    return paidInvoice;
   }
 
   // Send intelligent reminder (WhatsApp / SMS / Email)

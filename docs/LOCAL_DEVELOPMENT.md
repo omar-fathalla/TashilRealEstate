@@ -65,8 +65,9 @@ The Functions emulator used to crash on the first server-timestamp write
 (`Cannot read properties of undefined (reading 'serverTimestamp')`): the emulator wraps
 `admin.firestore`, which drops its static `FieldValue`/`Timestamp`. The callables and the
 marketplace sync now import them from `firebase-admin/firestore`, and
-`npm run test:emulator` checks that inside the real emulator. `processRentPayment` still
-uses the old form and will fail the same way in the emulator until TAQ-16 touches it.
+`npm run test:emulator` checks that inside the real emulator. The payment functions
+(`createRentPaymentIntent`, `paymobWebhook`) use the same imports and run in that smoke test
+against a local fake gateway.
 
 ## Demo accounts
 

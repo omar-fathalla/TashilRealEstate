@@ -245,16 +245,25 @@ test("TAQ-55: an unpublished listing from any user does not create /Properties/{
   }
 });
 
-test("TAQ-55: a placeholder attempt does not block the real owner's later publish", async () => {
+test("TAQ-55: a placeholder attempt by a non-landlord does not block the real owner's later publish", async () => {
   await db.doc("Users/tenantT").set({ role: "Tenant" });
   await ownerWrites("tenantT", "contested", privateListing({ isPublished: false }));
-  await ownerWrites("ownerB", "contested", privateListing({ isPublished: false }));
 
   await ownerWrites("ownerA", "contested", privateListing({ titles: { en: "Real owner" } }));
   const pub = await publicDoc("contested");
   assert.equal(pub.owner_id, "ownerA");
   assert.equal(pub.is_published, true);
   assert.equal(pub.titles.en, "Real owner");
+  assert.equal((await db.doc("PropertyOwners/contested").get()).get("owner_id"), "ownerA");
+});
+
+test("TAQ-110: the first landlord to create an id holds it; a later owner's doc is flagged and never publishes", async () => {
+  await ownerWrites("ownerB", "contested", privateListing({ isPublished: false }));
+  assert.equal((await db.doc("PropertyOwners/contested").get()).get("owner_id"), "ownerB");
+  await ownerWrites("ownerA", "contested", privateListing({ titles: { en: "Too late" } }));
+  assert.equal(await publicDoc("contested"), null);
+  assert.equal((await db.doc("Users/ownerA/properties/contested").get()).get("id_conflict"), true);
+  assert.equal((await db.doc("PropertyOwners/contested").get()).get("owner_id"), "ownerB");
 });
 
 test("TAQ-55: unpublishing or deleting an unowned id never creates or removes anything", async () => {

@@ -11,6 +11,7 @@ import '../../../core/localization/locale_controller.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../virtual_staging/widgets/ai_virtual_staging_dialog.dart';
 import '../../voice_broker/widgets/gemini_voice_broker_dialog.dart';
+import '../../requests/widgets/request_listing_sheet.dart';
 import '../models/property_item.dart';
 
 class PropertyDetailsDialog extends StatefulWidget {
@@ -31,9 +32,6 @@ class PropertyDetailsDialog extends StatefulWidget {
 }
 
 class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  bool _isSubmitting = false;
   String _selectedAction = 'booking';
 
   void _handleActionSelected(String action) {
@@ -47,123 +45,14 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
   void _showBookingBottomSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    final loc = AppLocalizations.of(context);
-    final lang = LocaleController.languageCode;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-                top: 24,
-                left: 24,
-                right: 24,
-              ),
-              child: StatefulBuilder(
-                builder: (context, setModalState) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        loc.tr('bookingTitle'),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.property.getTitle(lang),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: loc.tr('fullName'),
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: loc.tr('phoneWhatsapp'),
-                          prefixIcon: const Icon(Icons.phone_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      TashilButton(
-                        onPressed: _isSubmitting
-                            ? null
-                            : () async {
-                                if (_nameController.text.trim().isEmpty ||
-                                    _phoneController.text.trim().isEmpty) {
-                                  TashilSnackBar.showWarning(
-                                    context: context,
-                                    message: loc.tr('fillAllFields'),
-                                  );
-                                  return;
-                                }
-
-                                final nav = Navigator.of(ctx);
-
-                                setModalState(() => _isSubmitting = true);
-                                await Future.delayed(const Duration(milliseconds: 900));
-                                if (context.mounted) {
-                                  setModalState(() => _isSubmitting = false);
-                                  nav.pop();
-                                  TashilSnackBar.showSuccess(
-                                    context: context,
-                                    message: loc.tr('bookingSuccess'),
-                                  );
-                                }
-                              },
-                        label: loc.tr('confirmBooking'),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
+    RequestListingSheet.show(
+      context,
+      listingId: widget.property.id,
+      listingTitle: widget.property.getTitle(LocaleController.languageCode),
     );
   }
 

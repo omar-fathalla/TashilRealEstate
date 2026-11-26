@@ -11,7 +11,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 test("TAQ-44: the default Firebase project is a demo project; production needs the prod alias", () => {
   const rc = JSON.parse(read(".firebaserc"));
   assert.match(rc.projects.default, /^demo-/);
-  assert.equal(rc.projects.prod, "tashil-proptech-os");
+  assert.match(rc.projects.prod, /^[a-z][a-z0-9-]+$/);
+  assert.doesNotMatch(rc.projects.prod, /^demo-/);
 });
 
 test("TAQ-44: backend scripts that touch a live project name it explicitly", () => {
@@ -24,7 +25,7 @@ test("TAQ-44: backend scripts that touch a live project name it explicitly", () 
 });
 
 test("TAQ-44: seed.js has no hard-coded project id", () => {
-  assert.doesNotMatch(read("backend/seed.js"), /tashil-proptech-os/);
+  assert.doesNotMatch(read("backend/seed.js"), new RegExp(JSON.parse(read(".firebaserc")).projects.prod));
 });
 
 test("TAQ-44: the Flutter version pin is consistent", () => {
@@ -152,7 +153,7 @@ test("TAQ-78: .secret.local, .secret.*.local and .env*.local are ignored; exampl
     "backend/.secret.local",
     "backend/.secret.prod.local",
     "backend/.env.local",
-    "backend/.env.tashil-proptech-os.local",
+    "backend/.env.qa-fake-prod-xyz.local",
     "frontend/.env.local",
   ]) {
     assert.equal(ignored(file), true, `${file} must be ignored`);
@@ -196,7 +197,7 @@ test("TAQ-100 (F4 follow-up): backend/.secret*.json and backend/.env.* are ignor
     "backend/.secret.json",
     "backend/.secret-prod.json",
     "backend/.secret.service-account.json",
-    "backend/.env.tashil-proptech-os",
+    "backend/.env.qa-fake-prod-xyz",
     "backend/.env.some-project",
     "backend/.env.production",
   ]) {
@@ -288,11 +289,11 @@ test("TAQ-79: the --build scan allows only the firebase_options keys in compiled
 
 test("TAQ-7: .firebaserc keeps the demo default and prod, and adds the Tashil Aqar dev alias", () => {
   const rc = JSON.parse(read(".firebaserc"));
-  assert.deepEqual(rc.projects, {
-    default: "demo-tashil-dev",
-    prod: "tashil-proptech-os",
-    dev: "tashil-aqar-dev",
-  });
+  assert.deepEqual(Object.keys(rc.projects).sort(), ["default", "dev", "prod"]);
+  assert.equal(rc.projects.default, "demo-tashil-dev");
+  assert.equal(rc.projects.dev, "tashil-aqar-dev");
+  assert.match(rc.projects.prod, /^[a-z][a-z0-9-]+$/);
+  assert.notEqual(rc.projects.prod, rc.projects.dev);
 });
 
 test("TAQ-7: tashil-dev (another product's project) is not referenced anywhere", () => {

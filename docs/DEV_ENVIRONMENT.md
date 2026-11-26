@@ -228,19 +228,23 @@ How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91)
   write) once per project. It prints its target project first and refuses any project id that does
   not start with `demo-` unless `--confirm-project=<that id>` is also given (even for a dry run). It records `pre_hide_published: false`, so such a listing is not
   published automatically when restored.
+- **Property owner registry**: ids created before the registry are registered by `backend/scripts/backfill_property_owners.js` (dry run by default; production needs `--prod`, `BACKFILL_PROD_OK` and `--write`). The production run order is in `docs/PROPERTY_REGISTRY_BACKFILL.md`.
 - **Maintenance requests** must carry `lease_id`, and that lease must link the request's
   `tenant_id`, `owner_id` and `agency_id` (empty on both sides when the lease has no agency).
   Only the lease's tenant or owner can create one.
-- **Rent payments** (`processRentPayment`): only the lease's tenant (role `Tenant`) can record a
-  payment. The owner, the managing agency and SuperAdmin cannot: the app has no flow in which they
-  record a payment, so nothing needs it. The amount is the lease's rent (monthly rent, or annual
-  rent divided by 12); the client may omit it or repeat it, and any other value is
-  `invalid-argument`. Errors are clean codes: `unauthenticated`, `permission-denied`,
-  `not-found`, `invalid-argument`, `failed-precondition`, `already-exists`. A lease can be paid once
-  per month: the transaction id is `<leaseId>_<YYYY-MM>` (`period` is an optional `YYYY-MM`, from 24
-  months back to next month; the default is the current UTC month) and the record is `create()`d
-  inside a Firestore transaction, so a repeat or a concurrent call gets `already-exists` (the
-  existing id is in the error details) and writes nothing.
+- **Rent payments** (`createRentPaymentIntent`, `paymobWebhook`; TAQ-16): only the lease's tenant
+  (role `Tenant`) can start a payment, and only for an `active` lease whose `end_date` has not
+  passed. The amount is the lease's rent (monthly rent, or annual rent divided by 12); the client may
+  omit it or repeat it, and any other value is `invalid-argument`. The call records
+  `Transactions/<leaseId>_<YYYY-MM>` as `pending` and returns a Paymob checkout link; a second call
+  for the same pending month returns the same link, a paid month is `already-exists`. Only the
+  signed Paymob webhook writes `paid` / `failed`, issues the `Paid_Verified` invoice and notifies the
+  tenant and owner. `processRentPayment` no longer exists. The gateway is off (`PAYMENTS_ENABLED`)
+  until the keys are set; see `docs/SECURITY_SETUP.md`. Errors are clean codes: `unauthenticated`,
+  `permission-denied`, `not-found`, `invalid-argument`, `failed-precondition`, `already-exists`,
+  `aborted`, `unavailable`. `period` is an optional `YYYY-MM`, from 24 months back to next month
+  (the default is the current UTC month). The record is claimed inside a Firestore transaction, so
+  concurrent calls for one month start a single Paymob intention.
 - **Investor**: browse, save and compare listings, market index, valuation and the AI features that
   are open to any signed-in user. It cannot publish listings and has no access to leases, tenants
   or maintenance. It is accepted at signup and never escalates: the profile document can only ever
@@ -302,9 +306,9 @@ sizes, contact filter, image references, localized maps) of a large listing uses
   (dev before TAQ-103 had under 27 on the largest fixture). One edit that rewrites every text field,
   all images and every scalar in a single update is still over budget; split it, or edit the fields
   you need. The emulator log must show no `maximum of 1000 expressions` message during `npm test`.
-- `processRentPayment` rejects a `period` earlier than the lease's start month (`startDate`,
-  `start_date`, `leaseStartDate` or `lease_start_date`); a lease with no readable start date keeps the
-  24-month window.
+- `createRentPaymentIntent` rejects a `period` earlier than the lease's start month (`startDate`,
+  `start_date`, `leaseStartDate` or `lease_start_date`) or later than its end month; a lease with no
+  readable dates keeps the 24-month window.
 
 ## Follow-ups
 
@@ -314,7 +318,8 @@ sizes, contact filter, image references, localized maps) of a large listing uses
   but has no screen in `/admin` yet.
 - `/fast-onboarding` is still limited to `Owner` and `AgencyAdmin` in the Flutter route table (as
   before TAQ-91). The gateway already accepts `Admin` and `SuperAdmin` for onboarding and OCR.
-- `processRentPayment` records a payment but no money moves: there is no payment provider yet.
+- Online payment is wired to Paymob (UAE) but switched off until the keys exist; Egyptian leases
+  cannot be paid online yet (the gateway is the UAE one).
 - App Check for dev: register a dev reCAPTCHA site key before turning on `ENFORCE_APP_CHECK` in
   dev, as described in `docs/SECURITY_SETUP.md`.
 - Mobile: add an Android and an iOS app to `tashil-aqar-dev` and extend
