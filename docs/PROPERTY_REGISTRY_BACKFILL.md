@@ -141,7 +141,7 @@ run fails, resume with `--cursor <last printed id>`; ids already registered are 
 | `nonLandlordOwner` | No landlord holds the id; only a Tenant or Investor does | Never registered |
 | `flaggedHolders` | Docs already flagged `id_conflict` | Never count as holders, so a squatter's flagged copy does not block the owner |
 | `nonLandlordHolders` | Tenant or Investor docs beside a landlord's doc | Never count as holders |
-| `holdersWithoutProfile` | Holders with no `Users/{uid}` profile | Counted as landlords (claims-only admins have no profile role); check who they are |
+| `holdersWithoutProfile` | Holders with no `Users/{uid}` profile | Counted as landlords (claims-only admins have no profile role); check who they are. An override to one is refused without `--confirm-no-profile-owner <uid>` (see above) |
 | `overridden` | Ids resolved by the overrides file | Registered with `claimed_by: backfill-override` |
 | `idFieldIssues` | Private docs whose `id` field is missing or differs from the doc id | Must be 0 before `--write`; fix with `--fix-id-fields --write` |
 
@@ -180,6 +180,14 @@ are the same seed listing, the owner may want to delete the other copy once the 
 An override is refused when the id is not shared by two or more landlords, when the named uid is not a
 holder, when it is a Tenant or Investor or its doc is flagged `id_conflict`, or when the public listing
 belongs to another holder. A bad file is refused before any write. Do not commit the overrides file.
+
+**Never override to a `holdersWithoutProfile` entry without proof of ownership.** An anonymous account or
+one with no `Users/{uid}` profile can create a private property doc (it is flagged `id_conflict` and
+cannot take an id that a tenant holds, but it still shows up as a landlord holder). Naming such a uid in
+the overrides file would give it the id. The script therefore refuses that entry unless the run also
+names the uid with `--confirm-no-profile-owner <uid>` (repeat the flag for each uid). Add the flag only
+after the property owner or Mohamed has confirmed that the account really is the owner (a claims-only
+SuperAdmin is the usual legitimate case), and record that confirmation with the change.
 
 ## Tests
 
