@@ -228,6 +228,10 @@ How the roles map to the backend (`backend/authz.js`, `firestore.rules`, TAQ-91)
   write) once per project. It prints its target project first and refuses any project id that does
   not start with `demo-` unless `--confirm-project=<that id>` is also given (even for a dry run). It records `pre_hide_published: false`, so such a listing is not
   published automatically when restored.
+  `holdHiddenListingsOffline` (TAQ-135) unpublishes any public listing that is both published and
+  held hidden, whoever wrote it (the marketplace list query filters on `is_published` only); docs that are not
+  written again are cleaned once with `node scripts/backfill_hidden_unpublished.js --project <id>` (same
+  guard and flags as above; it only sets `is_published: false`).
 - **Property owner registry**: ids created before the registry are registered by `backend/scripts/backfill_property_owners.js` (dry run by default; production needs `--prod`, `BACKFILL_PROD_OK` and `--write`). The production run order is in `docs/PROPERTY_REGISTRY_BACKFILL.md`.
 - **Maintenance requests** must carry `lease_id`, and that lease must link the request's
   `tenant_id`, `owner_id` and `agency_id` (empty on both sides when the lease has no agency).

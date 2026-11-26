@@ -609,3 +609,47 @@ test("TAQ-91: the backfill script adds a moderation doc for listings hidden befo
   await ownerWrites("ownerA", "legacy-hidden", privateListing());
   assert.equal((await publicDoc("legacy-hidden")).is_published, false);
 });
+
+test("TAQ-135: a public doc that is both published and hidden is unpublished by the guard", async () => {
+  const run = (propertyId) => db.doc(`Properties/${propertyId}`).get().then((after) =>
+    fns.holdHiddenListingsOffline.run({ params: { propertyId }, data: { before: null, after } }));
+  await db.doc("Properties/both-1").set({ owner_id: "ownerA", is_published: true, moderation_hidden: true, status: "vacant" });
+  await db.doc("Properties/both-2").set({ owner_id: "ownerA", is_published: "true", moderation_hidden: "true", status: "vacant" });
+  await db.doc("Properties/live-1").set({ owner_id: "ownerA", is_published: true, moderation_hidden: false, status: "vacant" });
+  await db.doc("Properties/held-1").set({ owner_id: "ownerA", is_published: false, moderation_hidden: true, status: "vacant" });
+  await db.doc("Properties/plain-1").set({ owner_id: "ownerA", is_published: true, status: "vacant" });
+  for (const id of ["both-1", "both-2", "live-1", "held-1", "plain-1"]) await run(id);
+  assert.equal((await publicDoc("both-1")).is_published, false);
+  assert.equal((await publicDoc("both-1")).moderation_hidden, true, "the hold itself is not touched");
+  assert.equal((await publicDoc("both-2")).is_published, false);
+  assert.equal((await publicDoc("live-1")).is_published, true);
+  assert.equal((await publicDoc("held-1")).is_published, false);
+  assert.equal((await publicDoc("plain-1")).is_published, true);
+  await db.doc("Properties/both-1").delete();
+  await fns.holdHiddenListingsOffline.run({ params: { propertyId: "both-1" }, data: { before: null, after: await db.doc("Properties/both-1").get() } });
+  assert.equal((await db.doc("Properties/both-1").get()).exists, false, "a deleted doc is not recreated");
+});
+
+test("TAQ-135: the guard does not undo a lift that landed before it ran", async () => {
+  await db.doc("Properties/lifted-1").set({ owner_id: "ownerA", is_published: true, moderation_hidden: true, status: "vacant" });
+  const stale = await db.doc("Properties/lifted-1").get();
+  await db.doc("Properties/lifted-1").set({ moderation_hidden: false }, { merge: true });
+  await fns.holdHiddenListingsOffline.run({ params: { propertyId: "lifted-1" }, data: { before: null, after: stale } });
+  assert.equal((await publicDoc("lifted-1")).is_published, true);
+});
+
+test("TAQ-135: the clean-up script lists and unpublishes hidden listings that are still published", async () => {
+  const { backfill } = require("../scripts/backfill_hidden_unpublished");
+  await db.doc("Properties/b-1").set({ owner_id: "ownerA", is_published: true, moderation_hidden: true });
+  await db.doc("Properties/b-2").set({ owner_id: "ownerA", is_published: true, moderation_hidden: "true" });
+  await db.doc("Properties/b-3").set({ owner_id: "ownerA", is_published: false, moderation_hidden: true });
+  await db.doc("Properties/b-4").set({ owner_id: "ownerA", is_published: true, moderation_hidden: false });
+  const dry = await backfill(db);
+  assert.deepEqual(dry.found, ["b-1", "b-2"]);
+  assert.equal((await publicDoc("b-1")).is_published, true, "a dry run writes nothing");
+  await backfill(db, { apply: true });
+  assert.equal((await publicDoc("b-1")).is_published, false);
+  assert.equal((await publicDoc("b-2")).is_published, false);
+  assert.equal((await publicDoc("b-4")).is_published, true);
+  assert.deepEqual((await backfill(db)).found, []);
+});
