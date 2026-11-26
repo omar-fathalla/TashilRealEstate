@@ -8,14 +8,31 @@ class AppCheckService {
   factory AppCheckService() => _instance;
   AppCheckService._internal();
 
-  /// reCAPTCHA v3 site key registered for the web app in Firebase App Check, supplied at
+  /// reCAPTCHA Enterprise site key registered for the web app in Firebase App Check, supplied at
   /// build time with `--dart-define=RECAPTCHA_SITE_KEY=...` (see docs/SECURITY_SETUP.md).
+  /// The key is public by design, but it lives in build config, not in this repository.
   static const String webSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
 
   /// Release web builds without a site key skip App Check instead of attesting with an
   /// invalid key; the server keeps enforcement off (ENFORCE_APP_CHECK) until a key ships.
   static bool shouldActivateOnWeb({required bool debug, required String siteKey}) =>
       debug || siteKey.trim().isNotEmpty;
+
+  /// Web: reCAPTCHA Enterprise in release builds (the Firebase key is an Enterprise key, which a
+  /// v3 provider cannot attest with); the debug provider in debug builds.
+  static WebProvider webProvider({required bool debug, required String siteKey}) =>
+      debug ? WebDebugProvider() : ReCaptchaEnterpriseProvider(siteKey.trim());
+
+  /// Android: Play Integrity in release builds. It only verifies once the app is published as
+  /// ae.tashilaqar.app with a real release signing key (see docs/SECURITY_SETUP.md).
+  static AndroidAppCheckProvider androidProvider({required bool debug}) =>
+      debug ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider();
+
+  /// iOS: App Attest, falling back to DeviceCheck on devices without App Attest. DeviceCheck is
+  /// not registered in the Firebase console, so those devices stay unverified for now.
+  static AppleAppCheckProvider appleProvider({required bool debug}) => debug
+      ? const AppleDebugProvider()
+      : const AppleAppAttestWithDeviceCheckFallbackProvider();
 
   bool _isActivated = false;
 
@@ -31,16 +48,9 @@ class AppCheckService {
 
     try {
       await FirebaseAppCheck.instance.activate(
-        // Web Provider: Debug in dev, ReCaptcha V3 in release
-        providerWeb: kDebugMode
-            ? WebDebugProvider()
-            : ReCaptchaV3Provider(webSiteKey.trim()),
-        providerAndroid: kDebugMode
-            ? const AndroidDebugProvider()
-            : const AndroidPlayIntegrityProvider(),
-        providerApple: kDebugMode
-            ? const AppleDebugProvider()
-            : const AppleDeviceCheckProvider(),
+        providerWeb: webProvider(debug: kDebugMode, siteKey: webSiteKey),
+        providerAndroid: androidProvider(debug: kDebugMode),
+        providerApple: appleProvider(debug: kDebugMode),
       );
 
       _isActivated = true;

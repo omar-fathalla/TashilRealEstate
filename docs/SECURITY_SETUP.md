@@ -4,29 +4,47 @@
 
 The callables `sendRentalReminder`, `generateRentalInvoiceReceipt`, and `setUserRole` can
 require a valid Firebase App Check token. Enforcement is **off by default** because the web
-build has no registered reCAPTCHA key yet; turning it on before a key ships would block every
+build ships without a reCAPTCHA site key yet; turning it on before a key ships would block every
 web user. Sign-in and role checks apply whether or not App Check is enforced.
 
 ### What is needed to turn it on
 
-1. **A reCAPTCHA v3 site key** for the production web domains (for example `tashilaqar.com`
-   and the Firebase Hosting domains). Create it in the reCAPTCHA admin console, then register
-   the web app in Firebase console > App Check with the reCAPTCHA v3 provider and that key's
-   **secret**. The secret stays in the Firebase console and never goes into this repo. The
-   site key is public, but it is still passed at build time rather than committed.
-2. **Android and Apple**: enable Play Integrity and DeviceCheck/App Attest for the mobile
-   apps in App Check, if the mobile apps call these functions.
-3. **Build the web app with the site key**:
+1. **Web: a reCAPTCHA Enterprise site key** for the production web domains (for example
+   `tashilaqar.com` and the Firebase Hosting domains). Register the web app in Firebase console
+   > App Check with the **reCAPTCHA Enterprise** provider and that key. The app uses
+   `ReCaptchaEnterpriseProvider`; a reCAPTCHA v3 provider cannot attest with an Enterprise key.
+   Any secret stays in the Firebase / Google Cloud consoles and never goes into this repo. The
+   site key is public, but it is passed at build time rather than committed.
+2. **iOS**: the app `com.tashil.realestate` (Team ID `TX5G7GZL6T`) is registered for **App
+   Attest** in App Check. The app activates `AppleAppAttestWithDeviceCheckFallbackProvider`
+   (App Attest, with DeviceCheck on devices that lack it). DeviceCheck is **not** registered in
+   the console, so those devices stay unverified until it is. `ios/Runner/Runner.entitlements`
+   (Release and Profile) sets `com.apple.developer.devicecheck.appattest-environment` to
+   `production`; `ios/Runner/RunnerDebug.entitlements` (Debug) sets it to `development`.
+   Enable the App Attest capability on the App ID `com.tashil.realestate` in the Apple
+   developer account if it is not already on, or signing fails.
+3. **Android**: the app activates `AndroidPlayIntegrityProvider`. Play Integrity is registered
+   only for the Firebase app `ae.tashilaqar.app`
+   (`1:534001947779:android:6ae6cd3ce53bcb8e7ff7b6`). The repo still builds as
+   `com.example.tashil_real_estate`, so **Android App Check only verifies once the app ships as
+   `ae.tashilaqar.app` with a real release signing key**. Renaming the package and signing are
+   a separate ticket. Until then Android tokens are not verified, which is harmless while
+   enforcement is off.
+4. **Debug builds** use the App Check debug providers on every platform.
+5. **Build with the site key**. Release builds need the define only for web; mobile builds
+   ignore it:
 
    ```bash
    flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=<site key>
+   flutter build ipa --release
+   flutter build appbundle --release
    ```
 
    Without the define, release web builds skip App Check instead of sending tokens made
-   with an invalid key. Debug builds use the App Check debug provider.
-4. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
+   with an invalid key.
+6. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
    should be "verified" before enforcing.
-5. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
+7. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
    production deploy, for example in `backend/.env.<production project id>`:
 
    ```bash
@@ -38,14 +56,26 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
 Firestore and Storage App Check enforcement are separate switches in the Firebase console
 and are not affected by `ENFORCE_APP_CHECK`.
 
+## Public listings (`firestore.rules`, TAQ-131)
+
+- A visitor can `get` a `/Properties` doc only when it is published and `moderation_hidden` is
+  neither `true` nor `'true'`. Owners, their agency and platform staff can always read it.
+- List queries check `is_published` only. Rules are not filters: also testing `moderation_hidden`
+  would refuse the marketplace query (`is_published == true`), and adding a
+  `moderation_hidden == false` filter would drop public docs that lack the field. No write can make
+  a doc both published and hidden instead: a SuperAdmin create with both is refused, Admin and
+  SuperAdmin visibility changes can only set `is_published` to false, and the sync trigger sets
+  `is_published = !moderation_hidden`.
+
 ## Listing photos (`storage.rules`)
 
 Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
 
 - The owner, a SuperAdmin and an Admin can always read and list them.
 - Anyone else can read a photo only while `/Properties/{propertyId}` exists, has
-  `is_published == true`, `status == 'vacant'` and `moderation_hidden != true`, and has
-  `owner_id == ownerUid`.
+  `is_published == true`, `status == 'vacant'` and `moderation_hidden` neither `true` nor the
+  string `'true'`, and has `owner_id == ownerUid`. `firestore.rules` treats the string the same
+  way (TAQ-131).
   Unpublished, rented, moderation-hidden and deleted listings are refused. The rule costs one
   Firestore read (Storage rules allow two per evaluation).
 - Owners cannot upload or replace photos while `PropertyModeration/{propertyId}` has
@@ -56,8 +86,17 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
   `&token=` and `firestore.rules` rejects it, so every download goes through these rules.
 - Download URLs with `&token=` are bearer links: Cloud Storage serves them without evaluating
   the rules. A token URL handed out while a listing was live keeps working after it goes
-  offline, until the token is revoked (Firebase console, file details, "Revoke"). Revoking on
-  unpublish/hide and reissuing on republish is TAQ-109.
+  offline unless the token is replaced. The `revokePhotoTokensOnOffline` function
+  (`backend/listing_photos.js`, TAQ-109) watches `Properties/{propertyId}`: when a listing stops
+  being live by the same check as `listingLive` (unpublished, rented, made unavailable, held by
+  moderation, deleted, or handed to another owner) it replaces the `firebaseStorageDownloadTokens`
+  of every object under `public/listings/{owner}/{propertyId}/` that has one, and it does so again
+  when the listing goes live. The replacement is a single fresh token, which drops the old ones in
+  Cloud Storage. The Storage emulator appends instead of replacing, so the emulator test checks
+  what is written, not that an old link stops working. The function's service account needs
+  `storage.objects.update` on the default bucket (the default compute account has it). A listing
+  that was offline when this function was deployed keeps any token issued earlier until its next
+  change of state; revoke those once in the console if needed.
   Tokenless downloads, `getDownloadURL()` and `getMetadata()` all go through the rules.
 - The deployed project needs the Storage service agent to have Firestore read access for
   cross-service rules (the console prompts for it on the first rules deploy).

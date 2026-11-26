@@ -434,3 +434,49 @@ test("TAQ-110: an application is consumed by its lease; parallel calls from diff
   await assert.rejects(createLease(), (e) => e.code === "already-exists" && e.details.reason === "application_consumed", "deleting the lease does not free the application");
   assert.equal((await db.collection("Leases").get()).size, 0);
 });
+
+// --- TAQ-117: contacts in free text are rejected, not redacted ---
+
+const CONTACT_TEXTS = [
+  "call 0501234567",
+  "+971 50 123 4567",
+  "٠٥٠١٢٣٤٥٦٧٨",
+  "0 5 0 - 1 2 3 - 4 5 6 7",
+  "me@example.com",
+  "me [at] example [dot] com",
+  "wa.me/971501234567",
+  "https://t.me/someone",
+  "@someone_99",
+];
+
+async function expectContactRejected(promise) {
+  await assert.rejects(promise, (e) => {
+    assert.equal(e.code, "invalid-argument");
+    assert.equal(e.details && e.details.reason, "contact_in_message");
+    return true;
+  });
+}
+
+test("TAQ-117: requestViewing and applyForRental reject a contact in the message and write nothing", async () => {
+  for (const text of CONTACT_TEXTS) {
+    await expectContactRejected(view({ message: text }));
+    await expectContactRejected(apply({ message: text }));
+  }
+  assert.equal((await db.collection("ViewingRequests").get()).size, 0);
+  assert.equal((await db.collection("RentalApplications").get()).size, 0);
+  assert.equal((await db.collection("AiRateLimits").get()).size, 0, "a rejected message uses no quota");
+  assert.ok((await view({ message: "After 6pm, 2 bedrooms" })).requestId, "ordinary text still passes");
+});
+
+test("TAQ-117: respondToViewingRequest and decideRentalApplication reject a contact in the note and leave the request pending", async () => {
+  const { requestId } = await view();
+  await apply();
+  for (const text of CONTACT_TEXTS) {
+    await expectContactRejected(fns.respondToViewingRequest.run({ data: { requestId, decision: "confirmed", note: text }, auth: caller("owner") }));
+    await expectContactRejected(fns.decideRentalApplication.run({ data: { applicationId: "p1_visitor", decision: "approved", note: text }, auth: caller("owner") }));
+  }
+  assert.equal((await db.doc(`ViewingRequests/${requestId}`).get()).get("status"), "pending");
+  assert.equal((await db.doc("RentalApplications/p1_visitor").get()).get("status"), "pending");
+  const ok = await fns.respondToViewingRequest.run({ data: { requestId, decision: "confirmed", note: "Saturday 5pm" }, auth: caller("owner") });
+  assert.equal(ok.status, "confirmed");
+});

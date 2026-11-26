@@ -184,7 +184,7 @@ service cloud.firestore {
       return !(field in data) || (data[field] is map && data[field].keys().hasOnly(['ar', 'en', 'hi']));
     }
 
-    // Mirrors stripContacts() in backend/index.js. Rejects text that holds a phone number, a
+    // Mirrors stripContacts() in backend/contact_filter.js. Rejects text that holds a phone number, a
     // messaging/social link or @handle, or an email address once obvious obfuscation is looked
     // through. Phone shapes (trunk zero, bare EG/UAE mobiles, country codes, +/00 prefixes;
     // digits of any script; O/l/I between digits; grouped digits) and the link patterns are
@@ -271,20 +271,14 @@ service cloud.firestore {
     }
 
     function imageRefsMatch(refs, ref) {
-      return projectId().matches('[a-z][a-z0-9-]{4,29}')
-        && refs.matches('^(' + ref + '( ' + ref + ')*)?$')
+      return projectId().matches('[a-z][a-z0-9-]{4,29}') && imageRefsShapeOk(refs, ref);
+    }
+
+    // The project id is checked by the caller (once per request in listingEditOk).
+    function imageRefsShapeOk(refs, ref) {
+      return refs.matches('^(' + ref + '( ' + ref + ')*)?$')
         && !refs.matches('^.*[.][.].*$')
         && !refs.matches('(?i)^.*https://[^ ]*/(o/)?(users|private|kyc|documents|leases|contracts)(/|%2F).*$');
-    }
-
-    function imageRefsOk(refs) {
-      return imageRefsMatch(refs, imageRefPattern());
-    }
-
-    // An element holding a space would read as two refs once the list is joined, so the list is
-    // also checked joined with a comma, which adds no space of its own.
-    function imageListOk(list) {
-      return list.size() <= 20 && !list.join(',').matches('(?s)^.* .*$') && imageRefsOk(list.join(' '));
     }
 
     // Value checks that match what sanitizeForMarketplace produces. Kept compact because a
@@ -351,7 +345,14 @@ service cloud.firestore {
 
     function listingModerationHidden(propertyId) {
       return exists(moderationPath(propertyId))
-        && get(moderationPath(propertyId)).data.get('hidden', false) == true;
+        && get(moderationPath(propertyId)).data.get('hidden', false) in [true, 'true'];
+    }
+
+    // A published listing that moderation holds hidden is not public, whatever the order the two
+    // flags were written in. The string 'true' counts as hidden, as in storage.rules (TAQ-131).
+    function publiclyVisible(d) {
+      return d.get('is_published', false) == true
+        && !(d.get('moderation_hidden', false) in [true, 'true']);
     }
 
     // True only when this very request also writes PropertyModeration/{propertyId}: the moderation
@@ -427,10 +428,6 @@ service cloud.firestore {
       return names.get('ar', '').size() <= 200 && names.get('en', '').size() <= 200 && names.get('hi', '').size() <= 200;
     }
 
-    function agencyNamesOk(d) {
-      return localizedKeysOk(d, 'agencyNames') && agencyNameSizesOk(d.get('agencyNames', {}));
-    }
-
     function agencyPhoneOk(d) {
       return d.get('agencyPhone', '') is string && d.get('agencyPhone', '').matches('^[0-9+() .-]{0,30}$');
     }
@@ -447,17 +444,43 @@ service cloud.firestore {
           || (get(path).data.get('isPublished', false) == true && get(path).data.get('rentalStatus', 'available') == 'available'));
     }
 
-    function listingEditOk() {
+    // An update that changes up to 6 keys validates only those keys (listingEditFieldsOk). Wider ones,
+    // up to a full edit of every editable key, validate the whole resulting doc with the same
+    // compact checks a create uses (listingValuesOk): measured on a maximum-size listing, the
+    // per-field path costs more than the 1000-expression budget once enough text, image and
+    // scalar keys change together, while the whole-doc check costs about the same however many do
+    // (TAQ-105). The editable-key limit applies to both.
+    // `c` is the changed-key set of this update. Fields it leaves out are not checked again, and
+    // each stored value is read once into a local: every get() and string join costs expressions.
+    //
+    // The whole-doc check reads a missing key as its default (no titles, no image, no status), so it
+    // cannot tell a deleted required key from an untouched one. The wide path therefore also
+    // requires every protected key that this update touches to stay present and valid, as the
+    // per-field path does (TAQ-134): titles, image, imageUrls and status cannot be deleted at any
+    // key count.
+    function listingEditOk(c) {
+      return c.hasOnly(listingEditableKeys())
+        && ((c.size() <= 6 && listingEditFieldsOk(c))
+          || (c.size() > 6 && listingValuesOk(request.resource.data) && protectedKeysKept(c, request.resource.data)));
+    }
+
+    function protectedKeysKept(c, d) {
+      return (!('titles' in c) || ('titles' in d && d.titles is map))
+        && (!('image' in c) || ('image' in d && d.image is string))
+        && (!('imageUrls' in c) || ('imageUrls' in d && d.imageUrls is list))
+        && (!('status' in c) || ('status' in d && d.status in ['vacant', 'rented', 'unavailable']));
+    }
+
+    function listingEditFieldsOk(c) {
       let d = request.resource.data;
-      let c = changedKeys();
       let country = d.get('countryCode', 'EG');
       let currency = country == 'AE' ? 'AED' : 'EGP';
       let titles = d.get('titles', {});
       let descriptions = d.get('descriptions', {});
       let locations = d.get('locations', {});
       let amenities = d.get('amenitiesMap', {});
-      return c.hasOnly(listingEditableKeys())
-        && (!('agency_id' in c) || (d.agency_id is string && d.agency_id.matches('^[A-Za-z0-9_-]{0,128}$')))
+      let names = d.get('agencyNames', {});
+      return (!('agency_id' in c) || (d.agency_id is string && d.agency_id.matches('^[A-Za-z0-9_-]{0,128}$')))
         && (!('status' in c) || d.get('status', '') in ['vacant', 'rented', 'unavailable'])
         && (!c.hasAny(['countryCode', 'currencyCode'])
           || (country in ['EG', 'AE'] && d.get('currencyCode', currency) == currency))
@@ -481,23 +504,33 @@ service cloud.firestore {
         && (!c.hasAny(['cityCode', 'propertyTypeCode'])
           || (d.get('cityCode', '').size() <= 60 && d.get('propertyTypeCode', '').size() <= 60))
         && (!('agencyPhone' in c) || agencyPhoneOk(d))
-        && (!('agencyNames' in c) || agencyNamesOk(d))
+        && (!('agencyNames' in c) || (localizedKeysOk(d, 'agencyNames') && agencyNameSizesOk(names)))
         && (!('updated_at' in c) || d.updated_at is timestamp)
-        && (!('image' in c) || (d.image is string && !d.image.matches('^.* .*$') && imageRefsOk(d.image)))
-        && (!('imageUrls' in c) || (d.imageUrls is list && imageListOk(d.imageUrls)))
+        && editedImagesOk(d, c)
         && (!c.hasAny(['titles', 'descriptions', 'locations', 'amenitiesMap', 'agencyNames', 'buildingName', 'cityCode', 'propertyTypeCode'])
-          || contactFree(listingEditedText(d, c)));
+          || contactFree(listingEditedText(d, c, titles, descriptions, locations, amenities, names)));
+    }
+
+    // image and imageUrls share one pattern and one project check. An element of imageUrls holding
+    // a space would read as two refs once the list is joined, so the list is also checked joined
+    // with a comma, which adds no space of its own.
+    function editedImagesOk(d, c) {
+      let ref = c.hasAny(['image', 'imageUrls']) ? imageRefPattern() : '';
+      return (!c.hasAny(['image', 'imageUrls']) || projectId().matches('[a-z][a-z0-9-]{4,29}'))
+        && (!('image' in c) || (d.image is string && !d.image.matches('^.* .*$') && imageRefsShapeOk(d.image, ref)))
+        && (!('imageUrls' in c) || (d.imageUrls is list && d.imageUrls.size() <= 20 && !d.imageUrls.join(',').matches('(?s)^.* .*$')
+          && imageRefsShapeOk(d.imageUrls.join(' '), ref)));
     }
 
     // The free text of only the fields this update changed, joined with " | " (a list break for the
     // phone patterns) like listingValuesOk does for a whole listing.
-    function listingEditedText(d, c) {
-      return (('titles' in c) ? d.get('titles', {}).values() : [])
-        .concat(('descriptions' in c) ? d.get('descriptions', {}).values() : [])
-        .concat(('locations' in c) ? d.get('locations', {}).values() : [])
-        .concat(('agencyNames' in c) ? d.get('agencyNames', {}).values() : [])
+    function listingEditedText(d, c, titles, descriptions, locations, amenities, names) {
+      return (('titles' in c) ? titles.values() : [])
+        .concat(('descriptions' in c) ? descriptions.values() : [])
+        .concat(('locations' in c) ? locations.values() : [])
+        .concat(('agencyNames' in c) ? names.values() : [])
         .concat(('amenitiesMap' in c)
-          ? d.get('amenitiesMap', {}).get('ar', []).concat(d.get('amenitiesMap', {}).get('en', [])).concat(d.get('amenitiesMap', {}).get('hi', []))
+          ? amenities.get('ar', []).concat(amenities.get('en', [])).concat(amenities.get('hi', []))
           : [])
         .concat([('buildingName' in c) ? d.get('buildingName', '') : '',
           ('cityCode' in c) ? d.get('cityCode', '') : '',
@@ -509,6 +542,7 @@ service cloud.firestore {
       let d = request.resource.data;
       return d.keys().hasOnly(publicListingFields())
         && d.get('id', propertyId) == propertyId
+        && !(d.get('is_published', false) == true && d.get('moderation_hidden', false) == true)
         && listingValuesOk(d);
     }
 
@@ -520,10 +554,31 @@ service cloud.firestore {
       return isAgencyAdminOf(resource.data.get('agency_id', ''));
     }
 
+    // The role and the diff are each evaluated once: a full edit of a large listing needs most of
+    // the 1000-expression budget for its own value checks (TAQ-105).
+    function propertyUpdateOk(propertyId) {
+      let role = currentRole();
+      let c = changedKeys();
+      return (role == 'SuperAdmin'
+          && (c.hasAny(['is_published', 'moderation_hidden']) ? adminModerationOk(propertyId) : listingEditOk(c)))
+        || (role == 'Admin' && adminModerationOk(propertyId));
+    }
+
     match /Properties/{propertyId} {
-      // Anyone (including unauthenticated visitors) can read published listings. Unpublished
-      // ones, whatever their status, are visible only to their owner, agency, or SuperAdmin.
-      allow read: if resource.data.get('is_published', false) == true
+      // Anyone (including unauthenticated visitors) can read published listings that moderation
+      // does not hold hidden. Unpublished or hidden ones are visible only to their owner, agency,
+      // or platform staff.
+      allow get: if publiclyVisible(resource.data)
+        || isPlatformStaff()
+        || ownsListing()
+        || agencyManagesResource();
+      // Rules are not filters: a list rule that also tested moderation_hidden would refuse the
+      // marketplace query (`is_published == true`) outright, and filtering on
+      // `moderation_hidden == false` would drop public docs that lack the field. Lists therefore
+      // check is_published only; no write can make a doc both published and hidden
+      // (listingShapeOk on create, adminVisibilityOk on visibility changes, and the sync trigger,
+      // which sets is_published = !moderation_hidden).
+      allow list: if resource.data.get('is_published', false) == true
         || isPlatformStaff()
         || ownsListing()
         || agencyManagesResource();
@@ -541,11 +596,7 @@ service cloud.firestore {
       // Visibility changes (is_published, moderation_hidden) by Admin or SuperAdmin take the
       // moderation path and are checked first. Every other SuperAdmin edit takes the cheap path
       // that validates only the changed keys.
-      allow update: if (isAdmin() && adminModerationOk(propertyId))
-        || (isSuperAdmin()
-          && (changedKeys().hasAny(['is_published', 'moderation_hidden'])
-            ? adminModerationOk(propertyId)
-            : listingEditOk()));
+      allow update: if isAuthenticated() && propertyUpdateOk(propertyId);
 
       // An owner may remove their own listing, except while moderation holds it hidden: deleting
       // the public doc must not be a way to lose that state.

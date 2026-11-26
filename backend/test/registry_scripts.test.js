@@ -49,7 +49,8 @@ async function seedMixed() {
   await user("ownerB", "Owner");
   await user("agency", "AgencyAdmin");
   await user("tenantT", "Tenant");
-  const set = (p, data) => db.doc(p).set(data);
+  // Private docs carry `id` like every app-written doc (TAQ-128); the other paths are left as given.
+  const set = (p, data) => db.doc(p).set(p.startsWith("Users/") ? { id: p.split("/").pop(), ...data } : data);
   await set("Users/ownerA/properties/solo-a", { title: "x", rentalStatus: "available" });
   await set("Users/agency/properties/solo-agency", { title: "x", rentalStatus: "Rented" });
   await set("Properties/solo-agency", { owner_id: "agency" });
@@ -71,9 +72,10 @@ async function seedMixed() {
 // --- backfill guard ---
 
 test("TAQ-110 N-1: the backfill accepts demo- projects and tashil-aqar-dev only", () => {
-  const base = { project: "demo-x", write: false, prod: false, batchSize: 100, cursor: "", overrides: "" };
+  const base = { project: "demo-x", write: false, prod: false, fixIdFields: false, batchSize: 100, cursor: "", overrides: "" };
   assert.deepEqual(backfill.parseArgs(["--project", "demo-x"]), base);
   assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--write"]), { ...base, write: true });
+  assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--fix-id-fields", "--write"]), { ...base, write: true, fixIdFields: true });
   assert.deepEqual(backfill.parseArgs(["--project", "p", "--prod", "--batch-size=7", "--cursor", "c1", "--overrides", "o.json"]), { ...base, project: "p", prod: true, batchSize: 7, cursor: "c1", overrides: "o.json" });
   for (const bad of ["0", "401", "x", "1.5"]) assert.throws(() => backfill.parseArgs(["--project", "p", "--batch-size", bad]), /--batch-size/);
   assert.throws(() => backfill.parseArgs([]), /--project is required/);
@@ -337,7 +339,8 @@ test("TAQ-125: the prod dry run lists the 6 shared seed ids as multi-owner confl
   assert.equal(report.mode, "dry-run");
   assert.deepEqual(report.counts, {
     privateDocs: 14, ids: 8, alreadyRegistered: 0, toRegister: 2, multipleOwners: 6, publicOwnerMismatch: 0,
-    nonLandlordOwner: 0, registeredToOther: 0, idConflictCandidates: 12, overridden: 0,
+    nonLandlordOwner: 0, registeredToOther: 0, registeredToHolder: 0, idConflictCandidates: 12, overridden: 0, idFieldIssues: 0,
+    flaggedHolders: 0, nonLandlordHolders: 0, holdersWithoutProfile: 0,
   });
   assert.deepEqual(report.multipleOwners.map((x) => x.property_id), [...shared].sort());
   for (const m of report.multipleOwners) assert.deepEqual(m.owners, ["agency", "root"]);
@@ -483,4 +486,170 @@ test("TAQ-125: writes go in batches with a cursor, resume after a failure, and s
   assert.deepEqual(resumed.skipped.sort(), ["b4", "b5"], "registered meanwhile, or the private doc is gone");
   assert.equal(resumed.registered, 1);
   assert.deepEqual(await registry(), { b1: "ownerA", b2: "ownerA", b3: "ownerA", b4: "someone" });
+});
+
+// --- TAQ-128: private docs without a matching `id` field ---
+
+test("TAQ-128: the dry run lists private docs with a missing or mismatched id field", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerB").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/no-id").set({ title: "legacy" });
+  await db.doc("Users/ownerB/properties/wrong-id").set({ id: "something-else", title: "legacy" });
+  await db.doc("Users/ownerB/properties/null-id").set({ id: null, title: "legacy" });
+  await db.doc("Users/ownerA/properties/good").set({ id: "good" });
+  const r = await runMain(["--project", "demo-x"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  const report = jsonReport(r.out);
+  assert.equal(report.counts.idFieldIssues, 3);
+  assert.deepEqual(report.idFieldIssues, [
+    { property_id: "no-id", owner_id: "ownerA", id_field: "missing" },
+    { property_id: "null-id", owner_id: "ownerB", id_field: "missing" },
+    { property_id: "wrong-id", owner_id: "ownerB", id_field: "mismatch" },
+  ]);
+  assert.match(r.out, /missing or mismatched id field .*: 3/);
+  assert.match(r.out, /run with --fix-id-fields --write, then dry-run again/);
+  assert.deepEqual(await registry(), {}, "a dry run writes nothing");
+  assert.equal((await db.doc("Users/ownerA/properties/no-id").get()).get("id"), undefined);
+});
+
+test("TAQ-128: --write refuses to register while id field issues remain; --fix-id-fields --write fixes only the id", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/no-id").set({ title: "legacy", rentalStatus: "available" });
+  await db.doc("Users/ownerA/properties/good").set({ id: "good" });
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+
+  const refused = await runMain(["--project", FAKE_PROD, "--prod", "--write"], env);
+  assert.equal(refused.code, 2);
+  assert.match(refused.err, /Refusing to register: 1 private docs have a missing or mismatched id field/);
+  assert.deepEqual(await registry(), {}, "nothing is registered, not even the clean id");
+
+  const fixed = await runMain(["--project", FAKE_PROD, "--prod", "--fix-id-fields", "--write"], env);
+  assert.equal(fixed.code, 0, fixed.err);
+  assert.match(fixed.out, /^Target project: qa-fake-prod-xyz \(PROD, WRITE: will fix id fields only\)/);
+  assert.match(fixed.out, /Fixed the id field on 1 private docs\./);
+  assert.deepEqual(await registry(), {}, "fixing registers nothing");
+  assert.deepEqual((await db.doc("Users/ownerA/properties/no-id").get()).data(), { id: "no-id", title: "legacy", rentalStatus: "available" });
+
+  const dry = await runMain(["--project", FAKE_PROD, "--prod"], env);
+  assert.equal(jsonReport(dry.out).counts.idFieldIssues, 0);
+  const again = await runMain(["--project", FAKE_PROD, "--prod", "--fix-id-fields", "--write"], env);
+  assert.match(again.out, /Fixed the id field on 0 private docs\./, "idempotent");
+
+  const wrote = await runMain(["--project", FAKE_PROD, "--prod", "--write"], env);
+  assert.equal(wrote.code, 0, wrote.err);
+  assert.deepEqual(await registry(), { good: "ownerA", "no-id": "ownerA" });
+});
+
+test("TAQ-128: fixing skips docs deleted or fixed meanwhile and never touches other fields", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  for (const id of ["a1", "a2", "a3"]) await db.doc(`Users/ownerA/properties/${id}`).set({ title: id });
+  const plan = await backfill.classify(db, await backfill.scanPrivateProperties(db));
+  assert.equal(plan.idFieldIssues.length, 3);
+  await db.doc("Users/ownerA/properties/a2").delete();
+  await db.doc("Users/ownerA/properties/a3").update({ id: "a3" });
+  const batches = [];
+  const result = await backfill.fixIdFields(db, plan, { batchSize: 2, onBatch: (b) => batches.push(b) });
+  assert.deepEqual(result, { fixed: 1, skipped: ["ownerA/a2", "ownerA/a3"] });
+  assert.equal(batches.length, 2);
+  assert.equal((await db.doc("Users/ownerA/properties/a2").get()).exists, false, "a deleted doc is not re-created");
+  assert.deepEqual((await db.doc("Users/ownerA/properties/a1").get()).data(), { title: "a1", id: "a1" });
+});
+
+// --- TAQ-129: who counts as a holder, override validation, report labels ---
+
+test("TAQ-129: a flagged squatter doc does not count as a holder; the real owner is registered without an override", async () => {
+  await db.doc("Users/victim").set({ role: "Owner" });
+  await db.doc("Users/squatter").set({ role: "Owner" });
+  await db.doc("Users/victim/properties/legacy-1").set({ id: "legacy-1" });
+  await db.doc("Users/squatter/properties/legacy-1").set({ id: "legacy-1", id_conflict: true });
+  const r = await runMain(["--project", "demo-x", "--write"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  const report = jsonReport(r.out);
+  assert.equal(report.counts.multipleOwners, 0);
+  assert.deepEqual(report.flaggedHolders, [{ property_id: "legacy-1", owner_id: "squatter" }]);
+  assert.match(r.out, /Ignored holders: docs flagged id_conflict .*: 1/);
+  assert.deepEqual(await registry(), { "legacy-1": "victim" });
+});
+
+test("TAQ-129: a Tenant's or Investor's stray doc does not block the landlord; an id only they hold stays unregistered", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await db.doc("Users/inv").set({ role: "Investor" });
+  for (const [uid, id] of [["ownerA", "home-1"], ["tenantT", "home-1"], ["inv", "home-1"], ["tenantT", "t-only"]]) {
+    await db.doc(`Users/${uid}/properties/${id}`).set({ id });
+  }
+  const r = await runMain(["--project", "demo-x", "--write"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  const report = jsonReport(r.out);
+  assert.deepEqual(await registry(), { "home-1": "ownerA" });
+  assert.deepEqual(report.nonLandlordHolders, [
+    { property_id: "home-1", owner_id: "inv", role: "Investor" },
+    { property_id: "home-1", owner_id: "tenantT", role: "Tenant" },
+  ]);
+  assert.deepEqual(report.nonLandlordOwner, [{ property_id: "t-only", owner_id: "tenantT", role: "Tenant" }]);
+  assert.equal(report.idConflictCandidates.some((c) => c.owner_id === "tenantT" || c.owner_id === "inv"), false);
+});
+
+test("TAQ-129: an override naming a Tenant, an Investor or a flagged doc is refused before any write", async () => {
+  await seedProdLike();
+  await db.doc("Users/tenantT").set({ role: "Tenant" });
+  await db.doc("Users/inv").set({ role: "Investor" });
+  await db.doc("Users/squatter").set({ role: "Owner" });
+  await db.doc("Users/tenantT/properties/prop-ae-101").set({ id: "prop-ae-101" });
+  await db.doc("Users/inv/properties/prop-ae-102").set({ id: "prop-ae-102" });
+  await db.doc("Users/squatter/properties/prop-eg-101").set({ id: "prop-eg-101", id_conflict: true });
+  await db.doc("Users/tenantT/properties/pub-a").set({ id: "pub-a" });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ov-"));
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+  for (const [bad, expected] of [
+    [{ "prop-ae-101": "tenantT" }, /"tenantT" is a Tenant; only a landlord/],
+    [{ "prop-ae-102": "inv" }, /"inv" is an Investor; only a landlord/],
+    [{ "prop-eg-101": "squatter" }, /"squatter" is flagged id_conflict/],
+    [{ "pub-a": "ownerA" }, /not held by more than one owner \(id_conflict docs and Tenant or Investor holders do not count\)/],
+  ]) {
+    const f = path.join(dir, `o-${Math.random()}.json`);
+    fs.writeFileSync(f, JSON.stringify(bad));
+    const r = await runMain(["--project", FAKE_PROD, "--prod", "--write", "--overrides", f], env);
+    assert.equal(r.code, 2, JSON.stringify(bad));
+    assert.match(r.err, expected);
+    assert.deepEqual(await registry(), {}, "a refused override file writes nothing");
+  }
+});
+
+test("TAQ-129: after overrides the shared ids are reported as registered to a holder, not REVIEW", async () => {
+  const shared = await seedProdLike();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ov-"));
+  const f = path.join(dir, "o.json");
+  fs.writeFileSync(f, JSON.stringify(Object.fromEntries(shared.map((id) => [id, "agency"]))));
+  const env = { BACKFILL_PROD_OK: FAKE_PROD };
+  const wrote = await runMain(["--project", FAKE_PROD, "--prod", "--write", "--overrides", f], env);
+  assert.equal(wrote.code, 0, wrote.err);
+
+  await db.doc("Users/ownerB/properties/pub-a").set({ id: "pub-a" });
+  await db.doc("Users/ownerB/properties/stray-reg").set({ id: "stray-reg" });
+  await db.doc("PropertyOwners/stray-reg").set({ owner_id: "ownerA", claimed_by: "create" });
+  const after = await runMain(["--project", FAKE_PROD, "--prod"], env);
+  const report = jsonReport(after.out);
+  assert.equal(report.counts.registeredToHolder, 7);
+  assert.deepEqual(report.registeredToHolder.filter((x) => shared.includes(x.property_id)).map((x) => [x.registered_owner_id, x.claimed_by, x.other_holders]),
+    shared.map(() => ["agency", "backfill-override", ["root"]]));
+  assert.deepEqual(report.registeredToHolder.find((x) => x.property_id === "pub-a"), {
+    property_id: "pub-a", registered_owner_id: "ownerA", claimed_by: "backfill", other_holders: ["ownerB"],
+  });
+  assert.deepEqual(report.registeredToOther, [{ property_id: "stray-reg", registered_owner_id: "ownerA", holders: ["ownerB"], review: true }]);
+  assert.match(after.out, /Registered to one of several holders, e\.g\. by an override .*: 7/);
+  assert.match(after.out, /Registered to someone who is not a landlord holder \(REVIEW; left as is\): 1/);
+  assert.equal(report.idConflictCandidates.filter((c) => c.reason === "registered_to_other_holder").length, 7);
+});
+
+test("TAQ-129: a holder without a Users profile still counts as a landlord and is listed", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/p-shared").set({ id: "p-shared" });
+  await db.doc("Users/claimsOnly/properties/p-shared").set({ id: "p-shared" });
+  await db.doc("Users/claimsOnly/properties/p-solo").set({ id: "p-solo" });
+  const r = await runMain(["--project", "demo-x"], {}, { prodProjects: [] });
+  const report = jsonReport(r.out);
+  assert.deepEqual(report.multipleOwners, [{ property_id: "p-shared", owners: ["claimsOnly", "ownerA"] }], "dropping it would hand the id to ownerA");
+  assert.deepEqual(report.toRegister, [{ property_id: "p-solo", owner_id: "claimsOnly" }]);
+  assert.deepEqual(report.holdersWithoutProfile, [{ property_id: "p-shared", owner_id: "claimsOnly" }, { property_id: "p-solo", owner_id: "claimsOnly" }]);
 });

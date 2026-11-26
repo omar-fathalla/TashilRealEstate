@@ -69,8 +69,8 @@ async function registeredOwner(t, db, propertyId) {
  * The uids (other than [ownerId]) with an unflagged private doc for [propertyId], found through the
  * `id` field every app-written private doc carries (collection group query on `properties.id`, see
  * the fieldOverride in firestore.indexes.json). A failed query throws, so the trigger fails closed
- * (nothing is claimed or synced) instead of claiming blind. Docs without an `id` field are not seen
- * here; the backfill covers them.
+ * (nothing is claimed or synced) instead of claiming blind. Docs without a matching `id` field are
+ * not seen here: the backfill lists them and `--fix-id-fields` sets the field (TAQ-128).
  */
 async function otherPrivateHolders(t, db, ownerId, propertyId) {
   const snap = await t.get(db.collectionGroup("properties").where("id", "==", propertyId));
