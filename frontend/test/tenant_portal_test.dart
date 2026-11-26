@@ -292,6 +292,7 @@ void main() {
     }
 
     test('TAQ-110: unavailable, unregistered and conflicting properties map to their own messages', () {
+      expect(decisionErrorKey('try_again'), 'tnDecisionTryAgain');
       expect(decisionErrorKey('property_not_available'), 'tnPropertyNotAvailable');
       expect(decisionErrorKey('property_not_registered'), 'tnOfferPropertyInvalid');
       expect(decisionErrorKey('property_id_conflict'), 'tnOfferPropertyInvalid');

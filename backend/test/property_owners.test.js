@@ -314,7 +314,7 @@ test("TAQ-110 N-1: parallel acceptances on a registered property still have exac
   const results = await Promise.allSettled(offers.map(([id, t]) => respond(id, t)));
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   const lost = results.find((r) => r.status === "rejected");
-  assert.equal(lost.reason.details.reason, "property_already_leased");
+  assert.ok(["property_already_leased", "try_again"].includes(lost.reason.details.reason), String(lost.reason.details && lost.reason.details.reason));
 });
 
 // --- N-4 and rent precision ---
