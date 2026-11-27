@@ -278,6 +278,19 @@ test("TAQ-149: a rejected applicant may apply again; open leases or mandates blo
   assert.equal((await review(true, root(), "tenantA")).status, "approved");
 });
 
+test("TAQ-195: open leases or active mandates refuse the application itself, and nothing is written", async () => {
+  const l = await db.collection("Leases").add({ owner_id: "ownerB", tenant_id: "tenantA", status: "active" });
+  await reason(apply(tenant()), "failed-precondition", "applicant_has_open_leases");
+  assert.equal((await db.doc("AgencyApplications/tenantA").get()).exists, false);
+  await l.update({ status: "terminated" });
+  assert.equal((await apply(tenant())).status, "pending");
+
+  await invite();
+  await respond(true);
+  await reason(apply(owner("ownerA")), "failed-precondition", "applicant_has_mandates");
+  assert.equal((await db.doc("AgencyApplications/ownerA").get()).exists, false);
+});
+
 async function clearLeases() {
   const all = await db.collection("Leases").get();
   await Promise.all(all.docs.map((d) => d.ref.delete()));
