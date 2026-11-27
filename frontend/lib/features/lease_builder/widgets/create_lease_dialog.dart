@@ -8,6 +8,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
+import 'package:tashil_real_estate/features/agency_mandates/models/mandate_models.dart';
+import 'package:tashil_real_estate/features/agency_mandates/services/mandate_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_data_service.dart';
 import 'package:tashil_real_estate/features/requests/models/request_models.dart';
@@ -32,7 +34,11 @@ class CreateLeaseDialog extends StatefulWidget {
   final RequestsService? requests;
   final DateTime Function()? now;
 
-  const CreateLeaseDialog({super.key, this.properties, this.property, this.service, this.requests, this.now});
+  /// Other owners' properties the agency manages by mandate (TAQ-149). Looked up for an agency
+  /// when not given.
+  final List<PropertyMandate>? mandates;
+
+  const CreateLeaseDialog({super.key, this.properties, this.property, this.service, this.requests, this.now, this.mandates});
 
   /// Opens the dialog. Returns the new lease id, or null when nothing was created.
   static Future<String?> show(BuildContext context, {ManagedPropertyModel? property}) {
@@ -71,10 +77,55 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
   static String _two(int n) => n.toString().padLeft(2, '0');
   static String _day(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
+  late List<PropertyMandate> _mandates = widget.mandates ?? const [];
+
+  /// The owner of each property managed by mandate; any other property is the caller's own.
+  Map<String, String> get _ownerOf => {for (final m in _mandates) if (m.isActive) m.propertyId: m.ownerId};
+
+  static ManagedPropertyModel _mandatedUnit(PropertyMandate m) {
+    final title = m.propertyTitle.isEmpty ? m.propertyId : m.propertyTitle;
+    return ManagedPropertyModel(
+      id: m.propertyId,
+      countryCode: m.countryCode,
+      currencyCode: m.countryCode == 'EG' ? 'EGP' : 'AED',
+      titles: {'ar': title, 'en': title, 'hi': title},
+      descriptions: const {},
+      locations: const {},
+      cityCode: '',
+      propertyTypeCode: 'apartment',
+      unitNumber: '',
+      buildingName: '',
+      pricePerMonth: m.pricePerMonth,
+      bedrooms: 1,
+      bathrooms: 1,
+      areaSqM: 0,
+      image: '',
+      imageUrls: const [],
+      isPublished: false,
+      rentalStatus: PropertyRentalStatus.available,
+    );
+  }
+
   List<ManagedPropertyModel> get _units {
     final all = widget.properties ?? PropertyLifecycleService().propertiesNotifier.value;
     final country = CountryController.countryCode;
-    return all.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id) && p.countryCode == country).toList();
+    final own = all.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id) && p.countryCode == country).toList();
+    final ownIds = own.map((p) => p.id).toSet();
+    final managed = _mandates
+        .where((m) => m.isActive && m.countryCode == country && !ownIds.contains(m.propertyId))
+        .map(_mandatedUnit);
+    return [...own, ...managed];
+  }
+
+  Future<void> _loadMandates() async {
+    try {
+      final scope = await _service.scopeFor();
+      if (scope == null || !scope.isAgency) return;
+      final list = await MandateService.instance.backend.watchAgencyMandates(scope.value).first;
+      if (mounted) setState(() => _mandates = list.where((m) => m.isActive).toList());
+    } catch (_) {
+      // No mandates to offer; the agency's own properties still are.
+    }
   }
 
   @override
@@ -84,6 +135,7 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     _end.text = _day(DateTime(_today.year + 1, _today.month, _today.day));
     final given = widget.property;
     if (given != null) _choose(given);
+    if (widget.mandates == null) _loadMandates();
   }
 
   @override
@@ -172,7 +224,7 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     });
     try {
       final id = await _service.createLease(
-        ownerId: _service.backend.currentUserId ?? '',
+        ownerId: _ownerOf[property.id] ?? _service.backend.currentUserId ?? '',
         propertyId: property.id,
         tenantId: tenant.applicantId,
         startDate: _day(start),

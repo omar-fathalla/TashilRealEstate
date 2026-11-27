@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/agency_mandates/services/mandate_service.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/mandate_panels.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/agency_application_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -393,6 +396,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     isMobile: isMobile,
                   ),
                   const SizedBox(height: 18),
+
+                  // Agency invites and mandates, and agency registration (TAQ-149).
+                  const OwnerMandatesPanel(),
+                  if (MandateService.instance.backend.currentUserId != null)
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton.icon(
+                        key: const ValueKey('agency_apply_button'),
+                        onPressed: () => AgencyApplicationDialog.show(context),
+                        icon: const Icon(Icons.storefront_outlined),
+                        label: Text(loc.tr('aaApplyButton')),
+                      ),
+                    ),
 
                   // 2. Action Tools & View Switcher (Official M3 Connected Button Groups)
                   if (isMobileOrTablet) ...[

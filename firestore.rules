@@ -881,6 +881,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 4a-2. PropertyMandates (TAQ-149)
+    // Which agency an owner has put in charge of a property, written only by the inviteMandate,
+    // respondToMandate and revokeMandate callables. Read by the owner, the agency and SuperAdmin.
+    match /PropertyMandates/{propertyId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          isAgencyAdminOf(resource.data.get('agency_id', ''))
+        ));
+      allow write: if false;
+    }
+
+    // 4a-3. AgencyApplications (TAQ-149)
+    // An applicant's request to become an agency, written only by applyForAgency and
+    // reviewAgencyApplication. Read by the applicant and SuperAdmin.
+    match /AgencyApplications/{uid} {
+      allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == uid);
+      allow write: if false;
+    }
+
     // 4a0. PropertyOwners (TAQ-110)
     // The one owner each property id belongs to, written only by the marketplace sync trigger
     // (first creator claims) and the dev backfill script. No client reads or writes it.
