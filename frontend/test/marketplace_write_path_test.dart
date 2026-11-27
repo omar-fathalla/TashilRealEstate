@@ -11,10 +11,12 @@ import 'package:flutter_test/flutter_test.dart';
 /// pins the client to that same set.
 const adminModerationSource = 'lib/features/admin/admin_data_source.dart';
 const moderationFields = {'is_published', 'verified', 'moderation_hidden', 'updated_at'};
+final _agencyWrite = RegExp(r'_agency\([^)]*\)\.update\(\{([^}]*)\}\)', dotAll: true);
 
 void main() {
   test('the Admin moderation source writes only the moderation fields', () {
-    final source = File(adminModerationSource).readAsStringSync();
+    // The one agency write (licence verification, TAQ-154) is pinned by its own test below.
+    final source = File(adminModerationSource).readAsStringSync().replaceAll(_agencyWrite, '');
     final writes = RegExp(r'\.update\((?:_listing\([^)]*\),\s*)?\{([^}]*)\}\)', dotAll: true).allMatches(source).toList();
     expect(writes, isNotEmpty);
     for (final write in writes) {
@@ -24,6 +26,15 @@ void main() {
     }
     expect(source.contains('.delete('), isFalse);
     expect(source.contains('.add('), isFalse);
+  });
+
+  test('the only agency write is the licence status and badge (TAQ-154)', () {
+    final source = File(adminModerationSource).readAsStringSync();
+    final writes = _agencyWrite.allMatches(source).toList();
+    expect(writes.length, 1);
+    final keys = RegExp(r"'([a-z_]+)'\s*:").allMatches(writes.single.group(1)!).map((m) => m.group(1)!).toSet();
+    expect(keys, {'licence_status', 'verified_badge', 'updated_at'});
+    expect(RegExp(r"collection\('Agencies'\)").allMatches(source).length, 2, reason: 'the list query and _agency()');
   });
 
   test('the Admin moderation source writes PropertyModeration only with the four moderation-doc fields', () {

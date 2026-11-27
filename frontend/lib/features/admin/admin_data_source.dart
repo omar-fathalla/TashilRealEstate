@@ -268,9 +268,11 @@ class FirebaseAdminDataSource implements AdminDataSource {
     return claims['role'] == 'SuperAdmin';
   }
 
+  DocumentReference<Map<String, dynamic>> _agency(String id) => _db.collection('Agencies').doc(id);
+
   @override
   Future<void> setAgencyLicence(String agencyId, String status) {
-    return _db.collection('Agencies').doc(agencyId).update({
+    return _agency(agencyId).update({
       'licence_status': status,
       'verified_badge': status == 'verified',
       'updated_at': FieldValue.serverTimestamp(),
