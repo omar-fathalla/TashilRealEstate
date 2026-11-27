@@ -96,35 +96,48 @@ void main() {
       expect(PropertyValueDialog.parse('abc')!.isNaN, isTrue);
     });
 
-    testWidgets('saves the typed value, refuses zero, and clears', (tester) async {
-      final saved = <double?>[];
-      Future<void> save(String id, double? v) async => saved.add(v);
+    Future<void> open(WidgetTester tester, ManagedPropertyModel p, PropertyValueSaver save) async {
+      await tester.pumpWidget(testApp(Builder(
+        builder: (context) => TextButton(
+          onPressed: () => PropertyValueDialog.show(context, p, save: save),
+          child: const Text('open'),
+        ),
+      )));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
 
-      await tester.pumpWidget(testApp(PropertyValueDialog(property: _property('p'), save: save)));
+    testWidgets('saves the typed value and refuses zero', (tester) async {
+      final saved = <double?>[];
+      await open(tester, _property('p'), (id, v) async => saved.add(v));
       expect(find.byKey(const ValueKey('property_value_clear')), findsNothing);
       await tester.enterText(find.byKey(const ValueKey('property_value_field')), '0');
       await tester.tap(find.byKey(const ValueKey('property_value_save')));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Enter an amount above zero.'), findsOneWidget);
       expect(saved, isEmpty);
 
       await tester.enterText(find.byKey(const ValueKey('property_value_field')), '1200000');
       await tester.tap(find.byKey(const ValueKey('property_value_save')));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(saved, [1200000]);
+      expect(find.byType(PropertyValueDialog), findsNothing);
+    });
 
-      await tester.pumpWidget(testApp(PropertyValueDialog(key: const ValueKey('d2'), property: _property('p', value: 9), save: save)));
+    testWidgets('clears a stored value', (tester) async {
+      final saved = <double?>[];
+      await open(tester, _property('p', value: 9), (id, v) async => saved.add(v));
       await tester.tap(find.byKey(const ValueKey('property_value_clear')));
-      await tester.pump();
-      expect(saved, [1200000, null]);
+      await tester.pumpAndSettle();
+      expect(saved, [null]);
     });
 
     testWidgets('says so when the save fails', (tester) async {
-      Future<void> save(String id, double? v) async => throw StateError('offline');
-      await tester.pumpWidget(testApp(PropertyValueDialog(property: _property('p'), save: save)));
+      await open(tester, _property('p'), (id, v) async => throw StateError('offline'));
       await tester.enterText(find.byKey(const ValueKey('property_value_field')), '500000');
       await tester.tap(find.byKey(const ValueKey('property_value_save')));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Could not save the value. Try again.'), findsOneWidget);
     });
   });
