@@ -983,6 +983,14 @@ exports.respondToMandate = require("./mandates").respondToMandate;
 exports.revokeMandate = require("./mandates").revokeMandate;
 exports.applyForAgency = require("./agency_applications").applyForAgency;
 exports.reviewAgencyApplication = require("./agency_applications").reviewAgencyApplication;
+// TAQ-169: agency team invites.
+exports.inviteAgencyAgent = require("./agency_team").inviteAgencyAgent;
+exports.revokeAgencyInvite = require("./agency_team").revokeAgencyInvite;
+exports.listAgencyTeam = require("./agency_team").listAgencyTeam;
+exports.listMyAgencyInvites = require("./agency_team").listMyAgencyInvites;
+exports.acceptAgencyInvite = require("./agency_team").acceptAgencyInvite;
+exports.declineAgencyInvite = require("./agency_team").declineAgencyInvite;
+exports.removeAgencyAgent = require("./agency_team").removeAgencyAgent;
 
 // Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
 exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;

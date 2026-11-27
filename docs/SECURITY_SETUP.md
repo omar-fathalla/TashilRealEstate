@@ -402,3 +402,22 @@ An agent can't:
 - use any mandate callable or `document_ocr`
 - read invoices, transactions or `Agencies/{id}/private` (payout details)
 - delete anything
+
+### Agency team invites (TAQ-169)
+
+The AgencyAdmin calls `inviteAgencyAgent({email})`. That creates `AgencyInvites/{id}`, which
+expires after 7 days. Limits: 20 open invites and 20 agents per agency, and 30 invites a day per
+admin.
+
+The invitee signs in with that same email, verified, then calls `acceptAgencyInvite({inviteId})`
+or `declineAgencyInvite`. Accepting is refused when:
+
+- the invitee's role isn't self-service. Any non-staff role, or none, is fine.
+- the invitee is a party to an open lease or owns a managed property. This is the same check as
+  an agency approval.
+
+On accept, `applyUserRole` grants `AgencyAgent` with the agency's `agency_id`, which revokes the
+user's tokens, and records `AgencyAgents/{uid}`. `removeAgencyAgent({uid})`, called by the
+AgencyAdmin or a SuperAdmin, puts the user back on their earlier self-service role (Tenant if they
+had none). Clients can't read or write `AgencyInvites` or `AgencyAgents`. Every invite, join,
+revoke and removal is in the audit log.

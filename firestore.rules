@@ -994,6 +994,14 @@ service cloud.firestore {
     }
 
     // TAQ-193: audit trail, written only by the Admin SDK and kept one year (expire_at).
+    // TAQ-169: agency team invites and members. Only the agency_team.js callables touch these.
+    match /AgencyInvites/{inviteId} {
+      allow read, write: if false;
+    }
+    match /AgencyAgents/{uid} {
+      allow read, write: if false;
+    }
+
     match /AuditLog/{entryId} {
       allow read: if isSuperAdmin();
       allow write: if false;
