@@ -1,0 +1,18 @@
+# TAQ-32: weekly dependency update PRs, opened against dev (never master).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      firebase:
+        patterns: ["firebase*", "@firebase/*"]
+  - package-ecosystem: pub
+    directory: /frontend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
