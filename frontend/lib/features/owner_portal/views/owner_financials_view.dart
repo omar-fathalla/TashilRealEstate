@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/collected_this_month.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/lease_payment_service.dart';
@@ -236,9 +237,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
         final countryInvoices = allInvoices.where((inv) => inv.countryCode == currentCountry).toList();
 
         // Calculate Overview KPIs
-        final totalCollected = countryInvoices
-            .where((inv) => inv.status == 'paid')
-            .fold<double>(0.0, (sum, inv) => sum + inv.totalAmountDue);
+        // TAQ-189: this month's electronic collections only, not every paid month.
+        final totalCollected = collectedElectronicallyThisMonth(countryInvoices, DateTime.now());
 
         final totalPending = countryInvoices
             .where((inv) => inv.status == 'due_soon')
