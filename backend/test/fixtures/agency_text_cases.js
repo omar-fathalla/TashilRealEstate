@@ -1,6 +1,6 @@
 "use strict";
 
-// TAQ-201/207-213: one list for the server filter (agency_text_filter.test.js), applyForAgency
+// TAQ-201/207-216: one list for the server filter (agency_text_filter.test.js), applyForAgency
 // (same file) and the rules (rules.test.js), so the three stay in step. Each refused case says
 // what applyForAgency reports for it.
 const REFUSED = [
@@ -129,6 +129,36 @@ const REFUSED = [
   ["Delta 050 l23 4567", "phone"],
   ["Delta 05O I23 4567", "phone"],
   ["Delta oh five oh one two three four", "phone"],
+  // TAQ-214: country codes after ". " or a dot-like character still count in lower case.
+  ["Delta x \u00b7 ae", "link"],
+  ["Delta x\u00b7ae", "link"],
+  ["Delta x. sa", "link"],
+  ["Delta x \u00b7 eg", "link"],
+  ["Delta x. io", "link"],
+  ["Delta x. COM", "link"],
+  ["Delta x\u00b7COM", "link"],
+  // TAQ-216: lower-case comma, dot and word forms; abbreviation endings; digits
+  ["Delta x\uff0ccom", "link"],
+  ["Delta x, com", "link"],
+  ["Delta x ,com", "link"],
+  ["Delta x\u3001com", "link"],
+  ["Delta x\u060ccom", "link"],
+  ["Delta x\u066ccom", "link"],
+  ["Delta x,org", "link"],
+  ["Delta x\u2218com", "link"],
+  ["Delta x point net", "link"],
+  ["Delta x d.o.t com", "link"],
+  ["Delta co.rent", "link"],
+  ["Delta co.vip", "link"],
+  ["Delta 050 twelve thirty four", "phone"],
+  ["Delta 0S0 1234567", "phone"],
+  // TAQ-215: real phone-word runs stay refused with teens counted twice and tens once.
+  ["Delta zero five zero eleven twelve", "phone"],
+  ["Delta 0 5 0 twelve thirty four fifty", "phone"],
+  ["Delta 05 01 23 45 67", "phone"],
+  ["Floors 1, 2, 3, 4, 5, 6, 7", "phone"],
+  ["Call us: zero five zero, one two three, four five six", "phone"],
+  ["Delta zero, five, zero, one, two, three, four", "phone"],
 ];
 
 const ALLOWED = [
@@ -254,6 +284,51 @@ const ALLOWED = [
   "O.D. Properties",
   "Open 9 a.m. to 6 p.m.",
   "عائد ٧٫٥٪ سنويًا",
+  // TAQ-215: spelled numbers in sentences
+  "Since nineteen ninety eight, twenty years of service",
+  "Eleven, twelve, thirteen and fourteen storey towers",
+  "أبراج من ثلاثة عشر وأربعة عشر وخمسة عشر طابقا",
+  "Founded in nineteen ninety nine, twenty five years later still family run",
+  "Apartments of seventy five, eighty five and ninety five square meters",
+  "Ten, twenty, thirty and forty year leases",
+  "Twenty Twenty Twenty-One Realty",
+  "Thirteen, fourteen and fifteen floor towers",
+  "عندنا حداشر فيلا واتناشر شقة وتلتاشر محل",
+  "Nineteen Eighty Four Realty",
+  "One hundred and twenty villas",
+  // TAQ-214: country codes closing a list, capitalised words after a comma
+  "Dubai \u00b7 Abu Dhabi \u00b7 AE",
+  "Riyadh \u00b7 Jeddah \u00b7 SA",
+  "Cairo \u00b7 Giza \u00b7 EG",
+  "Doha \u00b7 QA",
+  "Kuwait \u00b7 KW",
+  "Delta Homes \u00b7 AE",
+  "Dubai\u00b7AE",
+  "Cairo \u00b7 EG office",
+  "Based in Dubai. AE licensed.",
+  "Villas in Dubai. Io",
+  "Residential,Commercial,Org chart",
+  "Info,Biz Bay office",
+  "Sales,Com",
+  "Delta Realty \u00b7 UAE",
+  // TAQ-216: normal text near the new checks
+  "Delta Co.Rent",
+  "Delta Co.VIP",
+  "Our point of view",
+  "Punto Inmobiliario",
+  "360\u00b0 virtual tours",
+  "Villa 1O1, Plot 2O3, Block 4O5",
+  "Price 1,25O,OOO AED",
+  "License No. 1234567",
+  "Plot 345-678-90",
+  "Parcel 1234 5678",
+  "Buy,Sell,Rent,Manage",
+  "Dubai,Abu Dhabi,Sharjah",
+  "Since the 1990s, 2000s and 2010s",
+  "Units 01 02 03 available",
+  "Flat 001 and 002",
+  "Studios S1, S2 and S3",
+  "Villas 5S and 6S",
 ];
 
 module.exports = { REFUSED, ALLOWED };
