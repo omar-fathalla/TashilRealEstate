@@ -135,6 +135,13 @@ String mandateErrorKey(String reason) {
     case 'name_invalid':
     case 'name_contact':
       return 'aaNameInvalid';
+    // TAQ-208: say what in the agency name was refused.
+    case 'name_phone':
+      return 'aaNamePhone';
+    case 'name_link':
+      return 'aaNameLink';
+    case 'name_email':
+      return 'aaNameEmail';
     case 'phone_required':
     case 'phone_invalid':
       return 'aaPhoneInvalid';

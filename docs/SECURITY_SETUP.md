@@ -257,13 +257,22 @@ for R in datastore.user firebaseauth.admin logging.logWriter monitoring.metricWr
 done
 gcloud storage buckets add-iam-policy-binding gs://$P.firebasestorage.app --project $P --member serviceAccount:$SA --role roles/storage.objectAdmin
 gcloud secrets add-iam-policy-binding GEMINI_API_KEY --project $P --member serviceAccount:$SA --role roles/secretmanager.secretAccessor
+N=$(gcloud projects describe $P --format="value(projectNumber)")
+# The deployer may act as the account; the Pub/Sub and Scheduler service agents mint its OIDC tokens.
+gcloud iam service-accounts add-iam-policy-binding $SA --project $P --member user:<deployer email> --role roles/iam.serviceAccountUser
+for A in gcp-sa-pubsub gcp-sa-cloudscheduler; do
+  gcloud iam service-accounts add-iam-policy-binding $SA --project $P --member serviceAccount:service-$N@$A.iam.gserviceaccount.com --role roles/iam.serviceAccountTokenCreator
+done
 ```
 
 Why each role: Firestore reads and writes (`datastore.user`); custom claims, token revocation and
 user lookups (`firebaseauth.admin`); the photo-token rotation on the default bucket
 (`storage.objectAdmin`, bucket only); `GEMINI_API_KEY` (accessor on that secret only); logs and
 metrics; and invoking the Cloud Run services behind the Firestore triggers and the two schedules
-(`run.invoker`, `eventarc.eventReceiver`). When `PAYMENTS_ENABLED=true`, also grant the accessor
+(`run.invoker`, `eventarc.eventReceiver`). On the account itself (not the project), the deployer needs
+`iam.serviceAccountUser` to deploy functions that run as it, and the Pub/Sub and Cloud Scheduler
+service agents need `iam.serviceAccountTokenCreator` to sign the OIDC tokens for trigger pushes
+and schedules. The Eventarc service agent needs nothing extra. When `PAYMENTS_ENABLED=true`, also grant the accessor
 role on each `PAYMOB_*` secret. Keep Editor on the default compute account until every function in
 the project has been redeployed with this code; removing it is a separate step.
 

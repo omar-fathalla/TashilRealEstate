@@ -1,67 +1,146 @@
 "use strict";
 
-// TAQ-201: the stricter check for an agency's own name and about text. It runs the request filter
-// (request_text_filter.js), then also refuses what that filter lets through on purpose because
-// tenants write it in ordinary sentences, but an agency name has no need for:
-//   - any word ending in a dot and two or more Latin letters with no space after the dot
-//     ("x.shop", "x.Me", "x .com", "x。com"), or a dot spaced on both sides ("x . com");
-//   - a spelled-out phone that mixes single digits and digit words, or joins them with '+', '/',
-//     '×' or '*' ("0 five 0 one 2 three 4", "zero+five+...");
-//   - Arabic digit words written with hamza or alef-maqsura ("أثنين", "ثمانى").
-// firestore.rules (agencyTextFree) mirrors the same checks for direct Agencies/{id} writes.
+// The stricter check for an agency's own name and about text (TAQ-198, TAQ-201, TAQ-207, TAQ-208).
+// It runs the request filter (request_text_filter.js), then the agency checks below on a normalised
+// copy. firestore.rules (agencyTextFree) runs the same agency checks for direct Agencies/{id}
+// writes. The word, ending and abbreviation lists are exported and test/agency_text_filter.test.js
+// checks that firestore.rules holds them verbatim, so the two cannot drift apart.
+//
+// Normalisation (both sides): lower case; Unicode full stops (。 ． ｡ ﹒ ․) to '.'; أ/إ/آ/ٱ to ا and
+// ى to ي; harakat, tatweel and zero-width characters removed; "[.]", "(.)", "[dot]", "(dot)" to '.'.
+//
+// Phone: every run of characters that are not letters, digits or marks is a separator (so – · ~ |
+// + / and keycap marks are too). Each token becomes a marker: a number word '#', a single digit
+// '%', a connector ("and", "et", "و") '&'. A connector counts only next to a number word ("zero and
+// five"); "6 and 7" still breaks the run. Seven markers in a row is a phone. Digit groups of two or
+// more digits never count, so "Open 24/7 365, one-stop shop" passes (TAQ-208).
+//
+// Domain: a word, a dot glued to it (or a dot with spaces before it), then two letters of a
+// Latin, Cyrillic or Greek script ("x.shop", "x.соm"), an Arabic country or generic ending
+// ("x.مصر"), or a known ending spelled with spaces ("x.c om", "x . c o m"). A known abbreviation
+// before the dot (P.O, Dr, Mr, Mrs, Ms, Co, Inc, Ltd, No, Jr, Sr; not St) is exempt unless a known
+// ending follows: "P.O.Box", "Dr.Ahmed" and "Co.LLC" pass, "Dr.com" and "St.Regis" do not. Also
+// "www." and "x dot com".
 
-const { foldForContactMatching } = require("./contact_filter");
-const { containsContactInRequestText, DIGIT_WORDS, foldTaMarbuta } = require("./request_text_filter");
+const { contactKind, foldForContactMatching } = require("./contact_filter");
+const { containsContactInRequestText, hasSpelledOutNumber } = require("./request_text_filter");
 
-const MIN_SPELLED_DIGITS = 7;
+// Number words, lower case and already normalised. Arabic words also match with a و or ف prefix.
+const NUMBER_WORDS = [
+  "zero", "oh", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+  "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen",
+  "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
+  "zéro", "un", "une", "deux", "trois", "quatre", "cinq", "sept", "huit", "neuf", "dix", "onze", "douze",
+  "शून्य", "जीरो", "एक", "दो", "तीन", "चार", "पांच", "पाँच", "छह", "छः", "छे", "सात", "आठ", "नौ",
+];
+const ARABIC_NUMBER_WORDS = [
+  "صفر", "واحد", "واحده", "واحدة", "اثنين", "اتنين", "اثنان", "ثلاثه", "ثلاثة", "ثلاث", "تلاته", "تلاتة", "تلات", "تلاث",
+  "اربعه", "اربعة", "اربع", "خمسه", "خمسة", "خمس", "سته", "ستة", "ست", "سبعه", "سبعة", "سبع",
+  "ثمانيه", "ثمانية", "ثماني", "ثمان", "تمانيه", "تمانية", "تماني", "تمان", "تسعه", "تسعة", "تسع",
+];
+const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.join("|")}))`;
+const GLUED_PATTERN = "(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}";
+const CONNECTOR_PATTERN = "(?:and|et|و)";
 
-/** Unicode full stops to '.', Arabic alef/yaa variants to their plain letter, harakat and tatweel removed. */
+const TLDS = ["com", "net", "org", "info", "biz", "co", "io", "me", "ae", "eg", "app", "online", "site", "xyz",
+  "ly", "gl", "us", "uk", "in", "sa", "qa", "kw", "edu", "gov", "shop", "store"];
+// A known ending, each letter optionally followed by one space ("c om", "c o m").
+const SPACED_TLD_PATTERN = `(?:${TLDS.map((t) => t.split("").join(" ?")).join("|")})`;
+const ARABIC_TLD_PATTERN = "(?:مصر|امارات|الامارات|السعوديه|السعودية|سعودي|قطر|الاردن|عمان|البحرين|الكويت|المغرب|الجزائر|تونس|فلسطين|سوريه|سورية|شبكه|شبكة|موقع|كوم|عرب)";
+const ABBREVIATION_PATTERN = "(?:p[.] ?o|dr|mrs|mr|ms|co|inc|ltd|no|jr|sr)";
+
+const SPACE = "[\\s\\u00a0\\u2000-\\u200a\\u202f\\u3000]";
+const re = (source) => new RegExp(source, "u");
+const reAll = (source) => new RegExp(source, "gu");
+
+/** Lower case, Unicode dots to '.', Arabic letter variants unified, harakat/tatweel/zero-width removed. */
 function normaliseAgencyText(text) {
-  return foldForContactMatching(String(text).normalize("NFKC")).folded
+  const plain = String(text).normalize("NFKC").replace(/[\u200b-\u200f\u2060\ufeff]/gu, "");
+  return foldForContactMatching(plain).folded
+    .toLowerCase()
     .replace(/[\u3002\uff61\ufe52\uff0e\u2024]/gu, ".")
     .replace(/[\u064b-\u065f\u0670\u0640]/gu, "")
     .replace(/[أإآٱ]/gu, "ا")
-    .replace(/ى/gu, "ي");
+    .replace(/ى/gu, "ي")
+    .replace(reAll(`[\\[({]${SPACE}*(?:[.]|dot)${SPACE}*[\\])}]`), ".");
 }
 
-// A Latin ending of 2+ letters straight after a dot ("x.shop", "x .com"), or after a dot spaced on
-// both sides ("x . com"). "Marina. Commercial", "L.L.C", "Ph.D" and "3.5" stay allowed.
-const AGENCY_DOMAIN = /[\p{L}\p{N}-](?:\.|\s+\.\s+|\s+\.)[a-z]{2,}(?!\p{L})/iu;
+/** The marker string the phone check reads: '#' number word, '%' single digit, '&' connector. */
+function numberMarkers(normal) {
+  return `  ${normal.replace(/[\u20e3\ufe0e\ufe0f]/gu, " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+    .replace(reAll(` ${NUMBER_WORD_PATTERN} `), " # ")
+    .replace(/ \p{Nd} /gu, " % ")
+    .replace(reAll(` ${CONNECTOR_PATTERN} `), " & ")
+    .replace(/\s+/gu, "")
+    .replace(/#&/g, "#")
+    .replace(/&#/g, "#");
+}
 
-const SEPARATORS = /[\s\-_.,;:|/\\()[\]{}'"!?،؛+×*]+/u;
+const NUMBER_RUN = /[#%]{7}/;
+const GLUED = re(GLUED_PATTERN);
 
-// After normaliseAgencyText: "أثنين" is "اثنين" and "ثمانى" is "ثماني", both in DIGIT_WORDS.
-const digitWord = (token) => DIGIT_WORDS.has(token) || DIGIT_WORDS.has(foldTaMarbuta(token));
+const ENDING = `(?:[\\p{Script=Latin}\\p{Script=Cyrillic}\\p{Script=Greek}]{2}|${ARABIC_TLD_PATTERN}|${SPACED_TLD_PATTERN}(?!\\p{L}))`;
+const DOT_FORM = "(?:[.]| +[.] ?)";
+const DOMAIN = re(`[\\p{L}\\p{N}-]${DOT_FORM}${ENDING}`);
+const ABBREVIATION = reAll(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}[.]`);
+const ABBREVIATION_DOMAIN = re(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}${DOT_FORM}${SPACED_TLD_PATTERN}(?!\\p{L})`);
+const WORD_DOT = re(`[\\p{L}\\p{N}] +dot +${SPACED_TLD_PATTERN}(?!\\p{L})`);
+const WWW = /(?:^|[^\p{L}\p{N}])www ?[.]/u;
 
-/** Seven or more digits written as a run of digit words and digits, with at least one word. */
-function hasMixedSpelledNumber(text) {
-  let words = 0;
-  let digits = 0;
-  const finish = () => {
-    const found = words >= 1 && digits >= MIN_SPELLED_DIGITS;
-    words = 0;
-    digits = 0;
-    return found;
-  };
-  for (const token of text.toLowerCase().split(SEPARATORS).filter(Boolean)) {
-    if (digitWord(token)) {
-      words += 1;
-      digits += 1;
-    } else if (/^[0-9]{1,4}$/.test(token)) {
-      digits += token.length;
-    } else if (finish()) {
-      return true;
-    }
+/** The domain-like fragment of normalised text, or "". */
+function domainIn(normal) {
+  const text = ` ${normal.replace(reAll(`${SPACE}+`), " ")}`;
+  const exempted = text.replace(ABBREVIATION, "  ");
+  for (const pattern of [DOMAIN, WORD_DOT, WWW]) {
+    const m = exempted.match(pattern);
+    if (m) return wordAround(text, m.index, m[0].length);
   }
-  return finish();
+  const m = text.match(ABBREVIATION_DOMAIN);
+  return m ? wordAround(text, m.index, m[0].length) : "";
+}
+
+// The match widened to the words it touches, for the error message: "t.re" -> "st.regis".
+function wordAround(text, start, length) {
+  let from = start;
+  let to = start + length;
+  while (from < to && !/[\p{L}\p{N}]/u.test(text[from])) from += 1;
+  while (from > 0 && /[\p{L}\p{N}-]/u.test(text[from - 1])) from -= 1;
+  while (to < text.length && /[\p{L}\p{N}\p{M}]/u.test(text[to])) to += 1;
+  return text.slice(from, to).trim();
+}
+
+/**
+ * What an agency name or about text is refused for, or null when it is clean:
+ * { kind: "phone" | "link" | "email" | "contact", match }. match is the website-like fragment for
+ * "link" when the agency check found it; "contact" is a loose email or link the request filter
+ * found (e.g. "name at host dot com").
+ */
+function agencyTextFinding(text) {
+  if (typeof text !== "string" || !text) return null;
+  const normal = normaliseAgencyText(text);
+  const kind = contactKind(text) || contactKind(normal);
+  if (kind === "phone" || NUMBER_RUN.test(numberMarkers(normal)) || GLUED.test(normal) || hasSpelledOutNumber(text)) {
+    return { kind: "phone", match: "" };
+  }
+  if (kind === "email") return { kind: "email", match: "" };
+  const domain = domainIn(normal);
+  if (domain) return { kind: "link", match: domain };
+  if (kind === "link") return { kind: "link", match: "" };
+  if (containsContactInRequestText(text) || containsContactInRequestText(normal)) return { kind: "contact", match: "" };
+  return null;
 }
 
 /** True when an agency name or about text holds a phone, link, email or domain in any form we know. */
 function containsContactInAgencyText(text) {
-  if (typeof text !== "string" || !text) return false;
-  if (containsContactInRequestText(text)) return true;
-  const normal = normaliseAgencyText(text);
-  return containsContactInRequestText(normal) || AGENCY_DOMAIN.test(normal) || hasMixedSpelledNumber(normal);
+  return agencyTextFinding(text) !== null;
 }
 
-module.exports = { containsContactInAgencyText, normaliseAgencyText };
+module.exports = {
+  containsContactInAgencyText,
+  agencyTextFinding,
+  normaliseAgencyText,
+  numberMarkers,
+  RULES_FRAGMENTS: {
+    NUMBER_WORD_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, ARABIC_TLD_PATTERN, ABBREVIATION_PATTERN,
+  },
+};

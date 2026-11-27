@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/features/agency_mandates/models/mandate_models.dart';
 import 'package:tashil_real_estate/features/agency_mandates/services/mandate_service.dart';
@@ -109,6 +110,18 @@ void main() {
       expect(mandateErrorKey('mandate_lease_live'), 'mdLeaseLive');
       expect(mandateErrorKey('mandate_pending_other'), 'mdPendingOther');
       expect(mandateErrorKey('applicant_has_open_leases'), 'aaBlockedLeases');
+      expect(mandateErrorKey('name_contact'), 'aaNameInvalid');
+      // TAQ-208: a refused agency name says what was refused, in every language.
+      expect(mandateErrorKey('name_phone'), 'aaNamePhone');
+      expect(mandateErrorKey('name_link'), 'aaNameLink');
+      expect(mandateErrorKey('name_email'), 'aaNameEmail');
+      for (final lang in ['ar', 'en', 'hi']) {
+        final loc = AppLocalizations(Locale(lang));
+        for (final key in ['aaNamePhone', 'aaNameLink', 'aaNameEmail']) {
+          expect(loc.tr(key), isNot(key), reason: '$lang $key');
+        }
+        expect(loc.tr('aaNamePhone'), isNot(loc.tr('aaNameLink')), reason: lang);
+      }
       expect(mandateErrorKey('something_new'), 'mdFailed');
     });
   });

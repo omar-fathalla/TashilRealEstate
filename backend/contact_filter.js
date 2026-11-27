@@ -103,4 +103,12 @@ function containsContact(text) {
   return phoneSpans(text).length > 0 || linkSpans(text).length > 0 || hasEmail(text);
 }
 
-module.exports = { stripContacts, containsContact, foldForContactMatching };
+/** Which kind of contact containsContact() finds first: "phone", "link", "email", or "" (TAQ-208). */
+function contactKind(text) {
+  if (typeof text !== "string" || text === "") return "";
+  if (phoneSpans(text).length > 0) return "phone";
+  if (linkSpans(text).length > 0) return "link";
+  return hasEmail(text) ? "email" : "";
+}
+
+module.exports = { stripContacts, containsContact, contactKind, foldForContactMatching };

@@ -298,15 +298,16 @@ async function clearLeases() {
 
 test("TAQ-149: application fields are checked", async () => {
   assert.throws(() => applicationFrom({ name: "A", countryCode: "AE", phone: "+97150000000" }), /name/);
-  assert.throws(() => applicationFrom({ name: "Call 050 123 4567 now", countryCode: "AE", phone: "+97150000000" }), /phone, link or email/);
+  assert.throws(() => applicationFrom({ name: "Call 050 123 4567 now", countryCode: "AE", phone: "+97150000000" }), /phone number/);
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "SA", phone: "+97150000000" }), /countryCode/);
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "call me" }), /phone/);
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "+97150000000", orn: "12 34/5" }), /ORN/);
   assert.equal(applicationFrom({ name: "  Dune   Realty ", countryCode: "EG", phone: "0100 000 0000" }).name, "Dune Realty");
   // TAQ-188: a spelled-out phone number or a bare domain is refused too.
-  for (const name of ["Realty zero five zero one two three four five six seven", "صفر واحد صفر خمسه تلاته اربعه سته سبعه", "Dune Realty example.com"]) {
-    assert.throws(() => applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }), /phone, link or email/, name);
+  for (const name of ["Realty zero five zero one two three four five six seven", "صفر واحد صفر خمسه تلاته اربعه سته سبعه"]) {
+    assert.throws(() => applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }), /phone number/, name);
   }
+  assert.throws(() => applicationFrom({ name: "Dune Realty example.com", countryCode: "AE", phone: "+97150000000" }), /website address/);
   for (const name of ["Seven Seas Realty", "One Two Three Homes", "First Gulf Properties"]) {
     assert.equal(applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }).name, name);
   }

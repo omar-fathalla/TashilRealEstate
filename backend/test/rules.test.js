@@ -651,11 +651,11 @@ test("TAQ-198: the agency name and about text refuse spelled-out phones and bare
   }
 });
 
-test("TAQ-201: the agency name and about text refuse the remaining variants, same list as the server", async () => {
+test("TAQ-201/207/208: the agency name and about text follow the server filter on one shared list", async () => {
   const { REFUSED, ALLOWED } = require("./fixtures/agency_text_cases");
   await seedAgency();
   const ref = doc(agency1Admin(), "Agencies/agency-1");
-  for (const text of REFUSED) {
+  for (const [text] of REFUSED) {
     await assertFails(updateDoc(ref, { name: text }), `name: ${text}`);
     await assertFails(updateDoc(ref, { "names.ar": text }), `names.ar: ${text}`);
     await assertFails(updateDoc(ref, { about: text }), `about: ${text}`);
