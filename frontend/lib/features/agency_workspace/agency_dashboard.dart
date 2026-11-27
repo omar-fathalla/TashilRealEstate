@@ -22,6 +22,7 @@ import 'package:tashil_real_estate/features/owner_portal/services/property_lifec
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_stats.dart';
 import 'agency_staff_scope.dart';
+import 'services/agency_properties_feed.dart';
 import 'views/agency_team_view.dart';
 import 'views/overview_view.dart';
 import 'views/properties_view.dart';
@@ -45,7 +46,10 @@ class AgencyDashboard extends StatefulWidget {
   /// pass a value to cover both layouts.
   final bool? showMockTabs;
 
-  const AgencyDashboard({super.key, this.identitySource, this.portfolio, this.showMockTabs});
+  /// Where an agent's Properties tab reads the agency's listings (TAQ-194); tests pass a fake.
+  final AgencyPropertiesBackend? agencyProperties;
+
+  const AgencyDashboard({super.key, this.identitySource, this.portfolio, this.showMockTabs, this.agencyProperties});
 
   @override
   State<AgencyDashboard> createState() => _AgencyDashboardState();
@@ -71,9 +75,16 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
   /// while it is hidden; an agent gets rent collection instead of financials.
   List<int> get _bottomTabs => [0, 1, if (_showMockTabs) 2, 3, _isAgent ? 4 : 5];
 
-  /// The view to show: an agent never lands on the admin-only financials or team views.
+  /// The agency's listings for an agent's read-only Properties tab (TAQ-194).
+  late final AgencyPropertiesFeed _agencyProperties = AgencyPropertiesFeed(backend: widget.agencyProperties);
+
+  /// The view to show: an agent never lands on the admin-only financials or team views, and its
+  /// Properties tab lists the agency's listings instead of its own.
   Widget get _currentView {
     final index = _isAgent && (_selectedIndex == 5 || _selectedIndex == _teamTab) ? 0 : _selectedIndex;
+    if (index == 1 && _isAgent) {
+      return PropertiesView(properties: _agencyProperties.properties, hydrating: _agencyProperties.hydrating);
+    }
     return _views[index];
   }
 
@@ -81,7 +92,9 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
   void initState() {
     super.initState();
     _identitySource.load().then((identity) {
-      if (mounted) setState(() => _identity.value = identity);
+      if (!mounted) return;
+      setState(() => _identity.value = identity);
+      if (identity.isAgent) _agencyProperties.start(identity.agencyId);
     }).catchError((Object _) {});
     _portfolio = widget.portfolio ?? PortfolioController();
     _portfolio.start();
@@ -108,6 +121,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
   @override
   void dispose() {
     _identity.dispose();
+    _agencyProperties.dispose();
     if (widget.portfolio == null) _portfolio.dispose();
     super.dispose();
   }
