@@ -10,6 +10,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 const ROOT = path.join(__dirname, "..", "..");
 const SCAN_DIRS = ["frontend/lib", "frontend/web"];
@@ -38,14 +39,34 @@ const RULES = [
   { name: "Gemini REST method", pattern: /:(stream)?[gG]enerateContent\b/g },
 ];
 
+// Hosting can serve precompressed copies (main.dart.js.gz, .br). The build scan reads them
+// decompressed, so a key only in a compressed copy is still found (TAQ-86).
+const COMPRESSED = {
+  ".gz": (buf) => zlib.gunzipSync(buf),
+  ".br": (buf) => zlib.brotliDecompressSync(buf),
+};
+
+function scannable(name) {
+  const ext = path.extname(name);
+  if (COMPRESSED[ext]) return SCAN_EXTENSIONS.has(path.extname(name.slice(0, -ext.length)));
+  return SCAN_EXTENSIONS.has(ext);
+}
+
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
-    else if (SCAN_EXTENSIONS.has(path.extname(entry.name))) out.push(full);
+    else if (scannable(entry.name)) out.push(full);
   }
   return out;
+}
+
+/** A file's text, decompressed for .gz and .br. A copy that does not decompress is a finding. */
+function readText(file) {
+  const decompress = COMPRESSED[path.extname(file)];
+  if (!decompress) return fs.readFileSync(file, "utf8");
+  return decompress(fs.readFileSync(file)).toString("utf8");
 }
 
 function firebaseApiKeys(root = ROOT, env = process.env) {
@@ -87,7 +108,14 @@ function scanClient(root = ROOT, { build = false, env = process.env } = {}) {
   for (const dir of dirs) {
     for (const file of walk(path.join(root, dir))) {
       const relPath = path.relative(root, file).split(path.sep).join("/");
-      findings.push(...scanText(relPath, fs.readFileSync(file, "utf8"), { allowedKeys }));
+      let text;
+      try {
+        text = readText(file);
+      } catch (err) {
+        findings.push({ file: relPath, line: 0, rule: `unreadable compressed file (${err.code || err.message})` });
+        continue;
+      }
+      findings.push(...scanText(relPath, text, { allowedKeys }));
     }
   }
   return findings;

@@ -35,7 +35,7 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
    ignore it:
 
    ```bash
-   flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=<site key>
+   tool/build_web.sh --release --dart-define=RECAPTCHA_SITE_KEY=<site key>   # in frontend/
    flutter build ipa --release
    flutter build appbundle --release
    ```
@@ -231,10 +231,11 @@ credential-looking value, is ignored by git, or is not tracked.
 
 `npm test` (in `backend/`) fails if `frontend/lib` or `frontend/web` holds a Gemini key, a base64
 form of one, or a direct Gemini/Vertex URL. Before shipping a web build, scan the compiled output
-too; only the public Firebase `apiKey` values from `firebase_options.dart` may appear in it:
+too; only the public Firebase `apiKey` values from `firebase_options.dart` may appear in it. The build
+scan also reads the gzip (`.gz`) and Brotli (`.br`) copies of those files (TAQ-86):
 
 ```bash
-cd frontend && flutter build web --release
+cd frontend && tool/build_web.sh --release
 cd ../backend && npm run check:client-keys:build
 ```
 
