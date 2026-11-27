@@ -11,12 +11,13 @@
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+// From the modular entry point like the other modules: in the Functions emulator the
+// `admin.firestore` namespace has no FieldValue, so reading it there threw (TAQ-165).
+const { FieldValue } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
-
-const { FieldValue } = admin.firestore;
 
 const { isPublishedAndHidden } = require("./hidden_listing_predicate");
 

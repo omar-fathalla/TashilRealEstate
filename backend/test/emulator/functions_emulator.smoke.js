@@ -125,6 +125,19 @@ test("TAQ-44: reminder, invoice, and setUserRole callables run in the Functions 
   assert.deepEqual((await admin.auth().getUser(target.uid)).customClaims, { role: "Tenant" });
 });
 
+// --- TAQ-165: the held-listing guard runs in the Functions emulator ---
+
+test("TAQ-165: holdHiddenListingsOffline unpublishes a published and held listing in the Functions emulator", async () => {
+  await db.doc("Properties/smoke-held").set({ is_published: true, moderation_hidden: true, owner_id: "smoke-owner" });
+  const after = await waitFor(async () => {
+    const snap = await db.doc("Properties/smoke-held").get();
+    return snap.get("is_published") === false ? snap.data() : null;
+  });
+  assert.ok(after, "the guard did not unpublish /Properties/smoke-held");
+  assert.equal(after.moderation_hidden, true);
+  assert.ok(after.updated_at, "server timestamp missing");
+});
+
 // --- TAQ-20: the market index callable runs in the Functions emulator ---
 
 test("TAQ-20: syncMarketIndexManual is SuperAdmin-only and writes a server timestamp", async () => {
