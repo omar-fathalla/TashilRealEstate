@@ -40,12 +40,25 @@ async function signUp(email, claims) {
   return { uid: user.uid, idToken: body.idToken };
 }
 
+// One callable may take at most this long (TAQ-156): a slow emulator then fails with the callable's
+// name instead of hanging until the whole test times out.
+const CALL_TIMEOUT_MS = Number(process.env.SMOKE_CALL_TIMEOUT_MS) || 60000;
+
 async function callable(name, idToken, data) {
-  const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ data }),
-  });
+  let res;
+  try {
+    res = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ data }),
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    });
+  } catch (err) {
+    if (err && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(`callable ${name} did not answer within ${CALL_TIMEOUT_MS} ms`);
+    }
+    throw err;
+  }
   return { status: res.status, body: await res.json() };
 }
 
@@ -110,6 +123,19 @@ test("TAQ-44: reminder, invoice, and setUserRole callables run in the Functions 
   const role = await callable("setUserRole", root.idToken, { uid: target.uid, role: "Tenant" });
   assert.equal(role.status, 200, JSON.stringify(role.body));
   assert.deepEqual((await admin.auth().getUser(target.uid)).customClaims, { role: "Tenant" });
+});
+
+// --- TAQ-165: the held-listing guard runs in the Functions emulator ---
+
+test("TAQ-165: holdHiddenListingsOffline unpublishes a published and held listing in the Functions emulator", async () => {
+  await db.doc("Properties/smoke-held").set({ is_published: true, moderation_hidden: true, owner_id: "smoke-owner" });
+  const after = await waitFor(async () => {
+    const snap = await db.doc("Properties/smoke-held").get();
+    return snap.get("is_published") === false ? snap.data() : null;
+  });
+  assert.ok(after, "the guard did not unpublish /Properties/smoke-held");
+  assert.equal(after.moderation_hidden, true);
+  assert.ok(after.updated_at, "server timestamp missing");
 });
 
 // --- TAQ-20: the market index callable runs in the Functions emulator ---
@@ -416,4 +442,44 @@ test("TAQ-110 N-1: the trigger flags a squatter's copy of a listed id; the squat
   assert.equal(ok.status, 200, JSON.stringify(ok.body));
   const accepted = await callable("respondToLeaseOffer", tenant.idToken, { leaseId: ok.body.result.leaseId, decision: "approve" });
   assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+});
+
+// --- TAQ-150: agency listings show the agency, not a platform placeholder ---
+
+test("TAQ-150: an agency listing carries its agency's name, the ORN once verified, and follows profile edits", async () => {
+  const agencyId = "smoke-agency";
+  await db.doc(`Agencies/${agencyId}`).set({ name: "Marina Realty", names: { ar: "مارينا العقارية" }, orn: "12345", verified_badge: false });
+  const user = await admin.auth().createUser({ email: "smoke-agency@example.test", password: "emulator-only-pass" });
+  await admin.auth().setCustomUserClaims(user.uid, { role: "AgencyAdmin", agency_id: agencyId });
+  await db.doc(`Users/${user.uid}`).set({ role: "AgencyAdmin", agency_id: agencyId });
+  await db.doc(`Users/${user.uid}/properties/agency-smoke-1`).set({
+    isPublished: true,
+    rentalStatus: "available",
+    countryCode: "AE",
+    titles: { en: "Agency listing" },
+    pricePerMonth: 9000,
+  });
+  const pub = await waitFor(async () => {
+    const snap = await db.doc("Properties/agency-smoke-1").get();
+    return snap.exists && snap.get("is_published") === true ? snap.data() : null;
+  });
+  assert.ok(pub, "the agency listing was never published");
+  assert.equal(pub.agency_id, agencyId);
+  assert.equal(pub.agencyNames.en, "Marina Realty");
+  assert.equal(pub.agencyNames.ar, "مارينا العقارية");
+  assert.equal(pub.agencyPhone, "");
+  assert.equal(pub.agencyOrn, undefined);
+
+  // A SuperAdmin verifies the licence: the ORN appears on the live listing without an owner edit.
+  await db.doc(`Agencies/${agencyId}`).update({ verified_badge: true, licence_status: "verified" });
+  assert.ok(await waitFor(async () => (await db.doc("Properties/agency-smoke-1").get()).get("agencyOrn") === "12345"),
+    "the ORN never reached the listing");
+
+  // Losing the badge removes it again; a rename follows.
+  await db.doc(`Agencies/${agencyId}`).update({ verified_badge: false, licence_status: "pending", name: "Marina Homes" });
+  const after = await waitFor(async () => {
+    const data = (await db.doc("Properties/agency-smoke-1").get()).data();
+    return data && data.agencyOrn === undefined && data.agencyNames.en === "Marina Homes" ? data : null;
+  });
+  assert.ok(after, "the listing kept the old ORN or name");
 });

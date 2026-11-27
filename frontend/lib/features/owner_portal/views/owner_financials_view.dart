@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/lease_payment_service.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,12 @@ import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars
 import 'package:tashil_real_estate/core/services/ai_translation_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/portfolio/services/rent_schedule_builder.dart';
+import 'package:tashil_real_estate/features/portfolio/services/gross_yield.dart';
+import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
+import 'package:tashil_real_estate/core/design_system/empty_state/tashil_empty_state.dart';
+import 'package:tashil_real_estate/core/design_system/loading/tashil_loading.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/create_rent_invoice_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warning_notice_dialog.dart';
@@ -23,7 +30,11 @@ import 'package:tashil_real_estate/features/rent_collection/widgets/tax_invoice_
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
 
 class OwnerFinancialsView extends StatefulWidget {
-  const OwnerFinancialsView({super.key});
+  /// When given (the signed-in owner portal, TAQ-162), invoices, arrears and payouts come from the
+  /// owner's real leases and payments; nothing local or sample is shown then.
+  final PortfolioController? portfolio;
+
+  const OwnerFinancialsView({super.key, this.portfolio});
 
   @override
   State<OwnerFinancialsView> createState() => _OwnerFinancialsViewState();
@@ -35,12 +46,81 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
   String? _expandedPayoutRef;
   final _searchController = TextEditingController();
   final _rentService = RentCollectionService();
+  final ValueNotifier<List<RentInvoiceModel>> _serverInvoices = ValueNotifier(const []);
+
+  /// True while the rows come from the server (a portfolio is given and someone is signed in).
+  bool get _serverMode {
+    final portfolio = widget.portfolio;
+    return portfolio != null && portfolio.snapshot.load != PortfolioLoad.signedOut;
+  }
+
+  ValueListenable<List<RentInvoiceModel>> get _invoices => _serverMode ? _serverInvoices : _rentService.invoicesNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.portfolio?.addListener(_applyPortfolio);
+    _applyPortfolio();
+  }
+
+  void _applyPortfolio() {
+    final portfolio = widget.portfolio;
+    if (portfolio == null) return;
+    final snapshot = portfolio.snapshot;
+    _serverInvoices.value = snapshot.isReady ? RentScheduleBuilder.build(snapshot) : const [];
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    widget.portfolio?.removeListener(_applyPortfolio);
+    _serverInvoices.dispose();
     _searchController.dispose();
     super.dispose();
   }
+
+  /// Loading and failure states of the server data, or null when the content can show.
+  Widget? _serverGate(AppLocalizations loc) {
+    final portfolio = widget.portfolio;
+    if (portfolio == null || !_serverMode) return null;
+    final snapshot = portfolio.snapshot;
+    if (snapshot.isLoading) return const Center(child: TashilLoadingIndicator());
+    if (snapshot.load == PortfolioLoad.error) {
+      return TashilEmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: loc.tr('ovLoadFailedTitle'),
+        message: loc.tr('ovLoadFailedMessage'),
+        primaryActionLabel: loc.tr('ovRetry'),
+        primaryActionIcon: Icons.refresh_rounded,
+        onPrimaryAction: portfolio.start,
+      );
+    }
+    return null;
+  }
+
+  /// Paid months as payout rows (TAQ-162): the owner's net after the recorded deductions.
+  List<Map<String, dynamic>> _serverPayouts(String countryCode) {
+    final paid = _serverInvoices.value
+        .where((inv) => inv.status == 'paid' && inv.countryCode == countryCode)
+        .toList()
+      ..sort((a, b) => (b.paidAt ?? b.dueDate).compareTo(a.paidAt ?? a.dueDate));
+    return [
+      for (final inv in paid)
+        {
+          'titles': {
+            for (final l in const ['ar', 'en', 'hi']) l: '${inv.unitTitle} (${inv.monthKey ?? ''})',
+          },
+          'dates': {
+            for (final l in const ['ar', 'en', 'hi']) l: _isoDay(inv.paidAt ?? inv.dueDate),
+          },
+          'ref': inv.transactionReference ?? inv.invoiceNumber,
+          'amount': inv.netPayoutToOwner,
+        },
+    ];
+  }
+
+  static String _isoDay(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _sendReminder(RentInvoiceModel invoice) async {
     final loc = AppLocalizations.of(context);
@@ -118,8 +198,11 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                   ),
                   const SizedBox(height: 24),
 
+                  if (_serverGate(loc) case final gate?)
+                    gate
+
                   // Tab 0: Rent Invoicing & Electronic Collection Hub
-                  if (_masterTab == 0)
+                  else if (_masterTab == 0)
                     _buildRentInvoicingHub(context, currency, lang, loc, isMobile, countryCode, colorScheme)
 
                   // Tab 1: Arrears & Legal Notices
@@ -148,7 +231,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
     ColorScheme colorScheme,
   ) {
     return ValueListenableBuilder<List<RentInvoiceModel>>(
-      valueListenable: _rentService.invoicesNotifier,
+      valueListenable: _invoices,
       builder: (context, allInvoices, _) {
         final countryInvoices = allInvoices.where((inv) => inv.countryCode == currentCountry).toList();
 
@@ -244,15 +327,23 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
               const SizedBox(height: 20),
 
               // 4 Financial Summary KPI Cards (Official Google M3 Portfolio KPI Standard)
-              _buildInvoicingKpis(
-                totalCollected: totalCollected,
-                totalPending: totalPending,
-                totalOverdue: totalOverdue,
-                totalInvoicesCount: countryInvoices.length,
-                currency: currency,
-                lang: lang,
-                loc: loc,
-                colorScheme: colorScheme,
+              // The gross yield card shows only when the owner entered a property value (TAQ-164).
+              ValueListenableBuilder<List<ManagedPropertyModel>>(
+                valueListenable: PropertyLifecycleService().propertiesNotifier,
+                builder: (context, properties, _) => _buildInvoicingKpis(
+                  totalCollected: totalCollected,
+                  totalPending: totalPending,
+                  totalOverdue: totalOverdue,
+                  totalInvoicesCount: countryInvoices.length,
+                  grossYield: _serverMode
+                      ? grossRentalYield(widget.portfolio!.snapshot.leases, propertyValuesOf(properties),
+                          countryCode: currentCountry)
+                      : null,
+                  currency: currency,
+                  lang: lang,
+                  loc: loc,
+                  colorScheme: colorScheme,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -361,6 +452,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
     required double totalPending,
     required double totalOverdue,
     required int totalInvoicesCount,
+    double? grossYield,
     required String currency,
     required String lang,
     required AppLocalizations loc,
@@ -404,6 +496,17 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
           iconColor: colorScheme.primary,
           iconBgColor: colorScheme.surfaceContainerHigh,
         ),
+        if (grossYield != null)
+          TashilKpiCard(
+            key: const ValueKey('owner_gross_yield_kpi'),
+            title: loc.tr('grossRentalYield'),
+            value: '${grossYield.toStringAsFixed(1)}%',
+            subtitle: loc.tr('pvYieldSubtitle'),
+            icon: Icons.trending_up_rounded,
+            subtitleIcon: Icons.home_work_outlined,
+            iconColor: colorScheme.secondary,
+            iconBgColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+          ),
       ],
     );
   }
@@ -736,7 +839,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
     ColorScheme colorScheme,
   ) {
     return ValueListenableBuilder<List<RentInvoiceModel>>(
-      valueListenable: _rentService.invoicesNotifier,
+      valueListenable: _invoices,
       builder: (context, allInvoices, _) {
         final overdueInvoices = allInvoices
             .where((inv) => inv.countryCode == currentCountry && inv.status == 'overdue')
@@ -871,11 +974,16 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
     ColorScheme colorScheme,
     String countryCode,
   ) {
-    final realPayouts = PropertyLifecycleService().getRealPayouts(countryCode: countryCode);
-    final properties = PropertyLifecycleService().propertiesNotifier.value.where((p) => p.countryCode == countryCode).toList();
-    final payouts = realPayouts.isNotEmpty
-        ? realPayouts
-        : (properties.isEmpty ? (countryCode == 'AE' ? _payoutsUAE : _payoutsEG) : <Map<String, dynamic>>[]);
+    final List<Map<String, dynamic>> payouts;
+    if (_serverMode) {
+      payouts = _serverPayouts(countryCode);
+    } else {
+      final realPayouts = PropertyLifecycleService().getRealPayouts(countryCode: countryCode);
+      final properties = PropertyLifecycleService().propertiesNotifier.value.where((p) => p.countryCode == countryCode).toList();
+      payouts = realPayouts.isNotEmpty
+          ? realPayouts
+          : (properties.isEmpty ? (countryCode == 'AE' ? _payoutsUAE : _payoutsEG) : <Map<String, dynamic>>[]);
+    }
 
     if (payouts.isEmpty) {
       return Center(

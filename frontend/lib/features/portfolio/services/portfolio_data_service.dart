@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/portfolio_models.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// Where the owner and agency portals read their leases, payments, receipts and maintenance, and
 /// where they create leases. The default talks to Firebase; tests pass a fake.
@@ -14,10 +15,17 @@ abstract class PortfolioBackend {
   /// The agency id from an AgencyAdmin's claims, or '' for everyone else.
   Future<String> currentAgencyId();
 
+  /// True when the signed-in user's claims say SuperAdmin (TAQ-162).
+  Future<bool> currentIsSuperAdmin();
+
   Stream<List<PortfolioLease>> watchLeases(PortfolioScope scope);
   Stream<List<PortfolioTransaction>> watchTransactions(PortfolioScope scope);
   Stream<List<PortfolioInvoice>> watchInvoices(PortfolioScope scope);
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope);
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope);
+
+  /// Calls updateRentRow (TAQ-163): trash, restore, delete, note, reminder or legal_notice.
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes});
 
   /// Calls the createLease function. Throws its error on refusal.
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data);
@@ -51,10 +59,23 @@ class FirebasePortfolioBackend implements PortfolioBackend {
     return claims['role'] == 'AgencyAdmin' && agency is String ? agency : '';
   }
 
+  @override
+  Future<bool> currentIsSuperAdmin() async {
+    if (currentUserId == null) return false;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final claims = (await user.getIdTokenResult()).claims ?? const {};
+    return claims['role'] == 'SuperAdmin';
+  }
+
+  /// The platform scope reads at most this many docs per collection (TAQ-162).
+  static const int platformLimit = 1000;
+
   Stream<List<T>> _scoped<T>(String collection, PortfolioScope scope, T Function(String, Map<String, dynamic>) parse) {
-    return _db
-        .collection(collection)
-        .where(scope.field, isEqualTo: scope.value)
+    final Query<Map<String, dynamic>> query = scope.isPlatform
+        ? _db.collection(collection).limit(platformLimit)
+        : _db.collection(collection).where(scope.field, isEqualTo: scope.value);
+    return query
         .snapshots()
         .map((s) => s.docs.map((d) => parse(d.id, d.data())).toList());
   }
@@ -74,9 +95,24 @@ class FirebasePortfolioBackend implements PortfolioBackend {
       _scoped('Maintenance', scope, PortfolioMaintenance.fromMap);
 
   @override
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope) =>
+      _scoped('RentRowStates', scope, PortfolioRentRowState.fromMap);
+
+  @override
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) async {
+    final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('updateRentRow');
+    await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
+      'leaseId': leaseId,
+      'period': period,
+      'action': action,
+      if (notes != null) 'notes': notes,
+    }));
+  }
+
+  @override
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data) async {
     final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('createLease');
-    final response = await callable.call<Map<String, dynamic>>(data);
+    final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>(data));
     return Map<String, dynamic>.from(response.data);
   }
 
@@ -105,6 +141,10 @@ String leaseCreateErrorKey(String reason) {
       return 'ldPropertyNotManaged';
     case 'rent_precision':
       return 'rqRentPrecision';
+    case 'late_fee_invalid':
+      return 'ldLateFeeInvalid';
+    case 'iban_invalid':
+      return 'ldIbanInvalid';
     case 'property_country_missing':
       return 'ldPropertyCountryMissing';
     default:
@@ -126,9 +166,13 @@ class PortfolioDataService {
   /// The records to read: an agency admin's agency by its claim, otherwise the owner's by their
   /// uid. With [agencyOnly] a missing agency claim gives null (nothing to show, never "all").
   /// Null too when signed out.
-  Future<PortfolioScope?> scopeFor({bool agencyOnly = false}) async {
+  ///
+  /// With [platform] (the SuperAdmin dashboard, TAQ-162) a SuperAdmin gets the platform scope and
+  /// anyone else null.
+  Future<PortfolioScope?> scopeFor({bool agencyOnly = false, bool platform = false}) async {
     final uid = backend.currentUserId;
     if (uid == null) return null;
+    if (platform) return await backend.currentIsSuperAdmin() ? const PortfolioScope.platform() : null;
     final id = await backend.currentAgencyId();
     if (id.isNotEmpty) return PortfolioScope.agency(id);
     return agencyOnly ? null : PortfolioScope.owner(uid);
@@ -144,6 +188,10 @@ class PortfolioDataService {
   Stream<List<PortfolioTransaction>> watchTransactions(PortfolioScope scope) => backend.watchTransactions(scope);
   Stream<List<PortfolioInvoice>> watchInvoices(PortfolioScope scope) => backend.watchInvoices(scope);
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope) => backend.watchMaintenance(scope);
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope) => backend.watchRentRowStates(scope);
+
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) =>
+      backend.updateRentRow(leaseId: leaseId, period: period, action: action, notes: notes);
 
   /// Creates the lease on the server and returns its id. [sendOffer] puts it straight in front of
   /// the tenant. Throws the callable's error on refusal; there is no local fallback.
@@ -155,6 +203,10 @@ class PortfolioDataService {
     required String endDate,
     required double monthlyRent,
     required bool sendOffer,
+    double? lateFeeAmount,
+    int? lateFeeGraceDays,
+    String? payoutBankName,
+    String? payoutIban,
   }) async {
     final result = await backend.createLease({
       'ownerId': ownerId,
@@ -164,6 +216,11 @@ class PortfolioDataService {
       'endDate': endDate,
       'monthlyRent': monthlyRent,
       'sendOffer': sendOffer,
+      // Optional terms (TAQ-164); absent ones are left out so the server keeps its defaults.
+      if (lateFeeAmount != null) 'lateFeeAmount': lateFeeAmount,
+      if (lateFeeGraceDays != null) 'lateFeeGraceDays': lateFeeGraceDays,
+      if (payoutBankName != null && payoutBankName.isNotEmpty) 'payoutBankName': payoutBankName,
+      if (payoutIban != null && payoutIban.isNotEmpty) 'payoutIban': payoutIban,
     });
     final id = result['leaseId'];
     if (id is! String || id.isEmpty) throw StateError('createLease returned no lease id');

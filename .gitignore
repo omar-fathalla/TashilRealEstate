@@ -6,6 +6,7 @@ backend/npm-debug.log
 # Repo-root env and secret files. Anchored with a leading slash on purpose: a bare `.env` would
 # also ignore backend/.env, which must stay tracked.
 /.env
+/.env.*
 /.secret*
 
 # Nested backend secrets and per-project env files (backend/.env stays tracked: `.env.*` needs a dot

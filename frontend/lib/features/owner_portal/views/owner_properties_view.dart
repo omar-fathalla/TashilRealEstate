@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/agency_mandates/services/mandate_service.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/mandate_panels.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/agency_application_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -11,6 +14,7 @@ import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_d
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/widgets/property_value_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/monthly_payment_schedule_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/publish_listing_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/marketplace_visitor_preview_dialog.dart';
@@ -392,6 +396,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
                     isMobile: isMobile,
                   ),
                   const SizedBox(height: 18),
+
+                  // Agency invites and mandates, and agency registration (TAQ-149).
+                  const OwnerMandatesPanel(),
+                  if (MandateService.instance.backend.currentUserId != null)
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton.icon(
+                        key: const ValueKey('agency_apply_button'),
+                        onPressed: () => AgencyApplicationDialog.show(context),
+                        icon: const Icon(Icons.storefront_outlined),
+                        label: Text(loc.tr('aaApplyButton')),
+                      ),
+                    ),
 
                   // 2. Action Tools & View Switcher (Official M3 Connected Button Groups)
                   if (isMobileOrTablet) ...[
@@ -1292,7 +1309,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
               ),
               const SizedBox(width: 20),
               SizedBox(
-                width: 166,
+                width: 206,
                 child: Text(
                   loc.tr('tableHeaderActions'),
                   textAlign: TextAlign.center,
@@ -1528,7 +1545,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
 
               // 6. Connected Action Button Group
               SizedBox(
-                width: 170,
+                width: 210,
                 child: Center(
                   child: _buildTableRowActionGroup(
                     context,
@@ -1623,6 +1640,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             thickness: 1,
             color: colorScheme.outlineVariant.withValues(alpha: 0.7),
           ),
+          // Property value (TAQ-164): optional and private, feeds the gross yield only.
+          _buildActionSegmentItem(
+            key: ValueKey('property_value_${prop.id}'),
+            icon: Icons.price_change_outlined,
+            tooltip: loc.tr('pvTitle'),
+            foregroundColor: colorScheme.onSurface,
+            onTap: () => PropertyValueDialog.show(context, prop),
+          ),
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
           // 4. Share & Options Segment
           _buildActionSegmentItem(
             icon: Icons.share_rounded,
@@ -1636,6 +1666,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
   }
 
   Widget _buildActionSegmentItem({
+    Key? key,
     required IconData icon,
     required String tooltip,
     Color? backgroundColor,
@@ -1643,6 +1674,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
     required VoidCallback onTap,
   }) {
     return Material(
+      key: key,
       color: backgroundColor ?? Colors.transparent,
       child: InkWell(
         onTap: onTap,

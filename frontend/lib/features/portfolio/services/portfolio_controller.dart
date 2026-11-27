@@ -19,6 +19,7 @@ class PortfolioSnapshot {
   final List<PortfolioMaintenance> maintenance;
   final List<ViewingRequestItem> viewings;
   final List<RentalApplicationItem> applications;
+  final List<PortfolioRentRowState> rentRowStates;
 
   const PortfolioSnapshot({
     this.load = PortfolioLoad.loading,
@@ -28,6 +29,7 @@ class PortfolioSnapshot {
     this.maintenance = const [],
     this.viewings = const [],
     this.applications = const [],
+    this.rentRowStates = const [],
   });
 
   bool get isLoading => load == PortfolioLoad.loading;
@@ -43,6 +45,7 @@ class PortfolioController extends ChangeNotifier {
     RequestsService? requests,
     this.agencyOnly = true,
     this.includeRequests = true,
+    this.platform = false,
   })  : data = data ?? PortfolioDataService.instance,
         requests = requests ?? RequestsService.instance;
 
@@ -50,6 +53,9 @@ class PortfolioController extends ChangeNotifier {
   final RequestsService requests;
   final bool agencyOnly;
   final bool includeRequests;
+
+  /// Reads the whole platform (SuperAdmin only, TAQ-162). Requests are never included then.
+  final bool platform;
 
   PortfolioSnapshot _snapshot = const PortfolioSnapshot();
   PortfolioSnapshot get snapshot => _snapshot;
@@ -61,7 +67,7 @@ class PortfolioController extends ChangeNotifier {
   Future<void> start() async {
     _update(const PortfolioSnapshot());
     try {
-      final scope = await data.scopeFor(agencyOnly: agencyOnly);
+      final scope = await data.scopeFor(agencyOnly: agencyOnly, platform: platform);
       if (_disposed) return;
       if (scope == null) {
         _update(PortfolioSnapshot(load: data.isSignedIn ? PortfolioLoad.noAgency : PortfolioLoad.signedOut));
@@ -74,7 +80,12 @@ class PortfolioController extends ChangeNotifier {
       _listen<List<PortfolioTransaction>>(data.watchTransactions(scope), (v) => _update(_copy(transactions: v)));
       _listen<List<PortfolioInvoice>>(data.watchInvoices(scope), (v) => _update(_copy(invoices: v)));
       _listen<List<PortfolioMaintenance>>(data.watchMaintenance(scope), (v) => _update(_copy(maintenance: v)));
-      if (includeRequests) {
+      // Row states are an overlay (TAQ-163): if they cannot be read, the rows still show.
+      _subs.add(data.watchRentRowStates(scope).listen(
+        (v) => _update(_copy(rentRowStates: v)),
+        onError: (Object e) => debugPrint('PortfolioController rent row states: $e'),
+      ));
+      if (includeRequests && !scope.isPlatform) {
         final requestScope = scope.isAgency ? RequestScope.agency(scope.value) : RequestScope.owner(scope.value);
         _listen<List<ViewingRequestItem>>(requests.watchViewings(requestScope), (v) => _update(_copy(viewings: v)));
         _listen<List<RentalApplicationItem>>(requests.watchApplications(requestScope), (v) => _update(_copy(applications: v)));
@@ -100,6 +111,7 @@ class PortfolioController extends ChangeNotifier {
     List<PortfolioMaintenance>? maintenance,
     List<ViewingRequestItem>? viewings,
     List<RentalApplicationItem>? applications,
+    List<PortfolioRentRowState>? rentRowStates,
   }) {
     final s = _snapshot;
     var nextLoad = load ?? s.load;
@@ -114,6 +126,7 @@ class PortfolioController extends ChangeNotifier {
       maintenance: maintenance ?? s.maintenance,
       viewings: viewings ?? s.viewings,
       applications: applications ?? s.applications,
+      rentRowStates: rentRowStates ?? s.rentRowStates,
     );
   }
 

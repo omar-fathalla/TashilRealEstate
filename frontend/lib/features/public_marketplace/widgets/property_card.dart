@@ -236,7 +236,9 @@ class _PropertyCardState extends State<PropertyCard> {
                 size: 38.0,
                 iconSize: 18.0,
                 tooltip: loc.tr('callAgency'),
-                onPressed: () {
+                // Live listings carry no phone number (TAQ-150): the details sheet holds the
+                // viewing and rental request buttons that reach the owner or agency.
+                onPressed: widget.property.agencyPhone.isEmpty ? () => _openDetails(context) : () {
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/request_models.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// Where the request flows read and write. The default talks to Firebase; tests pass a fake.
 abstract class RequestsBackend {
@@ -83,7 +84,7 @@ class FirebaseRequestsBackend implements RequestsBackend {
   @override
   Future<Map<String, dynamic>> call(String function, Map<String, dynamic> data) async {
     final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable(function);
-    final response = await callable.call<Map<String, dynamic>>(data);
+    final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>(data));
     return Map<String, dynamic>.from(response.data);
   }
 }

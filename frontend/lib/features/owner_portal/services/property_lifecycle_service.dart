@@ -696,7 +696,9 @@ class PropertyLifecycleService {
     final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
     final idx = list.indexWhere((p) => p.id == property.id);
     if (idx != -1) {
-      list[idx] = property;
+      // The edit form does not carry the property value (TAQ-164); keep the one already set.
+      final kept = list[idx].propertyValue;
+      list[idx] = property.propertyValue == null && kept != null ? property.copyWith(propertyValue: kept) : property;
     } else {
       list.insert(0, property);
     }
@@ -711,6 +713,20 @@ class PropertyLifecycleService {
     } catch (e) {
       debugPrint('Firestore update note (safe in test/offline): $e');
     }
+  }
+
+  /// Sets (or, with null, clears) what the owner says a property is worth (TAQ-164).
+  /// Throws when the write fails, so the dialog can say so.
+  Future<void> setPropertyValue(String propertyId, double? value) async {
+    final list = List<ManagedPropertyModel>.from(propertiesNotifier.value);
+    final idx = list.indexWhere((p) => p.id == propertyId);
+    if (idx == -1) return;
+    final service = _firestoreService;
+    if (service != null) {
+      await service.setOwnerPropertyValue(ownerId: currentOwnerId, propertyId: propertyId, value: value);
+    }
+    list[idx] = value == null ? list[idx].copyWith(clearPropertyValue: true) : list[idx].copyWith(propertyValue: value);
+    propertiesNotifier.value = list;
   }
 
   /// Publish a property to the Public Marketplace (تظهر فوراً للزوار)

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/agency_application_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -21,6 +22,7 @@ import 'package:tashil_real_estate/core/design_system/lists/m3_lists_showcase_di
 import 'package:tashil_real_estate/core/design_system/loading/m3_loading_showcase_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/switches/tashil_switches.dart';
 import 'package:tashil_real_estate/features/architecture_hub/widgets/google_ai_architecture_hub_dialog.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
 import 'package:tashil_real_estate/features/rent_collection/views/rent_collection_view.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
@@ -29,7 +31,12 @@ import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_ente
 
 class SuperAdminDashboard extends StatefulWidget {
   final int initialIndex;
-  const SuperAdminDashboard({super.key, this.initialIndex = 0});
+
+  /// The platform's real leases and payments (TAQ-162). Tests pass a fake; by default the
+  /// dashboard reads the platform scope, which the rules allow to a SuperAdmin only.
+  final PortfolioController? portfolio;
+
+  const SuperAdminDashboard({super.key, this.initialIndex = 0, this.portfolio});
 
   @override
   State<SuperAdminDashboard> createState() => _SuperAdminDashboardState();
@@ -41,11 +48,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   String _selectedCountryFilter = 'ALL';
   late List<Map<String, dynamic>> _agencies;
 
+  late final PortfolioController _portfolio;
+
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _initSampleAgencies();
+    _portfolio = widget.portfolio ?? PortfolioController(platform: true, includeRequests: false);
+    _portfolio.start();
+  }
+
+  @override
+  void dispose() {
+    if (widget.portfolio == null) _portfolio.dispose();
+    super.dispose();
   }
 
   void _initSampleAgencies() {
@@ -186,11 +203,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   List<Widget> _getViews(AppLocalizations loc, bool isMobile, ColorScheme colorScheme) => [
-    const FinancialKpiDashboardView(role: FinancialPortalRole.superAdmin),
+    FinancialKpiDashboardView(role: FinancialPortalRole.superAdmin, portfolio: _portfolio),
     _buildAgenciesAndTenantsView(loc, isMobile, colorScheme),
     _buildEscrowAndAuditView(loc, isMobile, colorScheme),
     _buildDesignSystemHubView(loc, isMobile, colorScheme),
-    const RentCollectionView(),
+    RentCollectionView(portfolio: _portfolio),
     const InvestorDashboardView(),
     const AiEngineHubView(),
   ];
@@ -1035,6 +1052,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ],
           ),
           const SizedBox(height: 20),
+
+          // Agency registration requests waiting for review (TAQ-149).
+          const AgencyApplicationsReviewPanel(),
 
           // 2. 4 Stat KPI Cards (Unified M3 Elevated Metric Cards)
           LayoutBuilder(

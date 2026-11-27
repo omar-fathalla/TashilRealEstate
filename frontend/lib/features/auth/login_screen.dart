@@ -146,7 +146,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
   }
 
-  Future<void> _handlePostAuthNavigation(User user, String role) async {
+  /// [fullName] is the name typed at email sign-up: the [user]'s displayName is not reloaded
+  /// after updateDisplayName, so it would still be empty here (TAQ-172).
+  Future<void> _handlePostAuthNavigation(User user, String role, {String? fullName}) async {
     final uid = user.uid;
     final photoUrl = UserAvatarUtils.getPhotoUrl(user);
     final claimRole = await TrustedRole.claimRole(user);
@@ -158,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         uid: uid,
         email: user.email ?? 'user@tashil.com',
         role: profileRole,
-        fullName: user.displayName,
+        fullName: (fullName != null && fullName.trim().isNotEmpty) ? fullName : user.displayName,
         photoUrl: photoUrl,
       );
     } else if (photoUrl != null && photoUrl.isNotEmpty) {
@@ -211,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       }
 
       if (creds?.user != null) {
-        await _handlePostAuthNavigation(creds!.user!, _selectedRole);
+        await _handlePostAuthNavigation(creds!.user!, _selectedRole, fullName: _isSignUpMode ? name : null);
       }
     } catch (e) {
       if (!mounted) return;
@@ -576,7 +578,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final isCompact = constraints.maxWidth < 460;
 
         return TashilConnectedButtonGroup<String>(
-          height: 44,
+          height: TashilConnectedButtonGroup.minTapHeight,
           isFullWidth: !isCompact,
           selectedValue: _selectedRole,
           onSelectionChanged: (newRole) {
@@ -606,7 +608,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Widget _buildAuthMethodConnectedGroup(AppLocalizations loc, ColorScheme colorScheme) {
     return TashilConnectedButtonGroup<AuthMethod>(
-      height: 44,
+      height: TashilConnectedButtonGroup.minTapHeight,
       isFullWidth: true,
       selectedValue: _selectedAuthMethod,
       onSelectionChanged: (method) {

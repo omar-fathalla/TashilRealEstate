@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// The AI features the `geminiGenerate` Cloud Function accepts. The server decides which of
 /// them signed-out visitors may use and how often.
@@ -44,7 +45,7 @@ class GeminiGateway {
       functionName,
       options: HttpsCallableOptions(timeout: timeout),
     );
-    final result = await callable.call<Object?>(payload);
+    final result = await SessionGuard.instance.run(() => callable.call<Object?>(payload));
     return result.data;
   }
 

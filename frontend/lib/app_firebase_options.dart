@@ -4,14 +4,22 @@ import 'package:tashil_real_estate/firebase_options_dev.dart';
 
 /// Picks the Firebase project at build time with `--dart-define=FIREBASE_ENV=prod|dev`.
 /// Without the define the build uses prod, exactly as before, so existing build commands and
-/// the generated `firebase_options.dart` are unchanged. Any other value is a typo and fails.
+/// the generated `firebase_options.dart` are unchanged. Any other value is a typo and fails;
+/// `tool/build_web.sh` refuses it before building (TAQ-82).
 class AppFirebaseOptions {
   AppFirebaseOptions._();
 
   static const String environment = String.fromEnvironment('FIREBASE_ENV', defaultValue: 'prod');
 
-  static FirebaseOptions get currentPlatform => forEnvironment(environment);
+  /// Branches on the const [environment] directly, so the compiler drops the config a build does
+  /// not use: a prod web bundle carries no dev project id (TAQ-81).
+  static FirebaseOptions get currentPlatform {
+    if (environment == 'prod') return DefaultFirebaseOptions.currentPlatform;
+    if (environment == 'dev') return DevFirebaseOptions.currentPlatform;
+    throw ArgumentError.value(environment, 'FIREBASE_ENV', 'must be "prod" or "dev"');
+  }
 
+  /// The same choice for any value, for tests. Not used by the app.
   static FirebaseOptions forEnvironment(String env, {FirebaseOptions Function()? devOptions}) {
     switch (env) {
       case 'prod':

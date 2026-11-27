@@ -8,6 +8,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/callable_error.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
+import 'package:tashil_real_estate/features/agency_mandates/models/mandate_models.dart';
+import 'package:tashil_real_estate/features/agency_mandates/services/mandate_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_data_service.dart';
 import 'package:tashil_real_estate/features/requests/models/request_models.dart';
@@ -32,7 +34,11 @@ class CreateLeaseDialog extends StatefulWidget {
   final RequestsService? requests;
   final DateTime Function()? now;
 
-  const CreateLeaseDialog({super.key, this.properties, this.property, this.service, this.requests, this.now});
+  /// Other owners' properties the agency manages by mandate (TAQ-149). Looked up for an agency
+  /// when not given.
+  final List<PropertyMandate>? mandates;
+
+  const CreateLeaseDialog({super.key, this.properties, this.property, this.service, this.requests, this.now, this.mandates});
 
   /// Opens the dialog. Returns the new lease id, or null when nothing was created.
   static Future<String?> show(BuildContext context, {ManagedPropertyModel? property}) {
@@ -55,6 +61,12 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
   final _rent = TextEditingController();
   final _start = TextEditingController();
   final _end = TextEditingController();
+  // Optional terms (TAQ-164).
+  final _lateFee = TextEditingController();
+  final _graceDays = TextEditingController();
+  final _bankName = TextEditingController();
+  final _iban = TextEditingController();
+  static final RegExp _ibanPattern = RegExp(r'^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$');
   final _errorKey = GlobalKey();
   ManagedPropertyModel? _property;
   RentalApplicationItem? _tenant;
@@ -65,10 +77,63 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
   static String _two(int n) => n.toString().padLeft(2, '0');
   static String _day(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
+  late List<PropertyMandate> _mandates = widget.mandates ?? const [];
+
+  // Built once per mandate list: the dropdown matches its value by identity.
+  late List<ManagedPropertyModel> _managedUnits = _mandatedUnits(_mandates);
+
+  static List<ManagedPropertyModel> _mandatedUnits(List<PropertyMandate> list) =>
+      list.where((m) => m.isActive).map(_mandatedUnit).toList();
+
+  /// The owner of each property managed by mandate; any other property is the caller's own.
+  Map<String, String> get _ownerOf => {for (final m in _mandates) if (m.isActive) m.propertyId: m.ownerId};
+
+  static ManagedPropertyModel _mandatedUnit(PropertyMandate m) {
+    final title = m.propertyTitle.isEmpty ? m.propertyId : m.propertyTitle;
+    return ManagedPropertyModel(
+      id: m.propertyId,
+      countryCode: m.countryCode,
+      currencyCode: m.countryCode == 'EG' ? 'EGP' : 'AED',
+      titles: {'ar': title, 'en': title, 'hi': title},
+      descriptions: const {},
+      locations: const {},
+      cityCode: '',
+      propertyTypeCode: 'apartment',
+      unitNumber: '',
+      buildingName: '',
+      pricePerMonth: m.pricePerMonth,
+      bedrooms: 1,
+      bathrooms: 1,
+      areaSqM: 0,
+      image: '',
+      imageUrls: const [],
+      isPublished: false,
+      rentalStatus: PropertyRentalStatus.available,
+    );
+  }
+
   List<ManagedPropertyModel> get _units {
     final all = widget.properties ?? PropertyLifecycleService().propertiesNotifier.value;
     final country = CountryController.countryCode;
-    return all.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id) && p.countryCode == country).toList();
+    final own = all.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id) && p.countryCode == country).toList();
+    final ownIds = own.map((p) => p.id).toSet();
+    final managed = _managedUnits.where((u) => u.countryCode == country && !ownIds.contains(u.id));
+    return [...own, ...managed];
+  }
+
+  Future<void> _loadMandates() async {
+    try {
+      final scope = await _service.scopeFor();
+      if (scope == null || !scope.isAgency) return;
+      final list = await MandateService.instance.backend.watchAgencyMandates(scope.value).first;
+      if (!mounted) return;
+      setState(() {
+        _mandates = list.where((m) => m.isActive).toList();
+        _managedUnits = _mandatedUnits(_mandates);
+      });
+    } catch (_) {
+      // No mandates to offer; the agency's own properties still are.
+    }
   }
 
   @override
@@ -78,6 +143,7 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     _end.text = _day(DateTime(_today.year + 1, _today.month, _today.day));
     final given = widget.property;
     if (given != null) _choose(given);
+    if (widget.mandates == null) _loadMandates();
   }
 
   @override
@@ -85,6 +151,10 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     _rent.dispose();
     _start.dispose();
     _end.dispose();
+    _lateFee.dispose();
+    _graceDays.dispose();
+    _bankName.dispose();
+    _iban.dispose();
     super.dispose();
   }
 
@@ -133,6 +203,20 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
       revealInlineError(_errorKey);
       return;
     }
+    final feeText = _lateFee.text.trim();
+    final graceText = _graceDays.text.trim();
+    final lateFee = feeText.isEmpty ? null : double.tryParse(feeText);
+    final grace = graceText.isEmpty ? null : int.tryParse(graceText);
+    final iban = _iban.text.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    final feeBad = (feeText.isNotEmpty && (lateFee == null || lateFee < 0)) || (graceText.isNotEmpty && (grace == null || grace < 0 || grace > 60));
+    if (feeBad || (iban.isNotEmpty && !_ibanPattern.hasMatch(iban))) {
+      setState(() {
+        _missing = false;
+        _error = loc.tr(feeBad ? 'ldLateFeeInvalid' : 'ldIbanInvalid');
+      });
+      revealInlineError(_errorKey);
+      return;
+    }
     if (!end.isAfter(start)) {
       setState(() {
         _missing = false;
@@ -148,13 +232,17 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     });
     try {
       final id = await _service.createLease(
-        ownerId: _service.backend.currentUserId ?? '',
+        ownerId: _ownerOf[property.id] ?? _service.backend.currentUserId ?? '',
         propertyId: property.id,
         tenantId: tenant.applicantId,
         startDate: _day(start),
         endDate: _day(end),
         monthlyRent: rent,
         sendOffer: sendOffer,
+        lateFeeAmount: lateFee,
+        lateFeeGraceDays: grace,
+        payoutBankName: _bankName.text.trim(),
+        payoutIban: iban,
       );
       if (mounted) Navigator.of(context).pop(id);
     } catch (e) {
@@ -254,6 +342,59 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
                             const SizedBox(width: 12),
                             Expanded(child: _dateField(loc, _end, loc.tr('ldEndDate'))),
                           ]),
+                          const SizedBox(height: 4),
+                          Theme(
+                            data: theme.copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              key: const ValueKey('lease_optional_terms'),
+                              tilePadding: EdgeInsetsDirectional.zero,
+                              childrenPadding: const EdgeInsetsDirectional.only(bottom: 8),
+                              title: Text(loc.tr('ldOptionalTerms'), style: theme.textTheme.titleSmall),
+                              children: [
+                                Row(children: [
+                                  Expanded(
+                                    child: TextField(
+                                      key: const ValueKey('lease_late_fee'),
+                                      controller: _lateFee,
+                                      enabled: !_saving,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(
+                                        labelText: loc.tr('ldLateFee'),
+                                        helperText: loc.tr('ldLateFeeHelp'),
+                                        suffixText: loc.tr(CountryController.isUAE ? 'currency_ae' : 'currency_eg'),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    width: 120,
+                                    child: TextField(
+                                      key: const ValueKey('lease_grace_days'),
+                                      controller: _graceDays,
+                                      enabled: !_saving,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: loc.tr('ldGraceDays'), hintText: '5'),
+                                    ),
+                                  ),
+                                ]),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  key: const ValueKey('lease_payout_bank'),
+                                  controller: _bankName,
+                                  enabled: !_saving,
+                                  decoration: InputDecoration(labelText: loc.tr('ldPayoutBank')),
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  key: const ValueKey('lease_payout_iban'),
+                                  controller: _iban,
+                                  enabled: !_saving,
+                                  textCapitalization: TextCapitalization.characters,
+                                  decoration: InputDecoration(labelText: loc.tr('ldPayoutIban')),
+                                ),
+                              ],
+                            ),
+                          ),
                           if (_missing || _error != null)
                             Padding(
                               key: _errorKey,

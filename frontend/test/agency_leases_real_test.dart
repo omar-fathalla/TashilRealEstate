@@ -311,6 +311,69 @@ void main() {
       expect(backend.created.single['sendOffer'], false);
     });
 
+    Future<void> fillOptional(WidgetTester tester, {String fee = '', String grace = '', String bank = '', String iban = ''}) async {
+      final tile = find.byKey(const ValueKey('lease_optional_terms'));
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      for (final e in {'lease_late_fee': fee, 'lease_grace_days': grace, 'lease_payout_bank': bank, 'lease_payout_iban': iban}.entries) {
+        if (e.value.isEmpty) continue;
+        final field = find.byKey(ValueKey(e.key));
+        await tester.ensureVisible(field);
+        await tester.enterText(field, e.value);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> sendOffer(WidgetTester tester) async {
+      final button = find.text('Send offer to tenant');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('TAQ-164: without optional terms nothing extra is sent, so the server keeps the 0 fee', (tester) async {
+      final backend = await open(tester);
+      await chooseProperty(tester, 'Marina Tower 1204');
+      await chooseTenant(tester, 'Sara Ali');
+      await sendOffer(tester);
+      final sent = backend.created.single;
+      expect(sent.containsKey('lateFeeAmount'), isFalse);
+      expect(sent.containsKey('lateFeeGraceDays'), isFalse);
+      expect(sent.containsKey('payoutIban'), isFalse);
+    });
+
+    testWidgets('TAQ-164: the late fee, grace days and payout bank go to the server, the IBAN normalised', (tester) async {
+      final backend = await open(tester);
+      await chooseProperty(tester, 'Marina Tower 1204');
+      await chooseTenant(tester, 'Sara Ali');
+      await fillOptional(tester, fee: '250', grace: '3', bank: 'FAB', iban: 'ae07 0331 2345 6789 0123 456');
+      await sendOffer(tester);
+      final sent = backend.created.single;
+      expect(sent['lateFeeAmount'], 250.0);
+      expect(sent['lateFeeGraceDays'], 3);
+      expect(sent['payoutBankName'], 'FAB');
+      expect(sent['payoutIban'], 'AE070331234567890123456');
+    });
+
+    testWidgets('TAQ-164: a bad IBAN or grace period is refused before any call', (tester) async {
+      final backend = await open(tester);
+      await chooseProperty(tester, 'Marina Tower 1204');
+      await chooseTenant(tester, 'Sara Ali');
+      await fillOptional(tester, iban: '12345');
+      await sendOffer(tester);
+      expect(backend.created, isEmpty);
+      expect(find.text('That IBAN is not valid.'), findsOneWidget);
+      final iban = find.byKey(const ValueKey('lease_payout_iban'));
+      await tester.enterText(iban, '');
+      final grace = find.byKey(const ValueKey('lease_grace_days'));
+      await tester.ensureVisible(grace);
+      await tester.enterText(grace, '90');
+      await sendOffer(tester);
+      expect(backend.created, isEmpty);
+      expect(find.text('Check the late fee and grace days (0 to 60 days).'), findsOneWidget);
+    });
+
     testWidgets('missing fields are refused before any call', (tester) async {
       final backend = await open(tester);
       await tester.tap(find.text('Send offer to tenant'));

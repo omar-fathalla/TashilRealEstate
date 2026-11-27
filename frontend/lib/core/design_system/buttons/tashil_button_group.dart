@@ -99,6 +99,10 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
   final bool isFullWidth;
   final bool showCheckmark;
 
+  /// The group height whose segments are 48dp tap targets: the group's 3.5dp inset and 1dp
+  /// border, and the segment's own 1dp border, take 11dp (TAQ-168).
+  static const double minTapHeight = kMinInteractiveDimension + 11.0;
+
   const TashilConnectedButtonGroup({
     super.key,
     required this.segments,
@@ -341,7 +345,10 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
             borderRadius: innerRadius,
             splashColor: currentFg.withValues(alpha: 0.12),
             highlightColor: currentFg.withValues(alpha: 0.08),
-            child: Padding(
+            // The whole pill is the tap target, not just its label row (TAQ-168).
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: widget.height),
+              child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: widget.isFullWidth ? 4.0 : 14.0,
               ),
@@ -365,7 +372,9 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                         color: currentFg,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                         letterSpacing: 0.2,
-                        fontSize: widget.height <= 38.0 ? 11.5 : 12.0,
+                        // A group raised to minTapHeight keeps the compact label size of the
+                        // 44dp group it replaces, so its width does not change (TAQ-168).
+                        fontSize: widget.height <= 38.0 || widget.height == TashilConnectedButtonGroup.minTapHeight - 7.0 ? 11.5 : 12.0,
                       ),
                     ),
                   ),
@@ -391,6 +400,7 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                   ],
                 ],
               ),
+            ),
             ),
           ),
         ),

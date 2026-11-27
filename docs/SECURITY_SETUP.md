@@ -35,10 +35,14 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
    ignore it:
 
    ```bash
-   flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=<site key>
+   tool/build_web.sh --release --dart-define=RECAPTCHA_SITE_KEY=<site key>   # in frontend/
    flutter build ipa --release
    flutter build appbundle --release
    ```
+
+   Get `<site key>` with `node backend/scripts/app_check_site_key.js --project <project id>`
+   (TAQ-170; see docs/DEV_ENVIRONMENT.md). It reads the key App Check has registered for the
+   web app and fails if there isn't one.
 
    Without the define, release web builds skip App Check instead of sending tokens made
    with an invalid key.
@@ -51,6 +55,11 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
    uses where `google.com` is unreachable. `recaptchaenterprise.googleapis.com` is not listed: the
    browser never calls it (assessments are server side). Check the CSP report for violations
    from a release web build with the real key before enforcing the CSP.
+   Browsers send those reports to `/csp-report`, which Hosting rewrites to the `cspReport`
+   function (TAQ-171). It logs one `csp_violation` line per report, with the directive, the
+   blocked origin and path, and the page path, and stores nothing. Read the reports in Cloud
+   Logging (`jsonPayload.message="csp_violation"`). Deploy functions with or before hosting,
+   because the rewrite needs the function to exist.
 6. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
    should be "verified" before enforcing.
 7. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
@@ -222,10 +231,11 @@ credential-looking value, is ignored by git, or is not tracked.
 
 `npm test` (in `backend/`) fails if `frontend/lib` or `frontend/web` holds a Gemini key, a base64
 form of one, or a direct Gemini/Vertex URL. Before shipping a web build, scan the compiled output
-too; only the public Firebase `apiKey` values from `firebase_options.dart` may appear in it:
+too; only the public Firebase `apiKey` values from `firebase_options.dart` may appear in it. The build
+scan also reads the gzip (`.gz`) and Brotli (`.br`) copies of those files (TAQ-86):
 
 ```bash
-cd frontend && flutter build web --release
+cd frontend && tool/build_web.sh --release
 cd ../backend && npm run check:client-keys:build
 ```
 
@@ -288,3 +298,38 @@ function.
   or bank-transfer rent (method, reference, paid-on date). It settles the month the same way the
   webhook does (invoice `Paid_Recorded`, receipt and owner notifications) and writes an `auditTrail`
   entry on the transaction. No split is deducted because the money did not pass through the platform.
+
+## Roles and custom claims (TAQ-23, TAQ-27)
+
+Firestore rules and the callables trust the `role` (and `agency_id`) custom claim. Only for a
+user with no role claim do the rules read `Users/{uid}`, and then they accept just the
+self-service roles (Owner, Tenant, Investor) from it.
+
+- **Self-service roles.** The `mirrorSelfServiceRole` trigger copies a profile's first
+  self-service role into the claim. It never replaces an existing role claim and never revokes
+  the session; the claim arrives with the user's next token refresh. Existing users get it from
+  a one-off backfill, run on each project once the trigger is deployed:
+
+  ```bash
+  cd backend
+  node scripts/role_claims.js --project <project id> --backfill-self-service          # dry run
+  node scripts/role_claims.js --project <project id> --backfill-self-service --apply
+  ```
+
+  Once the backfill has run on prod and an hour has passed (every ID token renewed), the
+  `profileRole()` fallback can be removed from `firestore.rules` in its own change. That ends
+  the per-request profile read.
+- **Elevated roles** (SuperAdmin, Admin, AgencyAdmin) come only from the `setUserRole`
+  callable, which a SuperAdmin calls. It revokes the user's refresh tokens when the role or
+  agency changes (TAQ-148). Run `node scripts/role_claims.js --project <project id>` for a
+  read-only audit of profiles whose role and claim disagree.
+- **The first SuperAdmin** is made once per project from a trusted machine with Admin
+  credentials. The script refuses if any account already has the SuperAdmin claim:
+
+  ```bash
+  cd backend
+  node scripts/role_claims.js --project <project id> --bootstrap-superadmin <uid>          # dry run
+  node scripts/role_claims.js --project <project id> --bootstrap-superadmin <uid> --apply
+  ```
+
+  The account then signs in again to pick up the claim.

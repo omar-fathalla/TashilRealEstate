@@ -36,6 +36,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool _usersLoading = false;
   bool _usersFailed = false;
   final Set<String> _busy = {};
+  bool _canVerifyAgencies = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _data.canVerifyAgencies().then((value) {
+      if (mounted && value) setState(() => _canVerifyAgencies = true);
+    }).catchError((Object _) {});
+  }
 
   Future<void> _run(String listingId, Future<void> Function() action, AppLocalizations loc) async {
     setState(() => _busy.add(listingId));
@@ -344,22 +353,66 @@ class _AdminDashboardState extends State<AdminDashboard> {
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final agency = items[index];
+            final busy = _busy.contains('agency-${agency.id}');
+            final licence = [
+              if (agency.orn.isNotEmpty) '${loc.tr('adminAgencyOrn')}: ${agency.orn}',
+              if (agency.rera.isNotEmpty) '${loc.tr('adminAgencyRera')}: ${agency.rera}',
+            ].join('  ·  ');
             return TashilCard.outlined(
               key: Key('admin-agency-${agency.id}'),
               padding: const EdgeInsetsDirectional.all(14),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(agency.name,
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                            if (agency.city.isNotEmpty) Text(agency.city, style: Theme.of(context).textTheme.bodySmall),
+                            if (licence.isNotEmpty)
+                              Text(licence, key: Key('admin-agency-licence-${agency.id}'), style: Theme.of(context).textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                      TashilAssistChip(
+                        key: Key('admin-agency-status-${agency.id}'),
+                        label: loc.tr(_licenceStatusKey(agency.licenceStatus)),
+                        icon: agency.licenceStatus == 'verified'
+                            ? Icons.verified_outlined
+                            : (agency.licenceStatus == 'rejected' ? Icons.block_outlined : Icons.schedule_outlined),
+                      ),
+                    ],
+                  ),
+                  if (_canVerifyAgencies) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Text(agency.name,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                        if (agency.city.isNotEmpty) Text(agency.city, style: Theme.of(context).textTheme.bodySmall),
+                        TashilButton.tonal(
+                          key: Key('admin-agency-verify-${agency.id}'),
+                          label: loc.tr('adminAgencyVerify'),
+                          icon: Icons.verified_outlined,
+                          isLoading: busy,
+                          onPressed: busy || agency.licenceStatus == 'verified'
+                              ? null
+                              : () => _run('agency-${agency.id}', () => _data.setAgencyLicence(agency.id, 'verified'), loc),
+                        ),
+                        TashilButton.outlined(
+                          key: Key('admin-agency-reject-${agency.id}'),
+                          label: loc.tr('adminAgencyReject'),
+                          icon: Icons.block_outlined,
+                          onPressed: busy || agency.licenceStatus == 'rejected'
+                              ? null
+                              : () => _run('agency-${agency.id}', () => _data.setAgencyLicence(agency.id, 'rejected'), loc),
+                        ),
                       ],
                     ),
-                  ),
-                  if (agency.verified) TashilAssistChip(label: loc.tr('adminStatusVerified'), icon: Icons.verified_outlined),
+                  ],
                 ],
               ),
             );
@@ -367,6 +420,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
       },
     );
+  }
+
+  static String _licenceStatusKey(String status) {
+    switch (status) {
+      case 'verified':
+        return 'adminLicenceVerified';
+      case 'pending':
+        return 'adminLicencePending';
+      case 'rejected':
+        return 'adminLicenceRejected';
+      default:
+        return 'adminLicenceUnverified';
+    }
   }
 
   String _roleLabel(AppLocalizations loc, String role) {

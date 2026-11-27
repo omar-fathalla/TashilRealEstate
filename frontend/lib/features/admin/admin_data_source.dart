@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// One public listing as the platform Admin sees it.
 class AdminListing {
@@ -98,12 +99,30 @@ class AdminUserPage {
 }
 
 class AdminAgencyRow {
-  const AdminAgencyRow({required this.id, required this.name, required this.verified, required this.city});
+  const AdminAgencyRow({
+    required this.id,
+    required this.name,
+    required this.verified,
+    required this.city,
+    this.orn = '',
+    this.rera = '',
+    this.licenceStatus = 'unverified',
+  });
 
   final String id;
   final String name;
   final bool verified;
   final String city;
+
+  /// The broker office (ORN) and broker (RERA) numbers the agency entered. Platform staff check
+  /// them by hand (TAQ-154).
+  final String orn;
+  final String rera;
+
+  /// `unverified`, `pending`, `verified` or `rejected`. Only a SuperAdmin can set verified or rejected.
+  final String licenceStatus;
+
+  static const licenceStatuses = ['unverified', 'pending', 'verified', 'rejected'];
 }
 
 /// What the Admin dashboard reads and writes. Every write here is one firestore.rules allow
@@ -122,6 +141,14 @@ abstract class AdminDataSource {
 
   Future<AdminUserPage> loadUsers({String? startAfter});
   Stream<List<AdminAgencyRow>> watchAgencies(String langCode);
+
+  /// Whether the signed-in account may verify agency licences. firestore.rules allow it only to a
+  /// SuperAdmin; an Admin sees the status read-only.
+  Future<bool> canVerifyAgencies();
+
+  /// Records the manual licence check: [status] `verified` also turns the public badge on, and any
+  /// other status turns it off.
+  Future<void> setAgencyLicence(String agencyId, String status);
 }
 
 class FirebaseAdminDataSource implements AdminDataSource {
@@ -198,10 +225,10 @@ class FirebaseAdminDataSource implements AdminDataSource {
 
   @override
   Future<AdminUserPage> loadUsers({String? startAfter}) async {
-    final result = await _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({
+    final result = await SessionGuard.instance.run(() => _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({
       'limit': 100,
       if (startAfter != null && startAfter.isNotEmpty) 'startAfter': startAfter,
-    });
+    }));
     final users = result.data['users'];
     final next = result.data['nextPageToken'];
     return AdminUserPage(
@@ -220,13 +247,36 @@ class FirebaseAdminDataSource implements AdminDataSource {
             if (names is Map && names[langCode] is String && (names[langCode] as String).isNotEmpty) {
               name = names[langCode] as String;
             }
+            final status = data['licence_status'];
             return AdminAgencyRow(
               id: d.id,
               name: name.isEmpty ? d.id : name,
               verified: data['verified_badge'] == true,
               city: data['city'] is String ? data['city'] as String : '',
+              orn: data['orn'] is String ? data['orn'] as String : '',
+              rera: data['rera'] is String ? data['rera'] as String : '',
+              licenceStatus: AdminAgencyRow.licenceStatuses.contains(status) ? status as String : 'unverified',
             );
           }).toList(),
         );
+  }
+
+  @override
+  Future<bool> canVerifyAgencies() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final claims = (await user.getIdTokenResult()).claims ?? const {};
+    return claims['role'] == 'SuperAdmin';
+  }
+
+  DocumentReference<Map<String, dynamic>> _agency(String id) => _db.collection('Agencies').doc(id);
+
+  @override
+  Future<void> setAgencyLicence(String agencyId, String status) {
+    return _agency(agencyId).update({
+      'licence_status': status,
+      'verified_badge': status == 'verified',
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 }

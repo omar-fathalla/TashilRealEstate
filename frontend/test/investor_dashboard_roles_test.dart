@@ -85,7 +85,7 @@ void main() {
       expect(find.text('التحليلات'), findsWidgets);
     });
 
-    testWidgets('AgencyDashboard includes Investor Dashboard in Rail and Drawer', (tester) async {
+    testWidgets('AgencyDashboard hides the Investor mockup by default and shows it behind the flag (TAQ-152)', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -95,8 +95,10 @@ void main() {
 
       await tester.pumpWidget(wrapWithApp(const AgencyDashboard()));
       await tester.pumpAndSettle();
+      expect(find.text('لوحة المستثمر وتحليلات المحفظة العقارية'), findsNothing);
 
-      // Verify the Investor Dashboard destination is present in Agency Navigation
+      await tester.pumpWidget(wrapWithApp(const AgencyDashboard(key: ValueKey('flag-on'), showMockTabs: true)));
+      await tester.pumpAndSettle();
       expect(find.text('لوحة المستثمر وتحليلات المحفظة العقارية'), findsWidgets);
     });
 

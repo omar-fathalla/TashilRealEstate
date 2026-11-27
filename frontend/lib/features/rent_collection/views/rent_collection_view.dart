@@ -69,6 +69,9 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     final portfolio = widget.portfolio;
     PropertyLifecycleService().propertiesNotifier.addListener(_syncInvoices);
     if (portfolio != null) {
+      // Row actions on server rows are stored by updateRentRow (TAQ-163).
+      _service.serverRowAction = (leaseId, period, action, {notes}) =>
+          portfolio.data.updateRentRow(leaseId: leaseId, period: period, action: action, notes: notes);
       portfolio.addListener(_applyPortfolio);
       _applyPortfolio();
     } else {
@@ -607,7 +610,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     );
 
     final viewModeWidget = TashilConnectedButtonGroup<String>(
-      height: 44,
+      height: TashilConnectedButtonGroup.minTapHeight,
       selectedValue: _viewMode,
       onSelectionChanged: (val) => setState(() => _viewMode = val),
       segments: [
@@ -2439,6 +2442,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: amountController,
+                        // A server row's rent is the lease's (TAQ-163); only its note can change.
+                        enabled: !_service.serverMode,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           suffixText: currency,
@@ -2456,7 +2461,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                       ),
                       const SizedBox(height: 6),
                       InkWell(
-                        onTap: () async {
+                        onTap: _service.serverMode ? null : () async {
                           final picked = await showDatePicker(
                             context: context,
                             initialDate: selectedDueDate,

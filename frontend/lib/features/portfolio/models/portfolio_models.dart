@@ -12,6 +12,8 @@ double _number(dynamic value) => value is num ? value.toDouble() : 0;
 
 /// Which records a manager sees: the ones of an agency (`agency_id`) or of an owner (`owner_id`).
 /// The rules allow exactly these two equality queries, so a manager never reads another's data.
+/// [PortfolioScope.platform] (TAQ-162) reads the latest records of the whole platform, capped;
+/// the rules allow that to a SuperAdmin only, and the client asks for it only for one.
 class PortfolioScope {
   final String field;
   final String value;
@@ -19,8 +21,10 @@ class PortfolioScope {
 
   const PortfolioScope.agency(String agencyId) : this._('agency_id', agencyId);
   const PortfolioScope.owner(String uid) : this._('owner_id', uid);
+  const PortfolioScope.platform() : this._('', '');
 
   bool get isAgency => field == 'agency_id';
+  bool get isPlatform => field.isEmpty;
 
   @override
   bool operator ==(Object other) => other is PortfolioScope && other.field == field && other.value == value;
@@ -47,6 +51,16 @@ class PortfolioLease {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Optional terms (TAQ-164). The late fee is a flat amount added once a month is paid after its
+  /// due day plus [lateFeeGraceDays]; 0 means none. The phone comes from the tenant's profile.
+  final String tenantPhone;
+  final double lateFeeAmount;
+  final int lateFeeGraceDays;
+  final String payoutBankName;
+  final String payoutIban;
+
+  static const int defaultGraceDays = 5;
+
   const PortfolioLease({
     required this.id,
     this.status = 'draft',
@@ -63,6 +77,11 @@ class PortfolioLease {
     this.endDate = '',
     this.createdAt,
     this.updatedAt,
+    this.tenantPhone = '',
+    this.lateFeeAmount = 0,
+    this.lateFeeGraceDays = defaultGraceDays,
+    this.payoutBankName = '',
+    this.payoutIban = '',
   });
 
   bool get isDraft => status == 'draft';
@@ -97,8 +116,16 @@ class PortfolioLease {
       endDate: _text(data['end_date']),
       createdAt: _date(data['created_at']),
       updatedAt: _date(data['updated_at']),
+      tenantPhone: _text(data['tenant_phone']),
+      lateFeeAmount: _number(data['late_fee_amount']) > 0 ? _number(data['late_fee_amount']) : 0,
+      lateFeeGraceDays: _graceDays(data['late_fee_grace_days']),
+      payoutBankName: _text(data['payout_bank_name']),
+      payoutIban: _text(data['payout_iban']),
     );
   }
+
+  static int _graceDays(dynamic value) =>
+      value is int && value >= 0 && value <= 60 ? value : defaultGraceDays;
 }
 
 /// A payment attempt or payment (`Transactions/{leaseId}_{YYYY-MM}`, written only by the server).
@@ -144,6 +171,52 @@ class PortfolioTransaction {
       reference: _text(data['reference']),
       invoiceNumber: _text(data['invoiceNumber']),
       paidAt: _date(data['paidAt']),
+    );
+  }
+}
+
+/// What the managers did with one month's rent row (`RentRowStates/{leaseId}_{YYYY-MM}`, written
+/// only by the updateRentRow function, TAQ-163).
+class PortfolioRentRowState {
+  final String id;
+  final String leaseId;
+  final String period;
+  final bool hidden;
+  final bool deleted;
+  final DateTime? hiddenAt;
+  final String notes;
+  final int reminderCount;
+  final DateTime? lastReminderAt;
+  final DateTime? legalNoticeAt;
+
+  const PortfolioRentRowState({
+    required this.id,
+    this.leaseId = '',
+    this.period = '',
+    this.hidden = false,
+    this.deleted = false,
+    this.hiddenAt,
+    this.notes = '',
+    this.reminderCount = 0,
+    this.lastReminderAt,
+    this.legalNoticeAt,
+  });
+
+  String get key => '${leaseId}_$period';
+
+  factory PortfolioRentRowState.fromMap(String id, Map<String, dynamic> data) {
+    final count = data['reminder_count'];
+    return PortfolioRentRowState(
+      id: id,
+      leaseId: _text(data['lease_id']),
+      period: _text(data['period']),
+      hidden: data['hidden'] == true,
+      deleted: data['deleted'] == true,
+      hiddenAt: _date(data['hidden_at']),
+      notes: _text(data['notes']),
+      reminderCount: count is num && count > 0 ? count.toInt() : 0,
+      lastReminderAt: _date(data['last_reminder_at']),
+      legalNoticeAt: _date(data['legal_notice_at']),
     );
   }
 }

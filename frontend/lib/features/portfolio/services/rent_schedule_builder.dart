@@ -11,7 +11,10 @@ import 'portfolio_controller.dart';
 ///   months) up to the current month, plus next month once it is within 30 days of falling due.
 /// - A month is paid only when `Transactions/{leaseId}_{YYYY-MM}` says `paid`.
 /// - Ended leases keep their paid months as history and owe nothing.
-/// - There is no late penalty: the server charges none, so none is shown.
+/// - The only late penalty is the lease's own flat late fee (TAQ-164, 0 by default), shown once a
+///   month is past its due day plus the lease's grace days, as the server charges it.
+/// - What the managers did with a row (trash, delete, notes, reminders, legal notice) comes from
+///   `RentRowStates` (TAQ-163); a deleted row is left out.
 class RentScheduleBuilder {
   RentScheduleBuilder._();
 
@@ -46,6 +49,8 @@ class RentScheduleBuilder {
       if (inv.transactionId.isNotEmpty) receiptByTx[inv.transactionId] = inv;
     }
 
+    final rowStates = {for (final r in snapshot.rentRowStates) r.key: r};
+
     final out = <RentInvoiceModel>[];
     for (final lease in snapshot.leases) {
       if (!lease.isActive && !lease.isEnded) continue;
@@ -78,10 +83,14 @@ class RentScheduleBuilder {
         if (year == null || month == null) continue;
         final tx = txByKey['${lease.id}_$period'];
         final paidTx = (tx != null && tx.isPaid) ? tx : null;
+        final state = rowStates['${lease.id}_$period'];
+        if (state != null && state.deleted) continue;
         final paid = paidTx != null;
         final receipt = paidTx == null ? null : receiptByTx[paidTx.id];
         final due = _dueDate(year, month, dueDay);
-        final overdue = !paid && today.isAfter(due.add(const Duration(days: graceDays)));
+        final overdue = !paid && today.isAfter(due.add(Duration(days: lease.lateFeeGraceDays)));
+        // The server adds the fee from the day after the grace days (backend/lease_terms.js).
+        final feeDue = !paid && lease.lateFeeAmount > 0 && !today.isBefore(due.add(Duration(days: lease.lateFeeGraceDays + 1)));
         final base = paidTx != null && paidTx.amount > 0 ? paidTx.amount : lease.monthlyRent;
         final deductedPercent = receipt != null && receipt.amount > 0
             ? ((receipt.amount - receipt.ownerPayout) / receipt.amount * 100).clamp(0, 100).toDouble()
@@ -98,12 +107,13 @@ class RentScheduleBuilder {
           unitNumber: '',
           buildingName: '',
           district: '',
-          tenant: TenantInfo(name: lease.tenantName, phone: '', email: '', idNumber: ''),
-          owner: const OwnerPayoutInfo(name: '', bankName: '', iban: '', accountNumber: ''),
+          tenant: TenantInfo(name: lease.tenantName, phone: lease.tenantPhone, email: '', idNumber: ''),
+          owner: OwnerPayoutInfo(name: '', bankName: lease.payoutBankName, iban: lease.payoutIban, accountNumber: ''),
           baseAmount: base,
           dueDate: due,
-          gracePeriodDays: graceDays,
+          gracePeriodDays: lease.lateFeeGraceDays,
           dailyPenaltyRate: 0,
+          flatLateFee: feeDue ? lease.lateFeeAmount : 0,
           propertyId: lease.propertyId,
           monthKey: period,
           status: paid ? 'paid' : (overdue ? 'overdue' : 'due_soon'),
@@ -112,6 +122,12 @@ class RentScheduleBuilder {
           transactionReference: paidTx != null && paidTx.reference.isNotEmpty ? paidTx.reference : null,
           platformFeePercent: deductedPercent,
           payoutStatus: paid ? 'transferred_to_owner' : 'pending',
+          reminderCount: state?.reminderCount ?? 0,
+          lastReminderSentAt: state?.lastReminderAt,
+          legalWarningIssued: state?.legalNoticeAt != null,
+          isDeleted: state?.hidden ?? false,
+          deletedAt: state != null && state.hidden ? (state.hiddenAt ?? today) : null,
+          notes: state == null || state.notes.isEmpty ? null : state.notes,
         ));
       }
     }

@@ -80,3 +80,24 @@ test("TAQ-110 N-1: PropertyOwners has no client access", async () => {
     await assertFails(deleteDoc(doc(db, "PropertyOwners/taken")));
   }
 });
+
+// --- TAQ-137: an anonymous session cannot create a private holder doc ---
+
+test("TAQ-137: an anonymous session cannot create a private property doc; signed-up providers can", async () => {
+  const anon = env.authenticatedContext("anonX", { firebase: { sign_in_provider: "anonymous" } }).firestore();
+  await assertFails(setDoc(doc(anon, "Users/anonX/properties/fresh-anon"), { title: "x" }));
+  for (const [uid, provider] of [["mailX", "password"], ["phoneX", "phone"], ["googleX", "google.com"]]) {
+    const db = env.authenticatedContext(uid, { firebase: { sign_in_provider: provider } }).firestore();
+    await assertSucceeds(setDoc(doc(db, `Users/${uid}/properties/fresh-${uid}`), { title: "x" }));
+  }
+  // Tokens without the firebase claim (custom tokens in tests, the Admin SDK) are not anonymous.
+  await assertSucceeds(setDoc(doc(env.authenticatedContext("plainX").firestore(), "Users/plainX/properties/fresh-plain"), { title: "x" }));
+});
+
+test("TAQ-137: an anonymous session keeps editing and deleting a doc it already has", async () => {
+  await seed({ "Users/anonY/properties/old": { title: "kept" } });
+  const anon = env.authenticatedContext("anonY", { firebase: { sign_in_provider: "anonymous" } }).firestore();
+  await assertSucceeds(updateDoc(doc(anon, "Users/anonY/properties/old"), { title: "edited" }));
+  await assertSucceeds(getDoc(doc(anon, "Users/anonY/properties/old")));
+  await assertSucceeds(deleteDoc(doc(anon, "Users/anonY/properties/old")));
+});

@@ -28,6 +28,8 @@ const { requireFreshAuth, requireRole, resolveUserAuthority, leaseAmount } = req
 const { appCheckEnforced } = require("./config");
 const { leaseLiveState, assertLeasePayable } = require("./lease_state");
 const { verifyPropertyOwnership, registeredOwner } = require("./property_owners");
+const { leaseExtrasFrom, tenantPhoneOf } = require("./lease_terms");
+const { managingAgency } = require("./agency_mandate_state");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
 const LOCKS = "PropertyLeaseLocks";
@@ -94,11 +96,14 @@ async function verifyLeaseProperty(t, db, lease) {
   if (!LANDLORD_ROLES.includes(authority.role)) throw precondition("The lease's owner cannot let property.", "owner_not_landlord");
   const agency = typeof lease.agency_id === "string" ? lease.agency_id : "";
   const siloAgency = typeof silo.get("agency_id") === "string" ? silo.get("agency_id") : "";
+  // The agency is the AgencyAdmin owner's own (claims plus the property doc), or the agency of the
+  // owner's active mandate on this property (TAQ-149), read in the same transaction.
+  const managed = await managingAgency(t, db, lease.owner_id, lease.property_id, authority);
   if (agency) {
-    if (authority.agencyId !== agency || siloAgency !== agency) {
+    if (managed.agencyId !== agency || (managed.via === "claim" && siloAgency !== agency)) {
       throw precondition("This agency does not manage this property.", "property_not_managed");
     }
-  } else if (authority.agencyId || siloAgency) {
+  } else if (managed.agencyId || siloAgency) {
     throw precondition("An agency manages this property; the agency creates its leases.", "property_agency_managed");
   }
   return silo;
@@ -196,9 +201,14 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
     throw new HttpsError("invalid-argument", "The tenant cannot be the owner or the caller.");
   }
   const status = data.sendOffer === true ? "pending_tenant_approval" : "draft";
+  const extras = leaseExtrasFrom(data);
 
   const ownerAuthority = await resolveUserAuthority(ownerId);
-  const agencyId = ownerAuthority.agencyId;
+  const db = admin.firestore();
+  const { agencyId } = await managingAgency(null, db, ownerId, propertyId, ownerAuthority);
+  if (role === "Owner" && agencyId) {
+    throw precondition("An agency manages this property; the agency creates its leases.", "property_agency_managed");
+  }
   if (role === "AgencyAdmin") {
     const callerAgency = auth.token && auth.token.agency_id;
     if (!callerAgency || agencyId !== callerAgency) {
@@ -208,7 +218,6 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
   const tenantAuthority = await resolveUserAuthority(tenantId);
   if (tenantAuthority.role !== "Tenant") throw precondition("The tenant must be a tenant account.", "tenant_not_found");
 
-  const db = admin.firestore();
   const ref = db.collection("Leases").doc();
   const now = deps.now();
   const parties = { id: ref.id, owner_id: ownerId, tenant_id: tenantId, agency_id: agencyId, property_id: propertyId };
@@ -233,6 +242,9 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
       end_date: data.endDate,
       property_title: titleOf(silo),
       tenant_name: tenantNameOf(tenantProfile.exists ? tenantProfile.data() : null),
+      tenant_phone: tenantPhoneOf(tenantProfile.exists ? tenantProfile.data() : null),
+      late_fee_amount: 0,
+      ...extras,
       created_by: auth.uid,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),

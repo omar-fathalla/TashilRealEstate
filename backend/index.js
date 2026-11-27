@@ -23,8 +23,15 @@ const {
   assertLeaseParty,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
+const { managingAgency } = require("./agency_mandate_state");
 const { appCheckEnforced } = require("./config");
-const { stripContacts } = require("./contact_filter");
+const {
+  MARKETPLACE_LOCALES,
+  cleanText,
+  localizedText,
+  agencyListingIdentity,
+  listingContactFields,
+} = require("./listing_contact");
 const { claimOrCheckOwner, registeredOwner } = require("./property_owners");
 const { loadSplitPercents, splitsFor } = require("./payments");
 
@@ -239,7 +246,6 @@ exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
 
 // Demo accounts are seeded only by the local admin script (seed.js), never by a deployed endpoint.
 
-const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
 const MARKETPLACE_MAX_IMAGES = 20;
 const MARKETPLACE_MAX_AMENITIES = 30;
 
@@ -249,29 +255,14 @@ const DEFAULT_AMENITIES = {
   hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
 };
 
-// Listings from the owner tree are contacted through the platform, never the owner directly.
-const PLATFORM_AGENCY_NAMES = {
-  ar: "شركة تسهيل لإدارة الأملاك",
-  en: "Tashil Property Management",
-  hi: "तशिल संपत्ति प्रबंधन",
-};
-const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
+async function loadAgencyIdentity(agencyId) {
+  if (!agencyId) return null;
+  const snap = await admin.firestore().collection("Agencies").doc(agencyId).get();
+  return snap.exists ? agencyListingIdentity(snap.data()) : null;
+}
+
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
-
-function cleanText(value, maxLength) {
-  return typeof value === "string" ? stripContacts(value).trim().slice(0, maxLength).trim() : "";
-}
-
-// Keeps only the ar/en/hi string entries; any other nested key is dropped.
-function localizedText(map, flatFallback, maxLength) {
-  const source = map && typeof map === "object" && !Array.isArray(map) ? map : null;
-  const result = {};
-  for (const locale of MARKETPLACE_LOCALES) {
-    result[locale] = cleanText(source ? source[locale] : flatFallback, maxLength);
-  }
-  return result;
-}
 
 function localizedAmenities(map) {
   if (!map || typeof map !== "object" || Array.isArray(map)) return DEFAULT_AMENITIES;
@@ -408,7 +399,7 @@ function hasPublishablePrice(data) {
   return Number.isFinite(price) && price > 0;
 }
 
-function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", current = null, moderation = NOT_MODERATED } = {}) {
+function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", agency = null, current = null, moderation = NOT_MODERATED } = {}) {
   const countryCode = data.countryCode === "AE" ? "AE" : "EG";
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
@@ -434,8 +425,7 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
     imageUrls: images,
     amenitiesMap: localizedAmenities(data.amenitiesMap),
     isFurnished: data.isFurnished !== false,
-    agencyNames: PLATFORM_AGENCY_NAMES,
-    agencyPhone: PLATFORM_AGENCY_PHONE,
+    ...listingContactFields(agencyId ? agency : null),
     ...moderatedFields(current, moderation),
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
@@ -501,14 +491,18 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
  * Whether a private listing may be live right now: the owner wants it public and available, holds
  * a role that can publish, and has a positive rent. `refusal` says why not when it wants to be live.
  */
-async function publishDecision(ownerId, data) {
+async function publishDecision(ownerId, data, propertyId) {
   const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
-  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "" };
-  const { role, agencyId } = await resolveUserAuthority(ownerId);
+  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "", agency: null };
+  const authority = await resolveUserAuthority(ownerId);
+  const { role } = authority;
+  // The listing names the managing agency: the AgencyAdmin owner's own, or an active mandate's (TAQ-149).
+  const { agencyId } = await managingAgency(null, null, ownerId, propertyId, authority);
   const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
     : !hasPublishablePrice(data) ? "the rent is not a positive number"
       : "";
-  return { wantsPublic, refusal, agencyId };
+  const agency = !refusal && agencyId ? await loadAgencyIdentity(agencyId) : null;
+  return { wantsPublic, refusal, agencyId, agency };
 }
 
 /**
@@ -556,7 +550,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     if (ownership.blocked) return null;
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
+    const { wantsPublic, refusal, agencyId, agency } = await publishDecision(ownerId, afterData, propertyId);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -581,6 +575,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
           ref,
           sanitizeForMarketplace(afterData, ownerId, propertyId, {
             agencyId,
+            agency,
             current: current.exists ? current.data() : null,
             moderation,
           }),
@@ -663,7 +658,7 @@ async function liftHold(db, propertyId, preHidePublished) {
     ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
     : null;
   const privateData = privateSnap && privateSnap.exists && privateSnap.get("id_conflict") !== true ? privateSnap.data() : null;
-  const decision = privateData ? await publishDecision(ownerId, privateData) : null;
+  const decision = privateData ? await publishDecision(ownerId, privateData, propertyId) : null;
   const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
   if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);
 
@@ -674,6 +669,7 @@ async function liftHold(db, propertyId, preHidePublished) {
     if (goLive) {
       tx.set(ref, sanitizeForMarketplace(privateData, ownerId, propertyId, {
         agencyId: decision.agencyId,
+        agency: decision.agency,
         current: current.data(),
         moderation: NOT_MODERATED,
       }));
@@ -683,8 +679,40 @@ async function liftHold(db, propertyId, preHidePublished) {
   });
 }
 
+/**
+ * Keeps the agency name and ORN on an agency's live listings in step with Agencies/{agencyId}
+ * (TAQ-150/154): a rename shows at once, a licence that loses its badge stops showing its ORN,
+ * and a deleted profile falls back to the platform name.
+ */
+exports.syncAgencyIdentityToListings = onDocumentWritten("Agencies/{agencyId}", async (event) => {
+  const agencyId = event.params.agencyId;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+  const next = listingContactFields(agencyListingIdentity(after));
+  if (JSON.stringify(next) === JSON.stringify(listingContactFields(agencyListingIdentity(before)))) return null;
+  const db = admin.firestore();
+  const update = { agencyNames: next.agencyNames, agencyPhone: next.agencyPhone, agencyOrn: next.agencyOrn || FieldValue.delete() };
+  let last = null;
+  let total = 0;
+  for (;;) {
+    let query = db.collection("Properties").where("agency_id", "==", agencyId).orderBy(FieldPath.documentId()).limit(300);
+    if (last) query = query.startAfter(last);
+    const snap = await query.get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    for (const doc of snap.docs) batch.update(doc.ref, update);
+    await batch.commit();
+    total += snap.size;
+    last = snap.docs[snap.size - 1];
+    if (snap.size < 300) break;
+  }
+  logger.info(`Updated the agency identity on ${total} listing(s) of agency [${agencyId}].`);
+  return null;
+});
+
 // Export helper for unit testing
 exports.sanitizeForMarketplace = sanitizeForMarketplace;
+exports.agencyListingIdentity = agencyListingIdentity;
 
 /**
  * Generates structured, verified market intelligence payload combining official
@@ -923,9 +951,23 @@ exports.notifyLeaseStatusChange = require("./lease_notifications").notifyLeaseSt
 exports.createLease = require("./leases").createLease;
 exports.respondToLeaseOffer = require("./leases").respondToLeaseOffer;
 exports.releasePropertyLeaseLock = require("./leases").releasePropertyLeaseLock;
+exports.updateRentRow = require("./rent_rows").updateRentRow;
+
+// Owner-to-agency mandates and agency self-onboarding (TAQ-149).
+exports.inviteMandate = require("./mandates").inviteMandate;
+exports.respondToMandate = require("./mandates").respondToMandate;
+exports.revokeMandate = require("./mandates").revokeMandate;
+exports.applyForAgency = require("./agency_applications").applyForAgency;
+exports.reviewAgencyApplication = require("./agency_applications").reviewAgencyApplication;
 
 // Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
 exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;
 
 // A listing held hidden by moderation is never published, whoever wrote the doc (TAQ-135).
 exports.holdHiddenListingsOffline = require("./hidden_listing_guard").holdHiddenListingsOffline;
+
+// TAQ-171: receives the Report-Only CSP reports (Hosting rewrite /csp-report); logs only.
+exports.cspReport = require("./csp_report").cspReport;
+
+// TAQ-23: self-service roles also land in the custom claim, so the rules skip the profile read.
+exports.mirrorSelfServiceRole = require("./self_service_claims").mirrorSelfServiceRole;

@@ -11,19 +11,15 @@
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+// From the modular entry point like the other modules: in the Functions emulator the
+// `admin.firestore` namespace has no FieldValue, so reading it there threw (TAQ-165).
+const { FieldValue } = require("firebase-admin/firestore");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { FieldValue } = admin.firestore;
-
-const isTrue = (value) => value === true || value === "true";
-
-/** True when the public listing data says both published and held hidden. */
-function isPublishedAndHidden(data) {
-  return Boolean(data) && isTrue(data.is_published) && isTrue(data.moderation_hidden);
-}
+const { isPublishedAndHidden } = require("./hidden_listing_predicate");
 
 const holdHiddenListingsOffline = onDocumentWritten("Properties/{propertyId}", async (event) => {
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;

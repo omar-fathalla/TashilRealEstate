@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/config/demo_data.dart';
+import 'package:tashil_real_estate/core/config/feature_flags.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/features/agency_workspace/agency_dashboard.dart';
 import 'package:tashil_real_estate/features/agency_workspace/services/agency_identity.dart';
 import 'package:tashil_real_estate/features/agency_workspace/widgets/agency_profile_dialog.dart';
+import 'package:tashil_real_estate/features/agency_workspace/views/crm_view.dart';
+import 'package:tashil_real_estate/features/financial_kpi_dashboard/views/financial_kpi_dashboard_view.dart';
+import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 
 class FakeIdentitySource implements AgencyIdentitySource {
   final AgencyIdentity identity;
@@ -229,6 +233,36 @@ void main() {
     expect(find.text('Sara Ali'), findsWidgets);
     expect(find.text('Marina Realty'), findsWidgets);
     expect(find.text('AG'), findsNothing);
+  });
+
+  group('mockup tabs (TAQ-152)', () {
+    test('stay behind the AGENCY_MOCK_TABS define, off by default', () {
+      expect(FeatureFlags.agencyMockTabs, isFalse);
+    });
+
+    testWidgets('CRM and Investor are left out of the rail by default', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpApp(tester, AgencyDashboard(identitySource: FakeIdentitySource(sara)));
+      expect(find.text('Clients'), findsNothing);
+      expect(find.byType(CrmView), findsNothing);
+      expect(find.byType(InvestorDashboardView), findsNothing);
+      expect(find.text('Contracts'), findsWidgets);
+    });
+
+    testWidgets('the phone bar opens Leases and Financials, not the hidden views', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpApp(tester, AgencyDashboard(identitySource: FakeIdentitySource(sara)));
+      final bar = find.byType(NavigationBar);
+      expect(find.descendant(of: bar, matching: find.byType(NavigationDestination)), findsNWidgets(4));
+      await tester.tap(find.descendant(of: bar, matching: find.byIcon(Icons.analytics_outlined)));
+      await tester.pumpAndSettle();
+      expect(find.byType(FinancialKpiDashboardView), findsOneWidget);
+      expect(find.byType(CrmView), findsNothing);
+    });
   });
 
   group('demo accounts (TAQ-153)', () {
