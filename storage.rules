@@ -15,18 +15,21 @@ service firebase.storage {
       return isSignedIn() && request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'anonymous';
     }
 
+    // TAQ-25, TAQ-185: same second-factor switch as firestore.rules (off unless mfa_required is set).
+    function secondFactorOk() {
+      return request.auth.token.get('mfa_required', false) != true
+        || request.auth.token.get('firebase', {}).get('sign_in_second_factor', null) != null;
+    }
+
     // Elevated roles only come from the custom claim set by setUserRole / the Admin SDK.
     function isSuperAdmin() {
-      // TAQ-25: same second-factor switch as firestore.rules (off unless mfa_required is set).
-      return isSignedIn() && request.auth.token.get('role', '') == 'SuperAdmin'
-        && (request.auth.token.get('mfa_required', false) != true
-          || request.auth.token.get('firebase', {}).get('sign_in_second_factor', null) != null);
+      return isSignedIn() && request.auth.token.get('role', '') == 'SuperAdmin' && secondFactorOk();
     }
 
     // Platform Admin may list and remove public listing photos to moderate them. It has no
     // access to the private users/ folder (KYC documents, contracts, voice notes).
     function isAdmin() {
-      return isSignedIn() && request.auth.token.get('role', '') == 'Admin';
+      return isSignedIn() && request.auth.token.get('role', '') == 'Admin' && secondFactorOk();
     }
 
     function under10MB() {

@@ -61,7 +61,7 @@ test("TAQ-25 callables: requireRole refuses with mfa_required, and triggers are 
   await assert.rejects(requireRole(auth(ON_NO_2FA), ["SuperAdmin"]), (e) => e.code === "permission-denied" && e.details.reason === "mfa_required");
   await assert.rejects(requireRole(auth(ON_NO_2FA), ["Admin", "SuperAdmin"]), (e) => e.details.reason === "mfa_required");
   assert.equal(await resolveRole(auth(ON_NO_2FA)), "");
-  assert.equal(missingSecondFactor(auth({ role: "Admin", mfa_required: true })), false, "only SuperAdmin is switched");
+  assert.equal(missingSecondFactor(auth({ role: "Owner", mfa_required: true })), false, "only SuperAdmin and Admin are switched");
   await admin.auth().createUser({ uid: "trigger-sa" }).catch(() => {});
   await admin.auth().setCustomUserClaims("trigger-sa", ON_NO_2FA);
   assert.equal((await resolveUserAuthority("trigger-sa")).role, "SuperAdmin");
@@ -79,7 +79,8 @@ test("TAQ-25 script: --require-mfa refuses without an enrolled factor or for a n
   };
   const quiet = () => {};
   await assert.rejects(setMfaRequired(fake({ role: "SuperAdmin" }, []), "u", true, true, quiet), /no enrolled second factor/);
-  await assert.rejects(setMfaRequired(fake({ role: "Admin" }, [{ factorId: "totp" }]), "u", true, true, quiet), /not a SuperAdmin/);
+  await assert.rejects(setMfaRequired(fake({ role: "Owner" }, [{ factorId: "totp" }]), "u", true, true, quiet), /not a SuperAdmin or Admin/);
+  assert.equal(await setMfaRequired(fake({ role: "Admin" }, [{ factorId: "totp" }]), "u", true, true, quiet), true, "TAQ-185: an Admin can be switched on");
   const dry = fake({ role: "SuperAdmin" }, [{ factorId: "totp" }]);
   assert.equal(await setMfaRequired(dry, "u", true, false, quiet), false);
   assert.deepEqual(dry.calls, []);
@@ -91,4 +92,25 @@ test("TAQ-25 script: --require-mfa refuses without an enrolled factor or for a n
   assert.deepEqual(off.calls, [["claims", { role: "SuperAdmin" }]], "turning it off needs no factor and keeps the session");
   assert.throws(() => parseArgs(["--project", "p", "--require-mfa"]), /needs a uid/);
   assert.throws(() => parseArgs(["--project", "p", "--require-mfa", "u", "--clear-mfa", "u"]), /one of/);
+});
+
+test("TAQ-185: the same switch applies to the platform Admin in rules, Storage and callables", async () => {
+  const A_OFF = { role: "Admin" };
+  const A_NO_2FA = { role: "Admin", mfa_required: true };
+  const A_2FA = { role: "Admin", mfa_required: true, firebase: { sign_in_provider: "password", sign_in_second_factor: "totp" } };
+  const alerts = (claims) => getDoc(doc(testEnv.authenticatedContext("staff", claims).firestore(), "AdminAlerts/a1"));
+  await assertSucceeds(alerts(A_OFF));
+  await assertFails(alerts(A_NO_2FA));
+  await assertSucceeds(alerts(A_2FA));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.storage().ref("public/listings/o1/p1/a.jpg").put(new Uint8Array(8), { contentType: "image/jpeg" });
+  });
+  const photo = (claims) => testEnv.authenticatedContext("staff", claims).storage().ref("public/listings/o1/p1/a.jpg").getMetadata();
+  await assertSucceeds(photo(A_OFF));
+  await assertFails(photo(A_NO_2FA));
+  await assertSucceeds(photo(A_2FA));
+  const auth = (token) => ({ uid: "staff", token });
+  assert.equal(await requireRole(auth(A_2FA), ["Admin", "SuperAdmin"]), "Admin");
+  await assert.rejects(requireRole(auth(A_NO_2FA), ["Admin", "SuperAdmin"]), (e) => e.details && e.details.reason === "mfa_required");
+  await assert.rejects(requireRole(auth(A_NO_2FA), ["Owner"]), (e) => e.code === "permission-denied" && !(e.details && e.details.reason));
 });

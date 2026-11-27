@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/admin/admin_data_source.dart';
+import 'package:tashil_real_estate/features/auth/widgets/second_factor_dialogs.dart';
 
 enum _AdminView { listings, users, agencies }
 
@@ -86,6 +87,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ],
             ),
             actions: [
+              // TAQ-185: platform Admin can add an authenticator app as a second factor.
+              TashilIconButton.tonal(
+                icon: Icons.verified_user_outlined,
+                size: 38,
+                iconSize: 20,
+                tooltip: loc.tr('mfaTitle'),
+                onPressed: () => SecondFactorSetupDialog.show(context),
+              ),
+              const SizedBox(width: 8),
               TashilIconButton.tonal(
                 icon: Icons.logout_rounded,
                 size: 38,
