@@ -99,6 +99,10 @@ class TashilConnectedButtonGroup<T> extends StatelessWidget {
   final bool isFullWidth;
   final bool showCheckmark;
 
+  /// The group height whose segments are 48dp tall: the 3.5dp inset and the 1dp border on each
+  /// side take 9dp (TAQ-168).
+  static const double minTapHeight = kMinInteractiveDimension + 9.0;
+
   const TashilConnectedButtonGroup({
     super.key,
     required this.segments,

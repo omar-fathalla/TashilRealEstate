@@ -576,7 +576,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final isCompact = constraints.maxWidth < 460;
 
         return TashilConnectedButtonGroup<String>(
-          height: 44,
+          height: TashilConnectedButtonGroup.minTapHeight,
           isFullWidth: !isCompact,
           selectedValue: _selectedRole,
           onSelectionChanged: (newRole) {
@@ -606,7 +606,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Widget _buildAuthMethodConnectedGroup(AppLocalizations loc, ColorScheme colorScheme) {
     return TashilConnectedButtonGroup<AuthMethod>(
-      height: 44,
+      height: TashilConnectedButtonGroup.minTapHeight,
       isFullWidth: true,
       selectedValue: _selectedAuthMethod,
       onSelectionChanged: (method) {

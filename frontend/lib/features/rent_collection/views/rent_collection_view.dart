@@ -610,7 +610,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     );
 
     final viewModeWidget = TashilConnectedButtonGroup<String>(
-      height: 44,
+      height: TashilConnectedButtonGroup.minTapHeight,
       selectedValue: _viewMode,
       onSelectionChanged: (val) => setState(() => _viewMode = val),
       segments: [
