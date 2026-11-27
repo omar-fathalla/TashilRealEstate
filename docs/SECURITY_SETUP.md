@@ -294,7 +294,7 @@ function.
   functions read it server-side when a payment is created, and the client never sends one. With no
   document the split is 2 / 8 / 90; an invalid document stops payments (`split_invalid`) instead of
   guessing. A payment keeps the split it was created with.
-- `recordManualPayment` lets the lease's owner, its managing agency, Admin or SuperAdmin record cash
+- `recordManualPayment` lets the lease's owner, its managing agency or a SuperAdmin record cash
   or bank-transfer rent (method, reference, paid-on date). It settles the month the same way the
   webhook does (invoice `Paid_Recorded`, receipt and owner notifications) and writes an `auditTrail`
   entry on the transaction. No split is deducted because the money did not pass through the platform.
