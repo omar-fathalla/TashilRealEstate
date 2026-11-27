@@ -59,6 +59,7 @@ void main() {
     expect(requestErrorKey(refusal('property_id_conflict')), 'rqPropertyNotVerified');
     expect(requestErrorKey(FirebaseFunctionsException(code: 'invalid-argument', message: 'x', details: {'reason': 'rent_precision'})), 'rqRentPrecision');
     expect(requestErrorKey(FirebaseFunctionsException(code: 'invalid-argument', message: 'x', details: {'reason': 'contact_in_message'})), 'rqContactInMessage');
+    expect(requestErrorKey(FirebaseFunctionsException(code: 'invalid-argument', message: 'x', details: {'reason': 'contact_in_name'})), 'rqContactInName');
     for (final lang in ['ar', 'en', 'hi']) {
       final loc = AppLocalizations(Locale(lang));
       for (final key in ['rqPropertyNotVerified', 'rqRentPrecision', 'rqContactInMessage']) {

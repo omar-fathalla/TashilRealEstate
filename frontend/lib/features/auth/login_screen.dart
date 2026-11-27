@@ -958,20 +958,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        _buildDemoBtn('owner@test.com', 'Owner', loc.tr('roleOwner'), Icons.person_rounded, loc),
-        _buildDemoBtn('agency@test.com', 'AgencyAdmin', loc.tr('roleAgency'), Icons.business_rounded, loc),
-        _buildDemoBtn('tenant@test.com', 'Tenant', loc.tr('roleTenant'), Icons.home_rounded, loc),
-        _buildDemoBtn('admin@test.com', 'SuperAdmin', loc.tr('roleSuperAdmin'), Icons.shield_rounded, loc),
+        for (final account in DemoData.accounts)
+          _buildDemoBtn(account.email, account.role, loc.tr(_demoRoleLabelKey(account.role)), _demoRoleIcon(account.role), loc),
       ],
     );
   }
+
+  static String _demoRoleLabelKey(String role) => switch (role) {
+        'Owner' => 'roleOwner',
+        'AgencyAdmin' => 'roleAgency',
+        'Tenant' => 'roleTenant',
+        _ => 'roleSuperAdmin',
+      };
+
+  static IconData _demoRoleIcon(String role) => switch (role) {
+        'Owner' => Icons.person_rounded,
+        'AgencyAdmin' => Icons.business_rounded,
+        'Tenant' => Icons.home_rounded,
+        _ => Icons.shield_rounded,
+      };
 
   Widget _buildDemoBtn(String email, String role, String label, IconData icon, AppLocalizations loc) {
     return TashilButton.outlined(
       onPressed: _isLoading ? null : () => _loginAsDemo(email, role, loc),
       icon: icon,
       label: label,
-      height: 38,
+      height: 48,
     );
   }
 }

@@ -69,11 +69,14 @@ class FinancialKpiSummary {
   final double totalCollectedNet;
   final double totalOverdueArrears;
   final double collectionEfficiencyRate; // e.g. 96.5%
-  final double grossRentalYield;          // e.g. 8.4%
+  /// Null when the screen shows real data: a yield needs each property's value, which the leases
+  /// and payments do not carry.
+  final double? grossRentalYield;          // e.g. 8.4%
   final double netProfitMargin;           // e.g. 82.0%
   final List<MonthlyCashFlowPoint> cashFlowHistory;
   final InvoiceStatusDistribution statusDistribution;
   final List<ArrearsAgingBucket> arrearsAging;
+  final int invoiceCount;
 
   const FinancialKpiSummary({
     required this.role,
@@ -82,10 +85,11 @@ class FinancialKpiSummary {
     required this.totalCollectedNet,
     required this.totalOverdueArrears,
     required this.collectionEfficiencyRate,
-    required this.grossRentalYield,
+    this.grossRentalYield,
     required this.netProfitMargin,
     required this.cashFlowHistory,
     required this.statusDistribution,
     required this.arrearsAging,
+    this.invoiceCount = 0,
   });
 }

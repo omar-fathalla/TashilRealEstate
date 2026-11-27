@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
@@ -21,6 +22,9 @@ class FakeBackend implements RequestsBackend {
   /// Mimics the server's contact filter: a message or note with a phone number is refused with
   /// the reason the real callables send.
   bool rejectContacts = false;
+
+  /// When set, `call` waits for it, so a test can act while a request is in flight.
+  Completer<void>? hold;
   final calls = <MapEntry<String, Map<String, dynamic>>>[];
   final viewings = StreamController<List<ViewingRequestItem>>.broadcast();
   final applications = StreamController<List<RentalApplicationItem>>.broadcast();
@@ -63,6 +67,7 @@ class FakeBackend implements RequestsBackend {
   @override
   Future<Map<String, dynamic>> call(String function, Map<String, dynamic> data) async {
     calls.add(MapEntry(function, data));
+    if (hold != null) await hold!.future;
     if (failWith != null) throw failWith!;
     if (rejectContacts && ('${data['message'] ?? ''} ${data['note'] ?? ''}').contains('+971')) {
       throw FirebaseFunctionsException(
@@ -167,6 +172,28 @@ void main() {
         await tester.enterText(find.byType(TextField).at(1), '+971500000000');
         await tester.enterText(find.byType(TextField).at(2), note);
       }
+
+      testWidgets('while the request is being sent the sheet cannot be closed by tapping outside or back (TAQ-140)', (tester) async {
+        final backend = FakeBackend()..hold = Completer<void>();
+        await openSheet(tester, backend);
+        await fill(tester, 'See you at 6pm');
+        await tester.tap(find.text('Send viewing request'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(backend.calls.length, 1);
+
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(RequestListingSheet), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(RequestListingSheet), findsOneWidget);
+
+        backend.hold!.complete();
+        await tester.pumpAndSettle();
+        expect(find.byType(RequestListingSheet), findsNothing);
+        expect(find.textContaining('Your viewing request was sent'), findsOneWidget);
+      });
 
       testWidgets('contact_in_message: error is inside the open sheet, input kept, second submit succeeds', (tester) async {
         final backend = FakeBackend()..rejectContacts = true;
@@ -405,6 +432,45 @@ void main() {
         await tester.tap(inDialog('Reject'));
         await tester.pumpAndSettle();
         expect(backend.calls.last.value, {'applicationId': 'p1_t0', 'decision': 'rejected', 'note': 'Unit already let'});
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+
+      testWidgets('while sending, tapping outside, Esc and back do not close the dialog (TAQ-140)', (tester) async {
+        final backend = await openInbox(tester);
+        backend.hold = Completer<void>();
+        await tester.tap(find.text('Confirm'));
+        await tester.pumpAndSettle();
+        await tester.tap(inDialog('Confirm'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(backend.calls.length, 1);
+
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(AlertDialog), findsOneWidget, reason: 'barrier tap is ignored');
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(AlertDialog), findsOneWidget, reason: 'Esc is ignored');
+        await tester.binding.handlePopRoute();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(AlertDialog), findsOneWidget, reason: 'back is ignored');
+
+        backend.hold!.complete();
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.text('Viewing request confirmed.'), findsOneWidget, reason: 'the result is still shown');
+      });
+
+      testWidgets('after a refusal the dialog can be dismissed again', (tester) async {
+        final backend = await openInbox(tester);
+        await tester.tap(find.text('Confirm'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'call $matchedContact');
+        await tester.tap(inDialog('Confirm'));
+        await tester.pumpAndSettle();
+        expect(backend.calls.length, 1);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsNothing);
       });
 

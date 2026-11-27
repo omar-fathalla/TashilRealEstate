@@ -229,6 +229,28 @@ test("TAQ-87: connect-src names the two geocoding hosts the app calls, and the C
   for (const host of ["nominatim.openstreetmap.org", "ipwho.is"]) assert.ok(service.includes(`https://${host}/`), `${host} is used by the app`);
 });
 
+// --- TAQ-155: web App Check (reCAPTCHA Enterprise) must not be blocked once the CSP is enforced ---
+
+test("TAQ-155: the CSP allows the reCAPTCHA Enterprise script, its challenge frames and its network calls", () => {
+  const headers = hostingHeaders("**");
+  assert.equal(headers["Content-Security-Policy"], undefined, "the CSP stays report-only");
+  const csp = Object.fromEntries(headers["Content-Security-Policy-Report-Only"].split(";").map((d) => {
+    const [name, ...values] = d.trim().split(/\s+/);
+    return [name, values];
+  }));
+  const want = {
+    "script-src": ["https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+    "connect-src": ["https://www.google.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+    "frame-src": ["https://www.google.com/recaptcha/", "https://recaptcha.google.com/recaptcha/", "https://www.recaptcha.net/recaptcha/"],
+  };
+  for (const [directive, origins] of Object.entries(want)) {
+    for (const origin of origins) assert.ok(csp[directive].includes(origin), `${directive} lacks ${origin}`);
+  }
+  assert.ok(!csp["script-src"].includes("'unsafe-inline'") && !csp["script-src"].includes("'unsafe-eval'"), "script-src stays strict");
+  assert.ok(!csp["connect-src"].includes("*") && !csp["frame-src"].includes("*"), "no wildcard sources");
+  assert.deepEqual(csp["frame-ancestors"], ["'none'"]);
+});
+
 // --- TAQ-79: the CSP allows only the Google API hosts Firebase uses ---
 
 test("TAQ-79: connect-src lists the Firebase googleapis hosts by name and never the Gemini or Vertex APIs", () => {
@@ -452,3 +474,29 @@ test("TAQ-136: the runbook's backfill commands for dev name the real dev project
   assert.throws(() => backfill.resolveTarget("dev"), /Refusing to run against/);
   assert.doesNotMatch(doc, /nothing in the repo holds the production project id/i);
 });
+
+// --- TAQ-138: the Android build needs the Gradle and Android Gradle Plugin versions Flutter 3.50 requires ---
+
+const versionParts = (text) => text.split(".").map((n) => Number(n) || 0);
+const compareVersions = (a, b) => {
+  const [x, y] = [versionParts(a), versionParts(b)];
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+  return 0;
+};
+const gradleVersion = () => read("frontend/android/gradle/wrapper/gradle-wrapper.properties").match(/gradle-(\d+\.\d+(?:\.\d+)?)-(?:all|bin)\.zip/)[1];
+const agpVersion = () => read("frontend/android/settings.gradle.kts").match(/id\("com\.android\.application"\) version "([\d.]+)"/)[1];
+
+test("TAQ-138: the Gradle wrapper is at least 9.3.1 (Flutter 3.50.1 refuses 9.1.0)", () => {
+  const gradle = gradleVersion();
+  assert.ok(compareVersions(gradle, "9.3.1") >= 0, `Gradle ${gradle} is older than 9.3.1`);
+  assert.ok(compareVersions(gradle, "9.6.0") < 0, "Flutter 3.50 supports Gradle up to 9.5.0; check the Flutter pin before raising it");
+});
+
+test("TAQ-138: the Android Gradle Plugin is at least 9.1.1 (flutter build apk fails on 9.0.1) and fits the Gradle wrapper", () => {
+  const agp = agpVersion();
+  assert.ok(compareVersions(agp, "9.1.1") >= 0, `AGP ${agp} is older than the 9.1.1 that Flutter 3.50.1 builds with`);
+  // Flutter's AGP to minimum-Gradle table (flutter_tools gradle_utils.dart).
+  const minGradle = compareVersions(agp, "9.3.0") >= 0 ? "9.5.0" : compareVersions(agp, "9.2.0") >= 0 ? "9.4.1" : "9.3.1";
+  assert.ok(compareVersions(gradleVersion(), minGradle) >= 0, `AGP ${agp} needs Gradle ${minGradle} or newer; the wrapper has ${gradleVersion()}`);
+});
+

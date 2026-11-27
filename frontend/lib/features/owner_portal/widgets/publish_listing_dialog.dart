@@ -9,7 +9,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
-import 'package:tashil_real_estate/features/lease_builder/widgets/lease_builder_wizard_dialog.dart';
+import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_dialog.dart';
 
 /// Modal dialog for managing property marketplace publication status and fast tenant recording.
 /// Fully adheres to Material Design 3 guidelines:
@@ -414,7 +414,7 @@ class _PublishListingDialogState extends State<PublishListingDialog> {
                             child: TashilButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
-                                LeaseBuilderWizardDialog.show(context, targetProperty: widget.property);
+                                openLeaseCreation(context, property: widget.property);
                               },
                               icon: Icons.description_outlined,
                               label: loc.tr('createCertifiedLeaseBtn'),

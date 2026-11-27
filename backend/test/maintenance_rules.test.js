@@ -230,10 +230,12 @@ test("TAQ-111: only the parties and staff read; list queries are scoped", async 
   await assertFails(getDocs(query(col(ctx.ag2), where("agency_id", "==", "ag1"))));
 });
 
-test("TAQ-111: delete stays with SuperAdmin and the managing agency", async () => {
+test("TAQ-146: no one but SuperAdmin deletes a maintenance complaint, not even the managing agency", async () => {
   await assertFails(deleteDoc(M(ctx.tenantA, "m1")));
   await assertFails(deleteDoc(M(ctx.ownerA, "m1")));
   await assertFails(deleteDoc(M(ctx.ag2, "m2")));
-  await assertSucceeds(deleteDoc(M(ctx.ag1, "m2")));
+  await assertFails(deleteDoc(M(ctx.ag1, "m2")), "the managing agency");
+  await assertFails(deleteDoc(M(ctx.admin, "m2")));
+  await assertFails(deleteDoc(M(ctx.unauth, "m2")));
   await assertSucceeds(deleteDoc(M(ctx.sa, "m1")));
 });

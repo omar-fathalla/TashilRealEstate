@@ -172,8 +172,9 @@ test("TAQ-110 M-1: parallel acceptances of offers on one property have exactly o
   const won = results.filter((r) => r.status === "fulfilled");
   assert.equal(won.length, 1);
   for (const r of results.filter((x) => x.status === "rejected")) {
-    assert.equal(r.reason.code, "failed-precondition");
-    assert.equal(r.reason.details.reason, "property_already_leased");
+    // A loser that hit raw contention is told the same thing, or to retry (TAQ-141).
+    assert.ok(["failed-precondition", "aborted"].includes(r.reason.code), `${r.reason.code}: ${r.reason.message}`);
+    assert.ok(["property_already_leased", "try_again"].includes(r.reason.details.reason), String(r.reason.details && r.reason.details.reason));
   }
   const statuses = await Promise.all(offers.map(async ([id]) => (await lease(id)).status));
   assert.equal(statuses.filter((s) => s === "active").length, 1);
@@ -403,4 +404,67 @@ test("TAQ-110: the lease audit only reads, refuses production, and lists what th
   const after = (await db.collection("Leases").get()).docs.map((d) => JSON.stringify(d.data())).sort();
   assert.deepEqual(after, before, "the audit writes nothing");
   assert.equal((await db.collection("PropertyLeaseLocks").get()).size, locksBefore);
+});
+
+// --- TAQ-141: contention on the accept path ---
+
+async function withContendedTransactions(failures, run) {
+  const original = db.runTransaction.bind(db);
+  let remaining = failures;
+  let calls = 0;
+  db.runTransaction = (...args) => {
+    calls += 1;
+    if (remaining > 0) {
+      remaining -= 1;
+      return Promise.reject(Object.assign(new Error("10 ABORTED: Too much contention on these documents. Please try again."), { code: 10 }));
+    }
+    return original(...args);
+  };
+  try {
+    return await run(() => calls);
+  } finally {
+    delete db.runTransaction;
+  }
+}
+
+test("TAQ-141: an accept that loses to contention is retried and then succeeds", async () => {
+  const id = (await create()).leaseId;
+  await withContendedTransactions(2, async (calls) => {
+    assert.equal((await respond(id, "approve", "tenantA")).status, "active");
+    assert.equal(calls(), 3);
+  });
+  assert.equal((await lease(id)).status, "active");
+  assert.equal((await lock("propA")).lease_id, id);
+});
+
+test("TAQ-141: raw contention with another live lease on the property becomes property_already_leased", async () => {
+  const first = (await create()).leaseId;
+  const second = (await create(input({ tenantId: "tenantB" }))).leaseId;
+  await respond(first, "approve", "tenantA");
+  await withContendedTransactions(99, async () => {
+    await reason(respond(second, "approve", "tenantB"), "failed-precondition", "property_already_leased");
+  });
+  assert.equal((await lease(second)).status, "pending_tenant_approval");
+});
+
+test("TAQ-141: raw contention on a free property gives a retry-friendly answer and changes nothing", async () => {
+  const id = (await create()).leaseId;
+  await withContendedTransactions(99, async () => {
+    await reason(respond(id, "approve", "tenantA"), "aborted", "try_again");
+  });
+  assert.equal((await lease(id)).status, "pending_tenant_approval");
+  assert.equal(await lock("propA"), undefined);
+  assert.equal((await respond(id, "approve", "tenantA")).status, "active", "a later attempt works");
+});
+
+test("TAQ-141: only contention is retried; other errors and refusals pass straight through", async () => {
+  assert.equal(leases.isContention(Object.assign(new Error("boom"), { code: 10 })), true);
+  assert.equal(leases.isContention(Object.assign(new Error("3 INVALID_ARGUMENT: the transaction was aborted"), { code: 3 })), true);
+  assert.equal(leases.isContention(Object.assign(new Error("bad field"), { code: 3 })), false);
+  assert.equal(leases.isContention(new Error("plain")), false);
+  let attempts = 0;
+  await assert.rejects(leases.retryOnContention(async () => { attempts += 1; throw new Error("plain"); }, () => "x"), /plain/);
+  assert.equal(attempts, 1);
+  const id = (await create()).leaseId;
+  await reason(respond(id, "approve", "tenantB"), "permission-denied");
 });

@@ -394,39 +394,44 @@ class _RespondDialogState extends State<_RespondDialog> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.actionLabel),
-      scrollable: true,
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _note,
-              maxLines: 3,
-              maxLength: 500,
-              onChanged: (_) {
-                if (_contactError) setState(() => _error = null);
-              },
-              decoration: InputDecoration(
-                labelText: loc.tr('rqResponseNoteOptional'),
-                errorText: _contactError ? loc.tr('rqContactInMessageField') : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    // While the callable runs, tapping outside, Esc and back are ignored: closing now would hide
+    // whether the answer went through (TAQ-140).
+    return PopScope(
+      canPop: !_sending,
+      child: AlertDialog(
+        title: Text(widget.actionLabel),
+        scrollable: true,
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _note,
+                maxLines: 3,
+                maxLength: 500,
+                onChanged: (_) {
+                  if (_contactError) setState(() => _error = null);
+                },
+                decoration: InputDecoration(
+                  labelText: loc.tr('rqResponseNoteOptional'),
+                  errorText: _contactError ? loc.tr('rqContactInMessageField') : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              RequestInlineError(key: _errorKey, message: loc.tr(_error!)),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                RequestInlineError(key: _errorKey, message: loc.tr(_error!)),
+              ],
             ],
-          ],
+          ),
         ),
+        actions: [
+          TashilButton(label: loc.tr('cancel'), variant: TashilButtonVariant.text, onPressed: _sending ? null : () => Navigator.of(context).pop(false)),
+          TashilButton(label: widget.actionLabel, isLoading: _sending, onPressed: _sending ? null : _submit),
+          ],
       ),
-      actions: [
-        TashilButton(label: loc.tr('cancel'), variant: TashilButtonVariant.text, onPressed: _sending ? null : () => Navigator.of(context).pop(false)),
-        TashilButton(label: widget.actionLabel, isLoading: _sending, onPressed: _sending ? null : _submit),
-      ],
     );
   }
 }

@@ -72,10 +72,11 @@ async function seedMixed() {
 // --- backfill guard ---
 
 test("TAQ-110 N-1: the backfill accepts demo- projects and tashil-aqar-dev only", () => {
-  const base = { project: "demo-x", write: false, prod: false, fixIdFields: false, batchSize: 100, cursor: "", overrides: "" };
+  const base = { project: "demo-x", write: false, prod: false, fixIdFields: false, batchSize: 100, cursor: "", overrides: "", confirmNoProfile: [] };
   assert.deepEqual(backfill.parseArgs(["--project", "demo-x"]), base);
   assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--write"]), { ...base, write: true });
   assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--fix-id-fields", "--write"]), { ...base, write: true, fixIdFields: true });
+  assert.deepEqual(backfill.parseArgs(["--project=demo-x", "--confirm-no-profile-owner", "u1", "--confirm-no-profile-owner=u2"]), { ...base, confirmNoProfile: ["u1", "u2"] });
   assert.deepEqual(backfill.parseArgs(["--project", "p", "--prod", "--batch-size=7", "--cursor", "c1", "--overrides", "o.json"]), { ...base, project: "p", prod: true, batchSize: 7, cursor: "c1", overrides: "o.json" });
   for (const bad of ["0", "401", "x", "1.5"]) assert.throws(() => backfill.parseArgs(["--project", "p", "--batch-size", bad]), /--batch-size/);
   assert.throws(() => backfill.parseArgs([]), /--project is required/);
@@ -652,4 +653,40 @@ test("TAQ-129: a holder without a Users profile still counts as a landlord and i
   assert.deepEqual(report.multipleOwners, [{ property_id: "p-shared", owners: ["claimsOnly", "ownerA"] }], "dropping it would hand the id to ownerA");
   assert.deepEqual(report.toRegister, [{ property_id: "p-solo", owner_id: "claimsOnly" }]);
   assert.deepEqual(report.holdersWithoutProfile, [{ property_id: "p-shared", owner_id: "claimsOnly" }, { property_id: "p-solo", owner_id: "claimsOnly" }]);
+});
+
+test("TAQ-137: an override naming a holder without a Users profile is refused unless that uid is confirmed", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/p-shared").set({ id: "p-shared" });
+  await db.doc("Users/anon1/properties/p-shared").set({ id: "p-shared" });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ov-"));
+  const file = path.join(dir, "o.json");
+  const write = (data) => fs.writeFileSync(file, JSON.stringify(data));
+
+  write({ "p-shared": "anon1" });
+  const refused = await runMain(["--project", "demo-x", "--write", "--overrides", file], {}, { prodProjects: [] });
+  assert.equal(refused.code, 2);
+  assert.match(refused.err, /no Users profile/);
+  assert.match(refused.err, /--confirm-no-profile-owner anon1/);
+  assert.deepEqual(await registry(), {}, "a refused override writes nothing");
+
+  const wrongUid = await runMain(["--project", "demo-x", "--write", "--overrides", file, "--confirm-no-profile-owner", "someoneElse"], {}, { prodProjects: [] });
+  assert.equal(wrongUid.code, 2);
+  assert.deepEqual(await registry(), {});
+
+  write({ "p-shared": "ownerA" });
+  const profiled = await runMain(["--project", "demo-x", "--write", "--overrides", file], {}, { prodProjects: [] });
+  assert.equal(profiled.code, 0, profiled.err);
+  assert.equal((await db.doc("PropertyOwners/p-shared").get()).get("owner_id"), "ownerA", "a holder with a profile needs no confirmation");
+});
+
+test("TAQ-137: with the uid confirmed, the override to a no-profile holder goes through", async () => {
+  await db.doc("Users/ownerA").set({ role: "Owner" });
+  await db.doc("Users/ownerA/properties/p-shared").set({ id: "p-shared" });
+  await db.doc("Users/anon1/properties/p-shared").set({ id: "p-shared" });
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "ov-")), "o.json");
+  fs.writeFileSync(file, JSON.stringify({ "p-shared": "anon1" }));
+  const r = await runMain(["--project", "demo-x", "--write", "--overrides", file, "--confirm-no-profile-owner", "anon1"], {}, { prodProjects: [] });
+  assert.equal(r.code, 0, r.err);
+  assert.equal((await db.doc("PropertyOwners/p-shared").get()).get("owner_id"), "anon1");
 });

@@ -24,7 +24,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { requireAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
+const { requireFreshAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
 const { appCheckEnforced } = require("./config");
 const { leaseLiveState, assertLeasePayable } = require("./lease_state");
 const { verifyPropertyOwnership, registeredOwner } = require("./property_owners");
@@ -182,7 +182,7 @@ function titleOf(silo) {
  * (only the tenant's acceptance does), but a property that already has a live lease is refused.
  */
 const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, LANDLORD_ROLES);
   const data = request.data || {};
   const propertyId = requireId(data.propertyId, "propertyId");
@@ -254,13 +254,57 @@ function assertOfferTerms(lease, nowMs) {
   }
 }
 
+const CONTENTION_ATTEMPTS = 3;
+
+/** Firestore gave up on a transaction after its own retries (ABORTED), or the emulator reports the clash as invalid. */
+function isContention(error) {
+  if (!error || error instanceof HttpsError) return false;
+  const text = `${error.message || ""} ${error.details || ""}`;
+  if (error.code === 10 || error.code === "aborted") return true;
+  return (error.code === 3 || error.code === 4 || error.code === 14) && /contention|aborted|transaction/i.test(text);
+}
+
+/**
+ * Runs `attempt` again when it loses to a parallel transaction. Parallel acceptances on one property
+ * can exhaust Firestore's own retries; the loser then gets the same answer a later one would.
+ * `exhausted` decides what to tell the caller when every attempt was contended.
+ */
+async function retryOnContention(attempt, exhausted) {
+  let last;
+  for (let i = 0; i < CONTENTION_ATTEMPTS; i += 1) {
+    try {
+      return await attempt();
+    } catch (error) {
+      if (!isContention(error)) throw error;
+      last = error;
+      await new Promise((resolve) => setTimeout(resolve, 20 * (i + 1) + Math.floor(Math.random() * 30)));
+    }
+  }
+  return exhausted(last);
+}
+
+/** After contended attempts: a live lease on the property means the offer lost; otherwise ask to retry. */
+async function contendedAnswer(db, ref) {
+  const leaseSnap = await ref.get();
+  const lease = leaseSnap.exists ? leaseSnap.data() : null;
+  if (lease && validId(lease.property_id)) {
+    const lock = await db.collection(LOCKS).doc(lease.property_id).get();
+    const holderId = lock.exists ? lock.get("lease_id") : "";
+    if (holderId && holderId !== leaseSnap.id) {
+      const holder = await db.collection("Leases").doc(holderId).get();
+      if (holder.exists && holder.get("status") === "active") throw alreadyLeased(holderId);
+    }
+  }
+  throw new HttpsError("aborted", "Several requests reached this property at once. Try again in a moment.", { reason: "try_again" });
+}
+
 /**
  * The tenant's answer to a lease offer. `approve` activates the lease only if its property checks
  * still pass and no other live lease holds the property, and takes the property lock in the same
  * transaction; `reject` closes the offer. Nothing else on the lease changes.
  */
 const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const data = request.data || {};
   const leaseId = requireId(data.leaseId, "leaseId");
   if (!["approve", "reject"].includes(data.decision)) {
@@ -270,7 +314,7 @@ const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   const db = admin.firestore();
   const ref = db.collection("Leases").doc(leaseId);
   const now = deps.now();
-  const status = await db.runTransaction(async (t) => {
+  const status = await retryOnContention(() => db.runTransaction(async (t) => {
     const snap = await t.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Lease not found.");
     const lease = { id: snap.id, ...snap.data() };
@@ -304,7 +348,7 @@ const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
     t.update(silo.ref, { rentalStatus: "rented", isPublished: false, updated_at: FieldValue.serverTimestamp() });
     if (lock.stale) logger.info("Took over a stale property lock", { propertyId: lease.property_id, from: lock.stale, to: lease.id });
     return "active";
-  });
+  }), () => contendedAnswer(db, ref));
   return { success: true, status };
 });
 
@@ -355,4 +399,6 @@ module.exports = {
   writePropertyLock,
   leaseForPayment,
   alreadyLeased,
+  isContention,
+  retryOnContention,
 };

@@ -45,6 +45,7 @@ void main() {
       expect(find.byIcon(Icons.shield_rounded), findsNothing);
       expect(find.byIcon(Icons.business_rounded), findsNothing);
       expect(find.textContaining('@test.com'), findsNothing);
+      expect(find.textContaining('@test.tashilaqar.com'), findsNothing);
     });
   }
 }

@@ -39,7 +39,10 @@
  * Ids held by more than one owner are never registered automatically. To resolve one, pass
  * `--overrides <file.json>` with `{ "<propertyId>": "<ownerUid>" }` naming one of its landlord holders;
  * the file is checked against the live data before anything is written and refused if an entry does
- * not fit (a Tenant, an Investor or an id_conflict doc is refused). Without an entry the id stays unregistered (the sync trigger flags any later create of it).
+ * not fit (a Tenant, an Investor or an id_conflict doc is refused). A holder with no Users profile
+ * (listed as `holdersWithoutProfile`) is refused too, because an anonymous account can create a private
+ * doc; only proof of ownership justifies naming one, and then `--confirm-no-profile-owner <uid>` (repeatable)
+ * must name it. Without an entry the id stays unregistered (the sync trigger flags any later create of it).
  * Firebase Auth is not used: the backfill needs only Firestore read access (`roles/datastore.viewer`
  * for the dry run), so it runs under an identity that cannot read Auth.
  *
@@ -63,7 +66,7 @@ const MAX_BATCH = 400;
 const SCAN_PAGE = 500;
 
 function parseArgs(argv) {
-  const args = { project: "", write: false, prod: false, fixIdFields: false, batchSize: DEFAULT_BATCH, cursor: "", overrides: "" };
+  const args = { project: "", write: false, prod: false, fixIdFields: false, batchSize: DEFAULT_BATCH, cursor: "", overrides: "", confirmNoProfile: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
@@ -75,6 +78,8 @@ function parseArgs(argv) {
     else if (arg.startsWith("--batch-size=")) args.batchSize = Number(arg.slice("--batch-size=".length));
     else if (arg === "--overrides") args.overrides = argv[++i] || "";
     else if (arg.startsWith("--overrides=")) args.overrides = arg.slice("--overrides=".length);
+    else if (arg === "--confirm-no-profile-owner") args.confirmNoProfile.push(argv[++i] || "");
+    else if (arg.startsWith("--confirm-no-profile-owner=")) args.confirmNoProfile.push(arg.slice("--confirm-no-profile-owner=".length));
     else if (arg === "--cursor") args.cursor = argv[++i] || "";
     else if (arg.startsWith("--cursor=")) args.cursor = arg.slice("--cursor=".length);
     else throw new Error(`Unknown argument: ${arg}`);
@@ -184,7 +189,7 @@ async function splitHolders(db, list, roles) {
  * `idConflictCandidates` are the private docs that conflict with the registry or with other holders
  * (the sync trigger flags them `id_conflict` when they are next created).
  */
-async function classify(db, holders, { overrides = {} } = {}) {
+async function classify(db, holders, { overrides = {}, confirmNoProfile = [] } = {}) {
   const plan = {
     privateDocs: 0,
     ids: holders.size,
@@ -210,6 +215,9 @@ async function classify(db, holders, { overrides = {} } = {}) {
     if (tenantLike) throw new Error(`Override for "${propertyId}" refused: "${uid}" is ${tenantLike.role === "Investor" ? "an" : "a"} ${tenantLike.role}; only a landlord (Owner, AgencyAdmin, SuperAdmin) can own an id.`);
     if (split.landlords.length < 2) throw new Error(`Override for "${propertyId}" refused: the id is not held by more than one owner (id_conflict docs and Tenant or Investor holders do not count). Overrides only resolve multi-owner ids.`);
     if (!split.landlords.includes(uid)) throw new Error(`Override for "${propertyId}" refused: "${uid}" does not hold that id (holders: ${split.landlords.join(", ")}).`);
+    if (split.noProfile.includes(uid) && !confirmNoProfile.includes(uid)) {
+      throw new Error(`Override for "${propertyId}" refused: "${uid}" has no Users profile (an anonymous or claims-only account can create a private doc too). Get proof that this account is the real owner, then repeat the run with --confirm-no-profile-owner ${uid}.`);
+    }
   }
   const candidate = (propertyId, ownerId, reason) => plan.idConflictCandidates.push({ property_id: propertyId, owner_id: ownerId, reason });
   for (const propertyId of [...holders.keys()].sort()) {
@@ -441,7 +449,7 @@ async function main(argv, env = process.env, deps = {}) {
   const reader = readOnly(db);
   let plan;
   try {
-    plan = await classify(reader, await scanPrivateProperties(reader), { overrides: loadOverrides(args.overrides) });
+    plan = await classify(reader, await scanPrivateProperties(reader), { overrides: loadOverrides(args.overrides), confirmNoProfile: args.confirmNoProfile });
   } catch (err) {
     console.error(err.message);
     return 2;

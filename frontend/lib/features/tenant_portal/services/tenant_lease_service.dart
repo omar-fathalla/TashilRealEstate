@@ -75,6 +75,8 @@ String decisionErrorKey(String reason) {
       return 'tnOfferExpired';
     case 'not_pending':
       return 'tnOfferNotPending';
+    case 'try_again':
+      return 'tnDecisionTryAgain';
     case 'property_not_available':
       return 'tnPropertyNotAvailable';
     case 'property_not_found':
