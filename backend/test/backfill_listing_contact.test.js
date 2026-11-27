@@ -2,14 +2,15 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const { contactUpdate, guardProject } = require("../scripts/backfill_listing_contact");
 const { PLATFORM_AGENCY_NAMES, listingContactFields } = require("../listing_contact");
 
 const script = path.join(__dirname, "../scripts/backfill_listing_contact.js");
 const projectId = process.env.GCLOUD_PROJECT;
-if (!admin.apps.length) admin.initializeApp({ projectId });
+if (!getApps().length) initializeApp({ projectId });
 
 const run = (args, env = {}) => spawnSync(process.execPath, [script, ...args], {
   encoding: "utf8",
@@ -43,7 +44,7 @@ test("TAQ-161: a real project is refused unless its id is confirmed, before any 
 });
 
 test("TAQ-161: the CLI dry-runs by default and rewrites only stale contact fields with --apply", async () => {
-  const db = admin.firestore();
+  const db = getFirestore();
   const tag = `taq161-${Date.now()}`;
   const agencyId = `${tag}-agency`;
   await db.doc(`Agencies/${agencyId}`).set({ name: "Nile Homes", names: { ar: "بيوت النيل", en: "Nile Homes" }, orn: "ORN-77", verified_badge: true });

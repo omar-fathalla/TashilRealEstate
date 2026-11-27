@@ -514,6 +514,25 @@ test("TAQ-165: no deployed module reads FieldValue, Timestamp or FieldPath from 
   assert.deepEqual(offenders, [], "use require(\"firebase-admin/firestore\"); the Functions emulator's admin.firestore has none of them");
 });
 
+// --- TAQ-174: the backend uses only the modular firebase-admin API (firebase-admin 14 drops the namespace) ---
+
+test("TAQ-174: no backend module, script or test requires the namespaced firebase-admin entry point", () => {
+  const backendDir = path.join(root, "backend");
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".js") && /require\(\s*["']firebase-admin["']\s*\)/.test(fs.readFileSync(full, "utf8"))) {
+        offenders.push(path.relative(backendDir, full));
+      }
+    }
+  };
+  walk(backendDir);
+  assert.deepEqual(offenders, [], "use firebase-admin/app, /auth, /firestore or /storage");
+});
+
 // --- TAQ-81 / TAQ-82: the web build picks its Firebase config at compile time and refuses typos ---
 
 test("TAQ-81: the app chooses its Firebase options by branching on the const FIREBASE_ENV", () => {

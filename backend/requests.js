@@ -12,12 +12,10 @@
  * lease whose parties come from the application, and links the two.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { requireFreshAuth, requireRole, resolveRole, AGENCY_AGENT, AGENCY_MEMBER_ROLES } = require("./authz");
 const { verifyLeaseProperty, readPropertyLock, alreadyLeased } = require("./leases");
@@ -104,7 +102,7 @@ async function requireSignedInUser(request) {
 }
 
 async function consumeQuota(uid, kind) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const limits = LIMITS[kind];
   const now = deps.now();
   const minute = Math.floor(now / 60000);
@@ -138,7 +136,7 @@ async function loadLiveListing(listingId) {
   if (typeof listingId !== "string" || !listingId || listingId.length > 200 || listingId.includes("/")) {
     throw new HttpsError("invalid-argument", "A listing id is required.");
   }
-  const snap = await admin.firestore().collection("Properties").doc(listingId).get();
+  const snap = await getFirestore().collection("Properties").doc(listingId).get();
   const listing = snap.exists ? snap.data() : null;
   if (!listing || listing.is_published !== true || listing.moderation_hidden === true || !listing.owner_id
     || ["rented", "unavailable"].includes(listing.status)) {
@@ -215,7 +213,7 @@ const requestViewing = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
   assertNotOwnListing(auth, role, parties);
   await consumeQuota(auth.uid, "viewing");
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(VIEWINGS).doc();
   await db.runTransaction(async (t) => {
     const open = await t.get(
@@ -269,7 +267,7 @@ const respondToViewingRequest = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     throw new HttpsError("invalid-argument", "A request id is required.");
   }
   const note = optionalMessage(data.note);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(VIEWINGS).doc(data.requestId);
   const confirmed = data.decision === "confirmed";
   await db.runTransaction(async (t) => {
@@ -342,7 +340,7 @@ const applyForRental = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
   assertNotOwnListing(auth, role, parties);
   await consumeQuota(auth.uid, "application");
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(APPLICATIONS).doc(`${listing.id}_${auth.uid}`);
   await db.runTransaction(async (t) => {
     const existing = await t.get(ref);
@@ -394,7 +392,7 @@ const decideRentalApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     throw new HttpsError("invalid-argument", "An application id is required.");
   }
   const note = optionalMessage(data.note);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(APPLICATIONS).doc(data.applicationId);
   const approved = data.decision === "approved";
   await db.runTransaction(async (t) => {
@@ -470,7 +468,7 @@ const createLeaseFromApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, 
     throw new HttpsError("invalid-argument", "endDate must be after startDate.");
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const appRef = db.collection(APPLICATIONS).doc(data.applicationId);
   const leaseRef = db.collection("Leases").doc(`app_${data.applicationId}`);
   return db.runTransaction(async (t) => {

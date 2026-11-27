@@ -13,12 +13,10 @@
  * split in Settings/payment_split; there is no per-mandate commission.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { requireFreshAuth, requireRole, resolveUserAuthority } = require("./authz");
 const { appCheckEnforced } = require("./config");
@@ -87,7 +85,7 @@ const inviteMandate = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
     throw new HttpsError("permission-denied", "Your account has no agency.");
   }
   const propertyId = requirePropertyId((request.data || {}).propertyId);
-  const db = admin.firestore();
+  const db = getFirestore();
   const nowMs = deps.now();
 
   const ownerId = await db.runTransaction((t) => registeredOwner(t, db, propertyId));
@@ -136,7 +134,7 @@ const respondToMandate = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstanc
   const data = request.data || {};
   const propertyId = requirePropertyId(data.propertyId);
   if (typeof data.accept !== "boolean") throw new HttpsError("invalid-argument", "accept must be true or false.");
-  const db = admin.firestore();
+  const db = getFirestore();
   const nowMs = deps.now();
 
   return db.runTransaction(async (t) => {
@@ -174,7 +172,7 @@ const revokeMandate = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
   const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const propertyId = requirePropertyId((request.data || {}).propertyId);
-  const db = admin.firestore();
+  const db = getFirestore();
   const nowMs = deps.now();
 
   return db.runTransaction(async (t) => {

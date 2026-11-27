@@ -7,7 +7,7 @@
  *   for that same owner. Mandates are written only by the callables in mandates.js.
  * - Otherwise none: the owner lets the property themselves.
  */
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const MANDATES = "PropertyMandates";
 const AGENCY_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -26,7 +26,7 @@ function mandateAgency(data, ownerId) {
 async function managingAgency(t, db, ownerId, propertyId, authority) {
   if (authority && authority.agencyId) return { agencyId: authority.agencyId, via: "claim" };
   if (typeof propertyId !== "string" || !AGENCY_ID.test(propertyId)) return { agencyId: "", via: "" };
-  const ref = (db || admin.firestore()).collection(MANDATES).doc(propertyId);
+  const ref = (db || getFirestore()).collection(MANDATES).doc(propertyId);
   const snap = t ? await t.get(ref) : await ref.get();
   const agencyId = snap.exists ? mandateAgency(snap.data(), ownerId) : "";
   return { agencyId, via: agencyId ? "mandate" : "" };

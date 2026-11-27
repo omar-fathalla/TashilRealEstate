@@ -3,7 +3,9 @@
 // firebase-admin differently from a plain `require("../index")`.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 const projectId = process.env.GCLOUD_PROJECT;
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
@@ -14,8 +16,8 @@ if (!projectId || !projectId.startsWith("demo-") || !firestoreHost || !authHost)
   throw new Error("Run through `npm run test:emulator` against a demo- project.");
 }
 
-admin.initializeApp({ projectId });
-const db = admin.firestore();
+initializeApp({ projectId });
+const db = getFirestore();
 
 async function clearEmulators() {
   await Promise.all([
@@ -25,8 +27,8 @@ async function clearEmulators() {
 }
 
 async function signUp(email, claims) {
-  const user = await admin.auth().createUser({ email, password: "emulator-only-pass" });
-  if (claims) await admin.auth().setCustomUserClaims(user.uid, claims);
+  const user = await getAuth().createUser({ email, password: "emulator-only-pass" });
+  if (claims) await getAuth().setCustomUserClaims(user.uid, claims);
   const res = await fetch(
     `http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
     {
@@ -119,10 +121,10 @@ test("TAQ-44: reminder, invoice, and setUserRole callables run in the Functions 
   assert.equal(invoice.body.result.invoice.currencyCode, "EGP");
 
   const root = await signUp("smoke-root@example.com", { role: "SuperAdmin" });
-  const target = await admin.auth().createUser({ email: "smoke-target@example.com" });
+  const target = await getAuth().createUser({ email: "smoke-target@example.com" });
   const role = await callable("setUserRole", root.idToken, { uid: target.uid, role: "Tenant" });
   assert.equal(role.status, 200, JSON.stringify(role.body));
-  assert.deepEqual((await admin.auth().getUser(target.uid)).customClaims, { role: "Tenant" });
+  assert.deepEqual((await getAuth().getUser(target.uid)).customClaims, { role: "Tenant" });
 });
 
 // --- TAQ-165: the held-listing guard runs in the Functions emulator ---
@@ -449,8 +451,8 @@ test("TAQ-110 N-1: the trigger flags a squatter's copy of a listed id; the squat
 test("TAQ-150: an agency listing carries its agency's name, the ORN once verified, and follows profile edits", async () => {
   const agencyId = "smoke-agency";
   await db.doc(`Agencies/${agencyId}`).set({ name: "Marina Realty", names: { ar: "مارينا العقارية" }, orn: "12345", verified_badge: false });
-  const user = await admin.auth().createUser({ email: "smoke-agency@example.test", password: "emulator-only-pass" });
-  await admin.auth().setCustomUserClaims(user.uid, { role: "AgencyAdmin", agency_id: agencyId });
+  const user = await getAuth().createUser({ email: "smoke-agency@example.test", password: "emulator-only-pass" });
+  await getAuth().setCustomUserClaims(user.uid, { role: "AgencyAdmin", agency_id: agencyId });
   await db.doc(`Users/${user.uid}`).set({ role: "AgencyAdmin", agency_id: agencyId });
   await db.doc(`Users/${user.uid}/properties/agency-smoke-1`).set({
     isPublished: true,

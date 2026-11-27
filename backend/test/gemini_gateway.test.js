@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore emulator is attached.");
@@ -13,7 +13,7 @@ const fns = require("../index");
 const logger = require("firebase-functions/logger");
 const { _internal: gw } = require("../gemini_gateway");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const realNow = gw.deps.now;
 const realFetch = gw.deps.fetch;

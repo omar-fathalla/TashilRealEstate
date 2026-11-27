@@ -37,7 +37,9 @@
  * Credentials come from Application Default Credentials (gcloud auth application-default login)
  * or GOOGLE_APPLICATION_CREDENTIALS. Nothing is read from this repository.
  */
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { SELF_SERVICE_ROLES } = require("../authz");
 const { applyUserRole } = require("../roles");
 const { writeAuditLog } = require("../audit_log");
@@ -208,20 +210,20 @@ async function setMfaRequired(auth, uid, required, apply, log = console.log) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  admin.initializeApp({ projectId: args.project });
-  const db = admin.firestore();
+  initializeApp({ projectId: args.project });
+  const db = getFirestore();
   if (args.grant.length > 0) {
     await grant(db, args.grant, args.apply);
   } else if (args.backfillSelfService) {
-    await backfillSelfService(db, admin.auth(), args.apply);
+    await backfillSelfService(db, getAuth(), args.apply);
   } else if (args.bootstrapSuperAdmin) {
-    await bootstrapSuperAdmin(admin.auth(), args.bootstrapSuperAdmin, args.apply);
+    await bootstrapSuperAdmin(getAuth(), args.bootstrapSuperAdmin, args.apply);
   } else if (args.requireMfa) {
-    await setMfaRequired(admin.auth(), args.requireMfa, true, args.apply);
+    await setMfaRequired(getAuth(), args.requireMfa, true, args.apply);
   } else if (args.clearMfa) {
-    await setMfaRequired(admin.auth(), args.clearMfa, false, args.apply);
+    await setMfaRequired(getAuth(), args.clearMfa, false, args.apply);
   } else {
-    await audit(db, admin.auth());
+    await audit(db, getAuth());
   }
 }
 

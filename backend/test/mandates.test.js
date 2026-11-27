@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc: cdoc, getDoc, setDoc } = require("firebase/firestore");
 
@@ -15,7 +16,7 @@ const fns = require("../index");
 const mandates = require("../mandates");
 const { applicationFrom } = require("../agency_applications");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 const owner = (uid = "ownerA") => caller(uid, { role: "Owner" });
@@ -29,8 +30,8 @@ async function clearAll() {
 }
 
 async function user(uid, claims) {
-  await admin.auth().createUser({ uid });
-  await admin.auth().setCustomUserClaims(uid, claims);
+  await getAuth().createUser({ uid });
+  await getAuth().setCustomUserClaims(uid, claims);
   await db.doc(`Users/${uid}`).set({ role: claims.role, full_name: `Name ${uid}`, ...(claims.agency_id ? { agency_id: claims.agency_id } : {}) });
 }
 
@@ -248,7 +249,7 @@ test("TAQ-149: an applicant applies once; a SuperAdmin approval creates the agen
   assert.equal(ag.licence_status, "pending");
   assert.equal(ag.verified_badge, false);
   assert.equal((await get(`Agencies/${agencyId}/private/profile`)).phone, "+971 50 000 0000");
-  const claims = (await admin.auth().getUser("ownerB")).customClaims;
+  const claims = (await getAuth().getUser("ownerB")).customClaims;
   assert.equal(claims.role, "AgencyAdmin");
   assert.equal(claims.agency_id, agencyId);
   assert.equal((await get("AgencyApplications/ownerB")).agency_id, agencyId);
@@ -268,7 +269,7 @@ test("TAQ-149: a rejected applicant may apply again; open leases or mandates blo
   await invite();
   await respond(true);
   await reason(review(true, root(), "ownerA"), "failed-precondition", "applicant_has_mandates");
-  assert.equal((await admin.auth().getUser("ownerA")).customClaims.role, "Owner");
+  assert.equal((await getAuth().getUser("ownerA")).customClaims.role, "Owner");
 
   await apply(tenant());
   const l = await db.collection("Leases").add({ owner_id: "ownerB", tenant_id: "tenantA", status: "active" });

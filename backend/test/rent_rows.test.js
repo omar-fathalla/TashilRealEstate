@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc, getDocs, collection, query, where } = require("firebase/firestore");
 
@@ -14,7 +15,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 const fns = require("../index");
 const { cleanNote } = require("../rent_rows");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 const run = (data, auth) => fns.updateRentRow.run({ data, auth });
@@ -26,8 +27,8 @@ async function clearAll() {
 }
 
 async function user(uid, claims) {
-  await admin.auth().createUser({ uid });
-  if (claims) await admin.auth().setCustomUserClaims(uid, claims);
+  await getAuth().createUser({ uid });
+  if (claims) await getAuth().setCustomUserClaims(uid, claims);
 }
 
 async function code(promise, expected) {

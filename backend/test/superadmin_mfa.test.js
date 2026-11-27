@@ -4,14 +4,15 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc } = require("firebase/firestore");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the emulators are attached.");
 }
-if (!admin.apps.length) admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT });
+if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT });
 
 const { requireRole, resolveRole, resolveUserAuthority, missingSecondFactor } = require("../authz");
 const { setMfaRequired, parseArgs } = require("../scripts/role_claims");
@@ -62,8 +63,8 @@ test("TAQ-25 callables: requireRole refuses with mfa_required, and triggers are 
   await assert.rejects(requireRole(auth(ON_NO_2FA), ["Admin", "SuperAdmin"]), (e) => e.details.reason === "mfa_required");
   assert.equal(await resolveRole(auth(ON_NO_2FA)), "");
   assert.equal(missingSecondFactor(auth({ role: "Owner", mfa_required: true })), false, "only SuperAdmin and Admin are switched");
-  await admin.auth().createUser({ uid: "trigger-sa" }).catch(() => {});
-  await admin.auth().setCustomUserClaims("trigger-sa", ON_NO_2FA);
+  await getAuth().createUser({ uid: "trigger-sa" }).catch(() => {});
+  await getAuth().setCustomUserClaims("trigger-sa", ON_NO_2FA);
   assert.equal((await resolveUserAuthority("trigger-sa")).role, "SuperAdmin");
 });
 

@@ -12,12 +12,10 @@
  * owner, its managing agency or a SuperAdmin may act; the parties and SuperAdmin read the doc.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { requireFreshAuth, requireRole, loadLease, assertLeaseParty, AGENCY_AGENT } = require("./authz");
 const { appCheckEnforced } = require("./config");
@@ -77,7 +75,7 @@ const updateRentRow = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
   const lease = await loadLease(data.leaseId);
   assertLeaseParty(auth, role, lease);
   const changes = changesFor(data.action, data);
-  const ref = admin.firestore().collection("RentRowStates").doc(`${lease.id}_${period}`);
+  const ref = getFirestore().collection("RentRowStates").doc(`${lease.id}_${period}`);
   await ref.set({
     lease_id: lease.id,
     period,

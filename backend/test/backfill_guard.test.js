@@ -2,13 +2,14 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const { parseArgs, resolveTarget } = require("../scripts/backfill_property_moderation");
 
 const script = path.join(__dirname, "../scripts/backfill_property_moderation.js");
 const projectId = process.env.GCLOUD_PROJECT;
-if (!admin.apps.length) admin.initializeApp({ projectId });
+if (!getApps().length) initializeApp({ projectId });
 
 function run(args, env = {}) {
   return spawnSync(process.execPath, [script, ...args], {
@@ -66,7 +67,7 @@ test("TAQ-100: the CLI prints the target first and exits 2 for a real project wi
 });
 
 test("TAQ-100: the CLI dry-runs a demo- project by default and writes only with --apply", async () => {
-  const db = admin.firestore();
+  const db = getFirestore();
   const id = `guard-${Date.now()}`;
   await db.doc(`Properties/${id}`).set({ id, owner_id: "o", moderation_hidden: true, is_published: false });
 

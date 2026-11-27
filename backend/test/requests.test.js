@@ -1,7 +1,8 @@
 // TAQ-112: viewing requests and rental applications are written by the server only.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -10,7 +11,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 const fns = require("../index");
 const requests = require("../requests");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
@@ -57,8 +58,8 @@ test.beforeEach(async () => {
     db.doc("PropertyOwners/p1").set({ owner_id: "owner" }),
   ]);
   // The listing's owner is agency-1's account, as the sync trigger stamps agency_id from claims.
-  await admin.auth().createUser({ uid: "owner" });
-  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await getAuth().createUser({ uid: "owner" });
+  await getAuth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
 });
 test.after(() => {
   requests.deps.now = () => Date.now();
@@ -399,9 +400,9 @@ test("TAQ-110: no lease from an application when the property is not the owner's
   await db.doc("Users/owner/properties/p1").set({ title: "Marina Apartment", countryCode: "AE" });
   await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the property doc does not name the agency");
   await db.doc("Users/owner/properties/p1").set({ agency_id: "agency-1" }, { merge: true });
-  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-9" });
+  await getAuth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-9" });
   await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the owner's account is another agency");
-  await admin.auth().setCustomUserClaims("owner", { role: "Owner" });
+  await getAuth().setCustomUserClaims("owner", { role: "Owner" });
   await assert.rejects(createLease(), (e) => e.details.reason === "property_not_managed", "the owner's account has no agency");
   await db.doc("Properties/p1").update({ owner_id: "other" });
   await assert.rejects(createLease(), (e) => e.details.reason === "property_not_found", "the listing changed hands");

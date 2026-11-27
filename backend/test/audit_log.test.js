@@ -1,7 +1,7 @@
 // TAQ-193: server-written AuditLog with one-year retention.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -9,9 +9,9 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 
 const fns = require("../index");
 const audit = require("../audit_log");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 
@@ -26,7 +26,7 @@ async function entries(action) {
 }
 
 test("TAQ-193: a role change through setUserRole is audited with actor, target, roles and a one-year expiry", async () => {
-  await admin.auth().createUser({ uid: "target" });
+  await getAuth().createUser({ uid: "target" });
   const before = Date.now();
   await fns.setUserRole.run({ data: { uid: "target", role: "Admin" }, auth: caller("root", { role: "SuperAdmin" }) });
   const [entry] = await entries("role_assigned");

@@ -3,7 +3,8 @@
 const crypto = require("crypto");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -29,7 +30,7 @@ test.after(() => {
 const fns = require("../index");
 const payments = require("../payments");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const HMAC_SECRET = ENV.PAYMOB_HMAC_SECRET;
 
@@ -101,8 +102,8 @@ test.beforeEach(async () => {
   installGateway();
   await clearAll();
   await db.collection("Users").doc("owner").set({ role: "AgencyAdmin" });
-  await admin.auth().createUser({ uid: "owner" });
-  await admin.auth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await getAuth().createUser({ uid: "owner" });
+  await getAuth().setCustomUserClaims("owner", { role: "AgencyAdmin", agency_id: "agency-1" });
   await db.collection("Users").doc("tenant").set({ role: "Tenant", full_name: "Lease Tenant", email: "tenant@example.test" });
   await db.collection("Users").doc("stranger").set({ role: "Owner" });
   await seedLease("lease-1", {
@@ -272,7 +273,7 @@ test("TAQ-16: an annual-rent lease is charged one twelfth, rounded to cents", as
 
 test("TAQ-16: a lease that is not active cannot be paid", async () => {
   for (const status of ["draft", "pending_signatures", "expired", "terminated", "", undefined, "ACTIVE", 1]) {
-    await db.collection("Leases").doc("lease-1").update({ status: status === undefined ? admin.firestore.FieldValue.delete() : status });
+    await db.collection("Leases").doc("lease-1").update({ status: status === undefined ? FieldValue.delete() : status });
     await assert.rejects(intent({ leaseId: "lease-1" }), (e) => {
       assert.equal(e.code, "failed-precondition", String(status));
       assert.equal(e.details.reason, "lease_not_active");
@@ -720,7 +721,7 @@ const cash = (extra = {}) => ({ leaseId: "lease-1", method: "cash", reference: "
 
 /** Turns lease-1 into a lease of a private owner, with no agency, on the owner's own property. */
 async function makeOwnerLease() {
-  await admin.auth().setCustomUserClaims("owner", { role: "Owner" });
+  await getAuth().setCustomUserClaims("owner", { role: "Owner" });
   await db.collection("Users").doc("owner").set({ role: "Owner" });
   await db.doc("Users/owner/properties/prop-lease-1").set({ agency_id: "" }, { merge: true });
   await db.doc("Leases/lease-1").update({ agency_id: "" });
@@ -819,8 +820,8 @@ test("TAQ-16: a month is paid once, whichever way it was paid", async () => {
 });
 
 test("TAQ-110: a manual payment waits for an open checkout, then supersedes it; a late gateway success is a refund, not a second payment", async () => {
-  await admin.auth().createUser({ uid: "root" });
-  await admin.auth().setCustomUserClaims("root", { role: "SuperAdmin" });
+  await getAuth().createUser({ uid: "root" });
+  await getAuth().setCustomUserClaims("root", { role: "SuperAdmin" });
   const start = Date.now();
   payments.deps.now = () => start;
   const pending = await intent({ leaseId: "lease-1" });

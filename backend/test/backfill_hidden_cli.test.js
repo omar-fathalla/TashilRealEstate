@@ -3,11 +3,12 @@ const assert = require("node:assert/strict");
 const path = require("path");
 const fs = require("fs");
 const { spawnSync } = require("child_process");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const script = path.join(__dirname, "../scripts/backfill_hidden_unpublished.js");
 const projectId = process.env.GCLOUD_PROJECT;
-if (!admin.apps.length) admin.initializeApp({ projectId });
+if (!getApps().length) initializeApp({ projectId });
 
 const run = (args) => spawnSync(process.execPath, [script, ...args], {
   encoding: "utf8",
@@ -35,7 +36,7 @@ test("TAQ-160: the trigger and the script share one predicate", () => {
 });
 
 test("TAQ-160: the CLI dry-runs against the emulator, prints the count and writes only with --apply", async () => {
-  const db = admin.firestore();
+  const db = getFirestore();
   const id = `taq160-${Date.now()}`;
   const ok = `${id}-ok`;
   await db.doc(`Properties/${id}`).set({ id, owner_id: "o", moderation_hidden: true, is_published: true });

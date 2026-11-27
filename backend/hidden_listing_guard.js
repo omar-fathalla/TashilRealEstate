@@ -10,14 +10,12 @@
  */
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
 // From the modular entry point like the other modules: in the Functions emulator the
 // `admin.firestore` namespace has no FieldValue, so reading it there threw (TAQ-165).
-const { FieldValue } = require("firebase-admin/firestore");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { isPublishedAndHidden } = require("./hidden_listing_predicate");
 
@@ -25,7 +23,7 @@ const holdHiddenListingsOffline = onDocumentWritten("Properties/{propertyId}", a
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   if (!isPublishedAndHidden(after)) return null;
   const propertyId = event.params.propertyId;
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection("Properties").doc(propertyId);
   try {
     // Re-read inside a transaction so a moderator's lift that landed in the meantime is not undone.

@@ -2,14 +2,13 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 // Import these directly: the Functions emulator wraps admin.firestore, which drops its static
 // FieldValue/Timestamp members and made every server-timestamp write crash locally.
-const { FieldPath, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const {
   PUBLISHER_ROLES,
@@ -66,7 +65,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
   const countryCode = leaseCountry(lease);
   const currency = countryCode === "AE" ? "AED" : "EGP";
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const notifRef = db.collection("Notifications").doc();
   const reminderLogRef = db.collection("ReminderLog").doc(lease.id);
 
@@ -135,7 +134,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
   const vatAmount = (platformFee + agencyFee) * vatRate;
   const totalPaid = amount + vatAmount;
 
-  const db = admin.firestore();
+  const db = getFirestore();
   // A Firestore auto id as the suffix, so two invoices issued in the same moment never collide.
   const invoiceNumber = `TASHIL-INV-${new Date().getFullYear()}-${db.collection("Invoices").doc().id}`;
   const invoiceRef = db.collection("Invoices").doc(invoiceNumber);
@@ -182,7 +181,7 @@ async function assertRoleChangeAllowed(auth, data) {
   }
   let target;
   try {
-    target = await admin.auth().getUser(data.uid);
+    target = await getAuth().getUser(data.uid);
   } catch (err) {
     if (err.code === "auth/user-not-found") return;
     throw err;
@@ -238,7 +237,7 @@ function isValidPageToken(value) {
 async function claimRolesFor(uids) {
   const roles = new Map();
   if (uids.length === 0) return roles;
-  const result = await admin.auth().getUsers(uids.map((uid) => ({ uid })));
+  const result = await getAuth().getUsers(uids.map((uid) => ({ uid })));
   for (const user of result.users) {
     const role = user.customClaims && user.customClaims.role;
     if (typeof role === "string") roles.set(user.uid, role);
@@ -253,7 +252,7 @@ exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   const data = request.data || {};
   const requested = Number(data.limit);
   const limit = Number.isInteger(requested) && requested >= 1 ? Math.min(requested, ADMIN_USER_PAGE_MAX) : 50;
-  let query = admin.firestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
+  let query = getFirestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
   if (data.startAfter !== undefined && data.startAfter !== null && data.startAfter !== "") {
     if (!isValidPageToken(data.startAfter)) {
       throw new HttpsError("invalid-argument", "startAfter is not a valid page token.");
@@ -281,7 +280,7 @@ const DEFAULT_AMENITIES = {
 
 async function loadAgencyIdentity(agencyId) {
   if (!agencyId) return null;
-  const snap = await admin.firestore().collection("Agencies").doc(agencyId).get();
+  const snap = await getFirestore().collection("Agencies").doc(agencyId).get();
   return snap.exists ? agencyListingIdentity(snap.data()) : null;
 }
 
@@ -539,7 +538,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
   async (event) => {
     const ownerId = event.params.ownerId;
     const propertyId = event.params.propertyId;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     // 1. Handle document deletion in owner's tree. A doc flagged id_conflict never owned the
     // public listing, so deleting it changes nothing there.
@@ -654,7 +653,7 @@ exports.reconcilePropertyModeration = onDocumentWritten(
     const hidden = Boolean(after && after.exists && after.get("hidden") === true);
     const wasHidden = Boolean(before && before.exists && before.get("hidden") === true);
     const preHidePublished = Boolean(after && after.exists && after.get("pre_hide_published") === true);
-    const db = admin.firestore();
+    const db = getFirestore();
     const ref = db.collection("Properties").doc(propertyId);
     try {
       const current = await ref.get();
@@ -714,7 +713,7 @@ exports.syncAgencyIdentityToListings = onDocumentWritten("Agencies/{agencyId}", 
   const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
   const next = listingContactFields(agencyListingIdentity(after));
   if (JSON.stringify(next) === JSON.stringify(listingContactFields(agencyListingIdentity(before)))) return null;
-  const db = admin.firestore();
+  const db = getFirestore();
   const update = { agencyNames: next.agencyNames, agencyPhone: next.agencyPhone, agencyOrn: next.agencyOrn || FieldValue.delete() };
   let last = null;
   let total = 0;
@@ -909,7 +908,7 @@ exports.syncMarketIndexDaily = onSchedule(
   },
   async (event) => {
     logger.info("Executing 09:00 AM Daily Market Index Ingestion Pipeline...");
-    const db = admin.firestore();
+    const db = getFirestore();
     const countries = ["EG", "AE"];
 
     for (const code of countries) {
@@ -940,7 +939,7 @@ exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     throw new HttpsError("invalid-argument", "country must be EG or AE.");
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection("MarketIndices").doc(country);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);

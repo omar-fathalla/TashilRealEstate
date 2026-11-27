@@ -17,8 +17,7 @@
  * cannot be leased or paid. There is no lazy claim on those paths.
  */
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { HttpsError } = require("firebase-functions/v2/https");
 const { PUBLISHER_ROLES, resolveUserAuthority } = require("./authz");
 
@@ -97,7 +96,7 @@ async function otherPrivateHolders(t, db, ownerId, propertyId) {
  */
 async function claimOrCheckOwner(ownerId, propertyId, { created, isPlaceholder = async () => false }) {
   const canClaim = created && PUBLISHER_ROLES.includes((await resolveUserAuthority(ownerId)).role);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = registryRef(db, propertyId);
   const priv = siloRef(db, ownerId, propertyId);
   const pubRef = db.collection("Properties").doc(propertyId);

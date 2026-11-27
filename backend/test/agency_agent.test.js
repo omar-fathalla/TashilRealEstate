@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc, updateDoc, deleteDoc } = require("firebase/firestore");
 
@@ -12,7 +13,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 }
 
 const fns = require("../index");
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 let testEnv;
 
@@ -120,6 +121,6 @@ test("TAQ-169 callables: an agent cannot decide applications, make leases, recor
 });
 
 test("TAQ-169: setUserRole cannot assign AgencyAgent; it comes only from an invite", async () => {
-  await admin.auth().createUser({ uid: "x" });
+  await getAuth().createUser({ uid: "x" });
   await expectCode(fns.setUserRole.run({ data: { uid: "x", role: "AgencyAgent", agencyId: "ag1" }, auth: caller("root", { role: "SuperAdmin" }) }), "invalid-argument");
 });

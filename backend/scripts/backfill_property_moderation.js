@@ -19,7 +19,8 @@
  *
  * Credentials come from Application Default Credentials or the emulator environment variables.
  */
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 const MODERATION_COLLECTION = "PropertyModeration";
 
@@ -44,7 +45,7 @@ async function backfill(db, { apply = false } = {}) {
           hidden: true,
           pre_hide_published: false,
           updated_by: "migration-taq-91",
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+          updated_at: FieldValue.serverTimestamp(),
         });
       } catch (err) {
         if (err.code !== 6) throw err;
@@ -94,8 +95,8 @@ if (require.main === module) {
     const args = parseArgs(process.argv.slice(2));
     console.log(`Target project: ${args.project} (${args.apply ? "APPLY: will write" : "dry run: no writes"})`);
     const target = resolveTarget(args);
-    admin.initializeApp({ projectId: target.projectId });
-    const result = await backfill(admin.firestore(), { apply: args.apply });
+    initializeApp({ projectId: target.projectId });
+    const result = await backfill(getFirestore(), { apply: args.apply });
     console.log(`${result.missing.length} hidden listing(s) without a moderation doc: ${result.missing.join(", ") || "none"}`);
     console.log(args.apply ? "Moderation docs written." : "Dry run. Re-run with --apply to write them.");
   })().catch((err) => {

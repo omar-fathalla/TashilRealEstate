@@ -12,8 +12,7 @@
 const { onDocumentWrittenWithAuthContext } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 const AUDIT_LOG = "AuditLog";
 const RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
@@ -49,7 +48,7 @@ function auditEntry({ action, actorUid, actorRole, targetUid, targetPath, detail
 }
 
 /** Writes one audit entry. A failure is logged and never undoes the audited change. */
-async function writeAuditLog(entry, db = admin.firestore()) {
+async function writeAuditLog(entry, db = getFirestore()) {
   try {
     await db.collection(AUDIT_LOG).add(auditEntry(entry));
   } catch (err) {
@@ -58,7 +57,7 @@ async function writeAuditLog(entry, db = admin.firestore()) {
 }
 
 /** Deletes entries whose expire_at has passed. Returns the number deleted. */
-async function purgeExpired(db = admin.firestore(), now = deps.now()) {
+async function purgeExpired(db = getFirestore(), now = deps.now()) {
   let deleted = 0;
   for (let i = 0; i < PURGE_MAX_BATCHES; i++) {
     const snap = await db.collection(AUDIT_LOG).where("expire_at", "<", Timestamp.fromMillis(now)).limit(PURGE_BATCH).get();
