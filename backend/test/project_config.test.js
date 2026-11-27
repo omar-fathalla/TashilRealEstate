@@ -513,3 +513,93 @@ test("TAQ-165: no deployed module reads FieldValue, Timestamp or FieldPath from 
   }
   assert.deepEqual(offenders, [], "use require(\"firebase-admin/firestore\"); the Functions emulator's admin.firestore has none of them");
 });
+
+// --- TAQ-81 / TAQ-82: the web build picks its Firebase config at compile time and refuses typos ---
+
+test("TAQ-81: the app chooses its Firebase options by branching on the const FIREBASE_ENV", () => {
+  const src = read("frontend/lib/app_firebase_options.dart");
+  const getter = src.match(/static FirebaseOptions get currentPlatform \{([\s\S]*?)\n  \}/);
+  assert.ok(getter, "currentPlatform must be a block getter");
+  // A call through forEnvironment (which takes a replaceable dev function) kept the dev config in
+  // the prod bundle; the getter must test the const directly.
+  assert.doesNotMatch(getter[1], /forEnvironment/);
+  assert.match(getter[1], /if \(environment == 'prod'\) return DefaultFirebaseOptions\.currentPlatform;/);
+  assert.match(getter[1], /if \(environment == 'dev'\) return DevFirebaseOptions\.currentPlatform;/);
+  assert.match(src, /static const String environment = String\.fromEnvironment\('FIREBASE_ENV', defaultValue: 'prod'\);/);
+});
+
+test("TAQ-82: tool/build_web.sh refuses an unknown or empty FIREBASE_ENV before building", () => {
+  const { spawnSync } = require("child_process");
+  const script = path.join(root, "frontend/tool/build_web.sh");
+  const run = (...args) => spawnSync("bash", [script, ...args], { encoding: "utf8", env: { ...process.env, FLUTTER: "echo" } });
+  for (const bad of ["foo", "", "Dev", "production"]) {
+    const r = run("--release", `--dart-define=FIREBASE_ENV=${bad}`);
+    assert.equal(r.status, 2, `FIREBASE_ENV=${bad} must be refused`);
+    assert.match(r.stderr, /FIREBASE_ENV must be prod or dev/);
+    assert.equal(r.stdout, "", "flutter must not run");
+  }
+  assert.equal(run("--dart-define=FIREBASE_ENV=dev", "--dart-define=FIREBASE_ENV=prod").status, 2, "two values are refused");
+  for (const args of [["--release"], ["--release", "--dart-define=FIREBASE_ENV=prod"], ["--dart-define=FIREBASE_ENV=dev", "--dart-define=DEV_FIREBASE_WEB_API_KEY=k"]]) {
+    const r = run(...args);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout.trim(), ["build", "web", ...args].join(" "), "every argument reaches flutter build web");
+  }
+  assert.ok(fs.statSync(script).mode & 0o111, "build_web.sh must be executable");
+  assert.match(read("docs/DEV_ENVIRONMENT.md"), /tool\/build_web\.sh --release/);
+});
+
+// --- TAQ-85: inline scripts are allowed by hash, so the CSP can be enforced later ---
+
+test("TAQ-85: every inline script in web/index.html has its sha256 in the CSP script-src", () => {
+  const crypto = require("crypto");
+  const html = read("frontend/web/index.html");
+  const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  assert.ok(inline.length >= 1, "expected the inline tashilSpeech script");
+  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]+>/, "inline scripts must be plain <script> tags so this test hashes them");
+  assert.doesNotMatch(html, /\son[a-z]+=/i, "inline event handlers cannot be allowed by hash");
+  const headers = JSON.parse(read("firebase.json")).hosting.headers.flatMap((h) => h.headers);
+  const csp = headers.filter((h) => /^Content-Security-Policy/.test(h.key));
+  assert.ok(csp.length >= 1);
+  for (const header of csp) {
+    const scriptSrc = header.value.split(";").map((d) => d.trim()).find((d) => d.startsWith("script-src "));
+    assert.ok(scriptSrc, `${header.key} has no script-src`);
+    assert.doesNotMatch(scriptSrc, /'unsafe-inline'/);
+    for (const body of inline) {
+      const hash = `'sha256-${crypto.createHash("sha256").update(body, "utf8").digest("base64")}'`;
+      assert.ok(scriptSrc.split(/\s+/).includes(hash), `${header.key} script-src lacks ${hash}; update it after editing the inline script`);
+    }
+  }
+});
+
+// --- TAQ-86: the build scan reads compressed copies too ---
+
+test("TAQ-86: the --build scan finds keys inside .gz and .br copies and reports ones it cannot read", () => {
+  const os = require("os");
+  const zlib = require("zlib");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "client-keys-gz-"));
+  const firebaseKey = "AIza" + "F".repeat(35);
+  const otherKey = "AIza" + "G".repeat(35);
+  const write = (rel, data) => {
+    fs.mkdirSync(path.dirname(path.join(tmp, rel)), { recursive: true });
+    fs.writeFileSync(path.join(tmp, rel), data);
+  };
+  try {
+    write(clientKeys.FIREBASE_OPTIONS, `    apiKey: '${firebaseKey}',\n`);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js`, `a="${firebaseKey}"\n`);
+    write(`${clientKeys.BUILD_DIR}/main.dart.js.gz`, zlib.gzipSync(`a="${firebaseKey}"\n`));
+    write(`${clientKeys.BUILD_DIR}/main.dart.js.br`, zlib.brotliCompressSync(`a="${firebaseKey}"\n`));
+    write(`${clientKeys.BUILD_DIR}/canvaskit/x.wasm.gz`, zlib.gzipSync(`k="${otherKey}"`)); // not a scanned type
+    assert.deepEqual(clientKeys.scanClient(tmp, { build: true }), []);
+
+    write(`${clientKeys.BUILD_DIR}/main.dart.js.gz`, zlib.gzipSync(`a="${firebaseKey}"\nk="${otherKey}"\n`));
+    write(`${clientKeys.BUILD_DIR}/assets/a.json.br`, zlib.brotliCompressSync(`{"u":"https://generativelanguage.googleapis.com"}`));
+    write(`${clientKeys.BUILD_DIR}/flutter.js.gz`, "not gzip");
+    const found = clientKeys.scanClient(tmp, { build: true }).map((f) => `${f.file}:${f.line}: ${f.rule}`).sort();
+    assert.equal(found.length, 3, found.join("\n"));
+    assert.equal(found[0], `${clientKeys.BUILD_DIR}/assets/a.json.br:1: direct Gemini API URL`);
+    assert.match(found[1], new RegExp(`^${clientKeys.BUILD_DIR}/flutter\\.js\\.gz:0: unreadable compressed file`));
+    assert.equal(found[2], `${clientKeys.BUILD_DIR}/main.dart.js.gz:2: Google API key (AIza…)`);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});

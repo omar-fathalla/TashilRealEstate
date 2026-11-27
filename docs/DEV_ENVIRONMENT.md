@@ -26,10 +26,12 @@ the dev project yet, and those builds fail instead of falling back to prod).
 The dev web API key is a public Firebase browser key restricted to dev referrers. It is not in
 the repo; pass it as `DEV_FIREBASE_WEB_API_KEY`. A dev build without it throws at start-up
 (`FIREBASE_ENV=dev needs the dev web API key`), and an unknown `FIREBASE_ENV` value throws too.
+`tool/build_web.sh` checks `FIREBASE_ENV` before it calls `flutter build web` and refuses any
+value other than `prod` or `dev` (TAQ-82), so build with it rather than `flutter build web`.
 
 ```bash
 cd frontend
-flutter build web --release \
+tool/build_web.sh --release \
   --dart-define=FIREBASE_ENV=dev \
   --dart-define=DEV_FIREBASE_WEB_API_KEY=<dev web key> \
   --dart-define=RECAPTCHA_SITE_KEY=<dev reCAPTCHA Enterprise site key, once App Check is set up for dev>
