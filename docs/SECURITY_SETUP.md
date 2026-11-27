@@ -421,3 +421,9 @@ user's tokens, and records `AgencyAgents/{uid}`. `removeAgencyAgent({uid})`, cal
 AgencyAdmin or a SuperAdmin, puts the user back on their earlier self-service role (Tenant if they
 had none). Clients can't read or write `AgencyInvites` or `AgencyAgents`. Every invite, join,
 revoke and removal is in the audit log.
+
+`listAgencyStock()` (TAQ-197), for an AgencyAgent or AgencyAdmin with an `agency_id` claim,
+returns the agency's own properties from its AgencyAdmin's private tree, published or not, for
+the agent's read-only Properties tab. It returns only the fields a listing tile shows (titles,
+location, type, rent, rooms, status); property value, tenant, contact, payout and photo fields stay
+out. The rules for `Users/{uid}/properties` are unchanged.
