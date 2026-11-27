@@ -620,31 +620,84 @@ service cloud.firestore {
     // 3. Agencies Collection
     // The agency document is a public profile. Contact details, licence, bank and staff data
     // belong in Agencies/{agencyId}/private/*.
+    //
+    // Licence verification (TAQ-154): platform staff check the ORN/RERA by hand. Only a SuperAdmin
+    // sets licence_status to verified or rejected, or turns verified_badge on. The agency may edit
+    // its profile, but any change to its licence identity (orn, rera, legal name) must, in the same
+    // write, drop the badge and put licence_status back to pending, so a verified agency cannot swap
+    // in a licence nobody checked. Only a SuperAdmin can delete the profile.
     function publicAgencyFields() {
       return [
         'name', 'names', 'logo', 'logoUrl', 'orn', 'rera', 'city', 'cityCode', 'countryCode',
-        'area', 'about', 'website', 'verified_badge', 'updated_at'
+        'area', 'about', 'website', 'verified_badge', 'licence_status', 'updated_at'
       ];
+    }
+
+    function agencyLicenceKeys() {
+      return ['orn', 'rera', 'name', 'names'];
     }
 
     function canManageAgency(agencyId) {
       return isSuperAdmin() || isAgencyAdminOf(agencyId);
     }
 
+    function agencyStringOk(d, key, max) {
+      return !(key in d) || (d[key] is string && d[key].size() <= max);
+    }
+
+    // Shape of a public agency doc, and no phone, link or email in its free text (name, names,
+    // about), the same filter listings use.
+    function agencyProfileOk(d) {
+      let names = d.get('names', {});
+      return d.keys().hasOnly(publicAgencyFields())
+        && d.get('verified_badge', false) is bool
+        && d.get('licence_status', 'unverified') in ['unverified', 'pending', 'verified', 'rejected']
+        && agencyStringOk(d, 'name', 200) && agencyStringOk(d, 'about', 2000)
+        && agencyStringOk(d, 'orn', 40) && agencyStringOk(d, 'rera', 40)
+        && agencyStringOk(d, 'website', 300) && agencyStringOk(d, 'city', 100)
+        && names is map && names.keys().hasOnly(['ar', 'en', 'hi'])
+        && names.get('ar', '').size() <= 200 && names.get('en', '').size() <= 200 && names.get('hi', '').size() <= 200
+        && contactFree([d.get('name', ''), d.get('about', '')].concat(names.values()).join(' | '));
+    }
+
+    // What an agency (not staff) may do to its own badge and status: never grant, only clear, and
+    // always clear when the licence identity changes.
+    function agencySelfEditOk() {
+      let d = request.resource.data;
+      let c = changedKeys();
+      return (!('verified_badge' in c) || d.get('verified_badge', false) == false)
+        && (!('licence_status' in c) || d.get('licence_status', 'unverified') == 'pending')
+        && (!c.hasAny(agencyLicenceKeys())
+          || (d.get('verified_badge', false) == false && d.get('licence_status', 'unverified') in ['unverified', 'pending']));
+    }
+
+    // Agencies/{id}/private/*: licence, bank and office contact data, each a bounded string.
+    function agencyPrivateOk(d) {
+      return d.keys().hasOnly(['email', 'phone', 'iban', 'bank_name', 'account_name', 'address',
+          'licence_number', 'licence_doc_url', 'trade_licence_number', 'updated_at'])
+        && agencyStringOk(d, 'email', 254) && agencyStringOk(d, 'phone', 30)
+        && agencyStringOk(d, 'iban', 34) && agencyStringOk(d, 'bank_name', 200)
+        && agencyStringOk(d, 'account_name', 200) && agencyStringOk(d, 'address', 500)
+        && agencyStringOk(d, 'licence_number', 60) && agencyStringOk(d, 'licence_doc_url', 1000)
+        && agencyStringOk(d, 'trade_licence_number', 60)
+        && (!('updated_at' in d) || d.updated_at is timestamp);
+    }
+
     match /Agencies/{agencyId} {
       allow read: if true;
       allow create: if canManageAgency(agencyId)
-        && request.resource.data.keys().hasOnly(publicAgencyFields())
-        && (isSuperAdmin() || !('verified_badge' in request.resource.data))
-        && request.resource.data.get('verified_badge', false) is bool;
+        && agencyProfileOk(request.resource.data)
+        && (isSuperAdmin()
+          || (!('verified_badge' in request.resource.data)
+            && request.resource.data.get('licence_status', 'pending') in ['unverified', 'pending']));
       allow update: if canManageAgency(agencyId)
-        && request.resource.data.keys().hasOnly(publicAgencyFields())
-        && (isSuperAdmin() || !changedKeys().hasAny(['verified_badge']))
-        && request.resource.data.get('verified_badge', false) is bool;
-      allow delete: if canManageAgency(agencyId);
+        && agencyProfileOk(request.resource.data)
+        && (isSuperAdmin() || agencySelfEditOk());
+      allow delete: if isSuperAdmin();
 
       match /private/{docId} {
-        allow read, write: if canManageAgency(agencyId);
+        allow read, delete: if canManageAgency(agencyId);
+        allow create, update: if canManageAgency(agencyId) && agencyPrivateOk(request.resource.data);
       }
     }
 

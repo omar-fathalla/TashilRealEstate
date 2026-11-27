@@ -53,6 +53,14 @@ function anonDb() {
   return testEnv.unauthenticatedContext().firestore();
 }
 
+async function getDocAsAdmin(docPath) {
+  let data = null;
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    data = (await getDoc(doc(ctx.firestore(), docPath))).data();
+  });
+  return data;
+}
+
 async function seed(docPath, data) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), docPath), data);
@@ -551,6 +559,85 @@ test("TAQ-22: other agencies, visitors, owners and uid-named admins cannot write
     await assertFails(updateDoc(doc(writer, "Agencies/agency-1"), { about: "hijacked" }));
     await assertFails(deleteDoc(doc(writer, "Agencies/agency-1")));
   }
+});
+
+// --- TAQ-154: licence verification, profile delete and private shape ---
+
+const superAdmin = () => db("root", { role: "SuperAdmin" });
+
+async function seedVerifiedAgency() {
+  await seed("Agencies/agency-1", { ...publicAgency, verified_badge: true, licence_status: "verified" });
+}
+
+test("TAQ-154: an agency cannot verify itself or mark its licence verified", async () => {
+  await seedAgency();
+  await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { licence_status: "verified" }));
+  await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { licence_status: "rejected" }));
+  await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { verified_badge: true, licence_status: "verified" }));
+  const agent3 = db("agent3", { role: "AgencyAdmin", agency_id: "agency-3" });
+  await assertFails(setDoc(doc(agent3, "Agencies/agency-3"), { name: "New", licence_status: "verified" }));
+  await assertSucceeds(setDoc(doc(agent3, "Agencies/agency-3"), { name: "New", orn: "777", licence_status: "pending" }));
+  // Asking for review is allowed.
+  await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { licence_status: "pending" }));
+});
+
+test("TAQ-154: a SuperAdmin verifies or rejects the licence by hand", async () => {
+  await seedAgency();
+  await assertSucceeds(updateDoc(doc(superAdmin(), "Agencies/agency-1"), { licence_status: "verified", verified_badge: true }));
+  await assertSucceeds(updateDoc(doc(superAdmin(), "Agencies/agency-1"), { licence_status: "rejected", verified_badge: false }));
+  await assertFails(updateDoc(doc(superAdmin(), "Agencies/agency-1"), { licence_status: "approved" }));
+  for (const reader of [anonDb(), db("stranger")]) {
+    const snap = await assertSucceeds(getDoc(doc(reader, "Agencies/agency-1")));
+    assert.equal(snap.get("licence_status"), "rejected");
+  }
+});
+
+test("TAQ-154: changing ORN, RERA or the legal name of a verified agency must drop the badge", async () => {
+  for (const change of [{ orn: "99999" }, { rera: "R-2" }, { name: "Other Realty" }, { names: { en: "Other" } }]) {
+    await seedVerifiedAgency();
+    const key = Object.keys(change)[0];
+    await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), change), `${key} kept the badge`);
+    await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { ...change, verified_badge: false }), `${key} kept verified`);
+    await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { ...change, verified_badge: false, licence_status: "pending" }), key);
+  }
+  // Other profile fields stay editable without losing the badge.
+  await seedVerifiedAgency();
+  await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { about: "Dubai Marina specialists", logoUrl: "logo.png" }));
+  const snap = await getDocAsAdmin("Agencies/agency-1");
+  assert.equal(snap.verified_badge, true);
+});
+
+test("TAQ-154: only a SuperAdmin can delete an agency profile", async () => {
+  await seedVerifiedAgency();
+  await assertFails(deleteDoc(doc(agency1Admin(), "Agencies/agency-1")));
+  await assertSucceeds(deleteDoc(doc(superAdmin(), "Agencies/agency-1")));
+});
+
+test("TAQ-154: the public name and about text cannot carry contact details", async () => {
+  await seedAgency();
+  for (const change of [
+    { about: "Call us on 0501234567" },
+    { about: "WhatsApp wa.me/971501234567" },
+    { about: "Mail office@agency.ae" },
+    { name: "Marina 050 123 4567" },
+    { names: { ar: "اتصل 0501234567" } },
+    { about: "x".repeat(2001) },
+    { names: { fr: "x" } },
+  ]) {
+    await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), change), JSON.stringify(change).slice(0, 60));
+  }
+  await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { about: "Since 2005, 120 units in Dubai Marina" }));
+});
+
+test("TAQ-154: private agency docs take only known bounded fields", async () => {
+  await seedAgency();
+  const ref = doc(agency1Admin(), "Agencies/agency-1/private/profile");
+  await assertFails(updateDoc(ref, { staff: ["a"] }));
+  await assertFails(updateDoc(ref, { iban: "A".repeat(35) }));
+  await assertFails(updateDoc(ref, { phone: 971500000001 }));
+  await assertFails(setDoc(doc(agency1Admin(), "Agencies/agency-1/private/blob"), { notes: "x".repeat(100000) }));
+  await assertSucceeds(updateDoc(ref, { bank_name: "Emirates NBD", licence_number: "ORN-123", updated_at: serverTimestamp() }));
+  await assertSucceeds(deleteDoc(doc(agency1Admin(), "Agencies/agency-1/private/profile")));
 });
 
 // --- TAQ-49: only Owners and AgencyAdmins can publish listings ---
