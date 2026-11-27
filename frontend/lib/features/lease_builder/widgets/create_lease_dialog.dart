@@ -79,6 +79,12 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
 
   late List<PropertyMandate> _mandates = widget.mandates ?? const [];
 
+  // Built once per mandate list: the dropdown matches its value by identity.
+  late List<ManagedPropertyModel> _managedUnits = _mandatedUnits(_mandates);
+
+  static List<ManagedPropertyModel> _mandatedUnits(List<PropertyMandate> list) =>
+      list.where((m) => m.isActive).map(_mandatedUnit).toList();
+
   /// The owner of each property managed by mandate; any other property is the caller's own.
   Map<String, String> get _ownerOf => {for (final m in _mandates) if (m.isActive) m.propertyId: m.ownerId};
 
@@ -111,9 +117,7 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     final country = CountryController.countryCode;
     final own = all.where((p) => !PropertyLifecycleService.isMockPropertyId(p.id) && p.countryCode == country).toList();
     final ownIds = own.map((p) => p.id).toSet();
-    final managed = _mandates
-        .where((m) => m.isActive && m.countryCode == country && !ownIds.contains(m.propertyId))
-        .map(_mandatedUnit);
+    final managed = _managedUnits.where((u) => u.countryCode == country && !ownIds.contains(u.id));
     return [...own, ...managed];
   }
 
@@ -122,7 +126,11 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
       final scope = await _service.scopeFor();
       if (scope == null || !scope.isAgency) return;
       final list = await MandateService.instance.backend.watchAgencyMandates(scope.value).first;
-      if (mounted) setState(() => _mandates = list.where((m) => m.isActive).toList());
+      if (!mounted) return;
+      setState(() {
+        _mandates = list.where((m) => m.isActive).toList();
+        _managedUnits = _mandatedUnits(_mandates);
+      });
     } catch (_) {
       // No mandates to offer; the agency's own properties still are.
     }
