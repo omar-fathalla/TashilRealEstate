@@ -1,6 +1,6 @@
 "use strict";
 
-// TAQ-201/207/208: one list for the server filter (agency_text_filter.test.js), applyForAgency
+// TAQ-201/207/208/209/210: one list for the server filter (agency_text_filter.test.js), applyForAgency
 // (same file) and the rules (rules.test.js), so the three stay in step. Each refused case says
 // what applyForAgency reports for it.
 const REFUSED = [
@@ -50,6 +50,46 @@ const REFUSED = [
   // TAQ-208: an exempt abbreviation is still refused before a known ending.
   ["Dr.com Realty", "link"],
   ["Delta Co.uk", "link"],
+  // TAQ-209: variants User Test found on 81178d3
+  ["Delta o five o one two three o four five six", "phone"],
+  ["Delta five o one two three o four five six seven", "phone"],
+  ["دلتا صفر خمسة صفر واحد ثلاثة وعشرين خمسة واربعين سبعة وستين", "phone"],
+  ["دلتا صفر تمنية صفر تمنية تمنية تمنية تمنية", "phone"],
+  ["Delta zero five zero double five double six seven eight", "phone"],
+  ["Delta cero cinco cero uno dos tres cuatro", "phone"],
+  ["Delta صفر پانچ صفر ایک دو تین چار", "phone"],
+  ["Delta zero\u0301 five zero one two three four", "phone"],
+  ["Delta zer\u00f6 fiv\u00e9 zer\u00f6 on\u00e9 tw\u00f6 thre\u00e9 f\u00f6ur", "phone"],
+  ["Delta x.\u00adcom", "link"],
+  ["Delta x.\ufe0fcom", "link"],
+  ["Delta x.c\u034fom", "link"],
+  ["Delta x.c\u200bom", "link"],
+  ["Delta x.c\u0301om", "link"],
+  ["Delta x.\u0107om", "link"],
+  ["Delta \ud835\udc31.\ud835\udc1c\ud835\udc28\ud835\udc26", "link"],
+  ["Delta x.\u24d2\u24de\u24dc", "link"],
+  ["Delta x.c\u0585m", "link"],
+  ["Delta x\u00b7com", "link"],
+  ["Delta x\u2022com", "link"],
+  ["Delta x\u066bcom", "link"],
+  ["Delta x\u06d4com", "link"],
+  ["Delta x \u00b7 com", "link"],
+  ["Delta x-dot-com", "link"],
+  ["Delta x_dot_com", "link"],
+  ["Delta xdotcom", "link"],
+  ["Delta x نقطة كوم", "link"],
+  ["Delta x نقطة com", "link"],
+  ["Delta x دوت كوم", "link"],
+  ["Delta www x com", "link"],
+  ["Delta x. com", "link"],
+  ["Cairo.Egypt.com", "link"],
+  // TAQ-210: an abbreviation is exempt only before three or more letters that are not an ending.
+  ["Delta dr.tv", "link"],
+  ["Delta co.za", "link"],
+  ["Delta mr.de", "link"],
+  ["Delta ltd.realty", "link"],
+  ["Visit no.ru", "link"],
+  ["Eng.com Homes", "link"],
 ];
 
 const ALLOWED = [
@@ -92,6 +132,35 @@ const ALLOWED = [
   "Mr.Khaled and Mrs.Huda Properties",
   "Open 24/7 365, one-stop shop",
   "Ph.D in Law, Tashil Aqar L.L.C Dubai, U.A.E specialists",
+  // TAQ-209/210
+  "Eng.Ahmed Real Estate",
+  "Office 5, Sh.Zayed Road",
+  "Cairo.Egypt branch",
+  "P.O. Box 4455",
+  "P.O Box 77",
+  "Mr.Smith Homes",
+  "Delta Co. Dubai",
+  "Delta Inc.Dubai",
+  "Nile Ltd.",
+  "Ahmed Jr.Homes",
+  "Studios, 1, 2, 3, 4 and 5 bedrooms",
+  "Homes for one, two or three families",
+  "Twenty Twenty Realty",
+  "Eleven Eleven Homes",
+  "Sept. 2005 launch",
+  "Un deux trois immobilier",
+  "Una casa, dos casas, tres pisos",
+  "Caf\u00e9 Tower Realty, Se\u00f1or Homes",
+  "Delta \u00b7 Homes \u00b7 Dubai",
+  "We moved to Dubai. In 2005 we opened.",
+  "Since 2005. Net yields of 7%",
+  "Delta Realty. Commercial and residential",
+  "شقق غرفة وغرفتين وثلاث غرف",
+  "ست البيت للعقارات",
+  "مكتب الدور العاشر، برج عشرين",
+  "हम दुबई में एक दो तीन बेडरूम फ्लैट देते हैं",
+  "نعمل منذ ٢٠٠٥ في دبي وأبوظبي والشارقة، وندير أكثر من ٣٠٠ وحدة.",
+  "Tower 7 and Tower 8",
 ];
 
 module.exports = { REFUSED, ALLOWED };
