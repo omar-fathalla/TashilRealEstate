@@ -43,6 +43,7 @@ class PortfolioController extends ChangeNotifier {
     RequestsService? requests,
     this.agencyOnly = true,
     this.includeRequests = true,
+    this.platform = false,
   })  : data = data ?? PortfolioDataService.instance,
         requests = requests ?? RequestsService.instance;
 
@@ -50,6 +51,9 @@ class PortfolioController extends ChangeNotifier {
   final RequestsService requests;
   final bool agencyOnly;
   final bool includeRequests;
+
+  /// Reads the whole platform (SuperAdmin only, TAQ-162). Requests are never included then.
+  final bool platform;
 
   PortfolioSnapshot _snapshot = const PortfolioSnapshot();
   PortfolioSnapshot get snapshot => _snapshot;
@@ -61,7 +65,7 @@ class PortfolioController extends ChangeNotifier {
   Future<void> start() async {
     _update(const PortfolioSnapshot());
     try {
-      final scope = await data.scopeFor(agencyOnly: agencyOnly);
+      final scope = await data.scopeFor(agencyOnly: agencyOnly, platform: platform);
       if (_disposed) return;
       if (scope == null) {
         _update(PortfolioSnapshot(load: data.isSignedIn ? PortfolioLoad.noAgency : PortfolioLoad.signedOut));
@@ -74,7 +78,7 @@ class PortfolioController extends ChangeNotifier {
       _listen<List<PortfolioTransaction>>(data.watchTransactions(scope), (v) => _update(_copy(transactions: v)));
       _listen<List<PortfolioInvoice>>(data.watchInvoices(scope), (v) => _update(_copy(invoices: v)));
       _listen<List<PortfolioMaintenance>>(data.watchMaintenance(scope), (v) => _update(_copy(maintenance: v)));
-      if (includeRequests) {
+      if (includeRequests && !scope.isPlatform) {
         final requestScope = scope.isAgency ? RequestScope.agency(scope.value) : RequestScope.owner(scope.value);
         _listen<List<ViewingRequestItem>>(requests.watchViewings(requestScope), (v) => _update(_copy(viewings: v)));
         _listen<List<RentalApplicationItem>>(requests.watchApplications(requestScope), (v) => _update(_copy(applications: v)));

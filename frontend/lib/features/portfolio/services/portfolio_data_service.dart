@@ -14,6 +14,9 @@ abstract class PortfolioBackend {
   /// The agency id from an AgencyAdmin's claims, or '' for everyone else.
   Future<String> currentAgencyId();
 
+  /// True when the signed-in user's claims say SuperAdmin (TAQ-162).
+  Future<bool> currentIsSuperAdmin();
+
   Stream<List<PortfolioLease>> watchLeases(PortfolioScope scope);
   Stream<List<PortfolioTransaction>> watchTransactions(PortfolioScope scope);
   Stream<List<PortfolioInvoice>> watchInvoices(PortfolioScope scope);
@@ -51,10 +54,23 @@ class FirebasePortfolioBackend implements PortfolioBackend {
     return claims['role'] == 'AgencyAdmin' && agency is String ? agency : '';
   }
 
+  @override
+  Future<bool> currentIsSuperAdmin() async {
+    if (currentUserId == null) return false;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final claims = (await user.getIdTokenResult()).claims ?? const {};
+    return claims['role'] == 'SuperAdmin';
+  }
+
+  /// The platform scope reads at most this many docs per collection (TAQ-162).
+  static const int platformLimit = 1000;
+
   Stream<List<T>> _scoped<T>(String collection, PortfolioScope scope, T Function(String, Map<String, dynamic>) parse) {
-    return _db
-        .collection(collection)
-        .where(scope.field, isEqualTo: scope.value)
+    final Query<Map<String, dynamic>> query = scope.isPlatform
+        ? _db.collection(collection).limit(platformLimit)
+        : _db.collection(collection).where(scope.field, isEqualTo: scope.value);
+    return query
         .snapshots()
         .map((s) => s.docs.map((d) => parse(d.id, d.data())).toList());
   }
@@ -126,9 +142,13 @@ class PortfolioDataService {
   /// The records to read: an agency admin's agency by its claim, otherwise the owner's by their
   /// uid. With [agencyOnly] a missing agency claim gives null (nothing to show, never "all").
   /// Null too when signed out.
-  Future<PortfolioScope?> scopeFor({bool agencyOnly = false}) async {
+  ///
+  /// With [platform] (the SuperAdmin dashboard, TAQ-162) a SuperAdmin gets the platform scope and
+  /// anyone else null.
+  Future<PortfolioScope?> scopeFor({bool agencyOnly = false, bool platform = false}) async {
     final uid = backend.currentUserId;
     if (uid == null) return null;
+    if (platform) return await backend.currentIsSuperAdmin() ? const PortfolioScope.platform() : null;
     final id = await backend.currentAgencyId();
     if (id.isNotEmpty) return PortfolioScope.agency(id);
     return agencyOnly ? null : PortfolioScope.owner(uid);
