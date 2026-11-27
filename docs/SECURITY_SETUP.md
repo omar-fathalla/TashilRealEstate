@@ -378,7 +378,15 @@ and only a SuperAdmin can read it. It records:
 Entries hold uids, roles and small non-personal details only. Each one keeps for a year:
 `expire_at` is `created_at` plus 365 days. The `purgeExpiredAuditLog` job deletes expired entries
 every day at 03:30 Cairo time. You can also enable a Firestore TTL policy on `AuditLog.expire_at`;
-that's optional, and the scheduled purge works without it.
+that's optional, and the scheduled purge works without it. To turn it on for one project (TTL
+deletes run within about a day of `expire_at`, and the purge job then finds nothing to do):
+
+```bash
+gcloud firestore fields ttls update expire_at --collection-group=AuditLog --enable-ttl --project=<project-id>
+```
+
+Check it with `gcloud firestore fields ttls list --project=<project-id>`. It is not in
+`firestore.indexes.json`, so an indexes deploy never turns it on or off.
 
 ## Agency agents (TAQ-169)
 
@@ -427,3 +435,13 @@ returns the agency's own properties from its AgencyAdmin's private tree, publish
 the agent's read-only Properties tab. It returns only the fields a listing tile shows (titles,
 location, type, rent, rooms, status); property value, tenant, contact, payout and photo fields stay
 out. The rules for `Users/{uid}/properties` are unchanged.
+
+**Known limit: a removed agent's current ID token (TAQ-200, same as TAQ-158).** Removing an agent
+goes through `applyUserRole`, which revokes the agent's refresh tokens, so the app can't mint a new
+ID token and every callable that uses `requireFreshAuth` refuses the old one at once. Firestore and
+Storage rules can't check revocation, though. An ID token issued before the removal still says
+`role: AgencyAgent` with the agency's `agency_id`, so until it expires (at most one hour) it can
+still read what an agent reads: the agency's listings, leases, rent rows, mandates and requests.
+It can't write any of them, since agents write almost nothing. There's no code change for this.
+Closing the window would mean an extra `get()` on `AgencyAgents/{uid}` in every agency rule, plus
+a Firestore lookup in storage.rules, for a one-hour window.
