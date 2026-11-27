@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/rent_collection/views/rent_collectio
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
 import 'package:tashil_real_estate/features/lease_builder/models/lease_contract_model.dart';
 import 'package:tashil_real_estate/features/lease_builder/views/leases_management_view.dart';
+import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
 import 'package:tashil_real_estate/features/lease_builder/services/legal_clauses_service.dart';
 import 'package:tashil_real_estate/features/investor_dashboard/views/investor_dashboard_view.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
@@ -35,7 +36,11 @@ import 'package:tashil_real_estate/features/owner_portal/dialogs/edit_profile_di
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
 
 class OwnerDashboard extends StatefulWidget {
-  const OwnerDashboard({super.key});
+  /// The owner's real leases and payments (TAQ-162). Tests pass a fake; by default the dashboard
+  /// watches the signed-in owner's own records.
+  final PortfolioController? portfolio;
+
+  const OwnerDashboard({super.key, this.portfolio});
 
   /// Displays the M3 profile details bottom sheet
   static void showProfileDetailsModal(
@@ -55,10 +60,33 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   int _previousIndex = 0;
   bool _isSidebarCollapsed = false;
 
+  late final PortfolioController _portfolio;
+  late final List<Widget> _views;
+
   @override
   void initState() {
     super.initState();
     UserProfileService().loadProfile();
+    // Rent Collection, Leases and Financials read the same owner-scoped records (TAQ-162).
+    _portfolio = widget.portfolio ?? PortfolioController(agencyOnly: false, includeRequests: false);
+    _portfolio.start();
+    _views = [
+      const OwnerOverviewView(),
+      const OwnerPropertiesView(),
+      RentCollectionView(portfolio: _portfolio),
+      LeasesManagementView(controller: _portfolio),
+      OwnerFinancialsView(portfolio: _portfolio),
+      const InvestorDashboardView(),
+      const OwnerMaintenanceView(),
+      const OwnerTrashView(),
+      const RequestsInboxView(),
+    ];
+  }
+
+  @override
+  void dispose() {
+    if (widget.portfolio == null) _portfolio.dispose();
+    super.dispose();
   }
 
   void _selectView(int index) {
@@ -68,18 +96,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       _selectedIndex = index;
     });
   }
-
-  final List<Widget> _views = const [
-    OwnerOverviewView(),
-    OwnerPropertiesView(),
-    RentCollectionView(),
-    LeasesManagementView(),
-    OwnerFinancialsView(),
-    InvestorDashboardView(),
-    OwnerMaintenanceView(),
-    OwnerTrashView(),
-    RequestsInboxView(),
-  ];
 
   @override
   Widget build(BuildContext context) {

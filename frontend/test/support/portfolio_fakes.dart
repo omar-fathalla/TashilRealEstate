@@ -14,6 +14,7 @@ class FakePortfolioBackend implements PortfolioBackend {
   bool signedIn;
   String agency;
   String uid;
+  bool superAdmin = false;
   List<PortfolioLease> leases = const [];
   List<PortfolioTransaction> transactions = const [];
   List<PortfolioInvoice> invoices = const [];
@@ -33,6 +34,9 @@ class FakePortfolioBackend implements PortfolioBackend {
 
   @override
   Future<String> currentAgencyId() async => agency;
+
+  @override
+  Future<bool> currentIsSuperAdmin() async => superAdmin;
 
   Stream<List<T>> _stream<T>(PortfolioScope scope, List<T> items) {
     scopes.add(scope);

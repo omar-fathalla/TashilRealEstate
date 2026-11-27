@@ -12,6 +12,8 @@ double _number(dynamic value) => value is num ? value.toDouble() : 0;
 
 /// Which records a manager sees: the ones of an agency (`agency_id`) or of an owner (`owner_id`).
 /// The rules allow exactly these two equality queries, so a manager never reads another's data.
+/// [PortfolioScope.platform] (TAQ-162) reads the latest records of the whole platform, capped;
+/// the rules allow that to a SuperAdmin only, and the client asks for it only for one.
 class PortfolioScope {
   final String field;
   final String value;
@@ -19,8 +21,10 @@ class PortfolioScope {
 
   const PortfolioScope.agency(String agencyId) : this._('agency_id', agencyId);
   const PortfolioScope.owner(String uid) : this._('owner_id', uid);
+  const PortfolioScope.platform() : this._('', '');
 
   bool get isAgency => field == 'agency_id';
+  bool get isPlatform => field.isEmpty;
 
   @override
   bool operator ==(Object other) => other is PortfolioScope && other.field == field && other.value == value;
