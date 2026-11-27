@@ -2,6 +2,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { ASSIGNABLE_ROLES } = require("./authz");
+const { writeAuditLog } = require("./audit_log");
 
 // A Firestore document id the rules and queries can use as an agency id.
 const AGENCY_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
@@ -60,6 +61,13 @@ async function applyUserRole({ uid, role, agencyId, actorUid }) {
   };
   profile.agency_id = needsAgency ? agencyId : FieldValue.delete();
   await admin.firestore().collection("Users").doc(uid).set(profile, { merge: true });
+  // TAQ-193: every role assignment, from the callable, the scripts or agency approval.
+  await writeAuditLog({
+    action: "role_assigned",
+    actorUid: actorUid || null,
+    targetUid: uid,
+    details: { from_role: before.role || "", to_role: role, from_agency: before.agency_id || "", to_agency: needsAgency ? agencyId : "", changed },
+  });
 
   return { uid, role, agencyId: needsAgency ? agencyId : null };
 }

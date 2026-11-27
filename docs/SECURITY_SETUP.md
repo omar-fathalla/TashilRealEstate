@@ -364,3 +364,18 @@ Turning it on (by the account's owner, once per project):
 To turn it off (for example, a lost phone), run `--clear-mfa <uid> --apply`. That removes the
 claim without signing anyone out. The enrolled factor itself can then be removed with the
 Admin SDK or in the console.
+
+## Audit log (TAQ-193)
+
+`AuditLog/{id}` is a trail of SuperAdmin-level changes. Only the Admin SDK writes it; no client can,
+and only a SuperAdmin can read it. It records:
+
+- every role assignment through `applyUserRole` (the `setUserRole` callable, `role_claims.js` and agency approval)
+- agency application approvals and rejections
+- `--require-mfa` and `--clear-mfa`
+- writes to `Settings/*`, through the `auditSettingsChange` trigger
+
+Entries hold uids, roles and small non-personal details only. Each one keeps for a year:
+`expire_at` is `created_at` plus 365 days. The `purgeExpiredAuditLog` job deletes expired entries
+every day at 03:30 Cairo time. You can also enable a Firestore TTL policy on `AuditLog.expire_at`;
+that's optional, and the scheduled purge works without it.
