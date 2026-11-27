@@ -4,7 +4,8 @@
 // held by a lease of an owner the registry does not name can be taken over.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -24,7 +25,7 @@ const fns = require("../index");
 const leases = require("../leases");
 const payments = require("../payments");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 const realFetch = payments.deps.fetch;
@@ -44,8 +45,8 @@ async function clearAll() {
 }
 
 async function user(uid, role) {
-  await admin.auth().createUser({ uid });
-  await admin.auth().setCustomUserClaims(uid, { role });
+  await getAuth().createUser({ uid });
+  await getAuth().setCustomUserClaims(uid, { role });
   await db.doc(`Users/${uid}`).set({ role, full_name: `Name ${uid}` });
 }
 

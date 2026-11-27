@@ -18,12 +18,11 @@
 const crypto = require("crypto");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { requireFreshAuth, requireRole, loadLease, leaseAmount, leaseCountry } = require("./authz");
 const { lateFeeFor } = require("./lease_terms");
@@ -119,7 +118,7 @@ const SPLIT_DOC = "payment_split";
  * not valid stops the payment instead of guessing. Nothing here ever comes from a client.
  */
 async function loadSplitPercents() {
-  const snap = await admin.firestore().collection("Settings").doc(SPLIT_DOC).get();
+  const snap = await getFirestore().collection("Settings").doc(SPLIT_DOC).get();
   if (!snap.exists) return { ...DEFAULT_SPLIT };
   const platform = snap.get("platform_percent");
   const agency = snap.get("agency_percent");
@@ -185,7 +184,7 @@ function checkoutUrlFor(config, clientSecret) {
 }
 
 async function loadTenantBilling(uid, lease) {
-  const snap = await admin.firestore().collection("Users").doc(uid).get();
+  const snap = await getFirestore().collection("Users").doc(uid).get();
   const profile = snap.exists ? snap.data() : {};
   const name = splitName(profile.full_name || lease.tenant_name || lease.tenantName);
   const phone = String(profile.phone || profile.phone_number || profile.phoneNumber || "").trim();
@@ -249,7 +248,7 @@ const createRentPaymentIntent = onCall(
     const amountCents = Math.round(due * 100);
     const percents = await loadSplitPercents();
 
-    const db = admin.firestore();
+    const db = getFirestore();
     const txRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
     const now = deps.now();
 
@@ -458,7 +457,7 @@ async function applyGatewayTransaction(obj) {
 
 /** Every SuperAdmin (by custom claim) gets an in-app notification for the refund alert. */
 async function notifySuperAdmins(alertId, alert) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const uids = await deps.listSuperAdmins();
   const amount = `${Math.round(alert.amountCents) / 100} ${alert.currency}`;
   const batch = db.batch();
@@ -488,7 +487,7 @@ async function listSuperAdminUids() {
   const uids = [];
   let pageToken;
   do {
-    const page = await admin.auth().listUsers(1000, pageToken);
+    const page = await getAuth().listUsers(1000, pageToken);
     for (const user of page.users) {
       if (user.customClaims && user.customClaims.role === "SuperAdmin") uids.push(user.uid);
     }
@@ -498,7 +497,7 @@ async function listSuperAdminUids() {
 }
 
 async function settleGatewayTransaction(obj) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const orderId = String(obj.order.id);
   const sessionRef = db.collection("PaymentSessions").doc(orderId);
 
@@ -666,10 +665,11 @@ function parsePaidOn(value, now) {
 
 /**
  * Who may record a payment that happened outside the gateway: the lease's owner, the agency that
- * manages it, or platform staff (Admin, SuperAdmin). Never the tenant.
+ * manages it, or a SuperAdmin. Never the tenant, and never the platform Admin, which has no
+ * access to leases or transactions (TAQ-91, TAQ-183).
  */
 function assertCanRecordPayment(auth, role, lease) {
-  if (role === "SuperAdmin" || role === "Admin") return;
+  if (role === "SuperAdmin") return;
   if (role === "Owner" && lease.owner_id && lease.owner_id === auth.uid) return;
   const agencyId = auth.token && auth.token.agency_id;
   if (role === "AgencyAdmin" && agencyId && lease.agency_id === agencyId) return;
@@ -678,7 +678,7 @@ function assertCanRecordPayment(auth, role, lease) {
 
 const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = await requireFreshAuth(request);
-  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"]);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
 
   const lease = await loadLease(data.leaseId);
@@ -711,7 +711,7 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   }
   const currency = currencyFor(lease);
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const txRef = db.collection("Transactions").doc(`${lease.id}_${period}`);
   const actor = { uid: auth.uid, role };
   await db.runTransaction(async (t) => {

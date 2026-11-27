@@ -294,7 +294,7 @@ function.
   functions read it server-side when a payment is created, and the client never sends one. With no
   document the split is 2 / 8 / 90; an invalid document stops payments (`split_invalid`) instead of
   guessing. A payment keeps the split it was created with.
-- `recordManualPayment` lets the lease's owner, its managing agency, Admin or SuperAdmin record cash
+- `recordManualPayment` lets the lease's owner, its managing agency or a SuperAdmin record cash
   or bank-transfer rent (method, reference, paid-on date). It settles the month the same way the
   webhook does (invoice `Paid_Recorded`, receipt and owner notifications) and writes an `auditTrail`
   entry on the transaction. No split is deducted because the money did not pass through the platform.
@@ -319,8 +319,10 @@ self-service roles (Owner, Tenant, Investor) from it.
   Once the backfill has run on prod and an hour has passed (every ID token renewed), the
   `profileRole()` fallback can be removed from `firestore.rules` in its own change. That ends
   the per-request profile read.
-- **Elevated roles** (SuperAdmin, Admin, AgencyAdmin) come only from the `setUserRole`
-  callable, which a SuperAdmin calls. It revokes the user's refresh tokens when the role or
+- **Elevated roles** (Admin, AgencyAdmin) come only from the `setUserRole` callable, which a
+  SuperAdmin calls. That callable never grants or removes SuperAdmin and never changes the
+  caller's own role (TAQ-186): SuperAdmin is set only from a trusted machine with
+  `scripts/role_claims.js`. It revokes the user's refresh tokens when the role or
   agency changes (TAQ-148). Run `node scripts/role_claims.js --project <project id>` for a
   read-only audit of profiles whose role and claim disagree.
 - **The first SuperAdmin** is made once per project from a trusted machine with Admin
@@ -333,3 +335,89 @@ self-service roles (Owner, Tenant, Investor) from it.
   ```
 
   The account then signs in again to pick up the claim.
+
+## SuperAdmin two-step verification (TAQ-25)
+
+The same switch also covers the platform **Admin** role (TAQ-185): the enrolment button is in the `/admin`
+header, and `--require-mfa` accepts an Admin account too.
+
+Off by default. Nothing changes for any account until its SuperAdmin turns it on.
+
+- The switch is a per-account custom claim, `mfa_required`. While it is set on a SuperAdmin,
+  `firestore.rules`, `storage.rules` and every callable (`requireRole`) treat that account as
+  SuperAdmin only when its ID token shows a second factor
+  (`firebase.sign_in_second_factor`). Without one, a callable refuses with
+  `permission-denied` and `details.reason == "mfa_required"`. Triggers and other server-side
+  lookups don't depend on the claim.
+- The app supports an authenticator app (TOTP). Sign-in asks for the 6-digit code whenever the
+  account has one enrolled. A SuperAdmin adds one from the dashboard header (the shield icon).
+
+Turning it on (by the account's owner, once per project):
+
+1. In the Firebase console, open Authentication → Sign-in method → Multi-factor authentication.
+   That requires Identity Platform. Turn on TOTP there.
+2. Sign in to the app as the SuperAdmin and enrol an authenticator app from the dashboard.
+3. Run `node backend/scripts/role_claims.js --project <id> --require-mfa <uid>` as a dry run, then
+   again with `--apply`. The script refuses an account that isn't a SuperAdmin or has no enrolled
+   factor. It also revokes refresh tokens, so the next sign-in uses the second factor.
+
+To turn it off (for example, a lost phone), run `--clear-mfa <uid> --apply`. That removes the
+claim without signing anyone out. The enrolled factor itself can then be removed with the
+Admin SDK or in the console.
+
+## Audit log (TAQ-193)
+
+`AuditLog/{id}` is a trail of SuperAdmin-level changes. Only the Admin SDK writes it; no client can,
+and only a SuperAdmin can read it. It records:
+
+- every role assignment through `applyUserRole` (the `setUserRole` callable, `role_claims.js` and agency approval)
+- agency application approvals and rejections
+- `--require-mfa` and `--clear-mfa`
+- writes to `Settings/*`, through the `auditSettingsChange` trigger
+
+Entries hold uids, roles and small non-personal details only. Each one keeps for a year:
+`expire_at` is `created_at` plus 365 days. The `purgeExpiredAuditLog` job deletes expired entries
+every day at 03:30 Cairo time. You can also enable a Firestore TTL policy on `AuditLog.expire_at`;
+that's optional, and the scheduled purge works without it.
+
+## Agency agents (TAQ-169)
+
+`AgencyAgent` is agency staff. The role comes only from a custom claim, granted when the user
+accepts an AgencyAdmin's invite and carrying the agency's `agency_id`. `setUserRole` never assigns it.
+
+An agent can:
+
+- read its agency's listings, leases, rent rows, mandates, viewing requests, rental applications
+  and maintenance requests
+- update maintenance progress
+- answer viewing requests (`respondToViewingRequest`)
+- work rent rows (`updateRentRow`), but not delete a row or send a legal notice
+- send rent reminders
+- use the Gemini `onboarding` feature
+
+An agent can't:
+
+- decide rental applications, create leases, record manual payments or issue receipts. Those stay
+  with the AgencyAdmin.
+- use any mandate callable or `document_ocr`
+- read invoices, transactions or `Agencies/{id}/private` (payout details)
+- delete anything
+
+### Agency team invites (TAQ-169)
+
+The AgencyAdmin calls `inviteAgencyAgent({email})`. That creates `AgencyInvites/{id}`, which
+expires after 7 days. Limits: 20 open invites and 20 agents per agency, and 30 invites a day per
+admin.
+
+The invitee signs in with that same email, verified, then calls `acceptAgencyInvite({inviteId})`
+or `declineAgencyInvite`. Accepting is refused when:
+
+- the invitee's role isn't self-service. Any non-staff role, or none, is fine.
+- the invitee is a party to an open lease or owns a managed property. This is the same check as
+  an agency approval.
+
+On accept, `applyUserRole` grants `AgencyAgent` with the agency's `agency_id`, which revokes the
+user's tokens, and records `AgencyAgents/{uid}`. `removeAgencyAgent({uid})`, called by the
+AgencyAdmin or a SuperAdmin, puts the user back on their earlier self-service role (Tenant if they
+had none). Clients can't read or write `AgencyInvites` or `AgencyAgents`. Every invite, join,
+revoke and removal is in the audit log.

@@ -12,14 +12,14 @@
  */
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
+const { getAuth } = require("firebase-admin/auth");
 const { SELF_SERVICE_ROLES } = require("./authz");
 
 // No initializeApp here: index.js does it for the functions, and scripts/role_claims.js imports
 // this module and must initialize the app with its own --project first.
 
 /** Sets claims.role = role when role is self-service and the user has no role claim yet. */
-async function grantSelfServiceClaim(uid, role, auth = admin.auth()) {
+async function grantSelfServiceClaim(uid, role, auth = getAuth()) {
   if (!SELF_SERVICE_ROLES.includes(role)) return "not_self_service";
   let user;
   try {

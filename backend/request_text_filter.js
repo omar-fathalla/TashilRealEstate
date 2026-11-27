@@ -100,9 +100,12 @@ const WORDED_DOMAIN = new RegExp(
 );
 
 // "photos.In the evening": a missing space after a full stop puts a capitalised word where a
-// TLD would be. A capitalised TLD (In, Me, Co) is read as a sentence, unless a path follows;
-// lowercase and all-caps TLDs are still domains (TAQ-166).
-const isSentenceStart = (tld) => /^[A-Z][a-z]+$/.test(tld);
+// TLD would be. Only the endings that are also everyday English words (In, Me, Us, Co) are read
+// as a sentence when capitalised, unless a path follows (TAQ-166). Any other capitalised ending
+// (Example.Com, Tashil.Online, example . Com) is still a domain (TAQ-187); lowercase and all-caps
+// endings always are.
+const SENTENCE_WORDS = new Set(["In", "Me", "Us", "Co"]);
+const isSentenceStart = (tld) => SENTENCE_WORDS.has(tld);
 
 function hasDomain(folded, pattern) {
   for (const m of folded.matchAll(pattern)) {

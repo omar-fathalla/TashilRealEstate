@@ -2,7 +2,8 @@
 // and a flat late fee (default 0) that payments add once the grace days are over.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -23,7 +24,7 @@ const leases = require("../leases");
 const payments = require("../payments");
 const terms = require("../lease_terms");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 const realFetch = payments.deps.fetch;
@@ -57,10 +58,10 @@ test.beforeEach(async () => {
     return { ok: true, status: 201, json: async () => ({ id: `int_${order}`, intention_order_id: order, client_secret: `cs_${order}` }) };
   };
   await clearAll();
-  await admin.auth().createUser({ uid: "ownerT" });
-  await admin.auth().setCustomUserClaims("ownerT", { role: "Owner" });
-  await admin.auth().createUser({ uid: "tenantT" });
-  await admin.auth().setCustomUserClaims("tenantT", { role: "Tenant" });
+  await getAuth().createUser({ uid: "ownerT" });
+  await getAuth().setCustomUserClaims("ownerT", { role: "Owner" });
+  await getAuth().createUser({ uid: "tenantT" });
+  await getAuth().setCustomUserClaims("tenantT", { role: "Tenant" });
   await db.doc("Users/tenantT").set({ role: "Tenant", full_name: "Tenant T", phone: "+971 50 123 4567" });
   await db.doc("Users/ownerT/properties/propT").set({ title: "Flat T", countryCode: "AE" });
   await db.doc("PropertyOwners/propT").set({ owner_id: "ownerT" });

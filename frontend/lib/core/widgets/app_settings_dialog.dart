@@ -14,6 +14,9 @@ import 'package:tashil_real_estate/core/widgets/font_picker_dialog.dart';
 import 'package:tashil_real_estate/features/ai_engine_hub/widgets/ai_engine_hub_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/firebase_hub/firebase_enterprise_hub_dialog.dart';
 import 'package:tashil_real_estate/core/services/fcm_notification_service.dart';
+import 'package:tashil_real_estate/core/auth/role_session.dart';
+import 'package:tashil_real_estate/core/auth/trusted_role.dart';
+import 'package:tashil_real_estate/features/agency_workspace/widgets/agency_invites_card.dart';
 
 /// Minimalist, Icon-First Material Design 3 Settings Dialog for Tashil Real Estate.
 /// Integrates Country, Language, Dark Mode, Color Themes, and Font Themes with zero clutter.
@@ -87,6 +90,8 @@ class AppSettingsDialog extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // TAQ-169: open agency invites for a self-service user; nothing when none.
+                  if (TrustedRole.selfServiceRoles.contains(RoleSession.instance.role)) const AgencyInvitesCard(),
                   // Row 1: Quick Icon Controls (Country, Language, Dark Mode)
                   _buildQuickControlsBar(context, loc, colorScheme, isMobile),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design_system/buttons/tashil_buttons.dart';
+import '../../../core/routing/navigation_lock.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../models/request_models.dart';
@@ -101,11 +102,10 @@ class _RequestListingSheetState extends State<RequestListingSheet> {
       _phoneMissing = false;
     });
     try {
-      if (apply) {
-        await _service.applyForRental(listingId: widget.listingId, name: name, phone: phone, message: _note.text.trim());
-      } else {
-        await _service.requestViewing(listingId: widget.listingId, name: name, phone: phone, message: _note.text.trim());
-      }
+      // Browser Back on web would leave the page and drop the sheet with it (TAQ-190).
+      await NavigationLock.holdWhile(() => apply
+          ? _service.applyForRental(listingId: widget.listingId, name: name, phone: phone, message: _note.text.trim())
+          : _service.requestViewing(listingId: widget.listingId, name: name, phone: phone, message: _note.text.trim()));
       if (!mounted) return;
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text(loc.tr(apply ? 'rqApplicationSent' : 'rqViewingSent'))));

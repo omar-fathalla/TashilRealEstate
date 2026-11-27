@@ -3,7 +3,8 @@
 // under PropertyLeaseLocks/{propertyId}, and the lock is released when the lease leaves active.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -30,7 +31,7 @@ const leases = require("../leases");
 const payments = require("../payments");
 const { audit, resolveTarget } = require("../scripts/audit_leases");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 
@@ -40,8 +41,8 @@ async function clearAll() {
 }
 
 async function user(uid, claims) {
-  await admin.auth().createUser({ uid });
-  if (claims) await admin.auth().setCustomUserClaims(uid, claims);
+  await getAuth().createUser({ uid });
+  if (claims) await getAuth().setCustomUserClaims(uid, claims);
 }
 
 const realFetch = payments.deps.fetch;
@@ -214,9 +215,9 @@ test("TAQ-110: only the lease's tenant answers, only while pending, and approval
 
 test("TAQ-110: an agency offer is accepted only while the agency still manages the property", async () => {
   const id = (await create(input({ propertyId: "propG", ownerId: "ag1owner" }), ag1())).leaseId;
-  await admin.auth().setCustomUserClaims("ag1owner", { role: "AgencyAdmin", agency_id: "ag2" });
+  await getAuth().setCustomUserClaims("ag1owner", { role: "AgencyAdmin", agency_id: "ag2" });
   await reason(respond(id, "approve", "tenantA"), "failed-precondition", "property_not_managed");
-  await admin.auth().setCustomUserClaims("ag1owner", { role: "AgencyAdmin", agency_id: "ag1" });
+  await getAuth().setCustomUserClaims("ag1owner", { role: "AgencyAdmin", agency_id: "ag1" });
   await db.doc("Users/ag1owner/properties/propG").update({ agency_id: "ag2" });
   await reason(respond(id, "approve", "tenantA"), "failed-precondition", "property_not_managed");
   await db.doc("Users/ag1owner/properties/propG").update({ agency_id: "ag1" });
@@ -383,7 +384,7 @@ test("TAQ-110: the lease audit only reads, refuses production, and lists what th
   const before = (await db.collection("Leases").get()).docs.map((d) => JSON.stringify(d.data())).sort();
   const locksBefore = (await db.collection("PropertyLeaseLocks").get()).size;
 
-  const report = await audit(db, admin.auth());
+  const report = await audit(db, getAuth());
   assert.equal(report.leases, 6);
   assert.equal(report.liveLeases, 2);
   assert.deepEqual(report.multipleLiveLeases, [{ property_id: "propA", leaseIds: ["a1", "a2"] }]);

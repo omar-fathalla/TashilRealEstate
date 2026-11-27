@@ -17,12 +17,10 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { requireFreshAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
 const { appCheckEnforced } = require("./config");
@@ -204,7 +202,7 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
   const extras = leaseExtrasFrom(data);
 
   const ownerAuthority = await resolveUserAuthority(ownerId);
-  const db = admin.firestore();
+  const db = getFirestore();
   const { agencyId } = await managingAgency(null, db, ownerId, propertyId, ownerAuthority);
   if (role === "Owner" && agencyId) {
     throw precondition("An agency manages this property; the agency creates its leases.", "property_agency_managed");
@@ -323,7 +321,7 @@ const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
     throw new HttpsError("invalid-argument", "decision must be approve or reject.");
   }
   const note = cleanNote(data.note);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection("Leases").doc(leaseId);
   const now = deps.now();
   const status = await retryOnContention(() => db.runTransaction(async (t) => {
@@ -378,7 +376,7 @@ async function handleLeaseLockRelease(event) {
   const now = after && after.exists ? after.data() || {} : null;
   if (now && now.status === "active" && now.property_id === was.property_id) return null;
   const leaseId = event.params.leaseId;
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(LOCKS).doc(was.property_id);
   const siloRef = validId(was.owner_id) ? db.collection("Users").doc(was.owner_id).collection("properties").doc(was.property_id) : null;
   return db.runTransaction(async (t) => {

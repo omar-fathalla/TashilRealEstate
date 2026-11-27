@@ -1,5 +1,6 @@
 const { HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 // Roles a user may pick for themselves at signup. They are only read from the profile document
 // (or a claim); a profile can never vouch for any other role, so none of these escalates.
@@ -11,6 +12,10 @@ const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
 // Platform staff who moderate listings and read the sanitized user directory. Admin is the
 // restricted platform role; SuperAdmin keeps everything Admin can do.
 const PLATFORM_STAFF_ROLES = ["Admin", "SuperAdmin"];
+// TAQ-169: agency staff. Granted only by accepting an AgencyAdmin's invite, never by setUserRole.
+const AGENCY_AGENT = "AgencyAgent";
+// The agency roles whose agency_id claim names an agency they work for.
+const AGENCY_MEMBER_ROLES = ["AgencyAdmin", AGENCY_AGENT];
 
 function requireAuth(request) {
   if (!request.auth || !request.auth.uid) {
@@ -47,7 +52,7 @@ async function requireFreshAuth(request) {
   if (raw) {
     let decoded;
     try {
-      decoded = await admin.auth().verifyIdToken(raw, true);
+      decoded = await getAuth().verifyIdToken(raw, true);
     } catch (err) {
       throw revokedError();
     }
@@ -57,7 +62,7 @@ async function requireFreshAuth(request) {
   if (request.rawRequest) throw revokedError();
   let user;
   try {
-    user = await admin.auth().getUser(auth.uid);
+    user = await getAuth().getUser(auth.uid);
   } catch (err) {
     if (err.code === "auth/user-not-found") return auth;
     throw err;
@@ -76,13 +81,28 @@ function claimedRole(auth) {
 }
 
 /**
+ * TAQ-25, TAQ-185: a SuperAdmin or Admin claim only counts when the token's second factor is
+ * present, if that account's claims carry `mfa_required: true`. role_claims.js --require-mfa sets
+ * it, and only after a second factor is enrolled. Without the claim nothing changes (the switch is
+ * off). Mirrors secondFactorOk() in firestore.rules.
+ */
+const SECOND_FACTOR_ROLES = ["SuperAdmin", "Admin"];
+
+function missingSecondFactor(auth) {
+  const token = auth.token || {};
+  if (!SECOND_FACTOR_ROLES.includes(token.role) || token.mfa_required !== true) return false;
+  const firebase = token.firebase || {};
+  return !firebase.sign_in_second_factor;
+}
+
+/**
  * Mirrors currentRole() in firestore.rules: a custom claim wins, and the profile
  * document is only trusted for self-service roles.
  */
-async function resolveRole(auth) {
+async function resolveRole(auth, { checkSecondFactor = true } = {}) {
   const claim = claimedRole(auth);
-  if (claim) return claim;
-  const snap = await admin.firestore().collection("Users").doc(auth.uid).get();
+  if (claim) return checkSecondFactor && missingSecondFactor(auth) ? "" : claim;
+  const snap = await getFirestore().collection("Users").doc(auth.uid).get();
   const profileRole = snap.exists ? snap.get("role") : "";
   return SELF_SERVICE_ROLES.includes(profileRole) ? profileRole : "";
 }
@@ -94,11 +114,12 @@ async function resolveRole(auth) {
 async function resolveUserAuthority(uid) {
   let claims = {};
   try {
-    claims = (await admin.auth().getUser(uid)).customClaims || {};
+    claims = (await getAuth().getUser(uid)).customClaims || {};
   } catch (err) {
     if (err.code !== "auth/user-not-found") throw err;
   }
-  const role = await resolveRole({ uid, token: claims });
+  // No sign-in here (triggers act on stored data), so the second-factor switch does not apply.
+  const role = await resolveRole({ uid, token: claims }, { checkSecondFactor: false });
   const agencyId = role === "AgencyAdmin" && typeof claims.agency_id === "string" ? claims.agency_id : "";
   return { role, agencyId };
 }
@@ -109,6 +130,9 @@ async function resolveUserRole(uid) {
 
 async function requireRole(auth, roles) {
   const role = await resolveRole(auth);
+  if (!roles.includes(role) && missingSecondFactor(auth) && roles.includes(claimedRole(auth))) {
+    throw new HttpsError("permission-denied", "Sign in again with your second factor to do this.", { reason: "mfa_required" });
+  }
   if (!roles.includes(role)) {
     throw new HttpsError("permission-denied", "This action is not allowed for your role.");
   }
@@ -119,7 +143,7 @@ async function loadLease(leaseId) {
   if (!leaseId || typeof leaseId !== "string") {
     throw new HttpsError("invalid-argument", "A lease id is required.");
   }
-  const snap = await admin.firestore().collection("Leases").doc(leaseId).get();
+  const snap = await getFirestore().collection("Leases").doc(leaseId).get();
   if (!snap.exists) {
     throw new HttpsError("not-found", "Lease not found.");
   }
@@ -175,7 +199,8 @@ function assertLeaseParty(auth, role, lease, { allowTenant = false } = {}) {
   if (lease.owner_id && lease.owner_id === uid) return;
   if (allowTenant && lease.tenant_id && lease.tenant_id === uid) return;
   const agencyId = auth.token && auth.token.agency_id;
-  if (role === "AgencyAdmin" && agencyId && lease.agency_id === agencyId) return;
+  // An AgencyAgent passes here only on callables whose requireRole admits it (TAQ-169).
+  if (AGENCY_MEMBER_ROLES.includes(role) && agencyId && lease.agency_id === agencyId) return;
   throw new HttpsError("permission-denied", "You are not a party to this lease.");
 }
 
@@ -190,8 +215,11 @@ module.exports = {
   resolveUserRole,
   resolveUserAuthority,
   requireRole,
+  missingSecondFactor,
   loadLease,
   leaseAmount,
   leaseCountry,
   assertLeaseParty,
+  AGENCY_AGENT,
+  AGENCY_MEMBER_ROLES,
 };

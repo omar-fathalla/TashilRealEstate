@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_stats.dart';
 
 IconData activityIcon(ActivityKind kind) {
@@ -201,12 +202,15 @@ class OverviewView extends StatelessWidget {
         ),
       ],
     );
-    final add = TashilButton.filled(
-      label: loc.tr('addNewProperty'),
-      icon: Icons.add,
-      height: 48,
-      onPressed: onAddProperty,
-    );
+    // TAQ-169: an agent cannot add listings.
+    final Widget add = AgencyStaffScope.isAgentOf(context)
+        ? const SizedBox.shrink()
+        : TashilButton.filled(
+            label: loc.tr('addNewProperty'),
+            icon: Icons.add,
+            height: 48,
+            onPressed: onAddProperty,
+          );
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

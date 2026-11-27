@@ -2,14 +2,13 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 // Import these directly: the Functions emulator wraps admin.firestore, which drops its static
 // FieldValue/Timestamp members and made every server-timestamp write crash locally.
-const { FieldPath, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const {
   PUBLISHER_ROLES,
@@ -21,6 +20,7 @@ const {
   leaseAmount,
   leaseCountry,
   assertLeaseParty,
+  AGENCY_AGENT,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { managingAgency } = require("./agency_mandate_state");
@@ -50,7 +50,7 @@ function parseDueDate(value) {
 // Party, tenant, amount, and currency come from the lease document, never from the caller.
 exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = await requireFreshAuth(request);
-  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", AGENCY_AGENT, "SuperAdmin"]); // TAQ-169
   const data = request.data || {};
   const lease = await loadLease(data.leaseId);
   assertLeaseParty(auth, role, lease);
@@ -65,7 +65,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
   const countryCode = leaseCountry(lease);
   const currency = countryCode === "AE" ? "AED" : "EGP";
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const notifRef = db.collection("Notifications").doc();
   const reminderLogRef = db.collection("ReminderLog").doc(lease.id);
 
@@ -134,7 +134,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
   const vatAmount = (platformFee + agencyFee) * vatRate;
   const totalPaid = amount + vatAmount;
 
-  const db = admin.firestore();
+  const db = getFirestore();
   // A Firestore auto id as the suffix, so two invoices issued in the same moment never collide.
   const invoiceNumber = `TASHIL-INV-${new Date().getFullYear()}-${db.collection("Invoices").doc().id}`;
   const invoiceRef = db.collection("Invoices").doc(invoiceNumber);
@@ -169,11 +169,34 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
   }
 });
 
+// TAQ-186: SuperAdmin is granted and removed only out of band, with scripts/role_claims.js and the
+// Admin SDK, never through this callable. A stolen SuperAdmin session therefore cannot mint more
+// SuperAdmins or demote the others, and nobody changes their own role here (no self-lockout).
+async function assertRoleChangeAllowed(auth, data) {
+  const outOfBand = (message) => new HttpsError("permission-denied", message, { reason: "superadmin_out_of_band" });
+  if (data.role === "SuperAdmin") throw outOfBand("SuperAdmin is assigned with scripts/role_claims.js, not in the app.");
+  if (typeof data.uid !== "string" || !data.uid) return;
+  if (data.uid === auth.uid) {
+    throw new HttpsError("permission-denied", "You cannot change your own role.", { reason: "self_role_change" });
+  }
+  let target;
+  try {
+    target = await getAuth().getUser(data.uid);
+  } catch (err) {
+    if (err.code === "auth/user-not-found") return;
+    throw err;
+  }
+  if (target.customClaims && target.customClaims.role === "SuperAdmin") {
+    throw outOfBand("A SuperAdmin's role is changed with scripts/role_claims.js, not in the app.");
+  }
+}
+
 // SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
 exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
   const auth = await requireFreshAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
+  await assertRoleChangeAllowed(auth, data);
   const result = await applyUserRole({
     uid: data.uid,
     role: data.role,
@@ -214,7 +237,7 @@ function isValidPageToken(value) {
 async function claimRolesFor(uids) {
   const roles = new Map();
   if (uids.length === 0) return roles;
-  const result = await admin.auth().getUsers(uids.map((uid) => ({ uid })));
+  const result = await getAuth().getUsers(uids.map((uid) => ({ uid })));
   for (const user of result.users) {
     const role = user.customClaims && user.customClaims.role;
     if (typeof role === "string") roles.set(user.uid, role);
@@ -229,7 +252,7 @@ exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   const data = request.data || {};
   const requested = Number(data.limit);
   const limit = Number.isInteger(requested) && requested >= 1 ? Math.min(requested, ADMIN_USER_PAGE_MAX) : 50;
-  let query = admin.firestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
+  let query = getFirestore().collection("Users").orderBy(FieldPath.documentId()).limit(limit);
   if (data.startAfter !== undefined && data.startAfter !== null && data.startAfter !== "") {
     if (!isValidPageToken(data.startAfter)) {
       throw new HttpsError("invalid-argument", "startAfter is not a valid page token.");
@@ -257,7 +280,7 @@ const DEFAULT_AMENITIES = {
 
 async function loadAgencyIdentity(agencyId) {
   if (!agencyId) return null;
-  const snap = await admin.firestore().collection("Agencies").doc(agencyId).get();
+  const snap = await getFirestore().collection("Agencies").doc(agencyId).get();
   return snap.exists ? agencyListingIdentity(snap.data()) : null;
 }
 
@@ -515,7 +538,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
   async (event) => {
     const ownerId = event.params.ownerId;
     const propertyId = event.params.propertyId;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     // 1. Handle document deletion in owner's tree. A doc flagged id_conflict never owned the
     // public listing, so deleting it changes nothing there.
@@ -630,7 +653,7 @@ exports.reconcilePropertyModeration = onDocumentWritten(
     const hidden = Boolean(after && after.exists && after.get("hidden") === true);
     const wasHidden = Boolean(before && before.exists && before.get("hidden") === true);
     const preHidePublished = Boolean(after && after.exists && after.get("pre_hide_published") === true);
-    const db = admin.firestore();
+    const db = getFirestore();
     const ref = db.collection("Properties").doc(propertyId);
     try {
       const current = await ref.get();
@@ -690,7 +713,7 @@ exports.syncAgencyIdentityToListings = onDocumentWritten("Agencies/{agencyId}", 
   const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
   const next = listingContactFields(agencyListingIdentity(after));
   if (JSON.stringify(next) === JSON.stringify(listingContactFields(agencyListingIdentity(before)))) return null;
-  const db = admin.firestore();
+  const db = getFirestore();
   const update = { agencyNames: next.agencyNames, agencyPhone: next.agencyPhone, agencyOrn: next.agencyOrn || FieldValue.delete() };
   let last = null;
   let total = 0;
@@ -885,7 +908,7 @@ exports.syncMarketIndexDaily = onSchedule(
   },
   async (event) => {
     logger.info("Executing 09:00 AM Daily Market Index Ingestion Pipeline...");
-    const db = admin.firestore();
+    const db = getFirestore();
     const countries = ["EG", "AE"];
 
     for (const code of countries) {
@@ -916,7 +939,7 @@ exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     throw new HttpsError("invalid-argument", "country must be EG or AE.");
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection("MarketIndices").doc(country);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -959,6 +982,14 @@ exports.respondToMandate = require("./mandates").respondToMandate;
 exports.revokeMandate = require("./mandates").revokeMandate;
 exports.applyForAgency = require("./agency_applications").applyForAgency;
 exports.reviewAgencyApplication = require("./agency_applications").reviewAgencyApplication;
+// TAQ-169: agency team invites.
+exports.inviteAgencyAgent = require("./agency_team").inviteAgencyAgent;
+exports.revokeAgencyInvite = require("./agency_team").revokeAgencyInvite;
+exports.listAgencyTeam = require("./agency_team").listAgencyTeam;
+exports.listMyAgencyInvites = require("./agency_team").listMyAgencyInvites;
+exports.acceptAgencyInvite = require("./agency_team").acceptAgencyInvite;
+exports.declineAgencyInvite = require("./agency_team").declineAgencyInvite;
+exports.removeAgencyAgent = require("./agency_team").removeAgencyAgent;
 
 // Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
 exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;
@@ -971,3 +1002,7 @@ exports.cspReport = require("./csp_report").cspReport;
 
 // TAQ-23: self-service roles also land in the custom claim, so the rules skip the profile read.
 exports.mirrorSelfServiceRole = require("./self_service_claims").mirrorSelfServiceRole;
+
+// TAQ-193: audit trail for SuperAdmin-level changes, kept one year.
+exports.purgeExpiredAuditLog = require("./audit_log").purgeExpiredAuditLog;
+exports.auditSettingsChange = require("./audit_log").auditSettingsChange;

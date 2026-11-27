@@ -6,6 +6,8 @@ import '../../../core/design_system/cards/tashil_cards.dart';
 import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
+import '../../../core/routing/navigation_lock.dart';
+import '../../agency_workspace/agency_staff_scope.dart';
 import '../models/request_models.dart';
 import '../services/requests_service.dart';
 import '../widgets/request_inline_error.dart';
@@ -191,7 +193,8 @@ class _RequestsInboxViewState extends State<RequestsInboxView> {
       ],
       busy: _busy.contains(item.id),
       onWhatsApp: () => _openWhatsApp(item.applicantPhone, item.titleFor(locale.languageCode)),
-      actions: [
+      // TAQ-169: deciding applications and creating leases stay with the AgencyAdmin.
+      actions: AgencyStaffScope.isAgentOf(context) ? const [] : [
         if (item.isPending) ...[
           _Action(loc.tr('rqApprove'), Icons.check_rounded, () => _respond(actionLabel: loc.tr('rqApprove'), successKey: 'rqApplicationApproved', onSend: (note) => _service.decideApplication(item.id, approve: true, note: note))),
           _Action(loc.tr('rqReject'), Icons.close_rounded, () => _respond(actionLabel: loc.tr('rqReject'), successKey: 'rqApplicationRejected', onSend: (note) => _service.decideApplication(item.id, approve: false, note: note)), outlined: true),
@@ -379,7 +382,8 @@ class _RespondDialogState extends State<_RespondDialog> {
       _error = null;
     });
     try {
-      await widget.onSend(_note.text.trim());
+      // Browser Back on web would leave the page and drop the dialog with it (TAQ-190).
+      await NavigationLock.holdWhile(() => widget.onSend(_note.text.trim()));
       if (mounted) navigator.pop(true);
     } catch (e) {
       if (!mounted) return;

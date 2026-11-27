@@ -7,23 +7,22 @@
  *                                             (licence pending, no badge) and makes the applicant
  *                                             its AgencyAdmin through applyUserRole
  *
- * Only these callables write the application; the applicant and SuperAdmin read it. An approval is
- * refused while the applicant is a party to a lease that is not finished, or owns a property an
- * agency manages: becoming an agency would change who manages those. The licence badge stays a
- * separate SuperAdmin check (TAQ-154).
+ * Only these callables write the application; the applicant and SuperAdmin read it. Applying
+ * (TAQ-195) and the approval are both refused while the applicant is a party to a lease that is
+ * not finished, or owns a property an agency manages: becoming an agency would change who
+ * manages those. The licence badge stays a separate SuperAdmin check (TAQ-154).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { SELF_SERVICE_ROLES, requireFreshAuth, requireRole } = require("./authz");
 const { appCheckEnforced } = require("./config");
-const { containsContact } = require("./contact_filter");
+const { containsContactInRequestText } = require("./request_text_filter");
 const { applyUserRole } = require("./roles");
+const { writeAuditLog } = require("./audit_log");
 const { MANDATES } = require("./agency_mandate_state");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -52,7 +51,9 @@ function text(value, field, max, { required = false } = {}) {
 /** The application fields from the request, checked. */
 function applicationFrom(data) {
   const name = text(data.name, "name", 200, { required: true });
-  if (containsContact(name)) throw invalid("The agency name cannot hold a phone, link or email.", "name_contact");
+  // TAQ-188: the name becomes the public agency name, so it gets the request-text check, which
+  // also catches spelled-out numbers, spaced emails and bare domains.
+  if (containsContactInRequestText(name)) throw invalid("The agency name cannot hold a phone, link or email.", "name_contact");
   const countryCode = data.countryCode === "AE" || data.countryCode === "EG" ? data.countryCode : "";
   if (!countryCode) throw invalid("countryCode must be AE or EG.", "country_invalid");
   const orn = text(data.orn, "orn", 40);
@@ -76,7 +77,13 @@ const applyForAgency = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
     throw new HttpsError("permission-denied", "Sign in with an account to apply.");
   }
   const fields = applicationFrom(request.data || {});
-  const db = admin.firestore();
+  const db = getFirestore();
+  // TAQ-195: refuse up front what the approval would refuse anyway. The approval checks again,
+  // since a lease can start after the application.
+  const blocker = await approvalBlocker(db, auth.uid);
+  if (blocker) {
+    throw new HttpsError("failed-precondition", "Finish your open leases or managed properties before applying.", { reason: blocker });
+  }
   const ref = db.collection(APPLICATIONS).doc(auth.uid);
   await db.runTransaction(async (t) => {
     const snap = await t.get(ref);
@@ -114,7 +121,7 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
   if (typeof data.uid !== "string" || !UID.test(data.uid)) throw invalid("An applicant id is required.", "uid_invalid");
   if (typeof data.approve !== "boolean") throw invalid("approve must be true or false.", "approve_invalid");
   const note = text(data.note, "note", 500);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(APPLICATIONS).doc(data.uid);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Application not found.");
@@ -131,6 +138,7 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
       reviewed_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
     });
+    await writeAuditLog({ action: "agency_application_rejected", actorUid: auth.uid, actorRole: "SuperAdmin", targetUid: data.uid });
     return { success: true, status: "rejected" };
   }
 
@@ -171,6 +179,13 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     reviewed_by: auth.uid,
     reviewed_at: FieldValue.serverTimestamp(),
     updated_at: FieldValue.serverTimestamp(),
+  });
+  await writeAuditLog({
+    action: "agency_application_approved",
+    actorUid: auth.uid,
+    actorRole: "SuperAdmin",
+    targetUid: data.uid,
+    details: { agency_id: agencyRef.id },
   });
   return { success: true, status: "approved", agencyId: agencyRef.id };
 });

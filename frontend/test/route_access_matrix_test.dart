@@ -21,7 +21,7 @@ const Map<String, Set<String>?> expectedAccess = {
   '/financial-dashboard': public,
   '/super-admin': {'SuperAdmin'},
   '/admin': {'Admin', 'SuperAdmin'},
-  '/agency': {'AgencyAdmin'},
+  '/agency': {'AgencyAdmin', 'AgencyAgent'},
   '/owner': {'Owner'},
   '/tenant': {'Tenant'},
   '/checkout': {'Tenant'},
@@ -35,12 +35,13 @@ const Map<String, String> expectedHome = {
   'Admin': '/admin',
   'Investor': '/',
   'AgencyAdmin': '/agency',
+  'AgencyAgent': '/agency',
   'Owner': '/owner',
   'Tenant': '/tenant',
   '': '/',
 };
 
-const roles = ['SuperAdmin', 'Admin', 'AgencyAdmin', 'Owner', 'Tenant', 'Investor', ''];
+const roles = ['SuperAdmin', 'Admin', 'AgencyAdmin', 'AgencyAgent', 'Owner', 'Tenant', 'Investor', ''];
 
 void main() {
   test('the route_access table matches the expected matrix', () {

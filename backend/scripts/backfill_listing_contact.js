@@ -17,7 +17,8 @@
  *
  * The TAQ-100 project guard applies: a project that is not demo- needs --confirm-project=<id>.
  */
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldPath, FieldValue } = require("firebase-admin/firestore");
 const { parseArgs, resolveTarget } = require("./backfill_property_moderation");
 const { agencyListingIdentity, listingContactFields } = require("../listing_contact");
 
@@ -45,7 +46,6 @@ function contactUpdate(listing, expected, deleteSentinel) {
 }
 
 async function backfill(db, { apply = false } = {}) {
-  const { FieldPath, FieldValue } = admin.firestore;
   const agencies = new Map();
   const expectedFor = async (agencyId) => {
     const key = typeof agencyId === "string" && agencyId ? agencyId : "";
@@ -99,8 +99,8 @@ if (require.main === module) {
     const args = parseArgs(process.argv.slice(2));
     console.log(`Target project: ${args.project} (${args.apply ? "APPLY: will write" : "dry run: no writes"})`);
     const target = guardProject(args);
-    admin.initializeApp({ projectId: target.projectId });
-    const result = await backfill(admin.firestore(), { apply: args.apply });
+    initializeApp({ projectId: target.projectId });
+    const result = await backfill(getFirestore(), { apply: args.apply });
     console.log(`${result.changed.length} of ${result.scanned} listing(s) need new contact fields: ${result.changed.join(", ") || "none"}`);
     console.log(args.apply ? "Contact fields updated." : "Dry run. Re-run with --apply to update them.");
   })().catch((err) => {

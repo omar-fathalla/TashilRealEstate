@@ -2,7 +2,7 @@
 // TAQ-27: a written, guarded way to make the first SuperAdmin.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -12,7 +12,7 @@ const fns = require("../index");
 const { grantSelfServiceClaim } = require("../self_service_claims");
 const { parseArgs, backfillSelfService, bootstrapSuperAdmin } = require("../scripts/role_claims");
 
-const auth = admin.auth();
+const auth = getAuth();
 const projectId = process.env.GCLOUD_PROJECT;
 
 test.beforeEach(async () => {
@@ -105,6 +105,6 @@ test("TAQ-27: role_claims.js takes one mode at a time and needs a uid to bootstr
   assert.throws(() => parseArgs(["--project", "p", "--bootstrap-superadmin"]), /needs a uid/);
   assert.throws(() => parseArgs(["--project", "p", "--backfill-self-service", "--grant", "u"]), /one of/);
   assert.deepEqual(parseArgs(["--project", "p", "--bootstrap-superadmin", "u1", "--apply"]), {
-    project: "p", grant: [], apply: true, backfillSelfService: false, bootstrapSuperAdmin: "u1",
+    project: "p", grant: [], apply: true, backfillSelfService: false, bootstrapSuperAdmin: "u1", requireMfa: "", clearMfa: "",
   });
 });

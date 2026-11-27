@@ -19,9 +19,11 @@ import 'package:tashil_real_estate/features/portfolio/services/portfolio_control
 import 'package:tashil_real_estate/features/portfolio/services/rent_schedule_builder.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/collected_this_month.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/create_rent_invoice_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warning_notice_dialog.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/rent_receipt_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tax_invoice_viewer_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/tenant_checkout_dialog.dart';
@@ -181,9 +183,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             final overdueCount = countryInvoices.where((inv) => inv.status == 'overdue').length;
 
             // Financial KPIs
-            final totalCollected = countryInvoices
-                .where((inv) => inv.status == 'paid')
-                .fold<double>(0.0, (sum, inv) => sum + inv.totalAmountDue);
+            // TAQ-189: this month's electronic collections only, not every paid month.
+            final totalCollected = collectedElectronicallyThisMonth(countryInvoices, DateTime.now());
 
             final totalDueSoon = countryInvoices
                 .where((inv) => inv.status == 'due_soon')
@@ -928,7 +929,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                   label: loc.tr('sendReminderWhatsApp'),
                   icon: Icons.send_to_mobile_rounded,
                 ),
-                if (isOverdue) ...[
+                if (isOverdue && !AgencyStaffScope.isAgentOf(context)) ...[
                   TashilConnectedButtonSegment(
                     value: 'warning',
                     label: loc.tr('issueLegalWarningAction'),
@@ -1388,7 +1389,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               lang: lang,
             ),
           ),
-          if (isOverdue) ...[
+          if (isOverdue && !AgencyStaffScope.isAgentOf(context)) ...[
             const SizedBox(width: 5.0),
             // 3. Legal Warning Pill
             _TableConnectedActionPill(
@@ -2072,7 +2073,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                               lang: lang,
                             ),
                           ),
-                          if (isOverdue)
+                          if (isOverdue && !AgencyStaffScope.isAgentOf(context))
                             TashilButton(
                               variant: TashilButtonVariant.tonal,
                               icon: Icons.gavel_rounded,
@@ -2185,7 +2186,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                 ),
               ],
             ),
-            if (deletedInvoices.isNotEmpty)
+            if (deletedInvoices.isNotEmpty && !AgencyStaffScope.isAgentOf(context))
               TashilButton(
                 variant: TashilButtonVariant.outlined,
                 icon: Icons.delete_sweep_rounded,
@@ -2343,16 +2344,18 @@ class _RentCollectionViewState extends State<RentCollectionView> {
                             );
                           },
                         ),
-                        const SizedBox(width: 6),
-                        TashilIconButton.tonal(
-                          icon: Icons.delete_forever_rounded,
-                          size: 34,
-                          iconSize: 16,
-                          tooltip: loc.tr('deletePermanentlyAction'),
-                          color: colorScheme.error,
-                          backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.2),
-                          onPressed: () => _confirmPermanentlyDelete(context, loc, inv, colorScheme),
-                        ),
+                        if (!AgencyStaffScope.isAgentOf(context)) ...[
+                          const SizedBox(width: 6),
+                          TashilIconButton.tonal(
+                            icon: Icons.delete_forever_rounded,
+                            size: 34,
+                            iconSize: 16,
+                            tooltip: loc.tr('deletePermanentlyAction'),
+                            color: colorScheme.error,
+                            backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.2),
+                            onPressed: () => _confirmPermanentlyDelete(context, loc, inv, colorScheme),
+                          ),
+                        ],
                       ],
                     ),
                   ],

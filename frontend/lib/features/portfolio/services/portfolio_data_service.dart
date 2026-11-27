@@ -12,8 +12,12 @@ import 'package:tashil_real_estate/core/services/session_guard.dart';
 abstract class PortfolioBackend {
   String? get currentUserId;
 
-  /// The agency id from an AgencyAdmin's claims, or '' for everyone else.
+  /// The agency id from an AgencyAdmin's or AgencyAgent's claims, or '' for everyone else.
   Future<String> currentAgencyId();
+
+  /// True when the signed-in user's claims say AgencyAgent (TAQ-169): the rules give an agent no
+  /// invoices or transactions, so the portfolio does not ask for them.
+  Future<bool> currentIsAgencyAgent();
 
   /// True when the signed-in user's claims say SuperAdmin (TAQ-162).
   Future<bool> currentIsSuperAdmin();
@@ -56,7 +60,17 @@ class FirebasePortfolioBackend implements PortfolioBackend {
     if (user == null) return '';
     final claims = (await user.getIdTokenResult()).claims ?? const {};
     final agency = claims['agency_id'];
-    return claims['role'] == 'AgencyAdmin' && agency is String ? agency : '';
+    final role = claims['role'];
+    return (role == 'AgencyAdmin' || role == 'AgencyAgent') && agency is String ? agency : '';
+  }
+
+  @override
+  Future<bool> currentIsAgencyAgent() async {
+    if (currentUserId == null) return false;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final claims = (await user.getIdTokenResult()).claims ?? const {};
+    return claims['role'] == 'AgencyAgent';
   }
 
   @override

@@ -3,8 +3,7 @@ const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString, defineInt } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 const { appCheckEnforced } = require("./config");
 const { requireRole } = require("./authz");
@@ -54,6 +53,8 @@ const MODEL_ALIASES = {
 // for either feature and no business processing other people's documents. They keep every
 // visitor-level AI feature (valuation, search, market index, advisor) under the per-user quota.
 const PORTAL_ROLES = ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"];
+// TAQ-169: agency agents help list properties, but OCR (national IDs, contracts) stays off for them.
+const ONBOARDING_ROLES = [...PORTAL_ROLES, "AgencyAgent"];
 
 // `visitor`: reachable from public pages, so signed-out callers may use it under the
 // per-IP limit. `inline`: may carry base64 images or PDFs. `roles`: signed-in callers must
@@ -66,7 +67,7 @@ const FEATURES = {
   voice_broker: { visitor: true, inline: false },
   semantic_search: { visitor: true, inline: false },
   legal_advisor: { visitor: true, inline: false },
-  onboarding: { visitor: false, inline: false, roles: PORTAL_ROLES },
+  onboarding: { visitor: false, inline: false, roles: ONBOARDING_ROLES },
   document_ocr: { visitor: false, inline: true, roles: PORTAL_ROLES },
 };
 
@@ -356,7 +357,7 @@ function windowCount(data, windowField, countField, current) {
 }
 
 async function consumeQuota({ uid, ip, secret }) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const now = deps.now();
   const minute = Math.floor(now / 60000);
   const day = new Date(now).toISOString().slice(0, 10);

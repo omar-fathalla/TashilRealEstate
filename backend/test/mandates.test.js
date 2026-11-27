@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc: cdoc, getDoc, setDoc } = require("firebase/firestore");
 
@@ -15,7 +16,7 @@ const fns = require("../index");
 const mandates = require("../mandates");
 const { applicationFrom } = require("../agency_applications");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 const caller = (uid, claims = {}) => ({ uid, token: { uid, ...claims } });
 const owner = (uid = "ownerA") => caller(uid, { role: "Owner" });
@@ -29,8 +30,8 @@ async function clearAll() {
 }
 
 async function user(uid, claims) {
-  await admin.auth().createUser({ uid });
-  await admin.auth().setCustomUserClaims(uid, claims);
+  await getAuth().createUser({ uid });
+  await getAuth().setCustomUserClaims(uid, claims);
   await db.doc(`Users/${uid}`).set({ role: claims.role, full_name: `Name ${uid}`, ...(claims.agency_id ? { agency_id: claims.agency_id } : {}) });
 }
 
@@ -248,7 +249,7 @@ test("TAQ-149: an applicant applies once; a SuperAdmin approval creates the agen
   assert.equal(ag.licence_status, "pending");
   assert.equal(ag.verified_badge, false);
   assert.equal((await get(`Agencies/${agencyId}/private/profile`)).phone, "+971 50 000 0000");
-  const claims = (await admin.auth().getUser("ownerB")).customClaims;
+  const claims = (await getAuth().getUser("ownerB")).customClaims;
   assert.equal(claims.role, "AgencyAdmin");
   assert.equal(claims.agency_id, agencyId);
   assert.equal((await get("AgencyApplications/ownerB")).agency_id, agencyId);
@@ -268,13 +269,26 @@ test("TAQ-149: a rejected applicant may apply again; open leases or mandates blo
   await invite();
   await respond(true);
   await reason(review(true, root(), "ownerA"), "failed-precondition", "applicant_has_mandates");
-  assert.equal((await admin.auth().getUser("ownerA")).customClaims.role, "Owner");
+  assert.equal((await getAuth().getUser("ownerA")).customClaims.role, "Owner");
 
   await apply(tenant());
   const l = await db.collection("Leases").add({ owner_id: "ownerB", tenant_id: "tenantA", status: "active" });
   await reason(review(true, root(), "tenantA"), "failed-precondition", "applicant_has_open_leases");
   await l.update({ status: "terminated" });
   assert.equal((await review(true, root(), "tenantA")).status, "approved");
+});
+
+test("TAQ-195: open leases or active mandates refuse the application itself, and nothing is written", async () => {
+  const l = await db.collection("Leases").add({ owner_id: "ownerB", tenant_id: "tenantA", status: "active" });
+  await reason(apply(tenant()), "failed-precondition", "applicant_has_open_leases");
+  assert.equal((await db.doc("AgencyApplications/tenantA").get()).exists, false);
+  await l.update({ status: "terminated" });
+  assert.equal((await apply(tenant())).status, "pending");
+
+  await invite();
+  await respond(true);
+  await reason(apply(owner("ownerA")), "failed-precondition", "applicant_has_mandates");
+  assert.equal((await db.doc("AgencyApplications/ownerA").get()).exists, false);
 });
 
 async function clearLeases() {
@@ -289,5 +303,12 @@ test("TAQ-149: application fields are checked", async () => {
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "call me" }), /phone/);
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "+97150000000", orn: "12 34/5" }), /ORN/);
   assert.equal(applicationFrom({ name: "  Dune   Realty ", countryCode: "EG", phone: "0100 000 0000" }).name, "Dune Realty");
+  // TAQ-188: a spelled-out phone number or a bare domain is refused too.
+  for (const name of ["Realty zero five zero one two three four five six seven", "صفر واحد صفر خمسه تلاته اربعه سته سبعه", "Dune Realty example.com"]) {
+    assert.throws(() => applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }), /phone, link or email/, name);
+  }
+  for (const name of ["Seven Seas Realty", "One Two Three Homes", "First Gulf Properties"]) {
+    assert.equal(applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }).name, name);
+  }
   await reason(apply(caller("anon", { role: "Owner", firebase: { sign_in_provider: "anonymous" } })), "permission-denied");
 });

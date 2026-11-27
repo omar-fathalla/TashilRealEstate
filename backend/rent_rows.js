@@ -12,14 +12,12 @@
  * owner, its managing agency or a SuperAdmin may act; the parties and SuperAdmin read the doc.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
-const { requireFreshAuth, requireRole, loadLease, assertLeaseParty } = require("./authz");
+const { requireFreshAuth, requireRole, loadLease, assertLeaseParty, AGENCY_AGENT } = require("./authz");
 const { appCheckEnforced } = require("./config");
 const { stripContacts } = require("./contact_filter");
 
@@ -27,6 +25,7 @@ const ENFORCE_APP_CHECK = appCheckEnforced();
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 const NOTE_MAX = 500;
 const ACTIONS = ["trash", "restore", "delete", "note", "reminder", "legal_notice"];
+const AGENT_REFUSED_ACTIONS = ["delete", "legal_notice"];
 
 function cleanNote(value) {
   if (value === undefined || value === null) return "";
@@ -57,7 +56,7 @@ function changesFor(action, data) {
 
 const updateRentRow = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = await requireFreshAuth(request);
-  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", AGENCY_AGENT, "SuperAdmin"]); // TAQ-169
   const data = request.data || {};
   const period = data.period;
   if (typeof period !== "string" || !PERIOD.test(period)) {
@@ -69,10 +68,14 @@ const updateRentRow = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances:
   if (typeof data.leaseId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(data.leaseId)) {
     throw new HttpsError("invalid-argument", "A lease id is required.");
   }
+  // TAQ-169: an agent works the rent rows but cannot delete one or send a legal notice.
+  if (role === AGENCY_AGENT && AGENT_REFUSED_ACTIONS.includes(data.action)) {
+    throw new HttpsError("permission-denied", "Only the agency admin can do this.", { reason: "agent_not_allowed" });
+  }
   const lease = await loadLease(data.leaseId);
   assertLeaseParty(auth, role, lease);
   const changes = changesFor(data.action, data);
-  const ref = admin.firestore().collection("RentRowStates").doc(`${lease.id}_${period}`);
+  const ref = getFirestore().collection("RentRowStates").doc(`${lease.id}_${period}`);
   await ref.set({
     lease_id: lease.id,
     period,
