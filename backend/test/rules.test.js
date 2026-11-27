@@ -629,6 +629,28 @@ test("TAQ-154: the public name and about text cannot carry contact details", asy
   await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), { about: "Since 2005, 120 units in Dubai Marina" }));
 });
 
+test("TAQ-198: the agency name and about text refuse spelled-out phones and bare domains", async () => {
+  await seedAgency();
+  for (const change of [
+    { name: "Delta qa-homes.com", names: { en: "Delta qa-homes.com" } },
+    { name: "Delta qa-homes.Com" },
+    { name: "Delta example . com" },
+    { names: { en: "Delta zero five zero one two three four five six" } },
+    { names: { ar: "دلتا صفر خمسه صفر واحد اتنين تلاته اربعه خمسه سته" } },
+    { about: "Call us: zero five zero, one two three, four five six" },
+    { about: "Visit tashil.online for more" },
+  ]) {
+    await assertFails(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), change), JSON.stringify(change).slice(0, 60));
+  }
+  for (const change of [
+    { name: "Seven Seas Realty", names: { ar: "سبع بحار", en: "One Two Three Homes", hi: "Seven Seas" } },
+    { about: "Since 2005. Info and viewings through the app. Five stars from 300 owners." },
+    { about: "We manage units in Dubai Marina. Commercial and residential." },
+  ]) {
+    await assertSucceeds(updateDoc(doc(agency1Admin(), "Agencies/agency-1"), change), JSON.stringify(change).slice(0, 60));
+  }
+});
+
 test("TAQ-154: private agency docs take only known bounded fields", async () => {
   await seedAgency();
   const ref = doc(agency1Admin(), "Agencies/agency-1/private/profile");
