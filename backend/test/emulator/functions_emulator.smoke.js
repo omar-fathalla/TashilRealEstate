@@ -40,12 +40,25 @@ async function signUp(email, claims) {
   return { uid: user.uid, idToken: body.idToken };
 }
 
+// One callable may take at most this long (TAQ-156): a slow emulator then fails with the callable's
+// name instead of hanging until the whole test times out.
+const CALL_TIMEOUT_MS = Number(process.env.SMOKE_CALL_TIMEOUT_MS) || 60000;
+
 async function callable(name, idToken, data) {
-  const res = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ data }),
-  });
+  let res;
+  try {
+    res = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ data }),
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    });
+  } catch (err) {
+    if (err && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(`callable ${name} did not answer within ${CALL_TIMEOUT_MS} ms`);
+    }
+    throw err;
+  }
   return { status: res.status, body: await res.json() };
 }
 
