@@ -345,7 +345,10 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
             borderRadius: innerRadius,
             splashColor: currentFg.withValues(alpha: 0.12),
             highlightColor: currentFg.withValues(alpha: 0.08),
-            child: Padding(
+            // The whole pill is the tap target, not just its label row (TAQ-168).
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: widget.height),
+              child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: widget.isFullWidth ? 4.0 : 14.0,
               ),
@@ -397,6 +400,7 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                   ],
                 ],
               ),
+            ),
             ),
           ),
         ),

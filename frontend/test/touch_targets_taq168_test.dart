@@ -8,7 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 
 Widget _app(Widget body, {MaterialTapTargetSize? tapTargetSize}) => MaterialApp(
-      theme: ThemeData(useMaterial3: true, materialTapTargetSize: tapTargetSize),
+      // The app theme sets standard density; desktop's default compact density takes 8dp off.
+      theme: ThemeData(useMaterial3: true, materialTapTargetSize: tapTargetSize, visualDensity: VisualDensity.standard),
       home: Scaffold(body: Center(child: body)),
     );
 
@@ -18,6 +19,7 @@ void main() {
   test('the app theme pads tap targets on every platform', () {
     final src = File('lib/core/theme/app_theme.dart').readAsStringSync();
     expect(src, contains('materialTapTargetSize: MaterialTapTargetSize.padded'));
+    expect(src, contains('      visualDensity: VisualDensity.standard,\n'));
   });
 
   testWidgets('on desktop and web, a padded theme gives buttons, icon buttons and chips 48dp', (tester) async {
