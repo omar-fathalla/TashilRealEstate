@@ -758,11 +758,10 @@ test("TAQ-16: the owner records a cash payment: paid, one recorded invoice, an a
   assert.equal((await db.doc(`Users/owner/notifications/pay_${result.transactionId}_owner`).get()).exists, false, "the recorder is not notified of their own entry");
 });
 
-test("TAQ-16: the managing agency and platform staff can record, and the owner is notified of their entry", async () => {
+test("TAQ-16: the managing agency and a SuperAdmin can record, and the owner is notified of their entry", async () => {
   const agency = caller("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
   const staff = caller("root", { role: "SuperAdmin" });
-  const admin1 = caller("adm", { role: "Admin" });
-  for (const [who, period, method] of [[agency, monthsFromNow(-1), "bank_transfer"], [staff, monthsFromNow(-2), "cash"], [admin1, monthsFromNow(-3), "bank_transfer"]]) {
+  for (const [who, period, method] of [[agency, monthsFromNow(-1), "bank_transfer"], [staff, monthsFromNow(-2), "cash"]]) {
     const r = await manual(cash({ period, method, reference: "TRF-1" }), who);
     assert.equal(r.status, "paid");
     const tx = (await db.doc(`Transactions/${r.transactionId}`).get()).data();
@@ -772,9 +771,10 @@ test("TAQ-16: the managing agency and platform staff can record, and the owner i
   }
 });
 
-test("TAQ-16: the tenant, other owners, other agencies, investors and signed-out callers cannot record a payment", async () => {
+test("TAQ-16, TAQ-183: the tenant, other owners, other agencies, investors, the platform Admin and signed-out callers cannot record a payment", async () => {
   await db.collection("Users").doc("inv").set({ role: "Investor" });
   const denied = [
+    caller("adm", { role: "Admin" }),
     caller("tenant"),
     caller("stranger"),
     caller("agent2", { role: "AgencyAdmin", agency_id: "agency-2" }),

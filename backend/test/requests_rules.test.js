@@ -40,15 +40,15 @@ test.beforeEach(async () => {
 const V = (db) => doc(db, "ViewingRequests/v1");
 const A = (db) => doc(db, "RentalApplications/p1_visitorA");
 
-test("TAQ-112: the requester, owner, managing agency and staff read a viewing request and an application", async () => {
-  for (const who of ["visitorA", "ownerA", "ag1", "admin", "sa"]) {
+test("TAQ-112: the requester, owner, managing agency and SuperAdmin read a viewing request and an application", async () => {
+  for (const who of ["visitorA", "ownerA", "ag1", "sa"]) {
     await assertSucceeds(getDoc(V(ctx[who])), `viewing ${who}`);
     await assertSucceeds(getDoc(A(ctx[who])), `application ${who}`);
   }
 });
 
-test("TAQ-112: other visitors, other owners, other agencies and signed-out users cannot read them", async () => {
-  for (const who of ["visitorB", "ownerB", "ag2", "unauth"]) {
+test("TAQ-112, TAQ-184: other visitors, other owners, other agencies, the platform Admin and signed-out users cannot read them", async () => {
+  for (const who of ["visitorB", "ownerB", "ag2", "admin", "unauth"]) {
     await assertFails(getDoc(V(ctx[who])), `viewing ${who}`);
     await assertFails(getDoc(A(ctx[who])), `application ${who}`);
   }
@@ -76,4 +76,10 @@ test("TAQ-112: nobody writes these collections from the client, not even the par
     await assertFails(deleteDoc(V(ctx[who])), `delete viewing ${who}`);
     await assertFails(deleteDoc(A(ctx[who])), `delete application ${who}`);
   }
+});
+
+test("TAQ-184: the platform Admin cannot list viewing requests or applications either", async () => {
+  await assertFails(getDocs(collection(ctx.admin, "ViewingRequests")));
+  await assertFails(getDocs(collection(ctx.admin, "RentalApplications")));
+  await assertSucceeds(getDocs(collection(ctx.sa, "ViewingRequests")));
 });

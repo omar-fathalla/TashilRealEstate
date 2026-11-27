@@ -666,10 +666,11 @@ function parsePaidOn(value, now) {
 
 /**
  * Who may record a payment that happened outside the gateway: the lease's owner, the agency that
- * manages it, or platform staff (Admin, SuperAdmin). Never the tenant.
+ * manages it, or a SuperAdmin. Never the tenant, and never the platform Admin, which has no
+ * access to leases or transactions (TAQ-91, TAQ-183).
  */
 function assertCanRecordPayment(auth, role, lease) {
-  if (role === "SuperAdmin" || role === "Admin") return;
+  if (role === "SuperAdmin") return;
   if (role === "Owner" && lease.owner_id && lease.owner_id === auth.uid) return;
   const agencyId = auth.token && auth.token.agency_id;
   if (role === "AgencyAdmin" && agencyId && lease.agency_id === agencyId) return;
@@ -678,7 +679,7 @@ function assertCanRecordPayment(auth, role, lease) {
 
 const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = await requireFreshAuth(request);
-  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"]);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
 
   const lease = await loadLease(data.leaseId);

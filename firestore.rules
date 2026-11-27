@@ -1016,9 +1016,10 @@ service cloud.firestore {
     // Written only by the requestViewing / applyForRental / respond / decide / createLease functions
     // (Admin SDK): the listing must be live, the caller rate limited, and the owner and agency are
     // copied from the public listing. Readable by the signed-in requester, the owner, the managing
-    // agency and platform staff. No client writes.
+    // agency and SuperAdmin. Not the platform Admin: the docs carry names, phone numbers and
+    // messages, and no Admin screen reads them (TAQ-184). No client writes.
     match /ViewingRequests/{requestId} {
-      allow read: if isPlatformStaff()
+      allow read: if isSuperAdmin()
         || (isAuthenticated() && (resource.data.get('requester_id', '') == request.auth.uid
           || resource.data.get('owner_id', '') == request.auth.uid))
         || agencyManagesResource();
@@ -1026,7 +1027,7 @@ service cloud.firestore {
     }
 
     match /RentalApplications/{applicationId} {
-      allow read: if isPlatformStaff()
+      allow read: if isSuperAdmin()
         || (isAuthenticated() && (resource.data.get('applicant_id', '') == request.auth.uid
           || resource.data.get('owner_id', '') == request.auth.uid))
         || agencyManagesResource();
