@@ -965,3 +965,6 @@ exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoToke
 
 // A listing held hidden by moderation is never published, whoever wrote the doc (TAQ-135).
 exports.holdHiddenListingsOffline = require("./hidden_listing_guard").holdHiddenListingsOffline;
+
+// TAQ-171: receives the Report-Only CSP reports (Hosting rewrite /csp-report); logs only.
+exports.cspReport = require("./csp_report").cspReport;

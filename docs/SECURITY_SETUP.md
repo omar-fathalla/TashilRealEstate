@@ -40,6 +40,10 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
    flutter build appbundle --release
    ```
 
+   Get `<site key>` with `node backend/scripts/app_check_site_key.js --project <project id>`
+   (TAQ-170; see docs/DEV_ENVIRONMENT.md). It reads the key App Check has registered for the
+   web app and fails if there isn't one.
+
    Without the define, release web builds skip App Check instead of sending tokens made
    with an invalid key.
 
@@ -51,6 +55,11 @@ web user. Sign-in and role checks apply whether or not App Check is enforced.
    uses where `google.com` is unreachable. `recaptchaenterprise.googleapis.com` is not listed: the
    browser never calls it (assessments are server side). Check the CSP report for violations
    from a release web build with the real key before enforcing the CSP.
+   Browsers send those reports to `/csp-report`, which Hosting rewrites to the `cspReport`
+   function (TAQ-171). It logs one `csp_violation` line per report, with the directive, the
+   blocked origin and path, and the page path, and stores nothing. Read the reports in Cloud
+   Logging (`jsonPayload.message="csp_violation"`). Deploy functions with or before hosting,
+   because the rewrite needs the function to exist.
 6. **Check the metrics** in Firebase console > App Check > APIs: most callable requests
    should be "verified" before enforcing.
 7. **Enable enforcement for the callables** by setting `ENFORCE_APP_CHECK=true` for the
