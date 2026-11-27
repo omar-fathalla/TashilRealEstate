@@ -6,6 +6,7 @@ import '../../../core/design_system/cards/tashil_cards.dart';
 import '../../../core/design_system/snackbars/tashil_snackbars.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_controller.dart';
+import '../../../core/routing/navigation_lock.dart';
 import '../../agency_workspace/agency_staff_scope.dart';
 import '../models/request_models.dart';
 import '../services/requests_service.dart';
@@ -381,7 +382,8 @@ class _RespondDialogState extends State<_RespondDialog> {
       _error = null;
     });
     try {
-      await widget.onSend(_note.text.trim());
+      // Browser Back on web would leave the page and drop the dialog with it (TAQ-190).
+      await NavigationLock.holdWhile(() => widget.onSend(_note.text.trim()));
       if (mounted) navigator.pop(true);
     } catch (e) {
       if (!mounted) return;

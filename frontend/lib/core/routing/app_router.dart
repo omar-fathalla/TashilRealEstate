@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/auth/role_session.dart';
+import 'package:tashil_real_estate/core/routing/navigation_lock.dart';
 import 'package:tashil_real_estate/core/routing/role_gate.dart';
 import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/features/public_marketplace/public_marketplace_screen.dart';
@@ -62,6 +63,8 @@ GoRouter buildAppRouter({
   GoRoute route(String path, Widget Function(GoRouterState state) screen) {
     return GoRoute(
       path: path,
+      // TAQ-190: browser Back on web can't leave a page while a request is being sent.
+      onExit: (context, state) => !NavigationLock.held,
       builder: (context, state) {
         final page = screenOverride?.call(path) ?? screen(state);
         return RouteAccess.isProtected(path) ? RoleGate(route: path, session: session, child: page) : page;
