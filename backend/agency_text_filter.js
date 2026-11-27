@@ -56,11 +56,19 @@ const ARABIC_NUMBER_WORDS = [
   "خمسطاشر", "ستاشر", "سطاشر", "سبعتاشر", "سبعطاشر", "تمنتاشر", "تمانتاشر", "تمنطاشر", "تسعتاشر", "تسعطاشر",
 ];
 const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.join("|")}))`;
-// Teens and tens stand for two digits ("صفر خمسة صفر حداشر اتناشر تلتاشر" is 050111213), so they
-// count twice; they are also in the lists above.
-const TWO_DIGIT_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|diez"
+// Teens stand for two digits ("صفر خمسة صفر حداشر اتناشر تلتاشر" is 050111213), so they count
+// twice; they are also in the lists above. Tens count once (TAQ-215: "nineteen ninety eight",
+// "Twenty Twenty Twenty-One"), and so does عشر/عشرة, which follows a unit word ("ثلاثة عشر").
+const TWO_DIGIT_WORD_PATTERN = "(?:eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|onze|douze"
+  + "|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+// Teens and tens: a comma before one of these breaks a number-word run (TAQ-215: "ninety eight,
+// twenty years", "Eleven, twelve, thirteen"); a comma between single digits ("zero five zero, one
+// two three") does not.
+const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta"
   + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون"
   + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+// Commas (Latin, full-width, ideographic, Arabic, Arabic thousands separator).
+const COMMAS = [0x2c, 0xff0c, 0x3001, 0x60c, 0x66c];
 const GLUED_PATTERN = "(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}";
 const CONNECTOR_PATTERN = "(?:and|et|y|و)";
 
@@ -69,21 +77,26 @@ const TLDS = ["com", "net", "org", "info", "biz", "co", "io", "me", "ae", "eg", 
   "ly", "gl", "us", "uk", "in", "sa", "qa", "kw", "edu", "gov", "shop", "store"];
 // A known ending, each letter optionally followed by one space ("c om", "c o m").
 const SPACED_TLD_PATTERN = spaced(TLDS);
-// Endings that are not also everyday words, for the forms that look like a sentence ("x. com",
-// "x · com", "x point com"). uk, edu and gov start real sentences ("Dubai. UK investors"), so they
-// count there only in lower case (LOWER_CASE_TLD_PATTERN, checked on the original case).
-const STRICT_TLD_PATTERN = spaced(["com", "org", "biz", "io", "xyz", "ae", "eg", "sa", "qa", "kw", "ly"]);
-const LOWER_CASE_TLD_PATTERN = "(?:uk|edu|gov)";
-// Endings a comma glued between two words turns into a domain ("x,com").
+// Endings that are not words or country codes, for the forms that look like a sentence or a
+// separator ("x. com", "x · com", "x·com"), in any case.
+const STRICT_TLD_PATTERN = spaced(["com", "org", "biz", "xyz"]);
+// Country codes and endings that start real sentences or close a separator list ("Dubai. UK
+// investors", "Dubai · Abu Dhabi · AE", TAQ-211/214): they count only in lower case, checked on
+// the original case (x. uk, x · ae, x·sa refused).
+const LOWER_CASE_TLD_PATTERN = "(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)";
+// After "point"/"punto", lower case only ("x point com", "x point net"; not "Point Commercial").
+const POINT_TLD_PATTERN = "(?:com|org|biz|xyz|net|io|ae|eg|sa|qa|kw|ly)";
+// After a comma, lower case only: glued before these, or spaced before com ("x,com", "x, com",
+// "x、com"); "Sales,Com", "Info,Biz Bay" and "Gross,net yields" pass. net is left out: "Gross,net".
 const COMMA_TLD_PATTERN = "(?:com|org|biz|xyz)";
 // Endings refused after an abbreviation even with three or more letters ("ltd.realty", "Dr.com").
 const ABBREVIATION_TLD_PATTERN = `(?:${SPACED_TLD_PATTERN.slice(3, -1)}|realty|website|estate|properties|property|rentals|agency|club|tech|pro|top|world|live)`;
 // Endings that are also words in a company name (Co.LLC, Jr.Homes, Co.Ltd): refused after an
 // abbreviation only when written in lower case, as a typed domain is (co.llc, dr.homes, eng.dev).
-const ABBREVIATION_WORD_TLD_PATTERN = "(?:homes|house|apartments|villas|land|immo|city|group|global|dev|cloud|space|ltd|llc|inc|company|realestate)";
+const ABBREVIATION_WORD_TLD_PATTERN = "(?:homes|house|apartments|villas|land|immo|city|group|global|dev|cloud|space|ltd|llc|inc|company|realestate|rent|vip)";
 const ARABIC_TLD_PATTERN = "(?:مصر|امارات|الامارات|السعوديه|السعودية|سعودي|قطر|الاردن|عمان|البحرين|الكويت|المغرب|الجزائر|تونس|فلسطين|سوريه|سورية|شبكه|شبكة|موقع|كوم|عرب)";
 const SPOKEN_ARABIC_TLD_PATTERN = "(?:كوم|نت|اورج)";
-const DOT_WORD_PATTERN = "(?:dot|d0t|نقطة|نقطه|دوت)";
+const DOT_WORD_PATTERN = "(?:dot|d0t|d[.]o[.]t|نقطة|نقطه|دوت)";
 // "point" and "punto" are everyday words, so only before an ending that is not ("x point com").
 const POINT_WORD_PATTERN = "(?:point|punto)";
 const ABBREVIATION_PATTERN = "(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr)";
@@ -98,7 +111,7 @@ const INVISIBLES = [[0x300, 0x36f], 0xad, 0x180e, [0x200b, 0x200f], [0x2060, 0x2
   [0x64b, 0x65f], 0x670, 0x640];
 const UNICODE_FULL_STOPS = [0x3002, 0xff61, 0xfe52, 0xff0e, 0x2024];
 const ALT_DOTS = [0xb7, 0x2022, 0x2219, 0x22c5, 0x2027, 0x66b, 0x6d4, 0x30fb, 0xff65,
-  0x2e31, 0xa78f, 0x25cf, 0x25e6, 0x2d9, 0x318d, 0x1427, 0xb0];
+  0x2e31, 0xa78f, 0x25cf, 0x25e6, 0x2d9, 0x318d, 0x1427, 0xb0, 0x2218];
 const ENCLOSED_LETTERS = [[0x249c, 0x24e9], [0x1f130, 0x1f189]];
 const LETTER_SYMBOLS = [[0x1d400, 0x1d7ff], ...ENCLOSED_LETTERS];
 const hex = (c) => c.toString(16);
@@ -120,7 +133,9 @@ const GLUED_ALT_DOT = reAll(`([\\p{L}\\p{N}])${ALT_DOT}(${STRICT_TLD_PATTERN}(?:
 // every dot-like character to U+00B7, parenthesized letters to plain ones.
 const ANY_ALT_DOT = reAll(ALT_DOT);
 const PARENTHESIZED = /[\u249c-\u24b5]/gu;
-const GLUED_COMMA = reAll(`([\\p{L}\\p{N}]),(${COMMA_TLD_PATTERN}(?:[^\\p{L}]|$))`);
+const COMMA = `[${jsClass(COMMAS)}]`;
+// A comma and space between a word and a teen or tens word breaks a number-word run (TAQ-215).
+const WORD_COMMA = reAll(`(\\p{L})${COMMA}\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
 
 /** The text with invisibles removed and Unicode full stops as '.', case kept (rules: c). */
 function casedAgencyText(text) {
@@ -140,7 +155,6 @@ function normaliseAgencyText(text) {
     .replace(/ı/gu, "i")
     .replace(FULL_STOP, ".")
     .replace(GLUED_ALT_DOT, "$1.$2")
-    .replace(GLUED_COMMA, "$1.$2")
     .replace(/[أإآٱ]/gu, "ا")
     .replace(/ى/gu, "ي")
     .replace(reAll(`[\\[({]${SPACE}*(?:[.]|dot)${SPACE}*[\\])}]`), ".");
@@ -148,9 +162,10 @@ function normaliseAgencyText(text) {
 
 /** The marker string the phone check reads: '#' number word, '%' single digit, '&' connector. */
 function numberMarkers(normal) {
-  return `  ${normal.replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+  return `  ${normal.replace(WORD_COMMA, "$1 brk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
     .replace(reAll(` ${TWO_DIGIT_WORD_PATTERN} `), " ## ")
     .replace(reAll(` ${NUMBER_WORD_PATTERN} `), " # ")
+    .replace(/ 0\p{Nd}\p{Nd} /gu, " %%% ")
     .replace(/ \p{Nd} /gu, " % ")
     .replace(reAll(` ${CONNECTOR_PATTERN} `), " & ")
     .replace(/\s+/gu, "")
@@ -166,14 +181,17 @@ const DOT_FORM = "(?:[.]| +[.] ?)";
 const DOMAIN = re(`${LABEL}${DOT_FORM}(?:${LETTERLIKE}{2}|${ARABIC_TLD_PATTERN}|${SPACED_TLD_PATTERN}${END})`);
 const SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${STRICT_TLD_PATTERN}${END}`);
 const WORD_DOT = re(`[\\p{L}\\p{N}][ _-]*${DOT_WORD_PATTERN}[ _-]*(?:${SPACED_TLD_PATTERN}|${SPOKEN_ARABIC_TLD_PATTERN})${END}`);
-const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*${STRICT_TLD_PATTERN}${END}`);
 // On the original case (casedAgencyText):
 const LOWER_CASE_SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${LOWER_CASE_TLD_PATTERN}${END}`);
+const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*${POINT_TLD_PATTERN}${END}`);
+const COMMA_DOMAIN = re(`[\\p{L}\\p{N}](?:${COMMA}${COMMA_TLD_PATTERN}| ?${COMMA} ?com)${END}`);
 // With the i flag for the abbreviation; the ending must then be lower case (rules: (?i:abbr)[.]ending).
 const ABBREVIATION_WORD_DOMAIN = new RegExp(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}[.](${ABBREVIATION_WORD_TLD_PATTERN})${END}`, "giu");
-// Letters typed for digits next to a digit ("O5O l234567"): O -> 0, l and I -> 1, then the phone
-// check runs again. A letter after a digit becomes " 0"/" 1" (rules can't write "$1" then a digit).
-const LETTER_DIGITS = [[/[oO](\p{Nd})/gu, "0$1"], [/[lI](\p{Nd})/gu, "1$1"], [/(\p{Nd})[oO]/gu, "$1 0"], [/(\p{Nd})[lI]/gu, "$1 1"]];
+// Letters typed for digits next to a digit ("O5O l234567", "0S0 1234567"): O -> 0, l and I -> 1,
+// S before a digit -> 5, then the phone check runs again. A letter after a digit becomes " 0"/" 1"
+// (rules can't write "$1" then a digit); S after a digit is left alone ("1990s").
+const LETTER_DIGITS = [[/[oO](\p{Nd})/gu, "0$1"], [/[lI](\p{Nd})/gu, "1$1"], [/[sS](\p{Nd})/gu, "5$1"],
+  [/(\p{Nd})[oO]/gu, "$1 0"], [/(\p{Nd})[lI]/gu, "$1 1"]];
 
 function lettersAsDigits(text) {
   return LETTER_DIGITS.reduce((out, [pattern, sub]) => out.replace(pattern, sub), text);
@@ -181,8 +199,10 @@ function lettersAsDigits(text) {
 
 /** The domain-like fragment in the original case, or "" (lower-case-only endings). */
 function casedDomainIn(cased) {
-  const m = cased.match(LOWER_CASE_SPACE_AFTER_DOT);
-  if (m) return wordAround(cased, m.index, m[0].length).toLowerCase();
+  for (const pattern of [LOWER_CASE_SPACE_AFTER_DOT, POINT_WORD, COMMA_DOMAIN]) {
+    const m = cased.match(pattern);
+    if (m) return wordAround(cased, m.index, m[0].length).toLowerCase();
+  }
   for (const a of ` ${cased}`.matchAll(ABBREVIATION_WORD_DOMAIN)) {
     if (a[1] === a[1].toLowerCase()) return wordAround(` ${cased}`, a.index, a[0].length).toLowerCase();
   }
@@ -197,7 +217,7 @@ const ABBREVIATION_DOMAIN = re(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}${DOT_FORM
 function domainIn(normal) {
   const text = ` ${normal.replace(reAll(`${SPACE}+`), " ")}`;
   const exempted = text.replace(ABBREVIATION, "$1  $2").replace(PLACE, " $1");
-  for (const pattern of [DOMAIN, SPACE_AFTER_DOT, WORD_DOT, POINT_WORD, WWW]) {
+  for (const pattern of [DOMAIN, SPACE_AFTER_DOT, WORD_DOT, WWW]) {
     const m = exempted.match(pattern);
     if (m) return wordAround(exempted, m.index, m[0].length);
   }
@@ -249,12 +269,12 @@ module.exports = {
   normaliseAgencyText,
   numberMarkers,
   RULES_FRAGMENTS: {
-    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
-    LOWER_CASE_TLD_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
+    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
+    LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
     ABBREVIATION_WORD_TLD_PATTERN, ARABIC_TLD_PATTERN, SPOKEN_ARABIC_TLD_PATTERN, DOT_WORD_PATTERN,
     POINT_WORD_PATTERN, ABBREVIATION_PATTERN, PLACE_PATTERN,
     INVISIBLES_RULES: rulesClass(INVISIBLES), FULL_STOPS_RULES: rulesClass(UNICODE_FULL_STOPS),
     ALT_DOTS_RULES: rulesClass(ALT_DOTS), LETTER_SYMBOLS_RULES: rulesClass(LETTER_SYMBOLS),
-    ENCLOSED_LETTERS_RULES: rulesClass(ENCLOSED_LETTERS),
+    ENCLOSED_LETTERS_RULES: rulesClass(ENCLOSED_LETTERS), COMMAS_RULES: rulesClass(COMMAS),
   },
 };
