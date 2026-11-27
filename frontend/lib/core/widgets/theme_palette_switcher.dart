@@ -26,7 +26,7 @@ class ThemePaletteSwitcher extends StatelessWidget {
           valueListenable: controller.isDarkMode,
           builder: (context, isDark, _) {
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(24),
@@ -35,23 +35,32 @@ class ThemePaletteSwitcher extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. Five M3 Seed Color Dots
-                  for (final palette in M3ThemePalette.values) ...[
-                    _buildColorDot(
+                  // 1. Five M3 Seed Color Dots. With 48dp targets (TAQ-159) five dots need ~240dp,
+                  // so a compact switcher on a phone-width screen folds them into one 48dp menu.
+                  if (isCompact &&
+                      MediaQuery.sizeOf(context).width < _compactMenuBreakpoint)
+                    _buildPaletteMenu(
                       context,
-                      palette: palette,
-                      isSelected: palette == activePalette,
+                      activePalette: activePalette,
                       lang: lang,
-                      onTap: () => controller.setPalette(palette),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
+                      onSelected: controller.setPalette,
+                    )
+                  else
+                    for (final palette in M3ThemePalette.values) ...[
+                      _buildColorDot(
+                        context,
+                        palette: palette,
+                        isSelected: palette == activePalette,
+                        lang: lang,
+                        onTap: () => controller.setPalette(palette),
+                      ),
+                    ],
 
                   // Divider
                   Container(
                     height: 18,
                     width: 1,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
                     color: colorScheme.outlineVariant,
                   ),
 
@@ -59,11 +68,21 @@ class ThemePaletteSwitcher extends StatelessWidget {
                   IconButton(
                     iconSize: 18,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    tooltip: isDark ? 'الوضع النهاري (Light)' : 'الوضع الليلي (Dark)',
+                    // TAQ-159: M3 minimum touch target (48dp), the icon stays 18.
+                    constraints: const BoxConstraints(
+                      minWidth: kMinInteractiveDimension,
+                      minHeight: kMinInteractiveDimension,
+                    ),
+                    tooltip: isDark
+                        ? 'الوضع النهاري (Light)'
+                        : 'الوضع الليلي (Dark)',
                     icon: Icon(
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
-                      color: isDark ? Colors.amber[300] : colorScheme.onSurfaceVariant,
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_outlined,
+                      color: isDark
+                          ? Colors.amber[300]
+                          : colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () => controller.toggleDarkMode(),
                   ),
@@ -76,6 +95,45 @@ class ThemePaletteSwitcher extends StatelessWidget {
     );
   }
 
+  static const double _compactMenuBreakpoint = 600;
+
+  Widget _buildPaletteMenu(
+    BuildContext context, {
+    required M3ThemePalette activePalette,
+    required String lang,
+    required ValueChanged<M3ThemePalette> onSelected,
+  }) {
+    return PopupMenuButton<M3ThemePalette>(
+      key: const ValueKey('theme-palette-menu'),
+      tooltip: activePalette.getLocalizedName(lang),
+      initialValue: activePalette,
+      onSelected: onSelected,
+      constraints: const BoxConstraints(minWidth: 160),
+      itemBuilder: (context) => [
+        for (final palette in M3ThemePalette.values)
+          PopupMenuItem<M3ThemePalette>(
+            value: palette,
+            child: Row(
+              children: [
+                Icon(Icons.circle, size: 18, color: palette.color),
+                const SizedBox(width: 12),
+                Expanded(child: Text(palette.getLocalizedName(lang))),
+                if (palette == activePalette)
+                  const Icon(Icons.check_rounded, size: 18),
+              ],
+            ),
+          ),
+      ],
+      child: SizedBox(
+        width: kMinInteractiveDimension,
+        height: kMinInteractiveDimension,
+        child: Center(
+          child: Icon(Icons.circle, size: 22, color: activePalette.color),
+        ),
+      ),
+    );
+  }
+
   Widget _buildColorDot(
     BuildContext context, {
     required M3ThemePalette palette,
@@ -85,40 +143,51 @@ class ThemePaletteSwitcher extends StatelessWidget {
   }) {
     return Tooltip(
       message: palette.getLocalizedName(lang),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 24,
-          height: 24,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: isSelected
-                ? Border.all(color: palette.color, width: 2)
-                : Border.all(color: Colors.transparent, width: 2),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: palette.color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                if (isSelected)
-                  BoxShadow(
-                    color: palette.color.withValues(alpha: 0.4),
-                    blurRadius: 4,
-                    spreadRadius: 1,
+      // TAQ-159: the swatch stays 24dp, but the tap target (and its semantics node) is 48x48.
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: kMinInteractiveDimension,
+            height: kMinInteractiveDimension,
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 24,
+                height: 24,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: isSelected
+                      ? Border.all(color: palette.color, width: 2)
+                      : Border.all(color: Colors.transparent, width: 2),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: palette.color,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: palette.color.withValues(alpha: 0.4),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                    ],
                   ),
-              ],
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+              ),
             ),
-            child: isSelected
-                ? const Icon(
-                    Icons.check_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  )
-                : null,
           ),
         ),
       ),
