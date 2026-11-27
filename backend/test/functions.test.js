@@ -268,6 +268,35 @@ test("TAQ-9: setUserRole writes the role and agency as custom claims", async () 
   assert.deepEqual(user.customClaims, { role: "Owner" });
 });
 
+test("TAQ-186: setUserRole never grants or removes SuperAdmin, and never changes the caller's own role", async () => {
+  const root = caller("root", { role: "SuperAdmin" });
+  await admin.auth().createUser({ uid: "root" });
+  await admin.auth().setCustomUserClaims("root", { role: "SuperAdmin" });
+  await admin.auth().createUser({ uid: "other-root" });
+  await admin.auth().setCustomUserClaims("other-root", { role: "SuperAdmin" });
+  await admin.auth().createUser({ uid: "target" });
+  const reason = async (data, expected) => {
+    await assert.rejects(fns.setUserRole.run({ data, auth: root }), (e) => e.code === "permission-denied" && e.details && e.details.reason === expected);
+  };
+  await reason({ uid: "target", role: "SuperAdmin" }, "superadmin_out_of_band");
+  await reason({ uid: "other-root", role: "Owner" }, "superadmin_out_of_band");
+  await reason({ uid: "other-root", role: "Admin" }, "superadmin_out_of_band");
+  await reason({ uid: "root", role: "Owner" }, "self_role_change");
+  await reason({ uid: "root", role: "SuperAdmin" }, "superadmin_out_of_band");
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims || {}, {});
+  assert.deepEqual((await admin.auth().getUser("other-root")).customClaims, { role: "SuperAdmin" });
+  assert.deepEqual((await admin.auth().getUser("root")).customClaims, { role: "SuperAdmin" });
+  await fns.setUserRole.run({ data: { uid: "target", role: "Admin" }, auth: root });
+  assert.deepEqual((await admin.auth().getUser("target")).customClaims, { role: "Admin" }, "other roles still work");
+});
+
+test("TAQ-186: role_claims.js still assigns SuperAdmin out of band", async () => {
+  const { applyUserRole } = require("../roles");
+  await admin.auth().createUser({ uid: "new-root" });
+  await applyUserRole({ uid: "new-root", role: "SuperAdmin", actorUid: "script" });
+  assert.equal((await admin.auth().getUser("new-root")).customClaims.role, "SuperAdmin");
+});
+
 // --- TAQ-148: the agency of an AgencyAdmin ---
 
 test("TAQ-148: AgencyAdmin needs an agency that exists, with a valid id", async () => {
