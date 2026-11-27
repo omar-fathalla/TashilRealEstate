@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/agency_application_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
@@ -1051,6 +1052,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ],
           ),
           const SizedBox(height: 20),
+
+          // Agency registration requests waiting for review (TAQ-149).
+          const AgencyApplicationsReviewPanel(),
 
           // 2. 4 Stat KPI Cards (Unified M3 Elevated Metric Cards)
           LayoutBuilder(

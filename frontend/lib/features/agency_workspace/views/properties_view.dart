@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tashil_real_estate/features/agency_mandates/widgets/mandate_panels.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/cards/tashil_cards.dart';
 import 'package:tashil_real_estate/core/design_system/empty_state/tashil_empty_state.dart';
@@ -104,6 +105,11 @@ class PropertiesView extends StatelessWidget {
               style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
             ),
             SizedBox(height: isMobile ? 16 : 24),
+            // Other owners' properties this agency is invited to or manages (TAQ-149).
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: const SingleChildScrollView(child: AgencyMandatesPanel()),
+            ),
             Expanded(child: body),
           ],
         ),

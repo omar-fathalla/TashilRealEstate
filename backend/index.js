@@ -23,6 +23,7 @@ const {
   assertLeaseParty,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
+const { managingAgency } = require("./agency_mandate_state");
 const { appCheckEnforced } = require("./config");
 const {
   MARKETPLACE_LOCALES,
@@ -490,10 +491,13 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
  * Whether a private listing may be live right now: the owner wants it public and available, holds
  * a role that can publish, and has a positive rent. `refusal` says why not when it wants to be live.
  */
-async function publishDecision(ownerId, data) {
+async function publishDecision(ownerId, data, propertyId) {
   const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
   if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "", agency: null };
-  const { role, agencyId } = await resolveUserAuthority(ownerId);
+  const authority = await resolveUserAuthority(ownerId);
+  const { role } = authority;
+  // The listing names the managing agency: the AgencyAdmin owner's own, or an active mandate's (TAQ-149).
+  const { agencyId } = await managingAgency(null, null, ownerId, propertyId, authority);
   const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
     : !hasPublishablePrice(data) ? "the rent is not a positive number"
       : "";
@@ -546,7 +550,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     if (ownership.blocked) return null;
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const { wantsPublic, refusal, agencyId, agency } = await publishDecision(ownerId, afterData);
+    const { wantsPublic, refusal, agencyId, agency } = await publishDecision(ownerId, afterData, propertyId);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -654,7 +658,7 @@ async function liftHold(db, propertyId, preHidePublished) {
     ? await db.doc(`Users/${ownerId}/properties/${propertyId}`).get()
     : null;
   const privateData = privateSnap && privateSnap.exists && privateSnap.get("id_conflict") !== true ? privateSnap.data() : null;
-  const decision = privateData ? await publishDecision(ownerId, privateData) : null;
+  const decision = privateData ? await publishDecision(ownerId, privateData, propertyId) : null;
   const goLive = Boolean(decision && decision.wantsPublic && !decision.refusal);
   if (decision && decision.refusal) logger.warn(`Not republishing [${propertyId}] after moderation: ${decision.refusal}.`);
 
@@ -948,6 +952,13 @@ exports.createLease = require("./leases").createLease;
 exports.respondToLeaseOffer = require("./leases").respondToLeaseOffer;
 exports.releasePropertyLeaseLock = require("./leases").releasePropertyLeaseLock;
 exports.updateRentRow = require("./rent_rows").updateRentRow;
+
+// Owner-to-agency mandates and agency self-onboarding (TAQ-149).
+exports.inviteMandate = require("./mandates").inviteMandate;
+exports.respondToMandate = require("./mandates").respondToMandate;
+exports.revokeMandate = require("./mandates").revokeMandate;
+exports.applyForAgency = require("./agency_applications").applyForAgency;
+exports.reviewAgencyApplication = require("./agency_applications").reviewAgencyApplication;
 
 // Listing photo download tokens are replaced when a listing goes offline and again when it goes live (TAQ-109).
 exports.revokePhotoTokensOnOffline = require("./listing_photos").revokePhotoTokensOnOffline;
