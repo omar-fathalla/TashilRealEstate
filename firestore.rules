@@ -869,6 +869,18 @@ service cloud.firestore {
         || ((agencyManagesResource() || ownerManagesLease()) && resource.data.get('status', 'draft') == 'draft');
     }
 
+    // 4a-1. RentRowStates (TAQ-163)
+    // What the managers did with a month's rent row (trash, notes, reminder count, legal notice),
+    // written only by updateRentRow. Read by the lease's owner, managing agency and SuperAdmin.
+    match /RentRowStates/{rowId} {
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && (
+          resource.data.get('owner_id', '') == request.auth.uid ||
+          agencyManagesResource()
+        ));
+      allow write: if false;
+    }
+
     // 4a0. PropertyOwners (TAQ-110)
     // The one owner each property id belongs to, written only by the marketplace sync trigger
     // (first creator claims) and the dev backfill script. No client reads or writes it.
