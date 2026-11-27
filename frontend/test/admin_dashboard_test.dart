@@ -92,10 +92,19 @@ class _FakeAdminData implements AdminDataSource {
     ]);
   }
 
+  bool canVerify = false;
+
   @override
   Stream<List<AdminAgencyRow>> watchAgencies(String langCode) => Stream.value(const [
-        AdminAgencyRow(id: 'a1', name: 'Demo Agency', verified: true, city: 'Dubai'),
+        AdminAgencyRow(id: 'a1', name: 'Demo Agency', verified: true, city: 'Dubai', orn: '12345', licenceStatus: 'verified'),
+        AdminAgencyRow(id: 'a2', name: 'New Agency', verified: false, city: 'Abu Dhabi', orn: '777', licenceStatus: 'pending'),
       ]);
+
+  @override
+  Future<bool> canVerifyAgencies() async => canVerify;
+
+  @override
+  Future<void> setAgencyLicence(String agencyId, String status) => _write('licence:$agencyId:$status');
 }
 
 Widget _app(Widget home, {Locale locale = const Locale('en')}) {
@@ -240,6 +249,25 @@ void main() {
       expect(find.byKey(const Key('admin-agency-a1')), findsOneWidget);
       expect(find.text('Demo Agency'), findsOneWidget);
       expect(find.byKey(const Key('admin-read-only-note')), findsOneWidget);
+      expect(find.text('Licence verified'), findsOneWidget);
+      expect(find.text('Licence pending review'), findsOneWidget);
+      expect(find.text('ORN: 777'), findsOneWidget);
+      // A platform Admin sees the status but cannot change it (TAQ-154).
+      expect(find.byKey(const Key('admin-agency-verify-a2')), findsNothing);
+      expect(find.byKey(const Key('admin-agency-reject-a2')), findsNothing);
+    });
+
+    testWidgets('a SuperAdmin verifies or rejects an agency licence by hand (TAQ-154)', (tester) async {
+      final data = _FakeAdminData()..canVerify = true;
+      await _pump(tester, data);
+      await tester.tap(find.text('Agencies'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byKey(const Key('admin-agency-verify-a2')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('admin-agency-reject-a1')));
+      await tester.pump();
+      expect(data.calls, containsAll(['licence:a2:verified', 'licence:a1:rejected']));
     });
 
     testWidgets('the dashboard has no role, payment or settings controls', (tester) async {
