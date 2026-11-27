@@ -20,7 +20,7 @@ if (!getApps().length) initializeApp();
 
 const { SELF_SERVICE_ROLES, requireFreshAuth, requireRole } = require("./authz");
 const { appCheckEnforced } = require("./config");
-const { containsContactInAgencyText } = require("./agency_text_filter");
+const { agencyTextFinding } = require("./agency_text_filter");
 const { applyUserRole } = require("./roles");
 const { writeAuditLog } = require("./audit_log");
 const { MANDATES } = require("./agency_mandate_state");
@@ -34,6 +34,25 @@ const UID = /^[A-Za-z0-9_-]{1,128}$/;
 
 function invalid(message, reason) {
   return new HttpsError("invalid-argument", message, { reason });
+}
+
+// The reason and message for a refused agency name: name_phone, name_link, name_email or name_contact.
+function nameRefused({ kind, match }) {
+  if (kind === "phone") {
+    return new HttpsError("invalid-argument",
+      "The agency name looks like a phone number: seven or more digits or number words in a row. Remove the number.",
+      { reason: "name_phone" });
+  }
+  if (kind === "link") {
+    const what = match ? ` ("${match}")` : "";
+    return new HttpsError("invalid-argument",
+      `The agency name looks like a website address${what}. Remove it, or put a space after the dot.`,
+      { reason: "name_link", match });
+  }
+  if (kind === "email") {
+    return new HttpsError("invalid-argument", "The agency name holds an email address. Remove it.", { reason: "name_email" });
+  }
+  return new HttpsError("invalid-argument", "The agency name cannot hold a phone number, link or email.", { reason: "name_contact" });
 }
 
 function text(value, field, max, { required = false } = {}) {
@@ -53,7 +72,9 @@ function applicationFrom(data) {
   const name = text(data.name, "name", 200, { required: true });
   // TAQ-188: the name becomes the public agency name, so it gets the request-text check, which
   // also catches spelled-out numbers, spaced emails and bare domains.
-  if (containsContactInAgencyText(name)) throw invalid("The agency name cannot hold a phone, link or email.", "name_contact");
+  // TAQ-208: say what was refused, so the applicant knows what to change.
+  const finding = agencyTextFinding(name);
+  if (finding) throw nameRefused(finding);
   const countryCode = data.countryCode === "AE" || data.countryCode === "EG" ? data.countryCode : "";
   if (!countryCode) throw invalid("countryCode must be AE or EG.", "country_invalid");
   const orn = text(data.orn, "orn", 40);
