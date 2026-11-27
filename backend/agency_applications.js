@@ -13,12 +13,10 @@
  * separate SuperAdmin check (TAQ-154).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { SELF_SERVICE_ROLES, requireFreshAuth, requireRole } = require("./authz");
 const { appCheckEnforced } = require("./config");
@@ -77,7 +75,7 @@ const applyForAgency = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
     throw new HttpsError("permission-denied", "Sign in with an account to apply.");
   }
   const fields = applicationFrom(request.data || {});
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(APPLICATIONS).doc(auth.uid);
   await db.runTransaction(async (t) => {
     const snap = await t.get(ref);
@@ -115,7 +113,7 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
   if (typeof data.uid !== "string" || !UID.test(data.uid)) throw invalid("An applicant id is required.", "uid_invalid");
   if (typeof data.approve !== "boolean") throw invalid("approve must be true or false.", "approve_invalid");
   const note = text(data.note, "note", 500);
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection(APPLICATIONS).doc(data.uid);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Application not found.");

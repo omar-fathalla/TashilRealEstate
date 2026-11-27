@@ -2,7 +2,7 @@
 // live again. Runs against the Storage emulator through the Admin SDK.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getStorage } = require("firebase-admin/storage");
 const { File } = require("@google-cloud/storage");
 
 if (!process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
@@ -13,7 +13,7 @@ const fns = require("../index");
 const photos = require("../listing_photos");
 
 const projectId = process.env.GCLOUD_PROJECT;
-const bucket = admin.storage().bucket(`${projectId}.firebasestorage.app`);
+const bucket = getStorage().bucket(`${projectId}.firebasestorage.app`);
 const TOKEN_KEY = "firebaseStorageDownloadTokens";
 
 const live = { owner_id: "owner1", is_published: true, status: "vacant", moderation_hidden: false, pricePerMonth: 9000 };

@@ -7,7 +7,9 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -17,8 +19,8 @@ const backfill = require("../scripts/backfill_property_owners");
 const auditScript = require("../scripts/audit_leases");
 
 const projectId = process.env.GCLOUD_PROJECT;
-if (!admin.apps.length) admin.initializeApp({ projectId });
-const db = admin.firestore();
+if (!getApps().length) initializeApp({ projectId });
+const db = getFirestore();
 const FAKE_PROD = "qa-fake-prod-xyz";
 const NOWHERE = { FIRESTORE_EMULATOR_HOST: "127.0.0.1:1", FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:1" };
 
@@ -34,8 +36,8 @@ async function clearAll() {
 }
 
 async function user(uid, role) {
-  await admin.auth().createUser({ uid });
-  await admin.auth().setCustomUserClaims(uid, { role });
+  await getAuth().createUser({ uid });
+  await getAuth().setCustomUserClaims(uid, { role });
   await db.doc(`Users/${uid}`).set({ role });
 }
 
@@ -183,7 +185,7 @@ test("TAQ-110 N-3: the read-only wrapper throws on every write method of Firesto
   await db.doc("Users/ownerA/properties/p1").set({ title: "x" });
   await db.doc("Leases/l1").set({ status: "active", owner_id: "ownerA", property_id: "p1" });
   const ro = auditScript.readOnly(db);
-  const roAuth = auditScript.readOnly(admin.auth());
+  const roAuth = auditScript.readOnly(getAuth());
   const col = ro.collection("Leases");
   const ref = ro.doc("Leases/l1");
   const snap = await col.get();
@@ -223,8 +225,8 @@ test("TAQ-110 N-3: the audit gives the same report through the wrapper; the prod
   await db.doc("PropertyLeaseLocks/solo-a").set({ lease_id: "live", property_id: "solo-a" });
   await db.doc("PropertyLeaseLocks/other-reg").set({ lease_id: "squat", property_id: "other-reg" });
 
-  const raw = await auditScript.audit(db, admin.auth());
-  const wrapped = await auditScript.audit(auditScript.readOnly(db), auditScript.readOnly(admin.auth()));
+  const raw = await auditScript.audit(db, getAuth());
+  const wrapped = await auditScript.audit(auditScript.readOnly(db), auditScript.readOnly(getAuth()));
   assert.deepEqual(JSON.parse(JSON.stringify(wrapped)), JSON.parse(JSON.stringify(raw)));
 
   assert.deepEqual(raw.idsUnderMultipleOwners.map((x) => x.property_id).sort(), ["flagged-ok", "shared"]);
@@ -432,7 +434,7 @@ test("TAQ-125: the backfill needs no Firebase Auth and tenants and investors nev
   assert.equal(r.code, 0, r.err);
   assert.deepEqual(await registry(), { "o-1": "ownerA" });
   assert.deepEqual(jsonReport(r.out).nonLandlordOwner.map((x) => x.role).sort(), ["Investor", "Tenant"]);
-  assert.equal((await admin.auth().listUsers()).users.length, 0, "no Auth user was needed");
+  assert.equal((await getAuth().listUsers()).users.length, 0, "no Auth user was needed");
 });
 
 test("TAQ-125: registeredToOther rows are marked for review and listed as id_conflict candidates", async () => {

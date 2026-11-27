@@ -15,17 +15,16 @@
  */
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getStorage } = require("firebase-admin/storage");
 const crypto = require("crypto");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const TOKEN_KEY = "firebaseStorageDownloadTokens";
 
 const deps = {
-  bucket: () => admin.storage().bucket(),
+  bucket: () => getStorage().bucket(),
   newToken: () => crypto.randomUUID(),
 };
 

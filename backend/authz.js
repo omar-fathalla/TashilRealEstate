@@ -1,5 +1,6 @@
 const { HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 // Roles a user may pick for themselves at signup. They are only read from the profile document
 // (or a claim); a profile can never vouch for any other role, so none of these escalates.
@@ -51,7 +52,7 @@ async function requireFreshAuth(request) {
   if (raw) {
     let decoded;
     try {
-      decoded = await admin.auth().verifyIdToken(raw, true);
+      decoded = await getAuth().verifyIdToken(raw, true);
     } catch (err) {
       throw revokedError();
     }
@@ -61,7 +62,7 @@ async function requireFreshAuth(request) {
   if (request.rawRequest) throw revokedError();
   let user;
   try {
-    user = await admin.auth().getUser(auth.uid);
+    user = await getAuth().getUser(auth.uid);
   } catch (err) {
     if (err.code === "auth/user-not-found") return auth;
     throw err;
@@ -101,7 +102,7 @@ function missingSecondFactor(auth) {
 async function resolveRole(auth, { checkSecondFactor = true } = {}) {
   const claim = claimedRole(auth);
   if (claim) return checkSecondFactor && missingSecondFactor(auth) ? "" : claim;
-  const snap = await admin.firestore().collection("Users").doc(auth.uid).get();
+  const snap = await getFirestore().collection("Users").doc(auth.uid).get();
   const profileRole = snap.exists ? snap.get("role") : "";
   return SELF_SERVICE_ROLES.includes(profileRole) ? profileRole : "";
 }
@@ -113,7 +114,7 @@ async function resolveRole(auth, { checkSecondFactor = true } = {}) {
 async function resolveUserAuthority(uid) {
   let claims = {};
   try {
-    claims = (await admin.auth().getUser(uid)).customClaims || {};
+    claims = (await getAuth().getUser(uid)).customClaims || {};
   } catch (err) {
     if (err.code !== "auth/user-not-found") throw err;
   }
@@ -142,7 +143,7 @@ async function loadLease(leaseId) {
   if (!leaseId || typeof leaseId !== "string") {
     throw new HttpsError("invalid-argument", "A lease id is required.");
   }
-  const snap = await admin.firestore().collection("Leases").doc(leaseId).get();
+  const snap = await getFirestore().collection("Leases").doc(leaseId).get();
   if (!snap.exists) {
     throw new HttpsError("not-found", "Lease not found.");
   }

@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc } = require("firebase/firestore");
 
@@ -13,7 +14,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 
 const fns = require("../index");
 const team = require("../agency_team");
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT || "demo-tashil-test";
 let testEnv;
 
@@ -45,8 +46,8 @@ test.beforeEach(async () => {
   await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/emulator/v1/projects/${projectId}/accounts`, { method: "DELETE" });
   await db.doc("Agencies/ag1").set({ name: "Agency One" });
   await db.doc("Agencies/ag2").set({ name: "Agency Two" });
-  await admin.auth().createUser({ uid: "u1", email: "agent@example.test", emailVerified: true });
-  await admin.auth().setCustomUserClaims("u1", { role: "Tenant" });
+  await getAuth().createUser({ uid: "u1", email: "agent@example.test", emailVerified: true });
+  await getAuth().setCustomUserClaims("u1", { role: "Tenant" });
   await db.doc("Users/u1").set({ role: "Tenant" });
 });
 
@@ -66,7 +67,7 @@ test("TAQ-169: invite, accept, list and remove an agent", async () => {
 
   const res = await fns.acceptAgencyInvite.run({ data: { inviteId: id }, auth: invitee() });
   assert.equal(res.agencyId, "ag1");
-  const claims = (await admin.auth().getUser("u1")).customClaims;
+  const claims = (await getAuth().getUser("u1")).customClaims;
   assert.equal(claims.role, "AgencyAgent");
   assert.equal(claims.agency_id, "ag1");
   assert.equal((await db.doc(`AgencyInvites/${id}`).get()).get("status"), "accepted");
@@ -80,7 +81,7 @@ test("TAQ-169: invite, accept, list and remove an agent", async () => {
   await rejects(fns.acceptAgencyInvite.run({ data: { inviteId: id }, auth: invitee() }), "failed-precondition", "invite_not_open");
 
   await fns.removeAgencyAgent.run({ data: { uid: "u1" }, auth: ADMIN });
-  const after = (await admin.auth().getUser("u1")).customClaims;
+  const after = (await getAuth().getUser("u1")).customClaims;
   assert.equal(after.role, "Tenant");
   assert.equal(after.agency_id, undefined);
   assert.equal((await db.doc("AgencyAgents/u1").get()).exists, false);
@@ -133,7 +134,7 @@ test("TAQ-169: declining closes the invite; another agency cannot revoke or remo
   await fns.acceptAgencyInvite.run({ data: { inviteId: id2 }, auth: invitee("u1", { role: "Tenant" }) });
   await rejects(fns.removeAgencyAgent.run({ data: { uid: "u1" }, auth: other }), "not-found");
   await fns.removeAgencyAgent.run({ data: { uid: "u1", agencyId: "ag1" }, auth: SUPER });
-  assert.equal((await admin.auth().getUser("u1")).customClaims.role, "Tenant");
+  assert.equal((await getAuth().getUser("u1")).customClaims.role, "Tenant");
 });
 
 test("TAQ-169: setUserRole still cannot grant AgencyAgent", async () => {

@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -8,7 +9,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 
 const fns = require("../index");
 
-const db = admin.firestore();
+const db = getFirestore();
 const projectId = process.env.GCLOUD_PROJECT;
 
 async function clearEmulators() {
@@ -135,13 +136,13 @@ test("TAQ-49: an elevated role written into the profile does not allow publishin
 });
 
 test("TAQ-49: Owner and AgencyAdmin custom claims can publish", async () => {
-  await admin.auth().createUser({ uid: "claimOwner" });
-  await admin.auth().setCustomUserClaims("claimOwner", { role: "Owner" });
-  await admin.auth().createUser({ uid: "claimAgent" });
-  await admin.auth().setCustomUserClaims("claimAgent", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await getAuth().createUser({ uid: "claimOwner" });
+  await getAuth().setCustomUserClaims("claimOwner", { role: "Owner" });
+  await getAuth().createUser({ uid: "claimAgent" });
+  await getAuth().setCustomUserClaims("claimAgent", { role: "AgencyAdmin", agency_id: "agency-1" });
   // A Tenant claim wins over an Owner profile.
-  await admin.auth().createUser({ uid: "claimTenant" });
-  await admin.auth().setCustomUserClaims("claimTenant", { role: "Tenant" });
+  await getAuth().createUser({ uid: "claimTenant" });
+  await getAuth().setCustomUserClaims("claimTenant", { role: "Tenant" });
   await db.doc("Users/claimTenant").set({ role: "Owner" });
 
   await ownerWrites("claimOwner", "c-owner", privateListing());
@@ -186,8 +187,8 @@ test("TAQ-51: the trigger publishes a listing id nobody could claim first", asyn
 });
 
 test("TAQ-51: agency attribution comes from the AgencyAdmin's claims, not the private doc", async () => {
-  await admin.auth().createUser({ uid: "agent1" });
-  await admin.auth().setCustomUserClaims("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
+  await getAuth().createUser({ uid: "agent1" });
+  await getAuth().setCustomUserClaims("agent1", { role: "AgencyAdmin", agency_id: "agency-1" });
 
   await ownerWrites("agent1", "agency-listing", privateListing({ agency_id: "agency-2" }));
   await ownerWrites("ownerA", "owner-listing", privateListing({ agency_id: "agency-1", agencyId: "agency-1" }));
@@ -325,10 +326,10 @@ test("TAQ-55: a published listing can never be replaced as a placeholder", async
 test("TAQ-91: an Investor's or an Admin's draft never reaches the marketplace", async () => {
   await db.doc("Users/invP").set({ role: "Investor" });
   await db.doc("Users/admP").set({ role: "Admin" });
-  await admin.auth().createUser({ uid: "invC" });
-  await admin.auth().setCustomUserClaims("invC", { role: "Investor" });
-  await admin.auth().createUser({ uid: "admC" });
-  await admin.auth().setCustomUserClaims("admC", { role: "Admin" });
+  await getAuth().createUser({ uid: "invC" });
+  await getAuth().setCustomUserClaims("invC", { role: "Investor" });
+  await getAuth().createUser({ uid: "admC" });
+  await getAuth().setCustomUserClaims("admC", { role: "Admin" });
   for (const uid of ["invP", "admP", "invC", "admC"]) {
     await ownerWrites(uid, `${uid}-1`, privateListing());
     assert.equal(await publicDoc(`${uid}-1`), null, uid);

@@ -3,9 +3,8 @@
  * tenant there is an offer to approve. The tenant's decision (`active` or `rejected`) tells the
  * owner. The trigger covers every path that changes the status, so the rules stay the only gate.
  */
-const admin = require("firebase-admin");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 function field(snapshot, key) {
   if (!snapshot || !snapshot.exists) return undefined;
@@ -75,7 +74,7 @@ async function handleLeaseWrite(event) {
   const to = lease.status;
   if (from === to) return null;
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const leaseId = event.params.leaseId;
   let recipients = [];
   let note = null;

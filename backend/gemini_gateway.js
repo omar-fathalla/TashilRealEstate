@@ -3,8 +3,7 @@ const net = require("net");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString, defineInt } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 const { appCheckEnforced } = require("./config");
 const { requireRole } = require("./authz");
@@ -358,7 +357,7 @@ function windowCount(data, windowField, countField, current) {
 }
 
 async function consumeQuota({ uid, ip, secret }) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const now = deps.now();
   const minute = Math.floor(now / 60000);
   const day = new Date(now).toISOString().slice(0, 10);

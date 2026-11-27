@@ -53,8 +53,8 @@
  *
  * Credentials come from Application Default Credentials or the emulator environment variables.
  */
-const admin = require("firebase-admin");
-const { FieldValue, FieldPath } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { FieldValue, FieldPath, getFirestore } = require("firebase-admin/firestore");
 const { readOnly } = require("./read_only");
 const { prodProjectsFromConfig } = require("./prod_projects");
 
@@ -441,8 +441,8 @@ async function main(argv, env = process.env, deps = {}) {
   }
   let db = deps.db;
   if (!db) {
-    if (!admin.apps.length) admin.initializeApp({ projectId });
-    db = admin.firestore();
+    if (!getApps().length) initializeApp({ projectId });
+    db = getFirestore();
   }
   // The scan, the classification and every dry run go through the read-only wrapper; only the
   // write step below gets the real instance.

@@ -2,7 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the Firestore and Auth emulators are attached.");
@@ -17,7 +19,7 @@ const emulatorEnv = {
   FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST,
 };
 
-if (!admin.apps.length) admin.initializeApp({ projectId });
+if (!getApps().length) initializeApp({ projectId });
 
 // A clean environment: no emulator hosts, no project, no credentials beyond what is passed in.
 function liveEnv(extra = {}) {
@@ -87,12 +89,12 @@ test("TAQ-45: seed.js seeds the demo accounts into the emulator and keeps existi
   assert.equal(first.status, 0, first.stdout + first.stderr);
   assert.doesNotMatch(first.stdout, /emulator-only-pass/);
   for (const u of DEMO_USERS) {
-    const user = await admin.auth().getUserByEmail(u.email);
+    const user = await getAuth().getUserByEmail(u.email);
     const expected = u.role === "AgencyAdmin" ? { role: u.role, agency_id: DEMO_AGENCY_ID } : { role: u.role };
     assert.deepEqual(user.customClaims, expected);
   }
 
-  const agency = await admin.firestore().collection("Agencies").doc(DEMO_AGENCY_ID).get();
+  const agency = await getFirestore().collection("Agencies").doc(DEMO_AGENCY_ID).get();
   assert.equal(agency.exists, true, "the demo agency exists, so setUserRole accepts it (TAQ-148)");
 
   const second = run();
@@ -191,9 +193,9 @@ test("TAQ-91: the test set creates all seven accounts with the right claims and 
     superadmin: { role: "SuperAdmin" },
   };
   for (const u of TEST_USERS) {
-    const record = await admin.auth().getUserByEmail(u.email);
+    const record = await getAuth().getUserByEmail(u.email);
     assert.deepEqual(record.customClaims || {}, expectedClaims[u.key], u.email);
-    const profile = (await admin.firestore().collection("Users").doc(record.uid).get()).data();
+    const profile = (await getFirestore().collection("Users").doc(record.uid).get()).data();
     assert.equal(profile.email, u.email);
     assert.equal(profile.role, u.role === null ? undefined : u.role);
     assert.equal(profile.demo_seed, "tashilaqar-test");

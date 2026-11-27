@@ -154,12 +154,12 @@ function resolveSeedTarget(argv, env) {
 }
 
 async function seed(target) {
-  const admin = require('firebase-admin');
-  if (!admin.apps.length) admin.initializeApp({ projectId: target.projectId });
+  const { initializeApp, getApps } = require('firebase-admin/app');
+  if (!getApps().length) initializeApp({ projectId: target.projectId });
   const { applyUserRole } = require('./roles');
 
-  const auth = admin.auth();
-  const db = admin.firestore();
+  const auth = require('firebase-admin/auth').getAuth();
+  const db = require('firebase-admin/firestore').getFirestore();
   const testSet = target.set === TEST_SET;
   const users = testSet ? TEST_USERS : DEMO_USERS;
   const sharedPassword = target.password || crypto.randomBytes(12).toString('base64url');

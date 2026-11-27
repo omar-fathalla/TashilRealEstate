@@ -27,7 +27,9 @@
  * Any other project is refused. Credentials come from Application Default Credentials or the
  * emulator environment variables.
  */
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { scanPrivateProperties } = require("./backfill_property_owners");
 const { readOnly } = require("./read_only");
 const { prodProjectsFromConfig } = require("./prod_projects");
@@ -240,13 +242,13 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const projectId = resolveTarget(args.project, { prodReadOnly: args.prodReadOnly, confirm: process.env.AUDIT_PROD_OK || "" });
   console.log(`Lease audit (read-only${args.prodReadOnly ? ", production: counts and ids only" : ""}) on project: ${projectId}`);
-  if (!admin.apps.length) admin.initializeApp({ projectId });
+  if (!getApps().length) initializeApp({ projectId });
   if (args.prodReadOnly) {
-    const report = await audit(readOnly(admin.firestore()), readOnly(admin.auth()));
+    const report = await audit(readOnly(getFirestore()), readOnly(getAuth()));
     console.log(JSON.stringify(idsOnly(report), null, 2));
     return;
   }
-  const report = await audit(admin.firestore(), admin.auth());
+  const report = await audit(getFirestore(), getAuth());
   console.log(JSON.stringify(report, null, 2));
 }
 

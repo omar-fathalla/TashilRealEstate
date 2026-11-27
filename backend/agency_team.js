@@ -17,12 +17,11 @@
  * the audit log (TAQ-193).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!getApps().length) initializeApp();
 
 const { SELF_SERVICE_ROLES, AGENCY_AGENT, requireFreshAuth, requireRole, resolveRole } = require("./authz");
 const { appCheckEnforced } = require("./config");
@@ -108,7 +107,7 @@ const inviteAgencyAgent = onCall(opts, async (request) => {
   if (auth.token && typeof auth.token.email === "string" && auth.token.email.trim().toLowerCase() === email) {
     throw invalid("You cannot invite yourself.", "self_invite");
   }
-  const db = admin.firestore();
+  const db = getFirestore();
   const now = deps.now();
   const agency = await db.collection("Agencies").doc(agencyId).get();
   if (!agency.exists) throw new HttpsError("failed-precondition", "That agency does not exist.", { reason: "agency_not_found" });
@@ -143,7 +142,7 @@ const revokeAgencyInvite = onCall(opts, async (request) => {
   const auth = await requireFreshAuth(request);
   const data = request.data || {};
   const { role, agencyId } = await managedAgency(auth, data);
-  const ref = admin.firestore().collection(INVITES).doc(idFrom(data.inviteId, "inviteId"));
+  const ref = getFirestore().collection(INVITES).doc(idFrom(data.inviteId, "inviteId"));
   const snap = await ref.get();
   if (!snap.exists || snap.get("agency_id") !== agencyId) throw new HttpsError("not-found", "Invite not found.");
   if (snap.get("status") !== "pending") {
@@ -157,7 +156,7 @@ const revokeAgencyInvite = onCall(opts, async (request) => {
 const listAgencyTeam = onCall(opts, async (request) => {
   const auth = await requireFreshAuth(request);
   const { agencyId } = await managedAgency(auth, request.data || {});
-  const db = admin.firestore();
+  const db = getFirestore();
   const now = deps.now();
   const [agents, invites] = await Promise.all([
     db.collection(AGENTS).where("agency_id", "==", agencyId).limit(MAX_AGENTS * 2).get(),
@@ -180,7 +179,7 @@ const listMyAgencyInvites = onCall(opts, async (request) => {
   const auth = await requireFreshAuth(request);
   const email = verifiedEmail(auth);
   const now = deps.now();
-  const snap = await admin.firestore().collection(INVITES).where("email", "==", email).where("status", "==", "pending").limit(20).get();
+  const snap = await getFirestore().collection(INVITES).where("email", "==", email).where("status", "==", "pending").limit(20).get();
   return {
     invites: snap.docs
       .filter((d) => isOpen(d.data(), now))
@@ -191,7 +190,7 @@ const listMyAgencyInvites = onCall(opts, async (request) => {
 /** The invite the caller may answer: open, and for the caller's verified email. */
 async function ownOpenInvite(auth, data) {
   const email = verifiedEmail(auth);
-  const ref = admin.firestore().collection(INVITES).doc(idFrom(data.inviteId, "inviteId"));
+  const ref = getFirestore().collection(INVITES).doc(idFrom(data.inviteId, "inviteId"));
   const snap = await ref.get();
   if (!snap.exists || snap.get("email") !== email) throw new HttpsError("not-found", "Invite not found.");
   if (!isOpen(snap.data(), deps.now())) {
@@ -214,7 +213,7 @@ const acceptAgencyInvite = onCall(opts, async (request) => {
   if (role && !SELF_SERVICE_ROLES.includes(role)) {
     throw new HttpsError("failed-precondition", "Your account already has a staff role.", { reason: "role_not_self_service" });
   }
-  const db = admin.firestore();
+  const db = getFirestore();
   const blocker = await approvalBlocker(db, auth.uid);
   if (blocker) {
     throw new HttpsError("failed-precondition", "You still have leases or managed properties.", { reason: blocker });
@@ -254,12 +253,12 @@ const removeAgencyAgent = onCall(opts, async (request) => {
   const data = request.data || {};
   const { role, agencyId } = await managedAgency(auth, data);
   const uid = idFrom(data.uid, "uid");
-  const db = admin.firestore();
+  const db = getFirestore();
   const member = await db.collection(AGENTS).doc(uid).get();
   if (!member.exists || member.get("agency_id") !== agencyId) throw new HttpsError("not-found", "Agent not found.");
   let claims = {};
   try {
-    claims = (await admin.auth().getUser(uid)).customClaims || {};
+    claims = (await getAuth().getUser(uid)).customClaims || {};
   } catch (err) {
     if (err.code !== "auth/user-not-found") throw err;
   }

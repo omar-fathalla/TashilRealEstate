@@ -13,7 +13,8 @@
  * The same project guard as backfill_property_moderation.js applies: a project id that does not
  * start with `demo-` is refused, even for a dry run, unless `--confirm-project=<id>` repeats it.
  */
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { parseArgs, resolveTarget } = require("./backfill_property_moderation");
 const { isPublishedAndHidden } = require("../hidden_listing_predicate");
 
@@ -35,7 +36,7 @@ async function backfill(db, { apply = false } = {}) {
       await db.runTransaction(async (tx) => {
         const current = await tx.get(ref);
         if (current.exists && isPublishedAndHidden(current.data())) {
-          tx.update(ref, { is_published: false, updated_at: admin.firestore.FieldValue.serverTimestamp() });
+          tx.update(ref, { is_published: false, updated_at: FieldValue.serverTimestamp() });
         }
       });
     }
@@ -50,8 +51,8 @@ if (require.main === module) {
     const args = parseArgs(process.argv.slice(2));
     console.log(`Target project: ${args.project} (${args.apply ? "APPLY: will write" : "dry run: no writes"})`);
     const target = resolveTarget(args);
-    admin.initializeApp({ projectId: target.projectId });
-    const result = await backfill(admin.firestore(), { apply: args.apply });
+    initializeApp({ projectId: target.projectId });
+    const result = await backfill(getFirestore(), { apply: args.apply });
     console.log(`${result.found.length} listing(s) published while hidden: ${result.found.join(", ") || "none"}`);
     console.log(args.apply ? "Unpublished." : "Dry run. Re-run with --apply to unpublish them.");
   })().catch((err) => {

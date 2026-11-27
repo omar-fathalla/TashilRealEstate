@@ -1,6 +1,6 @@
 const { HttpsError } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { ASSIGNABLE_ROLES, AGENCY_AGENT } = require("./authz");
 const { writeAuditLog } = require("./audit_log");
 
@@ -39,13 +39,13 @@ async function applyUserRole({ uid, role, agencyId, actorUid, allowAgencyAgent =
     throw new HttpsError("invalid-argument", "The agencyId is not a valid agency id.", { reason: "agency_id_invalid" });
   }
   if (needsAgency) {
-    const agency = await admin.firestore().collection("Agencies").doc(agencyId).get();
+    const agency = await getFirestore().collection("Agencies").doc(agencyId).get();
     if (!agency.exists) {
       throw new HttpsError("failed-precondition", "That agency does not exist.", { reason: "agency_not_found" });
     }
   }
 
-  const user = await admin.auth().getUser(uid);
+  const user = await getAuth().getUser(uid);
   const before = user.customClaims || {};
   const claims = { ...(user.customClaims || {}), role };
   if (needsAgency) {
@@ -53,9 +53,9 @@ async function applyUserRole({ uid, role, agencyId, actorUid, allowAgencyAgent =
   } else {
     delete claims.agency_id;
   }
-  await admin.auth().setCustomUserClaims(uid, claims);
+  await getAuth().setCustomUserClaims(uid, claims);
   const changed = before.role !== claims.role || (before.agency_id || "") !== (claims.agency_id || "");
-  if (changed) await admin.auth().revokeRefreshTokens(uid);
+  if (changed) await getAuth().revokeRefreshTokens(uid);
 
   const profile = {
     role,
@@ -63,7 +63,7 @@ async function applyUserRole({ uid, role, agencyId, actorUid, allowAgencyAgent =
     role_updated_by: actorUid || null,
   };
   profile.agency_id = needsAgency ? agencyId : FieldValue.delete();
-  await admin.firestore().collection("Users").doc(uid).set(profile, { merge: true });
+  await getFirestore().collection("Users").doc(uid).set(profile, { merge: true });
   // TAQ-193: every role assignment, from the callable, the scripts or agency approval.
   await writeAuditLog({
     action: "role_assigned",
