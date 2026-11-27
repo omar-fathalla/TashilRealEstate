@@ -202,6 +202,23 @@ class FirestoreService {
     // Intentionally no-op: new owner accounts must always start with a clean slate.
   }
 
+  /// Sets or clears the owner's private property value (TAQ-164). It lives only in the owner's tree.
+  Future<void> setOwnerPropertyValue({
+    required String ownerId,
+    required String propertyId,
+    double? value,
+  }) async {
+    await _db
+        .collection('Users')
+        .doc(ownerId)
+        .collection('properties')
+        .doc(propertyId)
+        .update({
+      'propertyValue': value ?? FieldValue.delete(),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Deletes a property from owner tree and marketplace
   Future<void> deleteOwnerProperty({
     required String ownerId,
