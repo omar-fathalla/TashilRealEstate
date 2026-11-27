@@ -169,7 +169,9 @@ service cloud.firestore {
     // 2. Properties Collection (Public Marketplace)
     // The only fields a public listing may carry. Must match sanitizeForMarketplace in
     // backend/index.js (plus agency_id attribution); anything else is rejected, so contact
-    // fields such as phone, whatsapp, or email can never be written directly.
+    // fields such as phone, whatsapp, or email can never be written directly. agencyOrn is left
+    // out on purpose: only the server writes it, from a SuperAdmin-verified Agencies doc (TAQ-150),
+    // so no client can create a listing that shows a licence number, and no update can change it.
     function publicListingFields() {
       return [
         'id', 'owner_id', 'agency_id', 'countryCode', 'currencyCode',

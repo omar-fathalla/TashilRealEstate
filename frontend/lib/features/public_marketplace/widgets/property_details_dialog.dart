@@ -448,25 +448,33 @@ class _PropertyDetailsDialogState extends State<PropertyDetailsDialog> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
-                                            const SizedBox(height: 4.0),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.verified_rounded,
-                                                  size: 15.0,
-                                                  color: colorScheme.primary,
-                                                ),
-                                                const SizedBox(width: 4.0),
-                                                Text(
-                                                  loc.tr('verifiedAgency'),
-                                                  style: theme.textTheme.bodySmall?.copyWith(
-                                                    color: theme.colorScheme.onSurfaceVariant,
-                                                    fontSize: 12.0,
-                                                    fontWeight: FontWeight.w500,
+                                            // Only a SuperAdmin-verified agency carries an ORN (TAQ-150/154).
+                                            if (widget.property.isVerifiedAgency) ...[
+                                              const SizedBox(height: 4.0),
+                                              Row(
+                                                key: const Key('listing-verified-agency'),
+                                                children: [
+                                                  Icon(
+                                                    Icons.verified_rounded,
+                                                    size: 15.0,
+                                                    color: colorScheme.primary,
                                                   ),
-                                                ),
-                                              ],
-                                            ),
+                                                  const SizedBox(width: 4.0),
+                                                  Flexible(
+                                                    child: Text(
+                                                      '${loc.tr('verifiedAgency')} · ${loc.tr('listingAgencyOrn')}: ${widget.property.agencyOrn}',
+                                                      style: theme.textTheme.bodySmall?.copyWith(
+                                                        color: theme.colorScheme.onSurfaceVariant,
+                                                        fontSize: 12.0,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),
