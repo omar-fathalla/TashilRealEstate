@@ -45,6 +45,9 @@ class AppTheme {
           ? colorScheme.surface
           : colorScheme.surfaceContainerLow,
       visualDensity: VisualDensity.standard,
+      // Every button, icon button and chip gets a 48dp tap target on web and desktop too, where
+      // Flutter's default shrink-wraps them to their visual size (TAQ-168).
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       textTheme: appliedTextTheme,
 
       // M3 Card Container Theme: Crisp contrast between canvas & card
