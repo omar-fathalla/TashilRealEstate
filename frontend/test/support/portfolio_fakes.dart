@@ -19,6 +19,9 @@ class FakePortfolioBackend implements PortfolioBackend {
   List<PortfolioTransaction> transactions = const [];
   List<PortfolioInvoice> invoices = const [];
   List<PortfolioMaintenance> maintenance = const [];
+  List<PortfolioRentRowState> rentRowStates = const [];
+  bool failRowStates = false;
+  final rowActions = <Map<String, String?>>[];
   bool failStreams = false;
   Object? createFailure;
   Object? statusFailure;
@@ -55,6 +58,17 @@ class FakePortfolioBackend implements PortfolioBackend {
 
   @override
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope) => _stream(scope, maintenance);
+
+  @override
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope) {
+    if (failRowStates) return Stream.error(StateError('denied'));
+    return Stream.value(rentRowStates);
+  }
+
+  @override
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) async {
+    rowActions.add({'leaseId': leaseId, 'period': period, 'action': action, 'notes': notes});
+  }
 
   @override
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data) async {

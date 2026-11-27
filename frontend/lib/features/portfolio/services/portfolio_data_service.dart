@@ -21,6 +21,10 @@ abstract class PortfolioBackend {
   Stream<List<PortfolioTransaction>> watchTransactions(PortfolioScope scope);
   Stream<List<PortfolioInvoice>> watchInvoices(PortfolioScope scope);
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope);
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope);
+
+  /// Calls updateRentRow (TAQ-163): trash, restore, delete, note, reminder or legal_notice.
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes});
 
   /// Calls the createLease function. Throws its error on refusal.
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data);
@@ -88,6 +92,21 @@ class FirebasePortfolioBackend implements PortfolioBackend {
   @override
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope) =>
       _scoped('Maintenance', scope, PortfolioMaintenance.fromMap);
+
+  @override
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope) =>
+      _scoped('RentRowStates', scope, PortfolioRentRowState.fromMap);
+
+  @override
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) async {
+    final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('updateRentRow');
+    await callable.call<Map<String, dynamic>>({
+      'leaseId': leaseId,
+      'period': period,
+      'action': action,
+      if (notes != null) 'notes': notes,
+    });
+  }
 
   @override
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data) async {
@@ -168,6 +187,10 @@ class PortfolioDataService {
   Stream<List<PortfolioTransaction>> watchTransactions(PortfolioScope scope) => backend.watchTransactions(scope);
   Stream<List<PortfolioInvoice>> watchInvoices(PortfolioScope scope) => backend.watchInvoices(scope);
   Stream<List<PortfolioMaintenance>> watchMaintenance(PortfolioScope scope) => backend.watchMaintenance(scope);
+  Stream<List<PortfolioRentRowState>> watchRentRowStates(PortfolioScope scope) => backend.watchRentRowStates(scope);
+
+  Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) =>
+      backend.updateRentRow(leaseId: leaseId, period: period, action: action, notes: notes);
 
   /// Creates the lease on the server and returns its id. [sendOffer] puts it straight in front of
   /// the tenant. Throws the callable's error on refusal; there is no local fallback.

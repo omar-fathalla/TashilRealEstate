@@ -5,6 +5,9 @@ import 'package:tashil_real_estate/features/owner_portal/models/managed_property
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 
+/// Stores a row action on the server: (leaseId, period YYYY-MM, action, notes).
+typedef RentRowServerAction = Future<void> Function(String leaseId, String period, String action, {String? notes});
+
 /// Central Real-Time Rent Collection & Automated Payout Service.
 ///
 /// Fully synchronized with [PropertyLifecycleService]:
@@ -35,6 +38,29 @@ class RentCollectionService {
   bool _isSyncing = false;
   bool _serverMode = false;
 
+  /// Set by a screen showing server rows (TAQ-163): trash, restore, delete, notes, reminders and
+  /// legal notices of those rows are then stored by the updateRentRow function instead of locally.
+  RentRowServerAction? serverRowAction;
+
+  bool get _serverActions => _serverMode && serverRowAction != null;
+
+  void _sendRowAction(RentInvoiceModel invoice, String action, {String? notes}) {
+    final hook = serverRowAction;
+    final period = invoice.monthKey;
+    if (hook == null || period == null || invoice.contractNumber.isEmpty) return;
+    hook(invoice.contractNumber, period, action, notes: notes).catchError((Object e) {
+      debugPrint('RentCollectionService $action failed: $e');
+    });
+  }
+
+  void _replace(String invoiceId, RentInvoiceModel Function(RentInvoiceModel) change) {
+    final list = List<RentInvoiceModel>.from(invoicesNotifier.value);
+    final index = list.indexWhere((inv) => inv.id == invoiceId);
+    if (index == -1) return;
+    list[index] = change(list[index]);
+    invoicesNotifier.value = list;
+  }
+
   /// True while the list comes from the real leases and payments of the signed-in manager.
   bool get serverMode => _serverMode;
 
@@ -47,19 +73,22 @@ class RentCollectionService {
     final next = <RentInvoiceModel>[];
     for (final inv in fresh) {
       final key = (inv.propertyId != null && inv.monthKey != null) ? '${inv.propertyId}_${inv.monthKey}' : null;
-      if (_permanentlyDeletedInvoices.contains(inv.id) || (key != null && _permanentlyDeletedInvoices.contains(key))) continue;
+      if (serverRowAction == null && (_permanentlyDeletedInvoices.contains(inv.id) || (key != null && _permanentlyDeletedInvoices.contains(key)))) continue;
       var row = inv;
       final before = previous[inv.id];
       if (before != null) {
+        // The server's row state (TAQ-163) wins; a local action not yet echoed back is kept.
         row = row.copyWith(
-          reminderCount: before.reminderCount,
-          lastReminderSentAt: before.lastReminderSentAt,
-          legalWarningIssued: before.legalWarningIssued,
-          notes: before.notes,
+          reminderCount: before.reminderCount > row.reminderCount ? before.reminderCount : row.reminderCount,
+          lastReminderSentAt: row.lastReminderSentAt ?? before.lastReminderSentAt,
+          legalWarningIssued: row.legalWarningIssued || before.legalWarningIssued,
+          notes: row.notes ?? before.notes,
         );
       }
-      final deletedAt = _softDeletedInvoices[inv.id] ?? (key != null ? _softDeletedInvoices[key] : null);
-      if (deletedAt != null) row = row.copyWith(isDeleted: true, deletedAt: deletedAt);
+      if (serverRowAction == null) {
+        final deletedAt = _softDeletedInvoices[inv.id] ?? (key != null ? _softDeletedInvoices[key] : null);
+        if (deletedAt != null) row = row.copyWith(isDeleted: true, deletedAt: deletedAt);
+      }
       next.add(row);
     }
     invoicesNotifier.value = next;
@@ -69,6 +98,7 @@ class RentCollectionService {
   void leaveServerMode({required bool signedIn}) {
     if (!_serverMode) return;
     _serverMode = false;
+    serverRowAction = null;
     invoicesNotifier.value = signedIn ? <RentInvoiceModel>[] : _generateSampleInvoices();
     syncFromProperties();
   }
@@ -589,6 +619,13 @@ class RentCollectionService {
 
   /// Soft delete an invoice: moves it to trash for 7 days
   void softDeleteInvoice(String invoiceId) {
+    if (_serverActions) {
+      final inv = getInvoiceById(invoiceId);
+      if (inv == null) return;
+      _replace(invoiceId, (c) => c.copyWith(isDeleted: true, deletedAt: DateTime.now()));
+      _sendRowAction(inv, 'trash');
+      return;
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {
@@ -625,6 +662,13 @@ class RentCollectionService {
 
   /// Restore an invoice from trash back to active collection
   void restoreInvoice(String invoiceId) {
+    if (_serverActions) {
+      final inv = getInvoiceById(invoiceId);
+      if (inv == null) return;
+      _replace(invoiceId, (c) => c.copyWith(isDeleted: false, deletedAt: null));
+      _sendRowAction(inv, 'restore');
+      return;
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {
@@ -660,6 +704,13 @@ class RentCollectionService {
 
   /// Permanently delete an invoice from the system
   void permanentlyDeleteInvoice(String invoiceId) {
+    if (_serverActions) {
+      final inv = getInvoiceById(invoiceId);
+      if (inv == null) return;
+      invoicesNotifier.value = invoicesNotifier.value.where((i) => i.id != invoiceId).toList();
+      _sendRowAction(inv, 'delete');
+      return;
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {
@@ -690,6 +741,14 @@ class RentCollectionService {
 
   /// Empty all deleted invoices in trash for a given country (or all)
   void emptyTrash({String? countryCode}) {
+    if (_serverActions) {
+      final gone = invoicesNotifier.value.where((inv) => inv.isDeleted && (countryCode == null || inv.countryCode == countryCode)).toList();
+      invoicesNotifier.value = invoicesNotifier.value.where((inv) => !gone.contains(inv)).toList();
+      for (final inv in gone) {
+        _sendRowAction(inv, 'delete');
+      }
+      return;
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final toRemove = updatedList
         .where((inv) => inv.isDeleted && (countryCode == null || inv.countryCode == countryCode))
@@ -719,6 +778,13 @@ class RentCollectionService {
   /// Automatically purges invoices that have been in trash for >= 7 days
   void purgeExpiredDeletedInvoices() {
     if (_isPurging) return;
+    if (_serverActions) {
+      final now = DateTime.now();
+      for (final inv in invoicesNotifier.value.where((i) => i.isDeleted && i.deletedAt != null && now.difference(i.deletedAt!).inDays >= 7).toList()) {
+        permanentlyDeleteInvoice(inv.id);
+      }
+      return;
+    }
     _isPurging = true;
     try {
       final now = DateTime.now();
@@ -760,6 +826,14 @@ class RentCollectionService {
     DateTime? dueDate,
     String? notes,
   }) {
+    if (_serverActions) {
+      // A server row's amount and due date are the lease's; only the note is kept (TAQ-163).
+      final inv = getInvoiceById(invoiceId);
+      if (inv == null || notes == inv.notes) return;
+      _replace(invoiceId, (c) => c.copyWith(notes: notes ?? ''));
+      _sendRowAction(inv, 'note', notes: notes ?? '');
+      return;
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {
@@ -796,6 +870,10 @@ class RentCollectionService {
 
   // Send intelligent reminder (WhatsApp / SMS / Email)
   void sendReminder(String invoiceId) {
+    if (_serverActions) {
+      final inv = getInvoiceById(invoiceId);
+      if (inv != null) _sendRowAction(inv, 'reminder');
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {
@@ -810,6 +888,10 @@ class RentCollectionService {
 
   // Issue formal legal notice for eviction / RDC filing
   void issueLegalNotice(String invoiceId) {
+    if (_serverActions) {
+      final inv = getInvoiceById(invoiceId);
+      if (inv != null) _sendRowAction(inv, 'legal_notice');
+    }
     final updatedList = List<RentInvoiceModel>.from(invoicesNotifier.value);
     final index = updatedList.indexWhere((inv) => inv.id == invoiceId);
     if (index != -1) {

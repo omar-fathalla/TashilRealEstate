@@ -175,6 +175,52 @@ class PortfolioTransaction {
   }
 }
 
+/// What the managers did with one month's rent row (`RentRowStates/{leaseId}_{YYYY-MM}`, written
+/// only by the updateRentRow function, TAQ-163).
+class PortfolioRentRowState {
+  final String id;
+  final String leaseId;
+  final String period;
+  final bool hidden;
+  final bool deleted;
+  final DateTime? hiddenAt;
+  final String notes;
+  final int reminderCount;
+  final DateTime? lastReminderAt;
+  final DateTime? legalNoticeAt;
+
+  const PortfolioRentRowState({
+    required this.id,
+    this.leaseId = '',
+    this.period = '',
+    this.hidden = false,
+    this.deleted = false,
+    this.hiddenAt,
+    this.notes = '',
+    this.reminderCount = 0,
+    this.lastReminderAt,
+    this.legalNoticeAt,
+  });
+
+  String get key => '${leaseId}_$period';
+
+  factory PortfolioRentRowState.fromMap(String id, Map<String, dynamic> data) {
+    final count = data['reminder_count'];
+    return PortfolioRentRowState(
+      id: id,
+      leaseId: _text(data['lease_id']),
+      period: _text(data['period']),
+      hidden: data['hidden'] == true,
+      deleted: data['deleted'] == true,
+      hiddenAt: _date(data['hidden_at']),
+      notes: _text(data['notes']),
+      reminderCount: count is num && count > 0 ? count.toInt() : 0,
+      lastReminderAt: _date(data['last_reminder_at']),
+      legalNoticeAt: _date(data['legal_notice_at']),
+    );
+  }
+}
+
 /// A receipt (`Invoices/{invoiceNumber}`), issued by the server when a payment is paid or recorded.
 class PortfolioInvoice {
   final String invoiceNumber;

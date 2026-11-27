@@ -13,6 +13,8 @@ import 'portfolio_controller.dart';
 /// - Ended leases keep their paid months as history and owe nothing.
 /// - The only late penalty is the lease's own flat late fee (TAQ-164, 0 by default), shown once a
 ///   month is past its due day plus the lease's grace days, as the server charges it.
+/// - What the managers did with a row (trash, delete, notes, reminders, legal notice) comes from
+///   `RentRowStates` (TAQ-163); a deleted row is left out.
 class RentScheduleBuilder {
   RentScheduleBuilder._();
 
@@ -47,6 +49,8 @@ class RentScheduleBuilder {
       if (inv.transactionId.isNotEmpty) receiptByTx[inv.transactionId] = inv;
     }
 
+    final rowStates = {for (final r in snapshot.rentRowStates) r.key: r};
+
     final out = <RentInvoiceModel>[];
     for (final lease in snapshot.leases) {
       if (!lease.isActive && !lease.isEnded) continue;
@@ -79,6 +83,8 @@ class RentScheduleBuilder {
         if (year == null || month == null) continue;
         final tx = txByKey['${lease.id}_$period'];
         final paidTx = (tx != null && tx.isPaid) ? tx : null;
+        final state = rowStates['${lease.id}_$period'];
+        if (state != null && state.deleted) continue;
         final paid = paidTx != null;
         final receipt = paidTx == null ? null : receiptByTx[paidTx.id];
         final due = _dueDate(year, month, dueDay);
@@ -116,6 +122,12 @@ class RentScheduleBuilder {
           transactionReference: paidTx != null && paidTx.reference.isNotEmpty ? paidTx.reference : null,
           platformFeePercent: deductedPercent,
           payoutStatus: paid ? 'transferred_to_owner' : 'pending',
+          reminderCount: state?.reminderCount ?? 0,
+          lastReminderSentAt: state?.lastReminderAt,
+          legalWarningIssued: state?.legalNoticeAt != null,
+          isDeleted: state?.hidden ?? false,
+          deletedAt: state != null && state.hidden ? (state.hiddenAt ?? today) : null,
+          notes: state == null || state.notes.isEmpty ? null : state.notes,
         ));
       }
     }
