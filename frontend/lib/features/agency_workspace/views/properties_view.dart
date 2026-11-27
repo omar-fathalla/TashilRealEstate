@@ -14,6 +14,7 @@ import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 
 /// The agency's properties (TAQ-143): the units the signed-in agency admin registered, with their
 /// real rented or vacant status. Starter samples are never shown, and a card opens the unit for editing.
@@ -28,6 +29,8 @@ class PropertiesView extends StatelessWidget {
   void _add(BuildContext context) => onAdd != null ? onAdd!() : FastPropertyOnboardingDialog.show(context);
 
   void _open(BuildContext context, ManagedPropertyModel p) {
+    // TAQ-169: an agent cannot edit listings.
+    if (AgencyStaffScope.isAgentOf(context)) return;
     if (onOpen != null) {
       onOpen!(p);
       return;
@@ -61,6 +64,7 @@ class PropertiesView extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isAgent = AgencyStaffScope.isAgentOf(context);
     Widget body;
     if (loading && units.isEmpty) {
       body = const Center(child: TashilLoadingIndicator());
@@ -69,9 +73,9 @@ class PropertiesView extends StatelessWidget {
         icon: Icons.apartment_rounded,
         title: loc.tr('agPropsEmptyTitle'),
         message: loc.tr('agPropsEmptyMessage'),
-        primaryActionLabel: loc.tr('addProperty'),
-        primaryActionIcon: Icons.add,
-        onPrimaryAction: () => _add(context),
+        primaryActionLabel: isAgent ? null : loc.tr('addProperty'),
+        primaryActionIcon: isAgent ? null : Icons.add,
+        onPrimaryAction: isAgent ? null : () => _add(context),
       );
     } else {
       body = GridView.builder(
@@ -88,7 +92,7 @@ class PropertiesView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: units.isEmpty
+      floatingActionButton: units.isEmpty || isAgent
           ? null
           : TashilExtendedFloatingActionButton(
               onPressed: () => _add(context),
@@ -106,10 +110,12 @@ class PropertiesView extends StatelessWidget {
             ),
             SizedBox(height: isMobile ? 16 : 24),
             // Other owners' properties this agency is invited to or manages (TAQ-149).
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
-              child: const SingleChildScrollView(child: AgencyMandatesPanel()),
-            ),
+            // Mandates are the AgencyAdmin's decisions (TAQ-169).
+            if (!isAgent)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: const SingleChildScrollView(child: AgencyMandatesPanel()),
+              ),
             Expanded(child: body),
           ],
         ),

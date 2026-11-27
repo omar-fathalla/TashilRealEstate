@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/portfolio/services/portfolio_control
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_data_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 
 /// Material Design 3 (M3) Leases & Contracts Management View.
 /// Conforms to:
@@ -297,16 +298,19 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                       ),
                       const SizedBox(height: 24),
 
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: TashilButton(
-                          label: loc.tr('mpTitle'),
-                          icon: Icons.receipt_long_rounded,
-                          variant: TashilButtonVariant.tonal,
-                          onPressed: () => RecordManualPaymentDialog.show(context),
+                      // TAQ-169: recording payments stays with the AgencyAdmin.
+                      if (!AgencyStaffScope.isAgentOf(context)) ...[
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TashilButton(
+                            label: loc.tr('mpTitle'),
+                            icon: Icons.receipt_long_rounded,
+                            variant: TashilButtonVariant.tonal,
+                            onPressed: () => RecordManualPaymentDialog.show(context),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
+                      ],
                       // 2. M3 KPI Cards Grid
                       _buildKpiSection(
                         loc: loc,
@@ -413,11 +417,13 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
       ],
     );
 
-    final actionButton = TashilButton(
-      onPressed: _openLeaseBuilder,
-      icon: Icons.add_rounded,
-      label: loc.tr('createNewLease'),
-    );
+    final Widget actionButton = AgencyStaffScope.isAgentOf(context)
+        ? const SizedBox.shrink()
+        : TashilButton(
+            onPressed: _openLeaseBuilder,
+            icon: Icons.add_rounded,
+            label: loc.tr('createNewLease'),
+          );
 
     if (isCompact) {
       return Column(
@@ -835,16 +841,18 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
                     label: loc.tr('viewOfficialContract'),
                     icon: Icons.visibility_rounded,
                   ),
-                  TashilConnectedButtonSegment(
-                    value: 'edit',
-                    label: loc.tr('editContractBtn'),
-                    icon: Icons.edit_outlined,
-                  ),
-                  TashilConnectedButtonSegment(
-                    value: 'delete',
-                    label: loc.tr('deleteContractBtn'),
-                    icon: Icons.delete_outline_rounded,
-                  ),
+                  if (!AgencyStaffScope.isAgentOf(context)) ...[
+                    TashilConnectedButtonSegment(
+                      value: 'edit',
+                      label: loc.tr('editContractBtn'),
+                      icon: Icons.edit_outlined,
+                    ),
+                    TashilConnectedButtonSegment(
+                      value: 'delete',
+                      label: loc.tr('deleteContractBtn'),
+                      icon: Icons.delete_outline_rounded,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1089,12 +1097,14 @@ class _LeasesManagementViewState extends State<LeasesManagementView> {
               style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            TashilButton(
-              onPressed: _openLeaseBuilder,
-              icon: Icons.add_rounded,
-              label: loc.tr('createNewLease'),
-            ),
+            if (!AgencyStaffScope.isAgentOf(context)) ...[
+              const SizedBox(height: 20),
+              TashilButton(
+                onPressed: _openLeaseBuilder,
+                icon: Icons.add_rounded,
+                label: loc.tr('createNewLease'),
+              ),
+            ],
           ],
         ),
       ),

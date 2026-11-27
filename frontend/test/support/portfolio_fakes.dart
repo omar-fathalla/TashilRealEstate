@@ -41,6 +41,10 @@ class FakePortfolioBackend implements PortfolioBackend {
   @override
   Future<bool> currentIsSuperAdmin() async => superAdmin;
 
+  bool agent = false;
+  @override
+  Future<bool> currentIsAgencyAgent() async => agent;
+
   Stream<List<T>> _stream<T>(PortfolioScope scope, List<T> items) {
     scopes.add(scope);
     if (failStreams) return Stream.error(StateError('denied'));

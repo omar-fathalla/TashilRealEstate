@@ -14,6 +14,11 @@ class TrustedRole {
   /// escalations. Only ever granted as a custom claim by a SuperAdmin.
   static const String admin = 'Admin';
   static const String agencyAdmin = 'AgencyAdmin';
+
+  /// Agency staff (TAQ-169): works the agency's leases, rent rows, requests and maintenance, but
+  /// cannot decide applications, create leases or record payments. Granted only as a custom
+  /// claim when the user accepts an AgencyAdmin's invite.
+  static const String agencyAgent = 'AgencyAgent';
   static const String owner = 'Owner';
   static const String tenant = 'Tenant';
 
@@ -22,7 +27,7 @@ class TrustedRole {
   static const String investor = 'Investor';
 
   static const Set<String> selfServiceRoles = {owner, tenant, investor};
-  static const Set<String> all = {superAdmin, admin, agencyAdmin, owner, tenant, investor};
+  static const Set<String> all = {superAdmin, admin, agencyAdmin, agencyAgent, owner, tenant, investor};
 
   /// Returns one of [all], or '' when neither source grants a role.
   static String fromSources({Object? claimRole, Object? profileRole}) {
