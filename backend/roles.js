@@ -13,8 +13,12 @@ const AGENCY_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
  *
  * An AgencyAdmin needs an id of a real agency (`Agencies/{agencyId}` must exist). Moving a user off
  * AgencyAdmin removes `agency_id` from both the claim and the profile. When the role or agency
- * changes, the user's refresh tokens are revoked, so a demoted or moved admin does not keep the old
- * access until the one-hour token expires (TAQ-148).
+ * changes, the user's refresh tokens are revoked (TAQ-148), so the client cannot mint a new ID token
+ * with the old role. What that does and does not cover (TAQ-158):
+ * - Callables that use requireFreshAuth (authz.js) re-verify the caller's ID token with
+ *   checkRevoked=true, so they refuse an ID token issued before the revocation right away.
+ * - Firestore and Storage security rules cannot check revocation. An ID token that was issued before
+ *   the change keeps its old role/agency_id claims in the rules until it expires, at most one hour.
  */
 async function applyUserRole({ uid, role, agencyId, actorUid }) {
   if (!uid || typeof uid !== "string") {

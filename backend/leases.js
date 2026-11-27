@@ -24,7 +24,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { requireAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
+const { requireFreshAuth, requireRole, resolveUserAuthority, leaseAmount } = require("./authz");
 const { appCheckEnforced } = require("./config");
 const { leaseLiveState, assertLeasePayable } = require("./lease_state");
 const { verifyPropertyOwnership, registeredOwner } = require("./property_owners");
@@ -182,7 +182,7 @@ function titleOf(silo) {
  * (only the tenant's acceptance does), but a property that already has a live lease is refused.
  */
 const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, LANDLORD_ROLES);
   const data = request.data || {};
   const propertyId = requireId(data.propertyId, "propertyId");
@@ -304,7 +304,7 @@ async function contendedAnswer(db, ref) {
  * transaction; `reject` closes the offer. Nothing else on the lease changes.
  */
 const respondToLeaseOffer = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const data = request.data || {};
   const leaseId = requireId(data.leaseId, "leaseId");
   if (!["approve", "reject"].includes(data.decision)) {

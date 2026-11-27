@@ -19,6 +19,58 @@ function requireAuth(request) {
   return request.auth;
 }
 
+function bearerToken(rawRequest) {
+  const header = rawRequest && rawRequest.headers && (rawRequest.headers.authorization || rawRequest.headers.Authorization);
+  if (typeof header !== "string") return "";
+  const match = /^Bearer\s+(\S+)$/i.exec(header.trim());
+  return match ? match[1] : "";
+}
+
+function revokedError() {
+  return new HttpsError("unauthenticated", "Your session has expired. Please sign in again.", { reason: "token_revoked" });
+}
+
+/**
+ * requireAuth plus a revocation check (TAQ-158). The callable runtime only checks the ID token's
+ * signature and expiry, so a token issued before revokeRefreshTokens (role change, demotion,
+ * disabled or deleted account) would still work for up to an hour. Sensitive callables call this
+ * instead: the caller's bearer token is re-verified with verifyIdToken(token, checkRevoked=true),
+ * which rejects revoked tokens and disabled or deleted users. Any verification failure is refused.
+ *
+ * A deployed callable always has the raw HTTP request. Only in-process unit tests call `.run()`
+ * without one; then the same check is done from the decoded token's auth_time against the user's
+ * tokensValidAfterTime (if the Auth user exists).
+ */
+async function requireFreshAuth(request) {
+  const auth = requireAuth(request);
+  const raw = bearerToken(request.rawRequest);
+  if (raw) {
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(raw, true);
+    } catch (err) {
+      throw revokedError();
+    }
+    if (decoded.uid !== auth.uid) throw revokedError();
+    return auth;
+  }
+  if (request.rawRequest) throw revokedError();
+  let user;
+  try {
+    user = await admin.auth().getUser(auth.uid);
+  } catch (err) {
+    if (err.code === "auth/user-not-found") return auth;
+    throw err;
+  }
+  if (user.disabled) throw revokedError();
+  const validAfter = user.tokensValidAfterTime ? Date.parse(user.tokensValidAfterTime) : NaN;
+  const authTime = auth.token && Number(auth.token.auth_time);
+  if (Number.isFinite(validAfter) && Number.isFinite(authTime) && authTime * 1000 < validAfter) {
+    throw revokedError();
+  }
+  return auth;
+}
+
 function claimedRole(auth) {
   return (auth.token && auth.token.role) || "";
 }
@@ -133,6 +185,7 @@ module.exports = {
   PUBLISHER_ROLES,
   PLATFORM_STAFF_ROLES,
   requireAuth,
+  requireFreshAuth,
   resolveRole,
   resolveUserRole,
   resolveUserAuthority,
