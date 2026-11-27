@@ -243,9 +243,10 @@ cd ../backend && npm run check:client-keys:build
 ## Functions runtime service account (TAQ-177)
 
 `backend/runtime_options.js` makes every function run as `tashil-functions@<project>.iam.gserviceaccount.com`
-instead of the default compute account, which has Editor. The Firebase CLI expands the
-`tashil-functions@` shorthand for each project, and also uses that account for the Eventarc
-triggers and as the Cloud Scheduler OIDC identity. **Create the account and its roles in a project
+instead of the default compute account, which has Editor. The email is built from the
+`GCLOUD_PROJECT` the Firebase CLI sets when it loads the code for a deploy (the CLI does not expand
+the `name@` shorthand when it grants secret access). The CLI also uses that account for the
+Eventarc triggers and as the Cloud Scheduler OIDC identity. **Create the account and its roles in a project
 before deploying this code there**, or the deploy fails:
 
 ```sh
