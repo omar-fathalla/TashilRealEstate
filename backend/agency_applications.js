@@ -7,10 +7,10 @@
  *                                             (licence pending, no badge) and makes the applicant
  *                                             its AgencyAdmin through applyUserRole
  *
- * Only these callables write the application; the applicant and SuperAdmin read it. An approval is
- * refused while the applicant is a party to a lease that is not finished, or owns a property an
- * agency manages: becoming an agency would change who manages those. The licence badge stays a
- * separate SuperAdmin check (TAQ-154).
+ * Only these callables write the application; the applicant and SuperAdmin read it. Applying
+ * (TAQ-195) and the approval are both refused while the applicant is a party to a lease that is
+ * not finished, or owns a property an agency manages: becoming an agency would change who
+ * manages those. The licence badge stays a separate SuperAdmin check (TAQ-154).
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -78,6 +78,12 @@ const applyForAgency = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
   }
   const fields = applicationFrom(request.data || {});
   const db = getFirestore();
+  // TAQ-195: refuse up front what the approval would refuse anyway. The approval checks again,
+  // since a lease can start after the application.
+  const blocker = await approvalBlocker(db, auth.uid);
+  if (blocker) {
+    throw new HttpsError("failed-precondition", "Finish your open leases or managed properties before applying.", { reason: blocker });
+  }
   const ref = db.collection(APPLICATIONS).doc(auth.uid);
   await db.runTransaction(async (t) => {
     const snap = await t.get(ref);
