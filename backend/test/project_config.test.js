@@ -500,3 +500,16 @@ test("TAQ-138: the Android Gradle Plugin is at least 9.1.1 (flutter build apk fa
   assert.ok(compareVersions(gradleVersion(), minGradle) >= 0, `AGP ${agp} needs Gradle ${minGradle} or newer; the wrapper has ${gradleVersion()}`);
 });
 
+
+// --- TAQ-165: function modules take FieldValue and friends from firebase-admin/firestore ---
+
+test("TAQ-165: no deployed module reads FieldValue, Timestamp or FieldPath from the admin.firestore namespace", () => {
+  const backendDir = path.join(root, "backend");
+  const offenders = [];
+  for (const name of fs.readdirSync(backendDir)) {
+    if (!name.endsWith(".js")) continue;
+    const src = fs.readFileSync(path.join(backendDir, name), "utf8");
+    if (/admin\.firestore\.(FieldValue|Timestamp|FieldPath)\b|\}\s*=\s*admin\.firestore\s*;/.test(src)) offenders.push(name);
+  }
+  assert.deepEqual(offenders, [], "use require(\"firebase-admin/firestore\"); the Functions emulator's admin.firestore has none of them");
+});
