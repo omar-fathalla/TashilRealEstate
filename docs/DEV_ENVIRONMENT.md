@@ -35,6 +35,22 @@ flutter build web --release \
   --dart-define=RECAPTCHA_SITE_KEY=<dev reCAPTCHA Enterprise site key, once App Check is set up for dev>
 ```
 
+Take the site key only from the App Check config of the dev web app. Never copy a key-shaped
+string out of console or CLI output: that is how dev builds once shipped a wrong key (TAQ-170).
+The lookup prints the key alone, or exits 1 when App Check has no reCAPTCHA Enterprise key
+for the app:
+
+```bash
+cd backend
+ACCESS_TOKEN=<OAuth access token for tashil-aqar-dev> \
+  node scripts/app_check_site_key.js --project tashil-aqar-dev
+```
+
+The script runs no sign-in or gcloud command, so the caller supplies the token. The app id is
+read from `frontend/lib/firebase_options_dev.dart`. Under `set -e`, set the define with
+`KEY=$(...)` on its own line: a failed lookup then stops the build instead of building with an
+empty key.
+
 Check the output for stray keys. The scan accepts the prod keys from `firebase_options.dart`
 plus the one dev key you export, and fails on anything else:
 

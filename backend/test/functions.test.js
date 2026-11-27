@@ -184,8 +184,9 @@ test("TAQ-45: seedDatabase is no longer a deployed function", () => {
   const publicHttp = Object.keys(fns)
     .filter((name) => fns[name] && fns[name].__endpoint && fns[name].__endpoint.httpsTrigger)
     .sort();
-  // paymobWebhook is the one intended public endpoint (TAQ-16); it authenticates by HMAC signature.
-  assert.deepEqual(publicHttp, ["paymobWebhook"]);
+  // paymobWebhook authenticates by HMAC signature (TAQ-16). cspReport only logs trimmed CSP
+  // violation reports and writes nothing (TAQ-171).
+  assert.deepEqual(publicHttp, ["cspReport", "paymobWebhook"]);
 });
 
 // --- TAQ-20: syncMarketIndexManual ---
