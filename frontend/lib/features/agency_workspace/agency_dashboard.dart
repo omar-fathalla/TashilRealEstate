@@ -21,6 +21,8 @@ import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_propert
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_controller.dart';
 import 'package:tashil_real_estate/features/portfolio/services/portfolio_stats.dart';
+import 'agency_staff_scope.dart';
+import 'views/agency_team_view.dart';
 import 'views/overview_view.dart';
 import 'views/properties_view.dart';
 import 'views/crm_view.dart';
@@ -59,15 +61,27 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
   late final List<Widget> _views;
   late final bool _showMockTabs = widget.showMockTabs ?? FeatureFlags.agencyMockTabs;
 
+  /// TAQ-169: an AgencyAgent sees the agency's work without financials or the team tab.
+  bool get _isAgent => _identity.value.isAgent;
+
+  /// The team tab (AgencyAdmin only).
+  static const int _teamTab = 9;
+
   /// The views the bottom navigation bar opens, in order. The CRM mockup (view 2) is left out
-  /// while it is hidden.
-  List<int> get _bottomTabs => [0, 1, if (_showMockTabs) 2, 3, 5];
+  /// while it is hidden; an agent gets rent collection instead of financials.
+  List<int> get _bottomTabs => [0, 1, if (_showMockTabs) 2, 3, _isAgent ? 4 : 5];
+
+  /// The view to show: an agent never lands on the admin-only financials or team views.
+  Widget get _currentView {
+    final index = _isAgent && (_selectedIndex == 5 || _selectedIndex == _teamTab) ? 0 : _selectedIndex;
+    return _views[index];
+  }
 
   @override
   void initState() {
     super.initState();
     _identitySource.load().then((identity) {
-      if (mounted) _identity.value = identity;
+      if (mounted) setState(() => _identity.value = identity);
     }).catchError((Object _) {});
     _portfolio = widget.portfolio ?? PortfolioController();
     _portfolio.start();
@@ -75,7 +89,9 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       OverviewView(
         controller: _portfolio,
         onNavigate: (tab) => setState(() => _selectedIndex = tab),
-        onAddProperty: () => FastPropertyOnboardingDialog.show(context),
+        onAddProperty: () {
+          if (!_isAgent) FastPropertyOnboardingDialog.show(context);
+        },
       ),
       const PropertiesView(),
       const CrmView(),
@@ -85,6 +101,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       const InvestorDashboardView(),
       const RequestsInboxView(agency: true),
       const MaintenanceManagerView(agency: true),
+      const AgencyTeamView(),
     ];
   }
 
@@ -112,12 +129,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           builder: (context, country, _) {
             final loc = AppLocalizations.of(context);
 
-            return ListenableBuilder(
-              listenable: Listenable.merge([_portfolio, PropertyLifecycleService().propertiesNotifier]),
-              builder: (context, _) => ResponsiveLayout(
-                mobileBody: _buildMobileLayout(context, loc),
-                desktopBody: _buildDesktopLayout(context, loc),
-                tabletBody: _buildMobileLayout(context, loc),
+            return AgencyStaffScope(
+              isAgent: _isAgent,
+              child: ListenableBuilder(
+                listenable: Listenable.merge([_portfolio, PropertyLifecycleService().propertiesNotifier]),
+                builder: (context, _) => ResponsiveLayout(
+                  mobileBody: _buildMobileLayout(context, loc),
+                  desktopBody: _buildDesktopLayout(context, loc),
+                  tabletBody: _buildMobileLayout(context, loc),
+                ),
               ),
             );
           },
@@ -138,7 +158,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         alignment: Alignment.topCenter,
         child: SizedBox(
           width: double.infinity,
-          child: _views[_selectedIndex],
+          child: _currentView,
         ),
       ),
     );
@@ -294,14 +314,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 4),
         ),
-        TashilRailDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
-          label: loc.tr('financials'),
-          isSelected: _selectedIndex == 5,
-          isExpanded: isExpanded,
-          onTap: () => setState(() => _selectedIndex = 5),
-        ),
+        if (!_isAgent)
+          TashilRailDestination(
+            icon: Icons.analytics_outlined,
+            selectedIcon: Icons.analytics_rounded,
+            label: loc.tr('financials'),
+            isSelected: _selectedIndex == 5,
+            isExpanded: isExpanded,
+            onTap: () => setState(() => _selectedIndex = 5),
+          ),
         if (_showMockTabs)
           TashilRailDestination(
             icon: Icons.show_chart_outlined,
@@ -327,6 +348,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 8),
         ),
+        if (!_isAgent)
+          TashilRailDestination(
+            icon: Icons.groups_outlined,
+            selectedIcon: Icons.groups_rounded,
+            label: loc.tr('agencyTeamTitle'),
+            isSelected: _selectedIndex == _teamTab,
+            isExpanded: isExpanded,
+            onTap: () => setState(() => _selectedIndex = _teamTab),
+          ),
         TashilRailDestination(
           icon: Icons.tune_outlined,
           selectedIcon: Icons.tune_rounded,
@@ -396,7 +426,9 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         return TashilDrawerProfileTile(
           initials: _initialsOf(identity, loc),
           displayName: identity.personName.isEmpty ? loc.tr('agencyWorkspace') : identity.personName,
-          roleSubtitle: agencyName.isEmpty ? loc.tr('roleAgency') : agencyName,
+          roleSubtitle: identity.isAgent
+              ? (agencyName.isEmpty ? loc.tr('roleAgencyAgent') : '$agencyName · ${loc.tr('roleAgencyAgent')}')
+              : (agencyName.isEmpty ? loc.tr('roleAgency') : agencyName),
           isCollapsed: false,
           onTap: onTap,
         );
@@ -502,7 +534,7 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
         ],
       ),
       endDrawer: _buildMobileDrawer(context, loc, colorScheme),
-      body: _views[_selectedIndex],
+      body: _currentView,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _bottomTabs.contains(_selectedIndex) ? _bottomTabs.indexOf(_selectedIndex) : 0,
         onDestinationSelected: (index) {
@@ -532,11 +564,18 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             selectedIcon: const Icon(Icons.description_rounded),
             label: loc.tr('leases'),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics_rounded),
-            label: loc.tr('financials'),
-          ),
+          if (_isAgent)
+            NavigationDestination(
+              icon: const Icon(Icons.payments_outlined),
+              selectedIcon: const Icon(Icons.payments_rounded),
+              label: loc.tr('rentCollectionTitle'),
+            )
+          else
+            NavigationDestination(
+              icon: const Icon(Icons.analytics_outlined),
+              selectedIcon: const Icon(Icons.analytics_rounded),
+              label: loc.tr('financials'),
+            ),
         ],
       ),
     );
@@ -650,16 +689,17 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             setState(() => _selectedIndex = 4);
           },
         ),
-        TashilDrawerDestination(
-          icon: Icons.analytics_outlined,
-          selectedIcon: Icons.analytics_rounded,
-          label: loc.tr('financials'),
-          isSelected: _selectedIndex == 5,
-          onTap: () {
-            Navigator.pop(context);
-            setState(() => _selectedIndex = 5);
-          },
-        ),
+        if (!_isAgent)
+          TashilDrawerDestination(
+            icon: Icons.analytics_outlined,
+            selectedIcon: Icons.analytics_rounded,
+            label: loc.tr('financials'),
+            isSelected: _selectedIndex == 5,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _selectedIndex = 5);
+            },
+          ),
         if (_showMockTabs)
           TashilDrawerDestination(
             icon: Icons.show_chart_outlined,
@@ -691,6 +731,17 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             setState(() => _selectedIndex = 8);
           },
         ),
+        if (!_isAgent)
+          TashilDrawerDestination(
+            icon: Icons.groups_outlined,
+            selectedIcon: Icons.groups_rounded,
+            label: loc.tr('agencyTeamTitle'),
+            isSelected: _selectedIndex == _teamTab,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _selectedIndex = _teamTab);
+            },
+          ),
         const TashilDivider.middleInset(height: 16.0),
         TashilDrawerDestination(
           icon: Icons.tune_outlined,

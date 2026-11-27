@@ -9,12 +9,16 @@ class AgencyIdentity {
   final String agencyName;
   final Map<String, String> agencyNames;
 
+  /// True for an AgencyAgent (TAQ-169), false for the AgencyAdmin.
+  final bool isAgent;
+
   const AgencyIdentity({
     this.displayName = '',
     this.email = '',
     this.agencyId = '',
     this.agencyName = '',
     this.agencyNames = const {},
+    this.isAgent = false,
   });
 
   static const empty = AgencyIdentity();
@@ -85,6 +89,7 @@ class FirebaseAgencyIdentitySource implements AgencyIdentitySource {
       agencyId: agencyId,
       agencyName: agencyName,
       agencyNames: agencyNames,
+      isAgent: claims['role'] == 'AgencyAgent',
     );
   }
 

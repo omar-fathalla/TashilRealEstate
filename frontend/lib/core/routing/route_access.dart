@@ -24,7 +24,7 @@ class RouteAccess {
     '/financial-dashboard': null,
     '/super-admin': {TrustedRole.superAdmin},
     '/admin': {TrustedRole.admin, TrustedRole.superAdmin},
-    '/agency': {TrustedRole.agencyAdmin},
+    '/agency': {TrustedRole.agencyAdmin, TrustedRole.agencyAgent},
     '/owner': {TrustedRole.owner},
     '/tenant': {TrustedRole.tenant},
     '/checkout': {TrustedRole.tenant},
@@ -58,6 +58,7 @@ class RouteAccess {
       case TrustedRole.admin:
         return '/admin';
       case TrustedRole.agencyAdmin:
+      case TrustedRole.agencyAgent:
         return '/agency';
       case TrustedRole.owner:
         return '/owner';

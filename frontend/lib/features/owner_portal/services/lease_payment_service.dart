@@ -77,7 +77,9 @@ class FirebaseLeasePaymentBackend implements LeasePaymentBackend {
     if (user == null) return null;
     final claims = (await user.getIdTokenResult()).claims ?? const {};
     final agency = claims['agency_id'];
-    return claims['role'] == 'AgencyAdmin' && agency is String && agency.isNotEmpty ? agency : null;
+    final role = claims['role'];
+    // TAQ-169: an AgencyAgent sends reminders for its agency's leases too.
+    return (role == 'AgencyAdmin' || role == 'AgencyAgent') && agency is String && agency.isNotEmpty ? agency : null;
   }
 
   @override

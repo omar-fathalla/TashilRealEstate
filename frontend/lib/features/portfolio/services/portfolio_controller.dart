@@ -77,8 +77,13 @@ class PortfolioController extends ChangeNotifier {
         _gotLeases = true;
         _update(_copy(leases: v, load: PortfolioLoad.ready));
       });
-      _listen<List<PortfolioTransaction>>(data.watchTransactions(scope), (v) => _update(_copy(transactions: v)));
-      _listen<List<PortfolioInvoice>>(data.watchInvoices(scope), (v) => _update(_copy(invoices: v)));
+      // TAQ-169: an agency agent cannot read invoices or transactions.
+      final agent = scope.isAgency && await data.backend.currentIsAgencyAgent();
+      if (_disposed) return;
+      if (!agent) {
+        _listen<List<PortfolioTransaction>>(data.watchTransactions(scope), (v) => _update(_copy(transactions: v)));
+        _listen<List<PortfolioInvoice>>(data.watchInvoices(scope), (v) => _update(_copy(invoices: v)));
+      }
       _listen<List<PortfolioMaintenance>>(data.watchMaintenance(scope), (v) => _update(_copy(maintenance: v)));
       // Row states are an overlay (TAQ-163): if they cannot be read, the rows still show.
       _subs.add(data.watchRentRowStates(scope).listen(
