@@ -42,8 +42,16 @@ service cloud.firestore {
       return isAuthenticated() && currentRole() == role;
     }
 
+    // TAQ-25: a SuperAdmin whose claims carry mfa_required (set by role_claims.js
+    // --require-mfa, only after a second factor is enrolled) must have signed in with it.
+    // Without that claim nothing changes, so the switch is off until it is set per account.
+    function superAdminMfaOk() {
+      return request.auth.token.get('mfa_required', false) != true
+        || request.auth.token.get('firebase', {}).get('sign_in_second_factor', null) != null;
+    }
+
     function isSuperAdmin() {
-      return hasRole('SuperAdmin');
+      return hasRole('SuperAdmin') && superAdminMfaOk();
     }
 
     function isAgencyAdmin() {

@@ -76,12 +76,25 @@ function claimedRole(auth) {
 }
 
 /**
+ * TAQ-25: a SuperAdmin claim only counts when the token's second factor is present, if that
+ * account's claims carry `mfa_required: true`. role_claims.js --require-mfa sets it, and only
+ * after a second factor is enrolled. Without the claim nothing changes (the switch is off).
+ * Mirrors superAdminMfaOk() in firestore.rules.
+ */
+function missingSecondFactor(auth) {
+  const token = auth.token || {};
+  if (token.role !== "SuperAdmin" || token.mfa_required !== true) return false;
+  const firebase = token.firebase || {};
+  return !firebase.sign_in_second_factor;
+}
+
+/**
  * Mirrors currentRole() in firestore.rules: a custom claim wins, and the profile
  * document is only trusted for self-service roles.
  */
-async function resolveRole(auth) {
+async function resolveRole(auth, { checkSecondFactor = true } = {}) {
   const claim = claimedRole(auth);
-  if (claim) return claim;
+  if (claim) return checkSecondFactor && missingSecondFactor(auth) ? "" : claim;
   const snap = await admin.firestore().collection("Users").doc(auth.uid).get();
   const profileRole = snap.exists ? snap.get("role") : "";
   return SELF_SERVICE_ROLES.includes(profileRole) ? profileRole : "";
@@ -98,7 +111,8 @@ async function resolveUserAuthority(uid) {
   } catch (err) {
     if (err.code !== "auth/user-not-found") throw err;
   }
-  const role = await resolveRole({ uid, token: claims });
+  // No sign-in here (triggers act on stored data), so the second-factor switch does not apply.
+  const role = await resolveRole({ uid, token: claims }, { checkSecondFactor: false });
   const agencyId = role === "AgencyAdmin" && typeof claims.agency_id === "string" ? claims.agency_id : "";
   return { role, agencyId };
 }
@@ -109,6 +123,9 @@ async function resolveUserRole(uid) {
 
 async function requireRole(auth, roles) {
   const role = await resolveRole(auth);
+  if (!roles.includes(role) && roles.includes("SuperAdmin") && missingSecondFactor(auth)) {
+    throw new HttpsError("permission-denied", "Sign in again with your second factor to do this.", { reason: "mfa_required" });
+  }
   if (!roles.includes(role)) {
     throw new HttpsError("permission-denied", "This action is not allowed for your role.");
   }
@@ -190,6 +207,7 @@ module.exports = {
   resolveUserRole,
   resolveUserAuthority,
   requireRole,
+  missingSecondFactor,
   loadLease,
   leaseAmount,
   leaseCountry,

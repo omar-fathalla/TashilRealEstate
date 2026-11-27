@@ -333,3 +333,29 @@ self-service roles (Owner, Tenant, Investor) from it.
   ```
 
   The account then signs in again to pick up the claim.
+
+## SuperAdmin two-step verification (TAQ-25)
+
+Off by default. Nothing changes for any account until its SuperAdmin turns it on.
+
+- The switch is a per-account custom claim, `mfa_required`. While it is set on a SuperAdmin,
+  `firestore.rules`, `storage.rules` and every callable (`requireRole`) treat that account as
+  SuperAdmin only when its ID token shows a second factor
+  (`firebase.sign_in_second_factor`). Without one, a callable refuses with
+  `permission-denied` and `details.reason == "mfa_required"`. Triggers and other server-side
+  lookups don't depend on the claim.
+- The app supports an authenticator app (TOTP). Sign-in asks for the 6-digit code whenever the
+  account has one enrolled. A SuperAdmin adds one from the dashboard header (the shield icon).
+
+Turning it on (by the account's owner, once per project):
+
+1. In the Firebase console, open Authentication → Sign-in method → Multi-factor authentication.
+   That requires Identity Platform. Turn on TOTP there.
+2. Sign in to the app as the SuperAdmin and enrol an authenticator app from the dashboard.
+3. Run `node backend/scripts/role_claims.js --project <id> --require-mfa <uid>` as a dry run, then
+   again with `--apply`. The script refuses an account that isn't a SuperAdmin or has no enrolled
+   factor. It also revokes refresh tokens, so the next sign-in uses the second factor.
+
+To turn it off (for example, a lost phone), run `--clear-mfa <uid> --apply`. That removes the
+claim without signing anyone out. The enrolled factor itself can then be removed with the
+Admin SDK or in the console.

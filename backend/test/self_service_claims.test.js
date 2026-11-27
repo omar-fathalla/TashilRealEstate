@@ -105,6 +105,6 @@ test("TAQ-27: role_claims.js takes one mode at a time and needs a uid to bootstr
   assert.throws(() => parseArgs(["--project", "p", "--bootstrap-superadmin"]), /needs a uid/);
   assert.throws(() => parseArgs(["--project", "p", "--backfill-self-service", "--grant", "u"]), /one of/);
   assert.deepEqual(parseArgs(["--project", "p", "--bootstrap-superadmin", "u1", "--apply"]), {
-    project: "p", grant: [], apply: true, backfillSelfService: false, bootstrapSuperAdmin: "u1",
+    project: "p", grant: [], apply: true, backfillSelfService: false, bootstrapSuperAdmin: "u1", requireMfa: "", clearMfa: "",
   });
 });

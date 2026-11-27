@@ -11,6 +11,8 @@ import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/routing/route_access.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
 import 'package:tashil_real_estate/core/services/firestore_service.dart';
+import 'package:tashil_real_estate/core/services/second_factor.dart';
+import 'package:tashil_real_estate/features/auth/widgets/second_factor_dialogs.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
 import 'package:tashil_real_estate/core/design_system/dividers/tashil_dividers.dart';
@@ -187,6 +189,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     ));
   }
 
+  // TAQ-25: an account with an authenticator app finishes sign-in with its 6-digit code.
+  Future<UserCredential?> _withSecondFactor(Future<UserCredential?> Function() signIn) {
+    return SecondFactor.signInWithSecondFactor(signIn, () => askSecondFactorCode(context));
+  }
+
   Future<void> _handleEmailAuth(AppLocalizations loc) async {
     final email = _emailController.text.trim();
     final pass = _passwordController.text.trim();
@@ -209,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           await creds!.user!.updateDisplayName(name);
         }
       } else {
-        creds = await _authService.signInWithEmail(email, pass);
+        creds = await _withSecondFactor(() => _authService.signInWithEmail(email, pass));
       }
 
       if (creds?.user != null) {
@@ -229,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _handleGoogleAuth(AppLocalizations loc) async {
     setState(() => _isLoading = true);
     try {
-      final creds = await _authService.signInWithGoogle();
+      final creds = await _withSecondFactor(_authService.signInWithGoogle);
       if (creds?.user != null) {
         await _handlePostAuthNavigation(creds!.user!, _selectedRole);
       }
@@ -247,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _handleAppleAuth(AppLocalizations loc) async {
     setState(() => _isLoading = true);
     try {
-      final creds = await _authService.signInWithApple();
+      final creds = await _withSecondFactor(_authService.signInWithApple);
       if (creds?.user != null) {
         await _handlePostAuthNavigation(creds!.user!, _selectedRole);
       }
