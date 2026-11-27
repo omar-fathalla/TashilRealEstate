@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tashil_real_estate/core/design_system/buttons/tashil_buttons.dart';
@@ -1250,9 +1252,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
   }) {
     final outerRadius = BorderRadius.circular(20);
 
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.all(3.5),
+    return _ConnectedGroupFrame(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHigh,
         borderRadius: outerRadius,
@@ -1279,7 +1279,6 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               colorScheme: colorScheme,
             ),
           ),
-          const SizedBox(width: 4.0),
           // 2. Edit Action Pill
           _TableConnectedActionIconPill(
             icon: Icons.edit_outlined,
@@ -1294,7 +1293,6 @@ class _RentCollectionViewState extends State<RentCollectionView> {
               colorScheme: colorScheme,
             ),
           ),
-          const SizedBox(width: 4.0),
           // 3. Move to Trash Action Pill
           _TableConnectedActionIconPill(
             icon: Icons.delete_outline_rounded,
@@ -1328,9 +1326,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
     final outerRadius = BorderRadius.circular(20);
 
     if (isPaid) {
-      return Container(
-        height: 38,
-        padding: const EdgeInsets.all(3.5),
+      return _ConnectedGroupFrame(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHigh,
           borderRadius: outerRadius,
@@ -1351,9 +1347,7 @@ class _RentCollectionViewState extends State<RentCollectionView> {
       );
     }
 
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.all(3.5),
+    return _ConnectedGroupFrame(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHigh,
         borderRadius: outerRadius,
@@ -2926,40 +2920,53 @@ class _TableConnectedActionPillState extends State<_TableConnectedActionPill> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        height: widget.height,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: radius,
-          border: border,
-          boxShadow: shadow,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 11.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, size: 14, color: fg),
-                    const SizedBox(width: 5.0),
-                  ],
-                  Text(
-                    widget.label,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: widget.isFilled ? FontWeight.bold : FontWeight.w600,
-                      color: fg,
-                    ),
+      // TAQ-159: the pill stays [height] (31dp); the tap target is at least 48x48 and the label
+      // never wraps or shrinks, so the pill can't collapse to a sliver in a narrow table cell.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kMinInteractiveDimension / 2),
+          onTap: widget.onTap,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: kMinInteractiveDimension,
+              minHeight: math.max(widget.height, kMinInteractiveDimension),
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                height: widget.height,
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: radius,
+                  border: border,
+                  boxShadow: shadow,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 11.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, size: 14, color: fg),
+                        const SizedBox(width: 5.0),
+                      ],
+                      Text(
+                        widget.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: widget.isFilled ? FontWeight.bold : FontWeight.w600,
+                          color: fg,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -3022,23 +3029,30 @@ class _TableConnectedActionIconPillState extends State<_TableConnectedActionIcon
       onExit: (_) => setState(() => _isHovered = false),
       child: Tooltip(
         message: widget.tooltip,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: radius,
-            border: border,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: radius,
-              onTap: widget.onTap,
+        // TAQ-159: the pill stays [size] (31dp), the tap target around it is 48x48.
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: widget.onTap,
+            child: SizedBox(
+              width: math.max(widget.size, kMinInteractiveDimension),
+              height: math.max(widget.size, kMinInteractiveDimension),
               child: Center(
-                child: Icon(widget.icon, size: 15, color: fg),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: radius,
+                    border: border,
+                  ),
+                  child: Center(
+                    child: Icon(widget.icon, size: 15, color: fg),
+                  ),
+                ),
               ),
             ),
           ),
@@ -3049,3 +3063,35 @@ class _TableConnectedActionIconPillState extends State<_TableConnectedActionIcon
 }
 
 
+
+/// The rounded frame of a connected table button group. It is drawn 38dp tall (as before), centred
+/// behind a row whose buttons have 48dp tap targets (TAQ-159), so the row does not overflow the frame.
+class _ConnectedGroupFrame extends StatelessWidget {
+  final BoxDecoration decoration;
+  final Widget child;
+
+  const _ConnectedGroupFrame({required this.decoration, required this.child});
+
+  static const double _visualHeight = 38;
+
+  @override
+  Widget build(BuildContext context) {
+    const inset = (kMinInteractiveDimension - _visualHeight) / 2;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          top: inset,
+          bottom: inset,
+          child: DecoratedBox(decoration: decoration),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3.5),
+          child: child,
+        ),
+      ],
+    );
+  }
+}
