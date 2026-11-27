@@ -432,3 +432,13 @@ test("TAQ-91: an Investor keeps public photos, but cannot list, upload, delete o
 test("TAQ-91: an Investor can store their own private files like any user", async () => {
   await assertSucceeds(as("investor1", { role: "Investor" }).ref("users/investor1/kyc/id.png").put(bytes(16), { contentType: "image/png" }));
 });
+
+test("TAQ-180: an anonymous session cannot upload to its private users/ folder; a signed-up user still can", async () => {
+  const jpeg = { contentType: "image/jpeg" };
+  const anonSession = as("anonU", { firebase: { sign_in_provider: "anonymous" } });
+  await assertFails(anonSession.ref("users/anonU/kyc/id.jpg").put(bytes(16), jpeg));
+  await assertFails(anonSession.ref("users/anonU/voice.mp3").put(bytes(16), { contentType: "audio/mpeg" }));
+  await assertSucceeds(as("ownerA").ref("users/ownerA/kyc/new.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(as("ownerA", { firebase: { sign_in_provider: "password" } }).ref("users/ownerA/kyc/pw.jpg").put(bytes(16), jpeg));
+  await assertSucceeds(as("inv", { role: "Investor", firebase: { sign_in_provider: "google.com" } }).ref("users/inv/doc.pdf").put(bytes(16), { contentType: "application/pdf" }));
+});

@@ -10,6 +10,11 @@ service firebase.storage {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // An anonymous Firebase session (TAQ-180): no e-mail, phone or federated sign-in.
+    function isAnonymousSession() {
+      return isSignedIn() && request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'anonymous';
+    }
+
     // Elevated roles only come from the custom claim set by setUserRole / the Admin SDK.
     function isSuperAdmin() {
       // TAQ-25: same second-factor switch as firestore.rules (off unless mfa_required is set).
@@ -31,7 +36,9 @@ service firebase.storage {
     // Private files: KYC documents, contracts, voice notes. Never public.
     match /users/{uid}/{path=**} {
       allow read, delete: if isSelf(uid) || isSuperAdmin();
+      // An anonymous session cannot store files here (TAQ-180); it has no KYC or contract flow.
       allow create, update: if isSelf(uid)
+        && !isAnonymousSession()
         && under10MB()
         && request.resource.contentType.matches('image/.*|application/pdf|audio/.*');
     }

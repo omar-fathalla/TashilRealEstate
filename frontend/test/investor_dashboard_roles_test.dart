@@ -132,6 +132,9 @@ void main() {
       // 1. Verify 4 M3 elevated KPI Hero cards exist
       expect(find.byType(TashilCard), findsWidgets);
       expect(find.text('قيمة المحفظة العقارية الحية'), findsOneWidget);
+      // TAQ-181: the sample-data notice is shown.
+      expect(find.byKey(const Key('investorSampleDataNotice')), findsOneWidget);
+      expect(find.text('بيانات تجريبية: الأرقام في هذه الصفحة أمثلة توضيحية وليست محفظة حقيقية.'), findsOneWidget);
       expect(find.text('صافي التدفقات النقدية السنوية'), findsOneWidget);
       expect(find.text('صافي عائد الاستثمار'), findsOneWidget);
       expect(find.text('معدل إشغال المحفظة'), findsOneWidget);

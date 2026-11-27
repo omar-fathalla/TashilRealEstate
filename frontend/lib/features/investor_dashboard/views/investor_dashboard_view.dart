@@ -77,6 +77,28 @@ class _InvestorDashboardViewState extends State<InvestorDashboardView> {
                           height: 1.4,
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      // TAQ-181: every figure below is sample data, not a real portfolio.
+                      Container(
+                        key: const Key('investorSampleDataNotice'),
+                        padding: const EdgeInsetsDirectional.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: colorScheme.tertiaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded, size: 20, color: colorScheme.onTertiaryContainer),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                loc.tr('investorSampleDataNotice'),
+                                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onTertiaryContainer),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 18),
                       // Responsive Action Toolbar with M3 Button Group Suite
                       Wrap(
