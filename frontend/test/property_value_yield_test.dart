@@ -92,8 +92,8 @@ void main() {
     test('parse', () {
       expect(PropertyValueDialog.parse(''), isNull);
       expect(PropertyValueDialog.parse(' 1,250,000 '), 1250000);
-      expect(PropertyValueDialog.parse('0').isNaN, isTrue);
-      expect(PropertyValueDialog.parse('abc').isNaN, isTrue);
+      expect(PropertyValueDialog.parse('0')!.isNaN, isTrue);
+      expect(PropertyValueDialog.parse('abc')!.isNaN, isTrue);
     });
 
     testWidgets('saves the typed value, refuses zero, and clears', (tester) async {
