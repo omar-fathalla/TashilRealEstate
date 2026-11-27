@@ -24,7 +24,13 @@ const {
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { appCheckEnforced } = require("./config");
-const { stripContacts } = require("./contact_filter");
+const {
+  MARKETPLACE_LOCALES,
+  cleanText,
+  localizedText,
+  agencyListingIdentity,
+  listingContactFields,
+} = require("./listing_contact");
 const { claimOrCheckOwner, registeredOwner } = require("./property_owners");
 const { loadSplitPercents, splitsFor } = require("./payments");
 
@@ -239,7 +245,6 @@ exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
 
 // Demo accounts are seeded only by the local admin script (seed.js), never by a deployed endpoint.
 
-const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
 const MARKETPLACE_MAX_IMAGES = 20;
 const MARKETPLACE_MAX_AMENITIES = 30;
 
@@ -249,67 +254,14 @@ const DEFAULT_AMENITIES = {
   hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
 };
 
-// Listings from the owner tree are contacted through the platform, never the owner directly:
-// visitors use the viewing and rental request buttons, so a listing carries no phone number
-// (TAQ-150). A listing of an agency shows that agency's own name instead, and its ORN once a
-// SuperAdmin has verified the licence (TAQ-154).
-const PLATFORM_AGENCY_NAMES = {
-  ar: "تسهيل عقار",
-  en: "Tashil Real Estate",
-  hi: "ताशिल रियल एस्टेट",
-};
-const PLATFORM_AGENCY_PHONE = "";
-const AGENCY_ORN_PATTERN = /^[A-Za-z0-9/ -]{1,40}$/;
-
-/**
- * The public face of an agency for its listings, from Agencies/{agencyId}: localized display
- * names (contact-free, falling back to `name`) and the ORN, only when the badge is on.
- * Returns null when the agency has no usable name, so the platform name is shown instead.
- */
-function agencyListingIdentity(agencyData) {
-  if (!agencyData || typeof agencyData !== "object") return null;
-  const names = localizedText(agencyData.names, agencyData.name, 200);
-  const fallback = cleanText(agencyData.name, 200) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
-  if (!fallback) return null;
-  for (const locale of MARKETPLACE_LOCALES) {
-    if (!names[locale]) names[locale] = fallback;
-  }
-  const orn = typeof agencyData.orn === "string" ? agencyData.orn.trim() : "";
-  const verified = agencyData.verified_badge === true && AGENCY_ORN_PATTERN.test(orn);
-  return { names, orn: verified ? orn : "" };
-}
-
 async function loadAgencyIdentity(agencyId) {
   if (!agencyId) return null;
   const snap = await admin.firestore().collection("Agencies").doc(agencyId).get();
   return snap.exists ? agencyListingIdentity(snap.data()) : null;
 }
 
-/** The contact fields of a public listing: the agency's identity, or the platform's. */
-function listingContactFields(agency) {
-  const fields = {
-    agencyNames: agency ? agency.names : PLATFORM_AGENCY_NAMES,
-    agencyPhone: PLATFORM_AGENCY_PHONE,
-  };
-  if (agency && agency.orn) fields.agencyOrn = agency.orn;
-  return fields;
-}
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
-
-function cleanText(value, maxLength) {
-  return typeof value === "string" ? stripContacts(value).trim().slice(0, maxLength).trim() : "";
-}
-
-// Keeps only the ar/en/hi string entries; any other nested key is dropped.
-function localizedText(map, flatFallback, maxLength) {
-  const source = map && typeof map === "object" && !Array.isArray(map) ? map : null;
-  const result = {};
-  for (const locale of MARKETPLACE_LOCALES) {
-    result[locale] = cleanText(source ? source[locale] : flatFallback, maxLength);
-  }
-  return result;
-}
 
 function localizedAmenities(map) {
   if (!map || typeof map !== "object" || Array.isArray(map)) return DEFAULT_AMENITIES;
