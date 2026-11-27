@@ -3,7 +3,7 @@ const path = require("path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-tashil-test";
-const { sanitizeForMarketplace } = require("../index");
+const { sanitizeForMarketplace, agencyListingIdentity } = require("../index");
 
 const BUCKET = `${process.env.GCLOUD_PROJECT}.appspot.com`;
 const PROJECT_IMAGE = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/listings%2Fprop-1%2Fliving.jpg?alt=media`;
@@ -64,10 +64,40 @@ test("TAQ-18: nested localized maps keep only ar/en/hi strings", () => {
   assert.doesNotMatch(JSON.stringify(out), /\+971500000001|\+971500000002|owner@example\.com|PH-4502|AE0703/);
 });
 
-test("TAQ-18: owner-supplied contact data is replaced with the platform contact", () => {
+test("TAQ-18/TAQ-150: owner-supplied contact data is replaced with the platform name and no phone", () => {
   const out = sanitizeForMarketplace(ownerProperty, "owner", "prop-1");
-  assert.equal(out.agencyPhone, "+20 100 123 4567");
-  assert.equal(out.agencyNames.en, "Tashil Property Management");
+  assert.equal(out.agencyPhone, "");
+  assert.deepEqual(out.agencyNames, { ar: "تسهيل عقار", en: "Tashil Real Estate", hi: "ताशिल रियल एस्टेट" });
+  assert.equal("agencyOrn" in out, false);
+  assert.doesNotMatch(JSON.stringify(out), /100 123 4567|Tashil Property Management/);
+});
+
+test("TAQ-150: an agency listing shows the agency's own name, and its ORN only once verified", () => {
+  const unverified = agencyListingIdentity({ name: "Marina Realty", names: { ar: "مارينا العقارية" }, orn: "12345", verified_badge: false });
+  let out = sanitizeForMarketplace(ownerProperty, "owner", "prop-1", { agencyId: "agency-1", agency: unverified });
+  assert.deepEqual(out.agencyNames, { ar: "مارينا العقارية", en: "Marina Realty", hi: "Marina Realty" });
+  assert.equal(out.agencyPhone, "");
+  assert.equal("agencyOrn" in out, false);
+  assert.equal(out.agency_id, "agency-1");
+
+  const verified = agencyListingIdentity({ name: "Marina Realty", orn: " 12345 ", verified_badge: true });
+  out = sanitizeForMarketplace(ownerProperty, "owner", "prop-1", { agencyId: "agency-1", agency: verified });
+  assert.equal(out.agencyOrn, "12345");
+
+  // Without an agency id the agency profile is ignored.
+  out = sanitizeForMarketplace(ownerProperty, "owner", "prop-1", { agency: verified });
+  assert.equal(out.agencyNames.en, "Tashil Real Estate");
+  assert.equal("agencyOrn" in out, false);
+});
+
+test("TAQ-150: agency names are contact-filtered and a nameless agency falls back to the platform", () => {
+  const identity = agencyListingIdentity({ name: "Marina Realty call 0501234567", verified_badge: true, orn: "bad orn!!" });
+  assert.doesNotMatch(identity.names.en, /0501234567/);
+  assert.equal(identity.orn, "");
+  assert.equal(agencyListingIdentity({ orn: "123", verified_badge: true }), null);
+  assert.equal(agencyListingIdentity(null), null);
+  const out = sanitizeForMarketplace(ownerProperty, "owner", "prop-1", { agencyId: "agency-1", agency: null });
+  assert.equal(out.agencyNames.en, "Tashil Real Estate");
 });
 
 test("TAQ-18: private storage paths and non-image references are dropped", () => {

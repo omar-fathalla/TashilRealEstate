@@ -18,8 +18,24 @@ class PropertyItem {
   final bool isFurnished;
   final bool isFeatured;
   final Map<String, String> agencyNames;
+
+  /// The contact number shown on the listing. Live listings carry none (TAQ-150): visitors reach
+  /// the owner or agency through the viewing and rental request buttons.
   final String agencyPhone;
+
+  /// The agency's broker office number (ORN). The server sets it only for a listing of an agency
+  /// whose licence a SuperAdmin has verified, so a non-empty value means a verified agency.
+  final String agencyOrn;
   final double rating;
+
+  /// The name a listing shows when no agency manages it: the platform itself.
+  static const Map<String, String> platformAgencyNames = {
+    'ar': 'تسهيل عقار',
+    'en': 'Tashil Real Estate',
+    'hi': 'ताशिल रियल एस्टेट',
+  };
+
+  bool get isVerifiedAgency => agencyOrn.isNotEmpty;
 
   const PropertyItem({
     required this.id,
@@ -39,7 +55,8 @@ class PropertyItem {
     this.isFurnished = false,
     this.isFeatured = false,
     required this.agencyNames,
-    this.agencyPhone = '+20 100 000 0000',
+    this.agencyPhone = '',
+    this.agencyOrn = '',
     this.rating = 4.8,
   });
 
@@ -480,6 +497,7 @@ class PropertyItem {
       'isFeatured': isFeatured,
       'agencyNames': agencyNames,
       'agencyPhone': agencyPhone,
+      if (agencyOrn.isNotEmpty) 'agencyOrn': agencyOrn,
       'rating': rating,
     };
   }
@@ -545,8 +563,12 @@ class PropertyItem {
       amenitiesMap: parseAmenities(map['amenitiesMap']),
       isFurnished: map['isFurnished'] == true || map['is_furnished'] == true,
       isFeatured: map['isFeatured'] == true || map['is_featured'] == true,
-      agencyNames: parseStringMap(map['agencyNames'], 'شركة تسهيل لإدارة الأملاك'),
-      agencyPhone: map['agencyPhone']?.toString() ?? '+20 100 000 0000',
+      agencyNames: () {
+        final names = parseStringMap(map['agencyNames']);
+        return names.isEmpty ? platformAgencyNames : names;
+      }(),
+      agencyPhone: map['agencyPhone']?.toString() ?? '',
+      agencyOrn: map['agencyOrn'] is String ? map['agencyOrn'] as String : '',
       rating: (map['rating'] is num) ? (map['rating'] as num).toDouble() : 4.8,
     );
   }

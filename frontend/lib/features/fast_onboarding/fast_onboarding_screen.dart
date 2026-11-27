@@ -622,12 +622,7 @@ class _FastOnboardingScreenState extends State<FastOnboardingScreen> {
         },
         isFurnished: _draft.furnishingStatus != FurnishingStatus.unfurnished,
         isFeatured: true,
-        agencyNames: {
-          'ar': 'شركة تسهيل لإدارة الأملاك',
-          'en': 'Tashil Property Management',
-          'hi': 'तशिल संपत्ति प्रबंधन',
-        },
-        agencyPhone: '+20 100 123 4567',
+        agencyNames: PropertyItem.platformAgencyNames,
         rating: 5.0,
       );
 

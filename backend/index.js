@@ -249,13 +249,51 @@ const DEFAULT_AMENITIES = {
   hi: ["पूरी तरह सुसज्जित", "केंद्रीय एसी", "निजी पार्किंग", "24/7 सुरक्षा"],
 };
 
-// Listings from the owner tree are contacted through the platform, never the owner directly.
+// Listings from the owner tree are contacted through the platform, never the owner directly:
+// visitors use the viewing and rental request buttons, so a listing carries no phone number
+// (TAQ-150). A listing of an agency shows that agency's own name instead, and its ORN once a
+// SuperAdmin has verified the licence (TAQ-154).
 const PLATFORM_AGENCY_NAMES = {
-  ar: "شركة تسهيل لإدارة الأملاك",
-  en: "Tashil Property Management",
-  hi: "तशिल संपत्ति प्रबंधन",
+  ar: "تسهيل عقار",
+  en: "Tashil Real Estate",
+  hi: "ताशिल रियल एस्टेट",
 };
-const PLATFORM_AGENCY_PHONE = "+20 100 123 4567";
+const PLATFORM_AGENCY_PHONE = "";
+const AGENCY_ORN_PATTERN = /^[A-Za-z0-9/ -]{1,40}$/;
+
+/**
+ * The public face of an agency for its listings, from Agencies/{agencyId}: localized display
+ * names (contact-free, falling back to `name`) and the ORN, only when the badge is on.
+ * Returns null when the agency has no usable name, so the platform name is shown instead.
+ */
+function agencyListingIdentity(agencyData) {
+  if (!agencyData || typeof agencyData !== "object") return null;
+  const names = localizedText(agencyData.names, agencyData.name, 200);
+  const fallback = cleanText(agencyData.name, 200) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
+  if (!fallback) return null;
+  for (const locale of MARKETPLACE_LOCALES) {
+    if (!names[locale]) names[locale] = fallback;
+  }
+  const orn = typeof agencyData.orn === "string" ? agencyData.orn.trim() : "";
+  const verified = agencyData.verified_badge === true && AGENCY_ORN_PATTERN.test(orn);
+  return { names, orn: verified ? orn : "" };
+}
+
+async function loadAgencyIdentity(agencyId) {
+  if (!agencyId) return null;
+  const snap = await admin.firestore().collection("Agencies").doc(agencyId).get();
+  return snap.exists ? agencyListingIdentity(snap.data()) : null;
+}
+
+/** The contact fields of a public listing: the agency's identity, or the platform's. */
+function listingContactFields(agency) {
+  const fields = {
+    agencyNames: agency ? agency.names : PLATFORM_AGENCY_NAMES,
+    agencyPhone: PLATFORM_AGENCY_PHONE,
+  };
+  if (agency && agency.orn) fields.agencyOrn = agency.orn;
+  return fields;
+}
 // Shown until a SuperAdmin rates the listing; owners cannot set it.
 const DEFAULT_LISTING_RATING = 5.0;
 
@@ -408,7 +446,7 @@ function hasPublishablePrice(data) {
   return Number.isFinite(price) && price > 0;
 }
 
-function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", current = null, moderation = NOT_MODERATED } = {}) {
+function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", agency = null, current = null, moderation = NOT_MODERATED } = {}) {
   const countryCode = data.countryCode === "AE" ? "AE" : "EG";
   const rawImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0
     ? data.imageUrls
@@ -434,8 +472,7 @@ function sanitizeForMarketplace(data, ownerId, propertyId, { agencyId = "", curr
     imageUrls: images,
     amenitiesMap: localizedAmenities(data.amenitiesMap),
     isFurnished: data.isFurnished !== false,
-    agencyNames: PLATFORM_AGENCY_NAMES,
-    agencyPhone: PLATFORM_AGENCY_PHONE,
+    ...listingContactFields(agencyId ? agency : null),
     ...moderatedFields(current, moderation),
     status: "vacant",
     updated_at: FieldValue.serverTimestamp(),
@@ -503,12 +540,13 @@ async function writeOwnedMarketDoc(db, ownerId, propertyId, mutate, { claimPlace
  */
 async function publishDecision(ownerId, data) {
   const wantsPublic = Boolean(data.isPublished) && (data.rentalStatus || "available") === "available";
-  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "" };
+  if (!wantsPublic) return { wantsPublic: false, refusal: "", agencyId: "", agency: null };
   const { role, agencyId } = await resolveUserAuthority(ownerId);
   const refusal = !PUBLISHER_ROLES.includes(role) ? `owner [${ownerId}] has role [${role || "none"}]`
     : !hasPublishablePrice(data) ? "the rent is not a positive number"
       : "";
-  return { wantsPublic, refusal, agencyId };
+  const agency = !refusal && agencyId ? await loadAgencyIdentity(agencyId) : null;
+  return { wantsPublic, refusal, agencyId, agency };
 }
 
 /**
@@ -556,7 +594,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
     if (ownership.blocked) return null;
     const isPublished = Boolean(afterData.isPublished);
     const rentalStatus = afterData.rentalStatus || "available";
-    const { wantsPublic, refusal, agencyId } = await publishDecision(ownerId, afterData);
+    const { wantsPublic, refusal, agencyId, agency } = await publishDecision(ownerId, afterData);
 
     if (refusal) {
       logger.warn(`Not publishing [${propertyId}]: ${refusal}.`);
@@ -581,6 +619,7 @@ exports.syncOwnerPropertyToMarketplace = onDocumentWritten(
           ref,
           sanitizeForMarketplace(afterData, ownerId, propertyId, {
             agencyId,
+            agency,
             current: current.exists ? current.data() : null,
             moderation,
           }),
@@ -674,6 +713,7 @@ async function liftHold(db, propertyId, preHidePublished) {
     if (goLive) {
       tx.set(ref, sanitizeForMarketplace(privateData, ownerId, propertyId, {
         agencyId: decision.agencyId,
+        agency: decision.agency,
         current: current.data(),
         moderation: NOT_MODERATED,
       }));
@@ -683,8 +723,40 @@ async function liftHold(db, propertyId, preHidePublished) {
   });
 }
 
+/**
+ * Keeps the agency name and ORN on an agency's live listings in step with Agencies/{agencyId}
+ * (TAQ-150/154): a rename shows at once, a licence that loses its badge stops showing its ORN,
+ * and a deleted profile falls back to the platform name.
+ */
+exports.syncAgencyIdentityToListings = onDocumentWritten("Agencies/{agencyId}", async (event) => {
+  const agencyId = event.params.agencyId;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+  const next = listingContactFields(agencyListingIdentity(after));
+  if (JSON.stringify(next) === JSON.stringify(listingContactFields(agencyListingIdentity(before)))) return null;
+  const db = admin.firestore();
+  const update = { agencyNames: next.agencyNames, agencyPhone: next.agencyPhone, agencyOrn: next.agencyOrn || FieldValue.delete() };
+  let last = null;
+  let total = 0;
+  for (;;) {
+    let query = db.collection("Properties").where("agency_id", "==", agencyId).orderBy(FieldPath.documentId()).limit(300);
+    if (last) query = query.startAfter(last);
+    const snap = await query.get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    for (const doc of snap.docs) batch.update(doc.ref, update);
+    await batch.commit();
+    total += snap.size;
+    last = snap.docs[snap.size - 1];
+    if (snap.size < 300) break;
+  }
+  logger.info(`Updated the agency identity on ${total} listing(s) of agency [${agencyId}].`);
+  return null;
+});
+
 // Export helper for unit testing
 exports.sanitizeForMarketplace = sanitizeForMarketplace;
+exports.agencyListingIdentity = agencyListingIdentity;
 
 /**
  * Generates structured, verified market intelligence payload combining official
