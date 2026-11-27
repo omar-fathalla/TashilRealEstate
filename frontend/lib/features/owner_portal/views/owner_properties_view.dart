@@ -1293,7 +1293,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
               ),
               const SizedBox(width: 20),
               SizedBox(
-                width: 166,
+                width: 206,
                 child: Text(
                   loc.tr('tableHeaderActions'),
                   textAlign: TextAlign.center,
@@ -1529,7 +1529,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
 
               // 6. Connected Action Button Group
               SizedBox(
-                width: 170,
+                width: 210,
                 child: Center(
                   child: _buildTableRowActionGroup(
                     context,
