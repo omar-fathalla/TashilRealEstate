@@ -14,6 +14,14 @@ import 'agency_ux_test.dart' show FakeIdentitySource, pumpApp, sara;
 class FakeAgencyProperties implements AgencyPropertiesBackend {
   final controller = StreamController<List<ManagedPropertyModel>>.broadcast();
   final asked = <String>[];
+  List<ManagedPropertyModel> stock = const [];
+  Object? stockError;
+
+  @override
+  Future<List<ManagedPropertyModel>> fetchAgencyStock() async {
+    if (stockError != null) throw stockError!;
+    return stock;
+  }
 
   @override
   Stream<List<ManagedPropertyModel>> watchAgencyProperties(String agencyId) {
@@ -22,11 +30,11 @@ class FakeAgencyProperties implements AgencyPropertiesBackend {
   }
 }
 
-ManagedPropertyModel listing(String id, String title) => ManagedPropertyModel.fromMap({
+ManagedPropertyModel listing(String id, String title, {bool published = true}) => ManagedPropertyModel.fromMap({
       'countryCode': CountryController.countryCode,
       'titles': {'ar': title, 'en': title, 'hi': title},
       'agency_id': 'ag1',
-      'is_published': true,
+      'is_published': published,
     }, docId: id);
 
 Future<void> openProperties(WidgetTester tester) async {
@@ -76,6 +84,33 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(feed.hydrating.value, isFalse);
     expect(feed.properties.value, isEmpty);
+    feed.dispose();
+    await backend.controller.close();
+  });
+
+  testWidgets("TAQ-197: the agent's tab also lists the agency's unpublished stock, once each", (tester) async {
+    desktop(tester);
+    final backend = FakeAgencyProperties()
+      ..stock = [listing('s1', 'Draft Studio', published: false), listing('p1', 'Marina Tower 12')];
+    await pumpApp(tester, AgencyDashboard(identitySource: FakeIdentitySource(agent), agencyProperties: backend));
+    backend.controller.add([listing('p1', 'Marina Tower 12'), listing('m1', 'Managed Owner Flat')]);
+    await tester.pump();
+    await openProperties(tester);
+    expect(find.text('Draft Studio'), findsOneWidget);
+    expect(find.text('Marina Tower 12'), findsOneWidget);
+    expect(find.text('Managed Owner Flat'), findsOneWidget);
+    expect(find.text('Add Property'), findsNothing);
+    await backend.controller.close();
+  });
+
+  test('TAQ-197: a refused stock call keeps the published listings', () async {
+    final backend = FakeAgencyProperties()..stockError = StateError('denied');
+    final feed = AgencyPropertiesFeed(backend: backend);
+    feed.start('ag1');
+    backend.controller.add([listing('p1', 'Marina Tower 12')]);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(feed.properties.value.map((p) => p.id), ['p1']);
     feed.dispose();
     await backend.controller.close();
   });

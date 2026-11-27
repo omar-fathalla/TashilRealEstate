@@ -157,3 +157,27 @@ test("TAQ-169 rules: AgencyInvites and AgencyAgents are server-only", async () =
     await assertFails(setDoc(doc(fsdb, "AgencyAgents/x"), { agency_id: "ag1" }));
   }
 });
+
+test("TAQ-197: an agent lists its agency's own stock, published or not, without private fields", async () => {
+  await db.doc("Users/adm1").set({ role: "AgencyAdmin", agency_id: "ag1" });
+  await db.doc("Users/adm1/properties/p1").set({
+    titles: { en: "Draft Flat" }, countryCode: "AE", is_published: false, pricePerMonth: 9000,
+    propertyValue: 1400000, tenantPhone: "+971500000000", imageUrls: ["Users/adm1/a.jpg"], payout_iban: "AE00",
+  });
+  await db.doc("Users/adm1/properties/p2").set({ titles: { en: "Rented Villa" }, countryCode: "AE", rentalStatus: "rented" });
+  await db.doc("Users/adm2").set({ role: "AgencyAdmin", agency_id: "ag2" });
+  await db.doc("Users/adm2/properties/x1").set({ titles: { en: "Other agency" } });
+  await db.doc("Users/own1").set({ role: "Owner", agency_id: "ag1" });
+  await db.doc("Users/own1/properties/o1").set({ titles: { en: "Not agency stock" } });
+
+  const AGENT = { uid: "ag-u", token: { uid: "ag-u", role: "AgencyAgent", agency_id: "ag1" } };
+  const res = await fns.listAgencyStock.run({ data: { agencyId: "ag2" }, auth: AGENT });
+  assert.deepEqual(res.properties.map((p) => p.id).sort(), ["p1", "p2"]);
+  const p1 = res.properties.find((p) => p.id === "p1");
+  assert.deepEqual(p1, { id: "p1", titles: { en: "Draft Flat" }, countryCode: "AE", is_published: false, pricePerMonth: 9000 });
+
+  assert.deepEqual((await fns.listAgencyStock.run({ data: {}, auth: ADMIN })).properties.length, 2);
+  await rejects(fns.listAgencyStock.run({ data: {}, auth: invitee() }), "permission-denied");
+  await rejects(fns.listAgencyStock.run({ data: { agencyId: "ag1" }, auth: SUPER }), "permission-denied");
+  await rejects(fns.listAgencyStock.run({ data: {}, auth: { uid: "ag-x", token: { uid: "ag-x", role: "AgencyAgent" } } }), "permission-denied");
+});
