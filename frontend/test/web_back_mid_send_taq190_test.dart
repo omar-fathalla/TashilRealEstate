@@ -58,11 +58,12 @@ void main() {
   setUp(() {
     LocaleController.currentLocale.value = const Locale('en');
     session = RoleSession();
-    backend = _HeldBackend();
   });
   tearDown(() => session.dispose());
 
   Future<GoRouter> start(WidgetTester tester) async {
+    // Made inside the test's fake-async zone, so completing its hold runs the waiting code.
+    backend = _HeldBackend();
     final router = buildAppRouter(
       session: session,
       screenOverride: (route) => switch (route) {
