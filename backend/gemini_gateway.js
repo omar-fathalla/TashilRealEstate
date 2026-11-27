@@ -54,6 +54,8 @@ const MODEL_ALIASES = {
 // for either feature and no business processing other people's documents. They keep every
 // visitor-level AI feature (valuation, search, market index, advisor) under the per-user quota.
 const PORTAL_ROLES = ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"];
+// TAQ-169: agency agents help list properties, but OCR (national IDs, contracts) stays off for them.
+const ONBOARDING_ROLES = [...PORTAL_ROLES, "AgencyAgent"];
 
 // `visitor`: reachable from public pages, so signed-out callers may use it under the
 // per-IP limit. `inline`: may carry base64 images or PDFs. `roles`: signed-in callers must
@@ -66,7 +68,7 @@ const FEATURES = {
   voice_broker: { visitor: true, inline: false },
   semantic_search: { visitor: true, inline: false },
   legal_advisor: { visitor: true, inline: false },
-  onboarding: { visitor: false, inline: false, roles: PORTAL_ROLES },
+  onboarding: { visitor: false, inline: false, roles: ONBOARDING_ROLES },
   document_ocr: { visitor: false, inline: true, roles: PORTAL_ROLES },
 };
 

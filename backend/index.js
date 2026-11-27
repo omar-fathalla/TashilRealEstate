@@ -21,6 +21,7 @@ const {
   leaseAmount,
   leaseCountry,
   assertLeaseParty,
+  AGENCY_AGENT,
 } = require("./authz");
 const { applyUserRole } = require("./roles");
 const { managingAgency } = require("./agency_mandate_state");
@@ -50,7 +51,7 @@ function parseDueDate(value) {
 // Party, tenant, amount, and currency come from the lease document, never from the caller.
 exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
   const auth = await requireFreshAuth(request);
-  const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
+  const role = await requireRole(auth, ["Owner", "AgencyAdmin", AGENCY_AGENT, "SuperAdmin"]); // TAQ-169
   const data = request.data || {};
   const lease = await loadLease(data.leaseId);
   assertLeaseParty(auth, role, lease);
