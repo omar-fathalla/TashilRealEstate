@@ -169,11 +169,34 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
   }
 });
 
+// TAQ-186: SuperAdmin is granted and removed only out of band, with scripts/role_claims.js and the
+// Admin SDK, never through this callable. A stolen SuperAdmin session therefore cannot mint more
+// SuperAdmins or demote the others, and nobody changes their own role here (no self-lockout).
+async function assertRoleChangeAllowed(auth, data) {
+  const outOfBand = (message) => new HttpsError("permission-denied", message, { reason: "superadmin_out_of_band" });
+  if (data.role === "SuperAdmin") throw outOfBand("SuperAdmin is assigned with scripts/role_claims.js, not in the app.");
+  if (typeof data.uid !== "string" || !data.uid) return;
+  if (data.uid === auth.uid) {
+    throw new HttpsError("permission-denied", "You cannot change your own role.", { reason: "self_role_change" });
+  }
+  let target;
+  try {
+    target = await admin.auth().getUser(data.uid);
+  } catch (err) {
+    if (err.code === "auth/user-not-found") return;
+    throw err;
+  }
+  if (target.customClaims && target.customClaims.role === "SuperAdmin") {
+    throw outOfBand("A SuperAdmin's role is changed with scripts/role_claims.js, not in the app.");
+  }
+}
+
 // SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
 exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
   const auth = await requireFreshAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
+  await assertRoleChangeAllowed(auth, data);
   const result = await applyUserRole({
     uid: data.uid,
     role: data.role,

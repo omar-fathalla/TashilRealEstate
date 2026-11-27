@@ -319,8 +319,10 @@ self-service roles (Owner, Tenant, Investor) from it.
   Once the backfill has run on prod and an hour has passed (every ID token renewed), the
   `profileRole()` fallback can be removed from `firestore.rules` in its own change. That ends
   the per-request profile read.
-- **Elevated roles** (SuperAdmin, Admin, AgencyAdmin) come only from the `setUserRole`
-  callable, which a SuperAdmin calls. It revokes the user's refresh tokens when the role or
+- **Elevated roles** (Admin, AgencyAdmin) come only from the `setUserRole` callable, which a
+  SuperAdmin calls. That callable never grants or removes SuperAdmin and never changes the
+  caller's own role (TAQ-186): SuperAdmin is set only from a trusted machine with
+  `scripts/role_claims.js`. It revokes the user's refresh tokens when the role or
   agency changes (TAQ-148). Run `node scripts/role_claims.js --project <project id>` for a
   read-only audit of profiles whose role and claim disagree.
 - **The first SuperAdmin** is made once per project from a trusted machine with Admin
