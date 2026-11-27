@@ -635,3 +635,18 @@ test("TAQ-84: repo-root env and secret files are ignored, while backend/.env sta
   }
   assert.ok(!ignored("backend/.env"), "backend/.env holds the committed non-secret params");
 });
+
+// --- TAQ-33: CI runs the local merge checks on every PR ---
+
+test("TAQ-33: CI runs backend, rules, emulator, audit, Flutter, prod build and secret checks on PRs", () => {
+  const ci = read(".github/workflows/ci.yml");
+  assert.match(ci, /pull_request:\n    branches: \[dev, master\]/);
+  assert.match(ci, /permissions:\n  contents: read/);
+  for (const step of ["npm audit --audit-level=high", "npm run check:client-keys", "npm test", "flutter analyze", "flutter test", "tool/build_web.sh --release", "grep -q tashil-aqar-dev build/web/main.dart.js", "check:client-keys:build", "gitleaks/gitleaks-action@v2"]) {
+    assert.ok(ci.includes(step), `CI is missing: ${step}`);
+  }
+  assert.match(ci, new RegExp(`flutter-version: ${JSON.parse(read("frontend/.fvmrc")).flutter.replace(/\./g, "\\.")}`), "CI uses the pinned Flutter");
+  assert.doesNotMatch(ci, /secrets\.(?!GITHUB_TOKEN)/, "CI needs no project secrets");
+  assert.doesNotMatch(ci, /firebase deploy|--project (tashil-proptech-os|tashil-aqar-dev)/, "CI never deploys");
+  assert.match(read(".github/CODEOWNERS"), /^\/firestore\.rules\s+@omar-fathalla$/m);
+});

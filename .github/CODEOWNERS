@@ -1,0 +1,7 @@
+# TAQ-33: rules, backend and CI changes need the owner's review once branch protection
+# requires code-owner review.
+/firestore.rules     @omar-fathalla
+/storage.rules       @omar-fathalla
+/firebase.json       @omar-fathalla
+/backend/            @omar-fathalla
+/.github/            @omar-fathalla
