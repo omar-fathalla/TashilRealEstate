@@ -131,4 +131,4 @@ function containsContactInRequestText(text) {
   return containsContact(text) || hasSpelledOutNumber(text) || hasLooseEmailOrLink(text);
 }
 
-module.exports = { containsContactInRequestText, hasSpelledOutNumber, hasLooseEmailOrLink };
+module.exports = { containsContactInRequestText, hasSpelledOutNumber, hasLooseEmailOrLink, DIGIT_WORDS, foldTaMarbuta };

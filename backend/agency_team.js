@@ -175,6 +175,39 @@ const listAgencyTeam = onCall(opts, async (request) => {
   };
 });
 
+// TAQ-197: the agency's own stock lives in its AgencyAdmin's private tree (Users/{uid}/properties),
+// which the rules keep owner-only. An agent's read-only Properties tab gets it from here, with only
+// the fields a listing tile shows: no property value, tenant, contact, payout or photo fields.
+const STOCK_FIELDS = [
+  "title", "titles", "location", "locations", "countryCode", "currencyCode", "cityCode",
+  "propertyTypeCode", "unitNumber", "buildingName", "pricePerMonth", "bedrooms", "bathrooms",
+  "areaSqM", "isPublished", "is_published", "rentalStatus",
+];
+const MAX_STOCK = 500;
+
+const listAgencyStock = onCall(opts, async (request) => {
+  const auth = await requireFreshAuth(request);
+  await requireRole(auth, [AGENCY_AGENT, "AgencyAdmin"]);
+  const agencyId = auth.token && auth.token.agency_id;
+  if (typeof agencyId !== "string" || !ID.test(agencyId)) {
+    throw new HttpsError("permission-denied", "Your account has no agency.");
+  }
+  const db = getFirestore();
+  const admins = await db.collection("Users").where("agency_id", "==", agencyId).where("role", "==", "AgencyAdmin").limit(5).get();
+  const properties = [];
+  for (const admin of admins.docs) {
+    if (properties.length >= MAX_STOCK) break;
+    const snap = await admin.ref.collection("properties").limit(MAX_STOCK - properties.length).get();
+    for (const d of snap.docs) {
+      const data = d.data();
+      const item = { id: d.id };
+      for (const key of STOCK_FIELDS) if (key in data) item[key] = data[key];
+      properties.push(item);
+    }
+  }
+  return { properties };
+});
+
 const listMyAgencyInvites = onCall(opts, async (request) => {
   const auth = await requireFreshAuth(request);
   const email = verifiedEmail(auth);
@@ -282,6 +315,7 @@ module.exports = {
   revokeAgencyInvite,
   listAgencyTeam,
   listMyAgencyInvites,
+  listAgencyStock,
   acceptAgencyInvite,
   declineAgencyInvite,
   removeAgencyAgent,

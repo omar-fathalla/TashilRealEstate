@@ -20,7 +20,7 @@ if (!getApps().length) initializeApp();
 
 const { SELF_SERVICE_ROLES, requireFreshAuth, requireRole } = require("./authz");
 const { appCheckEnforced } = require("./config");
-const { containsContactInRequestText } = require("./request_text_filter");
+const { containsContactInAgencyText } = require("./agency_text_filter");
 const { applyUserRole } = require("./roles");
 const { writeAuditLog } = require("./audit_log");
 const { MANDATES } = require("./agency_mandate_state");
@@ -53,7 +53,7 @@ function applicationFrom(data) {
   const name = text(data.name, "name", 200, { required: true });
   // TAQ-188: the name becomes the public agency name, so it gets the request-text check, which
   // also catches spelled-out numbers, spaced emails and bare domains.
-  if (containsContactInRequestText(name)) throw invalid("The agency name cannot hold a phone, link or email.", "name_contact");
+  if (containsContactInAgencyText(name)) throw invalid("The agency name cannot hold a phone, link or email.", "name_contact");
   const countryCode = data.countryCode === "AE" || data.countryCode === "EG" ? data.countryCode : "";
   if (!countryCode) throw invalid("countryCode must be AE or EG.", "country_invalid");
   const orn = text(data.orn, "orn", 40);

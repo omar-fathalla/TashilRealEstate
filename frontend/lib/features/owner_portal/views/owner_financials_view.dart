@@ -250,7 +250,8 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
 
         // Apply filters & search
         final filteredInvoices = countryInvoices.where((inv) {
-          if (_invoiceFilter != 'all' && inv.status != _invoiceFilter) {
+          // The "Paid electronically" chip lists what it counts: no manual payments (TAQ-189).
+          if (_invoiceFilter == 'paid' ? !isPaidElectronically(inv) : _invoiceFilter != 'all' && inv.status != _invoiceFilter) {
             return false;
           }
           final q = _searchController.text.trim().toLowerCase();
@@ -390,7 +391,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
                     ),
                     TashilConnectedButtonSegment<String>(
                       value: 'paid',
-                      label: '${loc.tr('statusPaidElectronically')} (${countryInvoices.where((i) => i.status == 'paid').length})',
+                      label: '${loc.tr('statusPaidElectronically')} (${countryInvoices.where(isPaidElectronically).length})',
                       icon: Icons.check_circle_rounded,
                     ),
                     TashilConnectedButtonSegment<String>(
@@ -535,7 +536,7 @@ class _OwnerFinancialsViewState extends State<OwnerFinancialsView> {
     if (isPaid) {
       statusBg = colorScheme.secondaryContainer;
       statusFg = colorScheme.onSecondaryContainer;
-      statusLabel = loc.tr('statusPaidElectronically');
+      statusLabel = loc.tr(isPaidElectronically(invoice) ? 'statusPaidElectronically' : 'statusPaid');
       statusIcon = Icons.check_circle_rounded;
     } else if (isOverdue) {
       statusBg = colorScheme.errorContainer;

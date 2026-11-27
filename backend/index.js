@@ -1,3 +1,5 @@
+// Must load before any function is defined: it sets the runtime service account (TAQ-177).
+require("./runtime_options");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -987,6 +989,7 @@ exports.inviteAgencyAgent = require("./agency_team").inviteAgencyAgent;
 exports.revokeAgencyInvite = require("./agency_team").revokeAgencyInvite;
 exports.listAgencyTeam = require("./agency_team").listAgencyTeam;
 exports.listMyAgencyInvites = require("./agency_team").listMyAgencyInvites;
+exports.listAgencyStock = require("./agency_team").listAgencyStock;
 exports.acceptAgencyInvite = require("./agency_team").acceptAgencyInvite;
 exports.declineAgencyInvite = require("./agency_team").declineAgencyInvite;
 exports.removeAgencyAgent = require("./agency_team").removeAgencyAgent;

@@ -54,4 +54,17 @@ void main() {
       expect(source.contains(".where((inv) => inv.status == 'paid')\n                .fold"), isFalse, reason: path);
     }
   });
+
+  test('"Paid electronically" leaves manual payments out (the chip, its filter and the row badge)', () {
+    expect(isPaidElectronically(invoice('card', status: 'paid', method: 'card')), isTrue);
+    expect(isPaidElectronically(invoice('none', status: 'paid')), isTrue);
+    expect(isPaidElectronically(invoice('cash', status: 'paid', method: 'cash')), isFalse);
+    expect(isPaidElectronically(invoice('wire', status: 'paid', method: 'bank_transfer')), isFalse);
+    expect(isPaidElectronically(invoice('due', status: 'due_soon')), isFalse);
+
+    final source = File('lib/features/owner_portal/views/owner_financials_view.dart').readAsStringSync();
+    expect(source, contains("(\${countryInvoices.where(isPaidElectronically).length})"));
+    expect(source, contains("_invoiceFilter == 'paid' ? !isPaidElectronically(inv)"));
+    expect(source, contains("isPaidElectronically(invoice) ? 'statusPaidElectronically' : 'statusPaid'"));
+  });
 }

@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 import 'package:tashil_real_estate/features/lease_builder/views/leases_management_view.dart';
 import 'package:tashil_real_estate/features/lease_builder/views/real_leases_view.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_dialog.dart';
@@ -94,13 +95,15 @@ void main() {
       List<dynamic> leases = const [],
       Locale locale = const Locale('en'),
       bool fail = false,
+      bool agent = false,
     }) async {
       _big(tester);
       final backend = FakePortfolioBackend()
         ..leases = [for (final l in leases) l]
         ..failStreams = fail;
       final c = await _controller(tester, backend);
-      await tester.pumpWidget(testApp(RealLeasesView(controller: c, service: PortfolioDataService(backend: backend)), locale: locale));
+      final view = RealLeasesView(controller: c, service: PortfolioDataService(backend: backend));
+      await tester.pumpWidget(testApp(agent ? AgencyStaffScope(isAgent: true, child: view) : view, locale: locale));
       await tester.pumpAndSettle();
       return backend;
     }
@@ -126,6 +129,42 @@ void main() {
       expect(find.text('Active'), findsWidgets);
       expect(find.text('Awaiting tenant'), findsWidgets);
       expect(find.text('8,000 AED'), findsWidgets);
+    });
+
+    testWidgets('TAQ-196: an AgencyAgent sees the leases and details but none of the AgencyAdmin actions', (tester) async {
+      await pump(tester, agent: true, leases: [
+        lease('a', title: 'Marina Tower 1204'),
+        lease('b', status: 'pending_tenant_approval', title: 'Palm Villa 7'),
+        lease('c', status: 'draft', title: 'Draft Flat'),
+      ]);
+      expect(find.text('Marina Tower 1204'), findsOneWidget);
+      expect(find.text('Palm Villa 7'), findsOneWidget);
+      expect(find.text('Draft Flat'), findsOneWidget);
+      expect(find.text('Details'), findsNWidgets(3));
+      for (final label in const [
+        'Create Lease',
+        'Record a cash or bank transfer rent payment',
+        'Delete Contract',
+        'Send offer to tenant',
+        'Withdraw offer',
+      ]) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
+    });
+
+    testWidgets('TAQ-196: an agent with no leases gets the empty state without a create action', (tester) async {
+      await pump(tester, agent: true);
+      expect(find.text('No leases'), findsOneWidget);
+      expect(find.text('Create Lease'), findsNothing);
+    });
+
+    testWidgets('the AgencyAdmin still sees every action', (tester) async {
+      await pump(tester, leases: [lease('b', status: 'pending_tenant_approval'), lease('c', status: 'draft')]);
+      expect(find.text('Create Lease'), findsOneWidget);
+      expect(find.text('Record a cash or bank transfer rent payment'), findsOneWidget);
+      expect(find.text('Delete Contract'), findsOneWidget);
+      expect(find.text('Send offer to tenant'), findsOneWidget);
+      expect(find.text('Withdraw offer'), findsOneWidget);
     });
 
     testWidgets('filters by status', (tester) async {

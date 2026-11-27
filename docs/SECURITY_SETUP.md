@@ -112,7 +112,8 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
   when the listing goes live. The replacement is a single fresh token, which drops the old ones in
   Cloud Storage. The Storage emulator appends instead of replacing, so the emulator test checks
   what is written, not that an old link stops working. The function's service account needs
-  `storage.objects.update` on the default bucket (the default compute account has it). A listing
+  `storage.objects.update` on the default bucket (`tashil-functions` has Storage Object Admin there;
+  see "Functions runtime service account"). A listing
   that was offline when this function was deployed keeps any token issued earlier until its next
   change of state; revoke those once in the console if needed.
   When a live listing changes owner, the tokens under the old owner's folder and under the new
@@ -238,6 +239,33 @@ scan also reads the gzip (`.gz`) and Brotli (`.br`) copies of those files (TAQ-8
 cd frontend && tool/build_web.sh --release
 cd ../backend && npm run check:client-keys:build
 ```
+
+## Functions runtime service account (TAQ-177)
+
+`backend/runtime_options.js` makes every function run as `tashil-functions@<project>.iam.gserviceaccount.com`
+instead of the default compute account, which has Editor. The email is built from the
+`GCLOUD_PROJECT` the Firebase CLI sets when it loads the code for a deploy (the CLI does not expand
+the `name@` shorthand when it grants secret access). The CLI also uses that account for the
+Eventarc triggers and as the Cloud Scheduler OIDC identity. **Create the account and its roles in a project
+before deploying this code there**, or the deploy fails:
+
+```sh
+P=<project>; SA=tashil-functions@$P.iam.gserviceaccount.com
+gcloud iam service-accounts create tashil-functions --project $P --display-name "Tashil Cloud Functions runtime (TAQ-177)"
+for R in datastore.user firebaseauth.admin logging.logWriter monitoring.metricWriter run.invoker eventarc.eventReceiver; do
+  gcloud projects add-iam-policy-binding $P --project $P --member serviceAccount:$SA --role roles/$R --condition=None
+done
+gcloud storage buckets add-iam-policy-binding gs://$P.firebasestorage.app --project $P --member serviceAccount:$SA --role roles/storage.objectAdmin
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY --project $P --member serviceAccount:$SA --role roles/secretmanager.secretAccessor
+```
+
+Why each role: Firestore reads and writes (`datastore.user`); custom claims, token revocation and
+user lookups (`firebaseauth.admin`); the photo-token rotation on the default bucket
+(`storage.objectAdmin`, bucket only); `GEMINI_API_KEY` (accessor on that secret only); logs and
+metrics; and invoking the Cloud Run services behind the Firestore triggers and the two schedules
+(`run.invoker`, `eventarc.eventReceiver`). When `PAYMENTS_ENABLED=true`, also grant the accessor
+role on each `PAYMOB_*` secret. Keep Editor on the default compute account until every function in
+the project has been redeployed with this code; removing it is a separate step.
 
 ## Paymob rent payments (TAQ-16)
 
@@ -378,7 +406,15 @@ and only a SuperAdmin can read it. It records:
 Entries hold uids, roles and small non-personal details only. Each one keeps for a year:
 `expire_at` is `created_at` plus 365 days. The `purgeExpiredAuditLog` job deletes expired entries
 every day at 03:30 Cairo time. You can also enable a Firestore TTL policy on `AuditLog.expire_at`;
-that's optional, and the scheduled purge works without it.
+that's optional, and the scheduled purge works without it. To turn it on for one project (TTL
+deletes run within about a day of `expire_at`, and the purge job then finds nothing to do):
+
+```bash
+gcloud firestore fields ttls update expire_at --collection-group=AuditLog --enable-ttl --project=<project-id>
+```
+
+Check it with `gcloud firestore fields ttls list --project=<project-id>`. It is not in
+`firestore.indexes.json`, so an indexes deploy never turns it on or off.
 
 ## Agency agents (TAQ-169)
 
@@ -421,3 +457,19 @@ user's tokens, and records `AgencyAgents/{uid}`. `removeAgencyAgent({uid})`, cal
 AgencyAdmin or a SuperAdmin, puts the user back on their earlier self-service role (Tenant if they
 had none). Clients can't read or write `AgencyInvites` or `AgencyAgents`. Every invite, join,
 revoke and removal is in the audit log.
+
+`listAgencyStock()` (TAQ-197), for an AgencyAgent or AgencyAdmin with an `agency_id` claim,
+returns the agency's own properties from its AgencyAdmin's private tree, published or not, for
+the agent's read-only Properties tab. It returns only the fields a listing tile shows (titles,
+location, type, rent, rooms, status); property value, tenant, contact, payout and photo fields stay
+out. The rules for `Users/{uid}/properties` are unchanged.
+
+**Known limit: a removed agent's current ID token (TAQ-200, same as TAQ-158).** Removing an agent
+goes through `applyUserRole`, which revokes the agent's refresh tokens, so the app can't mint a new
+ID token and every callable that uses `requireFreshAuth` refuses the old one at once. Firestore and
+Storage rules can't check revocation, though. An ID token issued before the removal still says
+`role: AgencyAgent` with the agency's `agency_id`, so until it expires (at most one hour) it can
+still read what an agent reads: the agency's listings, leases, rent rows, mandates and requests.
+It can't write any of them, since agents write almost nothing. There's no code change for this.
+Closing the window would mean an extra `get()` on `AgencyAgents/{uid}` in every agency rule, plus
+a Firestore lookup in storage.rules, for a one-hour window.
