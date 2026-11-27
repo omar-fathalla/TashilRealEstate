@@ -89,6 +89,8 @@ class RentInvoiceModel {
   final DateTime dueDate;
   final int gracePeriodDays;
   final double dailyPenaltyRate; // e.g. 50 EGP/day or 100 AED/day
+  /// A flat fee added once the month is past its grace days (the lease's late fee, TAQ-164).
+  final double flatLateFee;
   final String? propertyId;
   final String? monthKey;
   final String propertyTypeCode;
@@ -132,6 +134,7 @@ class RentInvoiceModel {
     required this.dueDate,
     this.gracePeriodDays = 5,
     this.dailyPenaltyRate = 50.0,
+    this.flatLateFee = 0,
     this.propertyId,
     this.monthKey,
     this.propertyTypeCode = 'apartment',
@@ -175,8 +178,9 @@ class RentInvoiceModel {
 
   // Calculate accumulated late penalty
   double get latePenaltyAmount {
-    if (overdueDays <= 0) return 0.0;
-    return overdueDays * dailyPenaltyRate;
+    if (status == 'paid') return 0.0;
+    final daily = overdueDays > 0 ? overdueDays * dailyPenaltyRate : 0.0;
+    return daily + flatLateFee;
   }
 
   // Total invoice amount due (base + penalties)
@@ -228,6 +232,7 @@ class RentInvoiceModel {
       dueDate: dueDate ?? this.dueDate,
       gracePeriodDays: gracePeriodDays,
       dailyPenaltyRate: dailyPenaltyRate,
+      flatLateFee: flatLateFee,
       propertyId: propertyId ?? this.propertyId,
       monthKey: monthKey ?? this.monthKey,
       propertyTypeCode: propertyTypeCode ?? this.propertyTypeCode,

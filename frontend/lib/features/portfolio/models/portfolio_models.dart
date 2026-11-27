@@ -51,6 +51,16 @@ class PortfolioLease {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Optional terms (TAQ-164). The late fee is a flat amount added once a month is paid after its
+  /// due day plus [lateFeeGraceDays]; 0 means none. The phone comes from the tenant's profile.
+  final String tenantPhone;
+  final double lateFeeAmount;
+  final int lateFeeGraceDays;
+  final String payoutBankName;
+  final String payoutIban;
+
+  static const int defaultGraceDays = 5;
+
   const PortfolioLease({
     required this.id,
     this.status = 'draft',
@@ -67,6 +77,11 @@ class PortfolioLease {
     this.endDate = '',
     this.createdAt,
     this.updatedAt,
+    this.tenantPhone = '',
+    this.lateFeeAmount = 0,
+    this.lateFeeGraceDays = defaultGraceDays,
+    this.payoutBankName = '',
+    this.payoutIban = '',
   });
 
   bool get isDraft => status == 'draft';
@@ -101,8 +116,16 @@ class PortfolioLease {
       endDate: _text(data['end_date']),
       createdAt: _date(data['created_at']),
       updatedAt: _date(data['updated_at']),
+      tenantPhone: _text(data['tenant_phone']),
+      lateFeeAmount: _number(data['late_fee_amount']) > 0 ? _number(data['late_fee_amount']) : 0,
+      lateFeeGraceDays: _graceDays(data['late_fee_grace_days']),
+      payoutBankName: _text(data['payout_bank_name']),
+      payoutIban: _text(data['payout_iban']),
     );
   }
+
+  static int _graceDays(dynamic value) =>
+      value is int && value >= 0 && value <= 60 ? value : defaultGraceDays;
 }
 
 /// A payment attempt or payment (`Transactions/{leaseId}_{YYYY-MM}`, written only by the server).

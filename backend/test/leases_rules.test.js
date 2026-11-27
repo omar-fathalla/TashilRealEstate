@@ -449,3 +449,34 @@ test("TAQ-13: only lease parties and SuperAdmin read leases (unchanged)", async 
   for (const who of ["ownerA", "tenantA", "ag1", "sa"]) await assertSucceeds(getDoc(L(ctx[who])), who);
   for (const who of ["ownerB", "tenantB", "ag2", "admin", "investor", "unauth"]) await assertFails(getDoc(L(ctx[who])), who);
 });
+
+// --- TAQ-164: optional lease terms ---
+
+test("TAQ-164: a draft takes a late fee, grace days and payout bank of the right shape", async () => {
+  await seed({ "Leases/l1": lease(), "Leases/g1": agencyLease() });
+  await assertSucceeds(updateDoc(L(ctx.ownerA), { late_fee_amount: 250, late_fee_grace_days: 3, payout_bank_name: "FAB", payout_iban: "AE070331234567890123456" }));
+  await assertSucceeds(updateDoc(L(ctx.ag1, "g1"), { late_fee_amount: 0, late_fee_grace_days: 0, payout_iban: "" }));
+  for (const bad of [
+    { late_fee_amount: -1 }, { late_fee_amount: "250" }, { late_fee_amount: 2000000 },
+    { late_fee_grace_days: 61 }, { late_fee_grace_days: 2.5 }, { late_fee_grace_days: -1 },
+    { payout_iban: "12345" }, { payout_iban: "ae070331234567890123456" }, { payout_bank_name: "x".repeat(101) },
+    { payout_bank_name: "call 0501234567" },
+  ]) {
+    await assertFails(updateDoc(L(ctx.ownerA), bad), JSON.stringify(bad));
+  }
+});
+
+test("TAQ-164: the terms are frozen once the offer is out, and nobody but SuperAdmin rewrites the tenant phone", async () => {
+  await seed({ "Leases/l1": lease({ tenant_phone: "+971501234567" }), "Leases/p1": lease({ status: "pending_tenant_approval" }) });
+  await assertFails(updateDoc(L(ctx.ownerA), { tenant_phone: "+20100" }));
+  await assertFails(updateDoc(L(ctx.ownerA, "p1"), { late_fee_amount: 100 }));
+  await assertFails(updateDoc(L(ctx.tenantA, "p1"), { status: "rejected", late_fee_amount: 0 }));
+  await assertSucceeds(updateDoc(L(ctx.sa), { tenant_phone: "+971500000000" }));
+  await assertFails(updateDoc(L(ctx.sa), { late_fee_amount: -5 }), "SuperAdmin still gets the shape check");
+});
+
+test("TAQ-164: a SuperAdmin-created lease must carry valid optional terms", async () => {
+  await assertSucceeds(setDoc(L(ctx.sa, "n1"), lease({ late_fee_amount: 100, late_fee_grace_days: 5 })));
+  await assertFails(setDoc(L(ctx.sa, "n2"), lease({ late_fee_grace_days: 90 })));
+  await assertFails(setDoc(L(ctx.sa, "n3"), lease({ payout_iban: "bad" })));
+});
