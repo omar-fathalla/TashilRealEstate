@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// One public listing as the platform Admin sees it.
 class AdminListing {
@@ -224,10 +225,10 @@ class FirebaseAdminDataSource implements AdminDataSource {
 
   @override
   Future<AdminUserPage> loadUsers({String? startAfter}) async {
-    final result = await _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({
+    final result = await SessionGuard.instance.run(() => _fn.httpsCallable('listUsersForAdmin').call<Map<dynamic, dynamic>>({
       'limit': 100,
       if (startAfter != null && startAfter.isNotEmpty) 'startAfter': startAfter,
-    });
+    }));
     final users = result.data['users'];
     final next = result.data['nextPageToken'];
     return AdminUserPage(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 import '../models/tenant_models.dart';
 
@@ -57,7 +58,7 @@ class FirebaseTenantBackend implements TenantBackend {
   @override
   Future<void> decideLease(String leaseId, {required bool approve}) async {
     final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('respondToLeaseOffer');
-    await callable.call<Map<String, dynamic>>({'leaseId': leaseId, 'decision': approve ? 'approve' : 'reject'});
+    await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({'leaseId': leaseId, 'decision': approve ? 'approve' : 'reject'}));
   }
 
   @override

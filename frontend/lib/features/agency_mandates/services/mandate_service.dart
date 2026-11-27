@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tashil_real_estate/features/agency_mandates/models/mandate_models.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// Reads and callables behind mandates and agency applications (TAQ-149). Tests pass a fake.
 abstract class MandateBackend {
@@ -55,7 +56,7 @@ class FirebaseMandateBackend implements MandateBackend {
 
   @override
   Future<Map<String, dynamic>> call(String name, Map<String, dynamic> data) async {
-    final response = await FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable(name).call<Map<String, dynamic>>(data);
+    final response = await SessionGuard.instance.run(() => FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable(name).call<Map<String, dynamic>>(data));
     return Map<String, dynamic>.from(response.data);
   }
 }
