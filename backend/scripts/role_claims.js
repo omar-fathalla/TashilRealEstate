@@ -14,23 +14,41 @@
  *   node scripts/role_claims.js --project <projectId> --grant <uid>[,<uid>...]          # dry run
  *   node scripts/role_claims.js --project <projectId> --grant <uid>[,<uid>...] --apply  # writes
  *
+ * Give self-service users (Owner, Tenant, Investor) the claim for the role their profile already
+ * has, so the rules stop reading Users/{uid} for them (TAQ-23). Never touches a user that has a
+ * role claim, and never revokes tokens:
+ *   node scripts/role_claims.js --project <projectId> --backfill-self-service          # dry run
+ *   node scripts/role_claims.js --project <projectId> --backfill-self-service --apply  # writes
+ *
+ * First SuperAdmin (TAQ-27). The profile can't vouch for SuperAdmin, so --grant can't bootstrap
+ * it. This sets the claim on one uid, and only while no account has a SuperAdmin claim. After
+ * that, SuperAdmins use the setUserRole callable:
+ *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid>          # dry run
+ *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid> --apply  # writes
+ *
  * Credentials come from Application Default Credentials (gcloud auth application-default login)
  * or GOOGLE_APPLICATION_CREDENTIALS. Nothing is read from this repository.
  */
 const admin = require("firebase-admin");
 const { SELF_SERVICE_ROLES } = require("../authz");
 const { applyUserRole } = require("../roles");
+const { grantSelfServiceClaim } = require("../self_service_claims");
 
 function parseArgs(argv) {
-  const args = { project: "", grant: [], apply: false };
+  const args = { project: "", grant: [], apply: false, backfillSelfService: false, bootstrapSuperAdmin: "" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
     else if (arg === "--grant") args.grant = (argv[++i] || "").split(",").map((s) => s.trim()).filter(Boolean);
     else if (arg === "--apply") args.apply = true;
+    else if (arg === "--backfill-self-service") args.backfillSelfService = true;
+    else if (arg === "--bootstrap-superadmin") args.bootstrapSuperAdmin = (argv[++i] || "").trim();
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!args.project) throw new Error("--project is required.");
+  const modes = [args.grant.length > 0, args.backfillSelfService, args.bootstrapSuperAdmin !== ""].filter(Boolean).length;
+  if (modes > 1) throw new Error("Use one of --grant, --backfill-self-service or --bootstrap-superadmin.");
+  if (argv.includes("--bootstrap-superadmin") && !args.bootstrapSuperAdmin) throw new Error("--bootstrap-superadmin needs a uid.");
   return args;
 }
 
@@ -83,18 +101,80 @@ async function grant(db, uids, apply) {
   if (!apply) console.log("Dry run. Re-run with --apply to write claims.");
 }
 
+/** Self-service profiles whose user has no role claim get one for that same role. */
+async function backfillSelfService(db, auth, apply, log = console.log) {
+  const snapshot = await db.collection("Users").get();
+  let pending = 0;
+  for (const doc of snapshot.docs) {
+    const role = doc.get("role");
+    if (!SELF_SERVICE_ROLES.includes(role)) continue;
+    if (!apply) {
+      let user;
+      try {
+        user = await auth.getUser(doc.id);
+      } catch (err) {
+        if (err.code === "auth/user-not-found") continue;
+        throw err;
+      }
+      if (!(user.customClaims && user.customClaims.role)) pending++;
+      continue;
+    }
+    if ((await grantSelfServiceClaim(doc.id, role, auth)) === "granted") pending++;
+  }
+  log(`${apply ? "Set" : "Would set"} a self-service role claim on ${pending} of ${snapshot.size} profiles.`);
+  if (!apply) log("Dry run. Re-run with --apply to write claims.");
+  return pending;
+}
+
+/** Uids that already hold a SuperAdmin claim. */
+async function superAdminUids(auth) {
+  const uids = [];
+  let pageToken;
+  do {
+    const page = await auth.listUsers(1000, pageToken);
+    for (const user of page.users) if (user.customClaims && user.customClaims.role === "SuperAdmin") uids.push(user.uid);
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return uids;
+}
+
+/** Makes the first SuperAdmin. Refuses once any account holds the claim. */
+async function bootstrapSuperAdmin(auth, uid, apply, { applyRole = applyUserRole, log = console.log } = {}) {
+  const existing = await superAdminUids(auth);
+  if (existing.length > 0) {
+    throw new Error(`A SuperAdmin already exists (${existing.length}). Use the setUserRole callable instead.`);
+  }
+  const user = await auth.getUser(uid);
+  log(`${apply ? "Making" : "Would make"} ${user.uid} (${user.email || "no email"}) the first SuperAdmin.`);
+  if (!apply) {
+    log("Dry run. Re-run with --apply to write the claim.");
+    return false;
+  }
+  await applyRole({ uid, role: "SuperAdmin", actorUid: "scripts/role_claims.js --bootstrap-superadmin" });
+  log("Done. The account's refresh tokens were revoked; it signs in again to get the claim.");
+  return true;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   admin.initializeApp({ projectId: args.project });
   const db = admin.firestore();
   if (args.grant.length > 0) {
     await grant(db, args.grant, args.apply);
+  } else if (args.backfillSelfService) {
+    await backfillSelfService(db, admin.auth(), args.apply);
+  } else if (args.bootstrapSuperAdmin) {
+    await bootstrapSuperAdmin(admin.auth(), args.bootstrapSuperAdmin, args.apply);
   } else {
     await audit(db, admin.auth());
   }
 }
 
-main().catch((err) => {
-  console.error(err.message || err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err.message || err);
+    process.exit(1);
+  });
+}
+
+module.exports = { parseArgs, backfillSelfService, bootstrapSuperAdmin, superAdminUids };

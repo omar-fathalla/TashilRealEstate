@@ -968,3 +968,6 @@ exports.holdHiddenListingsOffline = require("./hidden_listing_guard").holdHidden
 
 // TAQ-171: receives the Report-Only CSP reports (Hosting rewrite /csp-report); logs only.
 exports.cspReport = require("./csp_report").cspReport;
+
+// TAQ-23: self-service roles also land in the custom claim, so the rules skip the profile read.
+exports.mirrorSelfServiceRole = require("./self_service_claims").mirrorSelfServiceRole;

@@ -298,3 +298,38 @@ function.
   or bank-transfer rent (method, reference, paid-on date). It settles the month the same way the
   webhook does (invoice `Paid_Recorded`, receipt and owner notifications) and writes an `auditTrail`
   entry on the transaction. No split is deducted because the money did not pass through the platform.
+
+## Roles and custom claims (TAQ-23, TAQ-27)
+
+Firestore rules and the callables trust the `role` (and `agency_id`) custom claim. Only for a
+user with no role claim do the rules read `Users/{uid}`, and then they accept just the
+self-service roles (Owner, Tenant, Investor) from it.
+
+- **Self-service roles.** The `mirrorSelfServiceRole` trigger copies a profile's first
+  self-service role into the claim. It never replaces an existing role claim and never revokes
+  the session; the claim arrives with the user's next token refresh. Existing users get it from
+  a one-off backfill, run on each project once the trigger is deployed:
+
+  ```bash
+  cd backend
+  node scripts/role_claims.js --project <project id> --backfill-self-service          # dry run
+  node scripts/role_claims.js --project <project id> --backfill-self-service --apply
+  ```
+
+  Once the backfill has run on prod and an hour has passed (every ID token renewed), the
+  `profileRole()` fallback can be removed from `firestore.rules` in its own change. That ends
+  the per-request profile read.
+- **Elevated roles** (SuperAdmin, Admin, AgencyAdmin) come only from the `setUserRole`
+  callable, which a SuperAdmin calls. It revokes the user's refresh tokens when the role or
+  agency changes (TAQ-148). Run `node scripts/role_claims.js --project <project id>` for a
+  read-only audit of profiles whose role and claim disagree.
+- **The first SuperAdmin** is made once per project from a trusted machine with Admin
+  credentials. The script refuses if any account already has the SuperAdmin claim:
+
+  ```bash
+  cd backend
+  node scripts/role_claims.js --project <project id> --bootstrap-superadmin <uid>          # dry run
+  node scripts/role_claims.js --project <project id> --bootstrap-superadmin <uid> --apply
+  ```
+
+  The account then signs in again to pick up the claim.

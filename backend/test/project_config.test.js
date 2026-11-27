@@ -626,3 +626,12 @@ test("TAQ-32: Dependabot opens weekly update PRs against dev for backend and fro
   for (const dir of ["/backend", "/frontend"]) assert.match(cfg, new RegExp(`directory: ${dir}\\n    target-branch: dev\\n`));
   assert.doesNotMatch(cfg, /target-branch: (master|main)/);
 });
+
+test("TAQ-84: repo-root env and secret files are ignored, while backend/.env stays tracked", () => {
+  const { spawnSync } = require("child_process");
+  const ignored = (file) => spawnSync("git", ["check-ignore", "-q", file], { cwd: root }).status === 0;
+  for (const file of [".env", ".env.production", ".env.local", ".secret", ".secret.json", "backend/.env.tashil-aqar-dev", "backend/.secret.local.json"]) {
+    assert.ok(ignored(file), `${file} must be ignored`);
+  }
+  assert.ok(!ignored("backend/.env"), "backend/.env holds the committed non-secret params");
+});
