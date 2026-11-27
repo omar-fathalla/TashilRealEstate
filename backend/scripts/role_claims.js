@@ -167,12 +167,14 @@ async function bootstrapSuperAdmin(auth, uid, apply, { applyRole = applyUserRole
   return true;
 }
 
-/** TAQ-25: require (or stop requiring) a second factor for one SuperAdmin. */
+/** TAQ-25, TAQ-185: require (or stop requiring) a second factor for one SuperAdmin or Admin. */
 async function setMfaRequired(auth, uid, required, apply, log = console.log) {
   const user = await auth.getUser(uid);
   const claims = user.customClaims || {};
   if (required) {
-    if (claims.role !== "SuperAdmin") throw new Error(`${uid} is not a SuperAdmin; the second-factor switch only applies to SuperAdmin.`);
+    if (!["SuperAdmin", "Admin"].includes(claims.role)) {
+      throw new Error(`${uid} is not a SuperAdmin or Admin; the second-factor switch only applies to those roles.`);
+    }
     const factors = (user.multiFactor && user.multiFactor.enrolledFactors) || [];
     if (factors.length === 0) throw new Error(`${uid} has no enrolled second factor. Enrol one in the app first, or this would lock the account out.`);
   }

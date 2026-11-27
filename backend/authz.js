@@ -76,14 +76,16 @@ function claimedRole(auth) {
 }
 
 /**
- * TAQ-25: a SuperAdmin claim only counts when the token's second factor is present, if that
- * account's claims carry `mfa_required: true`. role_claims.js --require-mfa sets it, and only
- * after a second factor is enrolled. Without the claim nothing changes (the switch is off).
- * Mirrors superAdminMfaOk() in firestore.rules.
+ * TAQ-25, TAQ-185: a SuperAdmin or Admin claim only counts when the token's second factor is
+ * present, if that account's claims carry `mfa_required: true`. role_claims.js --require-mfa sets
+ * it, and only after a second factor is enrolled. Without the claim nothing changes (the switch is
+ * off). Mirrors secondFactorOk() in firestore.rules.
  */
+const SECOND_FACTOR_ROLES = ["SuperAdmin", "Admin"];
+
 function missingSecondFactor(auth) {
   const token = auth.token || {};
-  if (token.role !== "SuperAdmin" || token.mfa_required !== true) return false;
+  if (!SECOND_FACTOR_ROLES.includes(token.role) || token.mfa_required !== true) return false;
   const firebase = token.firebase || {};
   return !firebase.sign_in_second_factor;
 }
@@ -123,7 +125,7 @@ async function resolveUserRole(uid) {
 
 async function requireRole(auth, roles) {
   const role = await resolveRole(auth);
-  if (!roles.includes(role) && roles.includes("SuperAdmin") && missingSecondFactor(auth)) {
+  if (!roles.includes(role) && missingSecondFactor(auth) && roles.includes(claimedRole(auth))) {
     throw new HttpsError("permission-denied", "Sign in again with your second factor to do this.", { reason: "mfa_required" });
   }
   if (!roles.includes(role)) {

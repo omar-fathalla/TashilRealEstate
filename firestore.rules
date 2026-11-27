@@ -42,16 +42,16 @@ service cloud.firestore {
       return isAuthenticated() && currentRole() == role;
     }
 
-    // TAQ-25: a SuperAdmin whose claims carry mfa_required (set by role_claims.js
-    // --require-mfa, only after a second factor is enrolled) must have signed in with it.
-    // Without that claim nothing changes, so the switch is off until it is set per account.
-    function superAdminMfaOk() {
+    // TAQ-25, TAQ-185: a SuperAdmin or Admin whose claims carry mfa_required (set by
+    // role_claims.js --require-mfa, only after a second factor is enrolled) must have signed in
+    // with it. Without that claim nothing changes, so the switch is off until it is set per account.
+    function secondFactorOk() {
       return request.auth.token.get('mfa_required', false) != true
         || request.auth.token.get('firebase', {}).get('sign_in_second_factor', null) != null;
     }
 
     function isSuperAdmin() {
-      return hasRole('SuperAdmin') && superAdminMfaOk();
+      return hasRole('SuperAdmin') && secondFactorOk();
     }
 
     function isAgencyAdmin() {
@@ -62,7 +62,7 @@ service cloud.firestore {
     // listed explicitly below; it has no access to Users documents (IBAN, national ID), leases,
     // invoices, agency private data, roles or settings.
     function isAdmin() {
-      return hasRole('Admin');
+      return hasRole('Admin') && secondFactorOk();
     }
 
     function isPlatformStaff() {

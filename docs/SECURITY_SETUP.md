@@ -338,6 +338,9 @@ self-service roles (Owner, Tenant, Investor) from it.
 
 ## SuperAdmin two-step verification (TAQ-25)
 
+The same switch also covers the platform **Admin** role (TAQ-185): the enrolment button is in the `/admin`
+header, and `--require-mfa` accepts an Admin account too.
+
 Off by default. Nothing changes for any account until its SuperAdmin turns it on.
 
 - The switch is a per-account custom claim, `mfa_required`. While it is set on a SuperAdmin,
