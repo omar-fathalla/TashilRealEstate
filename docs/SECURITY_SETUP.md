@@ -112,7 +112,8 @@ Photos live under `public/listings/{ownerUid}/{propertyId}/{fileName}`.
   when the listing goes live. The replacement is a single fresh token, which drops the old ones in
   Cloud Storage. The Storage emulator appends instead of replacing, so the emulator test checks
   what is written, not that an old link stops working. The function's service account needs
-  `storage.objects.update` on the default bucket (the default compute account has it). A listing
+  `storage.objects.update` on the default bucket (`tashil-functions` has Storage Object Admin there;
+  see "Functions runtime service account"). A listing
   that was offline when this function was deployed keeps any token issued earlier until its next
   change of state; revoke those once in the console if needed.
   When a live listing changes owner, the tokens under the old owner's folder and under the new
@@ -238,6 +239,32 @@ scan also reads the gzip (`.gz`) and Brotli (`.br`) copies of those files (TAQ-8
 cd frontend && tool/build_web.sh --release
 cd ../backend && npm run check:client-keys:build
 ```
+
+## Functions runtime service account (TAQ-177)
+
+`backend/runtime_options.js` makes every function run as `tashil-functions@<project>.iam.gserviceaccount.com`
+instead of the default compute account, which has Editor. The Firebase CLI expands the
+`tashil-functions@` shorthand for each project, and also uses that account for the Eventarc
+triggers and as the Cloud Scheduler OIDC identity. **Create the account and its roles in a project
+before deploying this code there**, or the deploy fails:
+
+```sh
+P=<project>; SA=tashil-functions@$P.iam.gserviceaccount.com
+gcloud iam service-accounts create tashil-functions --project $P --display-name "Tashil Cloud Functions runtime (TAQ-177)"
+for R in datastore.user firebaseauth.admin logging.logWriter monitoring.metricWriter run.invoker eventarc.eventReceiver; do
+  gcloud projects add-iam-policy-binding $P --project $P --member serviceAccount:$SA --role roles/$R --condition=None
+done
+gcloud storage buckets add-iam-policy-binding gs://$P.firebasestorage.app --project $P --member serviceAccount:$SA --role roles/storage.objectAdmin
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY --project $P --member serviceAccount:$SA --role roles/secretmanager.secretAccessor
+```
+
+Why each role: Firestore reads and writes (`datastore.user`); custom claims, token revocation and
+user lookups (`firebaseauth.admin`); the photo-token rotation on the default bucket
+(`storage.objectAdmin`, bucket only); `GEMINI_API_KEY` (accessor on that secret only); logs and
+metrics; and invoking the Cloud Run services behind the Firestore triggers and the two schedules
+(`run.invoker`, `eventarc.eventReceiver`). When `PAYMENTS_ENABLED=true`, also grant the accessor
+role on each `PAYMOB_*` secret. Keep Editor on the default compute account until every function in
+the project has been redeployed with this code; removing it is a separate step.
 
 ## Paymob rent payments (TAQ-16)
 

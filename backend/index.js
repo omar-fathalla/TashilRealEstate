@@ -1,3 +1,5 @@
+// Must load before any function is defined: it sets the runtime service account (TAQ-177).
+require("./runtime_options");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
