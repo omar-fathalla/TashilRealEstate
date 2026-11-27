@@ -55,6 +55,12 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
   final _rent = TextEditingController();
   final _start = TextEditingController();
   final _end = TextEditingController();
+  // Optional terms (TAQ-164).
+  final _lateFee = TextEditingController();
+  final _graceDays = TextEditingController();
+  final _bankName = TextEditingController();
+  final _iban = TextEditingController();
+  static final RegExp _ibanPattern = RegExp(r'^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$');
   final _errorKey = GlobalKey();
   ManagedPropertyModel? _property;
   RentalApplicationItem? _tenant;
@@ -85,6 +91,10 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
     _rent.dispose();
     _start.dispose();
     _end.dispose();
+    _lateFee.dispose();
+    _graceDays.dispose();
+    _bankName.dispose();
+    _iban.dispose();
     super.dispose();
   }
 
@@ -133,6 +143,20 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
       revealInlineError(_errorKey);
       return;
     }
+    final feeText = _lateFee.text.trim();
+    final graceText = _graceDays.text.trim();
+    final lateFee = feeText.isEmpty ? null : double.tryParse(feeText);
+    final grace = graceText.isEmpty ? null : int.tryParse(graceText);
+    final iban = _iban.text.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    final feeBad = (feeText.isNotEmpty && (lateFee == null || lateFee < 0)) || (graceText.isNotEmpty && (grace == null || grace < 0 || grace > 60));
+    if (feeBad || (iban.isNotEmpty && !_ibanPattern.hasMatch(iban))) {
+      setState(() {
+        _missing = false;
+        _error = loc.tr(feeBad ? 'ldLateFeeInvalid' : 'ldIbanInvalid');
+      });
+      revealInlineError(_errorKey);
+      return;
+    }
     if (!end.isAfter(start)) {
       setState(() {
         _missing = false;
@@ -155,6 +179,10 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
         endDate: _day(end),
         monthlyRent: rent,
         sendOffer: sendOffer,
+        lateFeeAmount: lateFee,
+        lateFeeGraceDays: grace,
+        payoutBankName: _bankName.text.trim(),
+        payoutIban: iban,
       );
       if (mounted) Navigator.of(context).pop(id);
     } catch (e) {
@@ -254,6 +282,59 @@ class _CreateLeaseDialogState extends State<CreateLeaseDialog> {
                             const SizedBox(width: 12),
                             Expanded(child: _dateField(loc, _end, loc.tr('ldEndDate'))),
                           ]),
+                          const SizedBox(height: 4),
+                          Theme(
+                            data: theme.copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              key: const ValueKey('lease_optional_terms'),
+                              tilePadding: EdgeInsetsDirectional.zero,
+                              childrenPadding: const EdgeInsetsDirectional.only(bottom: 8),
+                              title: Text(loc.tr('ldOptionalTerms'), style: theme.textTheme.titleSmall),
+                              children: [
+                                Row(children: [
+                                  Expanded(
+                                    child: TextField(
+                                      key: const ValueKey('lease_late_fee'),
+                                      controller: _lateFee,
+                                      enabled: !_saving,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(
+                                        labelText: loc.tr('ldLateFee'),
+                                        helperText: loc.tr('ldLateFeeHelp'),
+                                        suffixText: loc.tr(CountryController.isUAE ? 'currency_ae' : 'currency_eg'),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    width: 120,
+                                    child: TextField(
+                                      key: const ValueKey('lease_grace_days'),
+                                      controller: _graceDays,
+                                      enabled: !_saving,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: loc.tr('ldGraceDays'), hintText: '5'),
+                                    ),
+                                  ),
+                                ]),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  key: const ValueKey('lease_payout_bank'),
+                                  controller: _bankName,
+                                  enabled: !_saving,
+                                  decoration: InputDecoration(labelText: loc.tr('ldPayoutBank')),
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  key: const ValueKey('lease_payout_iban'),
+                                  controller: _iban,
+                                  enabled: !_saving,
+                                  textCapitalization: TextCapitalization.characters,
+                                  decoration: InputDecoration(labelText: loc.tr('ldPayoutIban')),
+                                ),
+                              ],
+                            ),
+                          ),
                           if (_missing || _error != null)
                             Padding(
                               key: _errorKey,

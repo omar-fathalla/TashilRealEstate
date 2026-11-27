@@ -11,7 +11,8 @@ import 'portfolio_controller.dart';
 ///   months) up to the current month, plus next month once it is within 30 days of falling due.
 /// - A month is paid only when `Transactions/{leaseId}_{YYYY-MM}` says `paid`.
 /// - Ended leases keep their paid months as history and owe nothing.
-/// - There is no late penalty: the server charges none, so none is shown.
+/// - The only late penalty is the lease's own flat late fee (TAQ-164, 0 by default), shown once a
+///   month is past its due day plus the lease's grace days, as the server charges it.
 class RentScheduleBuilder {
   RentScheduleBuilder._();
 
@@ -81,7 +82,9 @@ class RentScheduleBuilder {
         final paid = paidTx != null;
         final receipt = paidTx == null ? null : receiptByTx[paidTx.id];
         final due = _dueDate(year, month, dueDay);
-        final overdue = !paid && today.isAfter(due.add(const Duration(days: graceDays)));
+        final overdue = !paid && today.isAfter(due.add(Duration(days: lease.lateFeeGraceDays)));
+        // The server adds the fee from the day after the grace days (backend/lease_terms.js).
+        final feeDue = !paid && lease.lateFeeAmount > 0 && !today.isBefore(due.add(Duration(days: lease.lateFeeGraceDays + 1)));
         final base = paidTx != null && paidTx.amount > 0 ? paidTx.amount : lease.monthlyRent;
         final deductedPercent = receipt != null && receipt.amount > 0
             ? ((receipt.amount - receipt.ownerPayout) / receipt.amount * 100).clamp(0, 100).toDouble()
@@ -98,12 +101,13 @@ class RentScheduleBuilder {
           unitNumber: '',
           buildingName: '',
           district: '',
-          tenant: TenantInfo(name: lease.tenantName, phone: '', email: '', idNumber: ''),
-          owner: const OwnerPayoutInfo(name: '', bankName: '', iban: '', accountNumber: ''),
+          tenant: TenantInfo(name: lease.tenantName, phone: lease.tenantPhone, email: '', idNumber: ''),
+          owner: OwnerPayoutInfo(name: '', bankName: lease.payoutBankName, iban: lease.payoutIban, accountNumber: ''),
           baseAmount: base,
           dueDate: due,
-          gracePeriodDays: graceDays,
+          gracePeriodDays: lease.lateFeeGraceDays,
           dailyPenaltyRate: 0,
+          flatLateFee: feeDue ? lease.lateFeeAmount : 0,
           propertyId: lease.propertyId,
           monthKey: period,
           status: paid ? 'paid' : (overdue ? 'overdue' : 'due_soon'),

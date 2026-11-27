@@ -767,6 +767,24 @@ service cloud.firestore {
       return leaseRentOk(d) && leaseHasRent(d) && leaseDatesOk(d);
     }
 
+    // Optional lease terms (TAQ-164), mirrored from backend/lease_terms.js: a flat late fee
+    // (0 or more, default 0), its grace days (0-60), and where the owner's rent is paid out.
+    function leaseExtrasOk(d) {
+      return (!('late_fee_amount' in d)
+          || ((d.late_fee_amount is int || d.late_fee_amount is float)
+            && d.late_fee_amount >= 0 && d.late_fee_amount <= 1000000))
+        && (!('late_fee_grace_days' in d)
+          || (d.late_fee_grace_days is int && d.late_fee_grace_days >= 0 && d.late_fee_grace_days <= 60))
+        && (!('payout_bank_name' in d)
+          || (d.payout_bank_name is string && d.payout_bank_name.size() <= 100 && contactFree(d.payout_bank_name)))
+        && (!('payout_iban' in d)
+          || (d.payout_iban is string && (d.payout_iban == '' || d.payout_iban.matches('^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'))));
+    }
+
+    function leaseExtraKeys() {
+      return ['late_fee_amount', 'late_fee_grace_days', 'payout_bank_name', 'payout_iban'];
+    }
+
     function leasePartiesOk(d) {
       return d.get('tenant_id', '') is string && d.get('tenant_id', '') != ''
         && d.get('owner_id', '') is string && d.get('owner_id', '') != ''
@@ -778,7 +796,8 @@ service cloud.firestore {
     function leaseCreateOk(d) {
       return leasePartiesOk(d)
         && d.get('status', '') in ['draft', 'pending_tenant_approval']
-        && leaseTermsOk(d);
+        && leaseTermsOk(d)
+        && leaseExtrasOk(d);
     }
 
     // Rules every lease update obeys, whoever writes it.
@@ -790,6 +809,7 @@ service cloud.firestore {
         && (!changedKeys().hasAny(['monthly_rent', 'annual_rent', 'baseAmount', 'financialTerms'])
           || leaseRentOk(request.resource.data))
         && (!changedKeys().hasAny(['start_date', 'end_date']) || leaseDatesOk(request.resource.data))
+        && (!changedKeys().hasAny(leaseExtraKeys()) || leaseExtrasOk(request.resource.data))
         && (after != 'pending_tenant_approval' || before == 'pending_tenant_approval'
           || leaseTermsOk(request.resource.data));
     }
@@ -810,8 +830,10 @@ service cloud.firestore {
         || (from == 'active' && to in ['expired', 'terminated']);
     }
 
+    // tenant_phone comes from the tenant's own profile (createLease); a manager cannot rewrite it.
     function leaseEditOk() {
       return leaseStatusMoveOk()
+        && !changedKeys().hasAny(['tenant_phone'])
         && (resource.data.get('status', 'draft') == 'draft'
           || changedKeys().hasOnly(['status', 'notes', 'updated_at']));
     }

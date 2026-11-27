@@ -26,6 +26,7 @@ if (!admin.apps.length) {
 }
 
 const { requireFreshAuth, requireRole, loadLease, leaseAmount, leaseCountry } = require("./authz");
+const { lateFeeFor } = require("./lease_terms");
 const { appCheckEnforced, paymentSecrets, paymobConfig } = require("./config");
 const { START_KEYS, END_KEYS, leaseDate, assertLeasePayable } = require("./lease_state");
 const { leaseForPayment } = require("./leases");
@@ -225,7 +226,11 @@ const createRentPaymentIntent = onCall(
     }
     assertLeasePayable(lease);
 
-    const due = leaseAmount(lease);
+    // The month's rent, plus the lease's flat late fee once its grace days are over (TAQ-164; 0 by default).
+    const period = paymentPeriod(data.period, new Date(deps.now()), lease);
+    const rent = leaseAmount(lease);
+    const lateFee = lateFeeFor(lease, period, deps.now());
+    const due = Math.round((rent + lateFee) * 100) / 100;
     if (data.amount !== undefined && data.amount !== null) {
       if (typeof data.amount !== "number" || !Number.isFinite(data.amount) || data.amount <= 0) {
         throw new HttpsError("invalid-argument", "amount must be a positive number.");
@@ -235,7 +240,6 @@ const createRentPaymentIntent = onCall(
       }
     }
 
-    const period = paymentPeriod(data.period, new Date(deps.now()), lease);
     const currency = currencyFor(lease);
     if (currency !== config.currency) {
       throw new HttpsError("failed-precondition", "Online payment is not available for this lease's country yet.", {
@@ -293,6 +297,8 @@ const createRentPaymentIntent = onCall(
         owner_id: lease.owner_id || "",
         agency_id: lease.agency_id || "",
         amount: due,
+        rentAmount: rent,
+        lateFee,
         amountCents,
         currencyCode: currency,
         splits: splitsFor(due, percents),
@@ -690,7 +696,11 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
   const now = deps.now();
   const paidOn = parsePaidOn(data.paidOn, now);
 
-  const due = leaseAmount(lease);
+  const period = paymentPeriod(data.period, new Date(now), lease);
+  // Paid on paidOn: the late fee applies when that day is past the grace days (TAQ-164).
+  const rent = leaseAmount(lease);
+  const lateFee = lateFeeFor(lease, period, paidOn.getTime());
+  const due = Math.round((rent + lateFee) * 100) / 100;
   if (data.amount !== undefined && data.amount !== null) {
     if (typeof data.amount !== "number" || !Number.isFinite(data.amount) || data.amount <= 0) {
       throw new HttpsError("invalid-argument", "amount must be a positive number.");
@@ -699,7 +709,6 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
       throw new HttpsError("invalid-argument", "amount does not match the rent due on this lease.");
     }
   }
-  const period = paymentPeriod(data.period, new Date(now), lease);
   const currency = currencyFor(lease);
 
   const db = admin.firestore();
@@ -734,6 +743,8 @@ const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInst
       owner_id: lease.owner_id || "",
       agency_id: lease.agency_id || "",
       amount: due,
+      rentAmount: rent,
+      lateFee,
       amountCents: Math.round(due * 100),
       currencyCode: currency,
       // Nothing passed through the platform, so nothing is deducted.

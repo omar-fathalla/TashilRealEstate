@@ -121,6 +121,10 @@ String leaseCreateErrorKey(String reason) {
       return 'ldPropertyNotManaged';
     case 'rent_precision':
       return 'rqRentPrecision';
+    case 'late_fee_invalid':
+      return 'ldLateFeeInvalid';
+    case 'iban_invalid':
+      return 'ldIbanInvalid';
     case 'property_country_missing':
       return 'ldPropertyCountryMissing';
     default:
@@ -175,6 +179,10 @@ class PortfolioDataService {
     required String endDate,
     required double monthlyRent,
     required bool sendOffer,
+    double? lateFeeAmount,
+    int? lateFeeGraceDays,
+    String? payoutBankName,
+    String? payoutIban,
   }) async {
     final result = await backend.createLease({
       'ownerId': ownerId,
@@ -184,6 +192,11 @@ class PortfolioDataService {
       'endDate': endDate,
       'monthlyRent': monthlyRent,
       'sendOffer': sendOffer,
+      // Optional terms (TAQ-164); absent ones are left out so the server keeps its defaults.
+      if (lateFeeAmount != null) 'lateFeeAmount': lateFeeAmount,
+      if (lateFeeGraceDays != null) 'lateFeeGraceDays': lateFeeGraceDays,
+      if (payoutBankName != null && payoutBankName.isNotEmpty) 'payoutBankName': payoutBankName,
+      if (payoutIban != null && payoutIban.isNotEmpty) 'payoutIban': payoutIban,
     });
     final id = result['leaseId'];
     if (id is! String || id.isEmpty) throw StateError('createLease returned no lease id');

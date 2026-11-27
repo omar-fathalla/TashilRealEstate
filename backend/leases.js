@@ -28,6 +28,7 @@ const { requireFreshAuth, requireRole, resolveUserAuthority, leaseAmount } = req
 const { appCheckEnforced } = require("./config");
 const { leaseLiveState, assertLeasePayable } = require("./lease_state");
 const { verifyPropertyOwnership, registeredOwner } = require("./property_owners");
+const { leaseExtrasFrom, tenantPhoneOf } = require("./lease_terms");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
 const LOCKS = "PropertyLeaseLocks";
@@ -196,6 +197,7 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
     throw new HttpsError("invalid-argument", "The tenant cannot be the owner or the caller.");
   }
   const status = data.sendOffer === true ? "pending_tenant_approval" : "draft";
+  const extras = leaseExtrasFrom(data);
 
   const ownerAuthority = await resolveUserAuthority(ownerId);
   const agencyId = ownerAuthority.agencyId;
@@ -233,6 +235,9 @@ const createLease = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1
       end_date: data.endDate,
       property_title: titleOf(silo),
       tenant_name: tenantNameOf(tenantProfile.exists ? tenantProfile.data() : null),
+      tenant_phone: tenantPhoneOf(tenantProfile.exists ? tenantProfile.data() : null),
+      late_fee_amount: 0,
+      ...extras,
       created_by: auth.uid,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
