@@ -18,12 +18,7 @@ if (!admin.apps.length) {
 
 const { FieldValue } = admin.firestore;
 
-const isTrue = (value) => value === true || value === "true";
-
-/** True when the public listing data says both published and held hidden. */
-function isPublishedAndHidden(data) {
-  return Boolean(data) && isTrue(data.is_published) && isTrue(data.moderation_hidden);
-}
+const { isPublishedAndHidden } = require("./hidden_listing_predicate");
 
 const holdHiddenListingsOffline = onDocumentWritten("Properties/{propertyId}", async (event) => {
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;

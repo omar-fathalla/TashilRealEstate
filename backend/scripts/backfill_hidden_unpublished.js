@@ -15,7 +15,7 @@
  */
 const admin = require("firebase-admin");
 const { parseArgs, resolveTarget } = require("./backfill_property_moderation");
-const { isPublishedAndHidden } = require("../hidden_listing_guard");
+const { isPublishedAndHidden } = require("../hidden_listing_predicate");
 
 /** Returns the ids of public listings that are published while held hidden. */
 async function findPublishedHidden(db) {
