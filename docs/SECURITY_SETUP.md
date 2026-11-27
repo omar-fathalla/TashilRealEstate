@@ -379,3 +379,26 @@ Entries hold uids, roles and small non-personal details only. Each one keeps for
 `expire_at` is `created_at` plus 365 days. The `purgeExpiredAuditLog` job deletes expired entries
 every day at 03:30 Cairo time. You can also enable a Firestore TTL policy on `AuditLog.expire_at`;
 that's optional, and the scheduled purge works without it.
+
+## Agency agents (TAQ-169)
+
+`AgencyAgent` is agency staff. The role comes only from a custom claim, granted when the user
+accepts an AgencyAdmin's invite and carrying the agency's `agency_id`. `setUserRole` never assigns it.
+
+An agent can:
+
+- read its agency's listings, leases, rent rows, mandates, viewing requests, rental applications
+  and maintenance requests
+- update maintenance progress
+- answer viewing requests (`respondToViewingRequest`)
+- work rent rows (`updateRentRow`), but not delete a row or send a legal notice
+- send rent reminders
+- use the Gemini `onboarding` feature
+
+An agent can't:
+
+- decide rental applications, create leases, record manual payments or issue receipts. Those stay
+  with the AgencyAdmin.
+- use any mandate callable or `document_ocr`
+- read invoices, transactions or `Agencies/{id}/private` (payout details)
+- delete anything

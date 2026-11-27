@@ -85,6 +85,17 @@ service cloud.firestore {
       return isAgencyAdmin() && myAgencyId() != '' && agencyId == myAgencyId();
     }
 
+    // TAQ-169: agency staff. AgencyAgent comes only from a custom claim (an accepted invite) with
+    // its agency's agency_id. An agent reads what its agency manages and writes almost nothing:
+    // no deletes, no leases, no invoices or transactions, no payout details, no mandates.
+    function isAgencyAgent() {
+      return hasRole('AgencyAgent');
+    }
+
+    function isAgencyMemberOf(agencyId) {
+      return (isAgencyAdmin() || isAgencyAgent()) && myAgencyId() != '' && agencyId == myAgencyId();
+    }
+
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
@@ -574,6 +585,11 @@ service cloud.firestore {
       return isAgencyAdminOf(resource.data.get('agency_id', ''));
     }
 
+    // TAQ-169: the caller is an admin or agent of the agency the resource names. Reads only.
+    function agencyMemberReads() {
+      return isAgencyMemberOf(resource.data.get('agency_id', ''));
+    }
+
     // The role and the diff are each evaluated once: a full edit of a large listing needs most of
     // the 1000-expression budget for its own value checks (TAQ-105).
     function propertyUpdateOk(propertyId) {
@@ -591,7 +607,7 @@ service cloud.firestore {
       allow get: if publiclyVisible(resource.data)
         || isPlatformStaff()
         || ownsListing()
-        || agencyManagesResource();
+        || agencyMemberReads();
       // Rules are not filters: a list rule that also tested moderation_hidden would refuse the
       // marketplace query (`is_published == true`) outright, and filtering on
       // `moderation_hidden == false` would drop public docs that lack the field. Lists therefore
@@ -601,7 +617,7 @@ service cloud.firestore {
       allow list: if resource.data.get('is_published', false) == true
         || isPlatformStaff()
         || ownsListing()
-        || agencyManagesResource();
+        || agencyMemberReads();
 
       // Listings are written only by the syncOwnerPropertyToMarketplace trigger (Admin SDK)
       // from the owner's private Users/{ownerId}/properties tree, so no client can claim a
@@ -863,7 +879,7 @@ service cloud.firestore {
         (isAuthenticated() && (
           resource.data.tenant_id == request.auth.uid ||
           resource.data.owner_id == request.auth.uid ||
-          agencyManagesResource()
+          agencyMemberReads()
         ));
       allow create: if isSuperAdmin() && leaseCreateOk(request.resource.data);
       allow update: if leaseUpdateInvariantsOk() && (
@@ -884,7 +900,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
           resource.data.get('owner_id', '') == request.auth.uid ||
-          agencyManagesResource()
+          agencyMemberReads()
         ));
       allow write: if false;
     }
@@ -896,7 +912,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin() ||
         (isAuthenticated() && (
           resource.data.get('owner_id', '') == request.auth.uid ||
-          isAgencyAdminOf(resource.data.get('agency_id', ''))
+          isAgencyMemberOf(resource.data.get('agency_id', ''))
         ));
       allow write: if false;
     }
@@ -1028,7 +1044,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin()
         || (isAuthenticated() && (resource.data.get('requester_id', '') == request.auth.uid
           || resource.data.get('owner_id', '') == request.auth.uid))
-        || agencyManagesResource();
+        || agencyMemberReads();
       allow write: if false;
     }
 
@@ -1036,7 +1052,7 @@ service cloud.firestore {
       allow read: if isSuperAdmin()
         || (isAuthenticated() && (resource.data.get('applicant_id', '') == request.auth.uid
           || resource.data.get('owner_id', '') == request.auth.uid))
-        || agencyManagesResource();
+        || agencyMemberReads();
       allow write: if false;
     }
 
@@ -1113,12 +1129,14 @@ service cloud.firestore {
     }
 
     match /Maintenance/{requestId} {
-      allow read: if isPlatformStaff() || maintenanceParty();
+      allow read: if isPlatformStaff() || maintenanceParty() || agencyMemberReads();
       allow create: if isSuperAdmin()
         || ((isTenant() || isOwner()) && maintenanceCreateShapeOk(request.resource.data) && maintenanceLinkedToLease());
       allow update: if isSuperAdmin()
         || (isAdmin() && changedKeys().hasOnly(['status', 'escalated', 'resolution_note', 'updated_at']))
-        || ((isOwner() || isAgencyAdmin()) && maintenanceParty() && maintenanceProgressOk());
+        || ((isOwner() || isAgencyAdmin()) && maintenanceParty() && maintenanceProgressOk())
+        // TAQ-169: an agent may move its agency's maintenance requests along, like its admin.
+        || (isAgencyAgent() && agencyMemberReads() && maintenanceProgressOk());
       // A complaint is a record for the tenant, the owner and platform staff: parties close it by
       // resolving it, and only SuperAdmin can erase one (TAQ-146).
       allow delete: if isSuperAdmin();

@@ -11,6 +11,10 @@ const PUBLISHER_ROLES = ["Owner", "AgencyAdmin", "SuperAdmin"];
 // Platform staff who moderate listings and read the sanitized user directory. Admin is the
 // restricted platform role; SuperAdmin keeps everything Admin can do.
 const PLATFORM_STAFF_ROLES = ["Admin", "SuperAdmin"];
+// TAQ-169: agency staff. Granted only by accepting an AgencyAdmin's invite, never by setUserRole.
+const AGENCY_AGENT = "AgencyAgent";
+// The agency roles whose agency_id claim names an agency they work for.
+const AGENCY_MEMBER_ROLES = ["AgencyAdmin", AGENCY_AGENT];
 
 function requireAuth(request) {
   if (!request.auth || !request.auth.uid) {
@@ -194,7 +198,8 @@ function assertLeaseParty(auth, role, lease, { allowTenant = false } = {}) {
   if (lease.owner_id && lease.owner_id === uid) return;
   if (allowTenant && lease.tenant_id && lease.tenant_id === uid) return;
   const agencyId = auth.token && auth.token.agency_id;
-  if (role === "AgencyAdmin" && agencyId && lease.agency_id === agencyId) return;
+  // An AgencyAgent passes here only on callables whose requireRole admits it (TAQ-169).
+  if (AGENCY_MEMBER_ROLES.includes(role) && agencyId && lease.agency_id === agencyId) return;
   throw new HttpsError("permission-denied", "You are not a party to this lease.");
 }
 
@@ -214,4 +219,6 @@ module.exports = {
   leaseAmount,
   leaseCountry,
   assertLeaseParty,
+  AGENCY_AGENT,
+  AGENCY_MEMBER_ROLES,
 };
