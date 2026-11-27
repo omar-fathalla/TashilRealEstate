@@ -11,6 +11,7 @@ import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_d
 import 'package:tashil_real_estate/features/image_moderation/widgets/ai_image_moderator_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/models/managed_property_model.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/widgets/property_value_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/monthly_payment_schedule_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/publish_listing_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/marketplace_visitor_preview_dialog.dart';
@@ -1623,6 +1624,19 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
             thickness: 1,
             color: colorScheme.outlineVariant.withValues(alpha: 0.7),
           ),
+          // Property value (TAQ-164): optional and private, feeds the gross yield only.
+          _buildActionSegmentItem(
+            key: ValueKey('property_value_${prop.id}'),
+            icon: Icons.price_change_outlined,
+            tooltip: loc.tr('pvTitle'),
+            foregroundColor: colorScheme.onSurface,
+            onTap: () => PropertyValueDialog.show(context, prop),
+          ),
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
           // 4. Share & Options Segment
           _buildActionSegmentItem(
             icon: Icons.share_rounded,
@@ -1636,6 +1650,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
   }
 
   Widget _buildActionSegmentItem({
+    Key? key,
     required IconData icon,
     required String tooltip,
     Color? backgroundColor,
@@ -1643,6 +1658,7 @@ class _OwnerPropertiesViewState extends State<OwnerPropertiesView> {
     required VoidCallback onTap,
   }) {
     return Material(
+      key: key,
       color: backgroundColor ?? Colors.transparent,
       child: InkWell(
         onTap: onTap,

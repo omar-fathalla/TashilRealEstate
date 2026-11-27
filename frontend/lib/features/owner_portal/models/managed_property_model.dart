@@ -188,6 +188,10 @@ class ManagedPropertyModel {
   final List<MonthlyInstallment> installments;
   final List<MonthlyInstallment> archivedInstallments;
 
+  /// What the owner says the property is worth (TAQ-164), optional and private: it stays in the
+  /// owner's own tree and never reaches the public listing. Gross yield is shown only when it is set.
+  final double? propertyValue;
+
   const ManagedPropertyModel({
     required this.id,
     required this.countryCode,
@@ -213,6 +217,7 @@ class ManagedPropertyModel {
     this.leaseEndDate,
     this.installments = const [],
     this.archivedInstallments = const [],
+    this.propertyValue,
   });
 
   String getTitle(String lang) => titles[lang] ?? titles['ar'] ?? '';
@@ -258,6 +263,8 @@ class ManagedPropertyModel {
     DateTime? leaseEndDate,
     List<MonthlyInstallment>? installments,
     List<MonthlyInstallment>? archivedInstallments,
+    double? propertyValue,
+    bool clearPropertyValue = false,
   }) {
     return ManagedPropertyModel(
       id: id ?? this.id,
@@ -284,7 +291,15 @@ class ManagedPropertyModel {
       leaseEndDate: clearTenant ? null : (leaseEndDate ?? this.leaseEndDate),
       installments: installments ?? this.installments,
       archivedInstallments: archivedInstallments ?? this.archivedInstallments,
+      propertyValue: clearPropertyValue ? null : (propertyValue ?? this.propertyValue),
     );
+  }
+
+  /// A stored property value, or null when it is missing, not a number or not above zero.
+  static double? parsePropertyValue(dynamic raw) {
+    if (raw is! num) return null;
+    final value = raw.toDouble();
+    return value.isFinite && value > 0 ? value : null;
   }
 
   /// Converts this managed property to a visitor-facing PropertyItem for marketplace display
@@ -385,6 +400,8 @@ class ManagedPropertyModel {
       'leaseEndDate': leaseEndDate?.toIso8601String(),
       'installments': installments.map((i) => i.toMap()).toList(),
       'archivedInstallments': archivedInstallments.map((i) => i.toMap()).toList(),
+      // Left out when unset, so an edit that does not carry it never clears a stored value.
+      if (propertyValue != null) 'propertyValue': propertyValue,
       'updatedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -502,6 +519,7 @@ class ManagedPropertyModel {
       leaseEndDate: parseNullableDate(map['leaseEndDate'] ?? map['lease_end_date']),
       installments: instList,
       archivedInstallments: archivedList,
+      propertyValue: parsePropertyValue(map['propertyValue']),
     );
   }
 }
