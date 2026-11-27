@@ -603,3 +603,26 @@ test("TAQ-86: the --build scan finds keys inside .gz and .br copies and reports 
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+// --- TAQ-32: current Functions libraries, and dependency updates that land on dev ---
+
+test("TAQ-32: the backend runs Node 22 on firebase-functions 7+ and firebase-admin 13+", () => {
+  const pkg = JSON.parse(read("backend/package.json"));
+  assert.equal(pkg.engines.node, "22");
+  const major = (range) => Number(String(range).replace(/^[^\d]*/, "").split(".")[0]);
+  assert.ok(major(pkg.dependencies["firebase-functions"]) >= 7, pkg.dependencies["firebase-functions"]);
+  assert.ok(major(pkg.dependencies["firebase-admin"]) >= 13, pkg.dependencies["firebase-admin"]);
+  const lock = JSON.parse(read("backend/package-lock.json"));
+  for (const [name, entry] of Object.entries(lock.packages)) {
+    if (name.endsWith("node_modules/@grpc/grpc-js")) {
+      const [maj, min, patch] = entry.version.split(".").map(Number);
+      assert.ok(maj > 1 || min > 13 || (min === 13 && patch > 5), `${name} ${entry.version} has GHSA-m9gg-hp2v-232j`);
+    }
+  }
+});
+
+test("TAQ-32: Dependabot opens weekly update PRs against dev for backend and frontend", () => {
+  const cfg = read(".github/dependabot.yml");
+  for (const dir of ["/backend", "/frontend"]) assert.match(cfg, new RegExp(`directory: ${dir}\\n    target-branch: dev\\n`));
+  assert.doesNotMatch(cfg, /target-branch: (master|main)/);
+});
