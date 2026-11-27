@@ -7,6 +7,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // An anonymous Firebase session (no e-mail, phone or federated sign-in). Such an account has
+    // no way to prove who it is, so it cannot become the holder of a property id (TAQ-137).
+    function isAnonymousSession() {
+      return request.auth != null
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'anonymous';
+    }
+
     // Roles a user may pick for themselves at signup; the profile can vouch for these only.
     // Admin, AgencyAdmin and SuperAdmin come from custom claims set by setUserRole.
     function selfServiceRoles() {
@@ -143,10 +150,13 @@ service cloud.firestore {
         // Property ids are global (TAQ-110): an id registered to another owner in PropertyOwners
         // cannot be created here, and `id_conflict` (set by the server on a colliding doc) is never
         // written or cleared by a client, SuperAdmin included.
+        // An anonymous session cannot create one at all (TAQ-137): it could otherwise register
+        // itself as the holder of an id that a signed-up owner later claims.
         allow create: if propertyIdFreeFor(propertyId, userId)
           && !('id_conflict' in request.resource.data)
           && (isSuperAdmin()
             || (isAuthenticated() && request.auth.uid == userId && !hasRole('Investor')
+              && !isAnonymousSession()
               && (!privateImagesAdded() || !listingModerationHidden(propertyId))));
         allow update: if !changedKeys().hasAny(['id_conflict', 'id_conflict_at'])
           && (isSuperAdmin()
