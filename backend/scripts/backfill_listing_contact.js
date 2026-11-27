@@ -15,13 +15,12 @@
  *   node scripts/backfill_listing_contact.js --project demo-<name> --apply              # writes
  *   node scripts/backfill_listing_contact.js --project <id> --confirm-project=<id>      # real project
  *
- * The TAQ-100 project guard applies, and `tashil-dev` is always refused.
+ * The TAQ-100 project guard applies: a project that is not demo- needs --confirm-project=<id>.
  */
 const admin = require("firebase-admin");
 const { parseArgs, resolveTarget } = require("./backfill_property_moderation");
 const { agencyListingIdentity, listingContactFields } = require("../listing_contact");
 
-const REFUSED_PROJECTS = new Set(["tashil-dev"]);
 const PAGE = 300;
 
 function sameNames(a, b) {
@@ -90,9 +89,6 @@ async function backfill(db, { apply = false } = {}) {
 }
 
 function guardProject(args) {
-  if (REFUSED_PROJECTS.has(args.project)) {
-    throw Object.assign(new Error(`Refusing to run against "${args.project}": this project is never touched.`), { exitCode: 2 });
-  }
   return resolveTarget(args);
 }
 

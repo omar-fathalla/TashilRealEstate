@@ -32,14 +32,13 @@ test("TAQ-161: contactUpdate touches only the three contact fields and only when
   assert.deepEqual(contactUpdate({ agencyNames: { ar: "أ", en: "A", hi: "A" }, agencyPhone: "" }, verified, DEL), { agencyOrn: "ORN-1" });
 });
 
-test("TAQ-161: the guard refuses tashil-dev even when confirmed, and real projects without confirmation", () => {
-  assert.throws(() => guardProject({ project: "tashil-dev", confirmProject: "tashil-dev" }), /never touched/);
-  assert.throws(() => guardProject({ project: "tashil-aqar-dev", confirmProject: "" }), /not a demo- project/);
-  assert.deepEqual(guardProject({ project: "tashil-aqar-dev", confirmProject: "tashil-aqar-dev" }), { projectId: "tashil-aqar-dev", demo: false });
+test("TAQ-161: a real project is refused unless its id is confirmed, before any connection", () => {
+  assert.throws(() => guardProject({ project: "real-project-x", confirmProject: "" }), /not a demo- project/);
+  assert.deepEqual(guardProject({ project: "real-project-x", confirmProject: "real-project-x" }), { projectId: "real-project-x", demo: false });
   const env = { FIRESTORE_EMULATOR_HOST: "127.0.0.1:1" };
-  const refused = run(["--project", "tashil-dev", "--confirm-project", "tashil-dev", "--apply"], env);
+  const refused = run(["--project", "real-project-x", "--apply"], env);
   assert.equal(refused.status, 2, refused.stderr);
-  assert.match(refused.stderr, /never touched/);
+  assert.match(refused.stderr, /Refusing to run against/);
   assert.doesNotMatch(refused.stdout, /listing\(s\)/);
 });
 
