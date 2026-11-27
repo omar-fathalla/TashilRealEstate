@@ -369,7 +369,9 @@ class _ConnectedGroupSegmentItemState<T> extends State<_ConnectedGroupSegmentIte
                         color: currentFg,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                         letterSpacing: 0.2,
-                        fontSize: widget.height <= 38.0 ? 11.5 : 12.0,
+                        // A group raised to minTapHeight keeps the compact label size of the
+                        // 44dp group it replaces, so its width does not change (TAQ-168).
+                        fontSize: widget.height <= 38.0 || widget.height == TashilConnectedButtonGroup.minTapHeight - 7.0 ? 11.5 : 12.0,
                       ),
                     ),
                   ),
