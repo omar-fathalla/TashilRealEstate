@@ -24,6 +24,7 @@ const { SELF_SERVICE_ROLES, requireFreshAuth, requireRole } = require("./authz")
 const { appCheckEnforced } = require("./config");
 const { containsContact } = require("./contact_filter");
 const { applyUserRole } = require("./roles");
+const { writeAuditLog } = require("./audit_log");
 const { MANDATES } = require("./agency_mandate_state");
 
 const ENFORCE_APP_CHECK = appCheckEnforced();
@@ -131,6 +132,7 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
       reviewed_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
     });
+    await writeAuditLog({ action: "agency_application_rejected", actorUid: auth.uid, actorRole: "SuperAdmin", targetUid: data.uid });
     return { success: true, status: "rejected" };
   }
 
@@ -171,6 +173,13 @@ const reviewAgencyApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
     reviewed_by: auth.uid,
     reviewed_at: FieldValue.serverTimestamp(),
     updated_at: FieldValue.serverTimestamp(),
+  });
+  await writeAuditLog({
+    action: "agency_application_approved",
+    actorUid: auth.uid,
+    actorRole: "SuperAdmin",
+    targetUid: data.uid,
+    details: { agency_id: agencyRef.id },
   });
   return { success: true, status: "approved", agencyId: agencyRef.id };
 });

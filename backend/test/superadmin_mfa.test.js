@@ -114,3 +114,17 @@ test("TAQ-185: the same switch applies to the platform Admin in rules, Storage a
   await assert.rejects(requireRole(auth(A_NO_2FA), ["Admin", "SuperAdmin"]), (e) => e.details && e.details.reason === "mfa_required");
   await assert.rejects(requireRole(auth(A_NO_2FA), ["Owner"]), (e) => e.code === "permission-denied" && !(e.details && e.details.reason));
 });
+
+test("TAQ-193 rules: AuditLog is readable only by a SuperAdmin and writable by no client", async () => {
+  const { setDoc: set } = require("firebase/firestore");
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await set(doc(ctx.firestore(), "AuditLog/e1"), { action: "role_assigned" });
+  });
+  const ref = (claims) => doc(testEnv.authenticatedContext("u1", claims).firestore(), "AuditLog/e1");
+  await assertSucceeds(getDoc(ref({ role: "SuperAdmin" })));
+  for (const claims of [{ role: "Admin" }, { role: "Owner" }, { role: "AgencyAdmin", agency_id: "a" }, {}]) {
+    await assertFails(getDoc(ref(claims)));
+  }
+  await assertFails(set(ref({ role: "SuperAdmin" }), { action: "forged" }));
+  await assertFails(getDoc(ref({ role: "SuperAdmin", mfa_required: true })), "MFA switch applies too");
+});

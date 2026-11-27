@@ -994,3 +994,7 @@ exports.cspReport = require("./csp_report").cspReport;
 
 // TAQ-23: self-service roles also land in the custom claim, so the rules skip the profile read.
 exports.mirrorSelfServiceRole = require("./self_service_claims").mirrorSelfServiceRole;
+
+// TAQ-193: audit trail for SuperAdmin-level changes, kept one year.
+exports.purgeExpiredAuditLog = require("./audit_log").purgeExpiredAuditLog;
+exports.auditSettingsChange = require("./audit_log").auditSettingsChange;

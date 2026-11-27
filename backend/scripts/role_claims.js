@@ -22,7 +22,8 @@
  *
  * First SuperAdmin (TAQ-27). The profile can't vouch for SuperAdmin, so --grant can't bootstrap
  * it. This sets the claim on one uid, and only while no account has a SuperAdmin claim. After
- * that, SuperAdmins use the setUserRole callable:
+ * that, another SuperAdmin is added with --grant on a reviewed profile; the setUserRole callable
+ * never grants or removes SuperAdmin (TAQ-186):
  *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid>          # dry run
  *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid> --apply  # writes
  *
@@ -39,6 +40,7 @@
 const admin = require("firebase-admin");
 const { SELF_SERVICE_ROLES } = require("../authz");
 const { applyUserRole } = require("../roles");
+const { writeAuditLog } = require("../audit_log");
 const { grantSelfServiceClaim } = require("../self_service_claims");
 
 function parseArgs(argv) {
@@ -191,6 +193,12 @@ async function setMfaRequired(auth, uid, required, apply, log = console.log) {
   if (required) next.mfa_required = true;
   else delete next.mfa_required;
   await auth.setCustomUserClaims(uid, next);
+  await writeAuditLog({
+    action: required ? "mfa_required_set" : "mfa_required_cleared",
+    actorUid: "scripts/role_claims.js",
+    targetUid: uid,
+    details: { role: claims.role || "" },
+  });
   if (required) {
     await auth.revokeRefreshTokens(uid);
     log("Done. The account signs in again with its second factor.");

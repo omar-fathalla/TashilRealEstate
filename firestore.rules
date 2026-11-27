@@ -977,6 +977,12 @@ service cloud.firestore {
         && d.updated_at == request.time;
     }
 
+    // TAQ-193: audit trail, written only by the Admin SDK and kept one year (expire_at).
+    match /AuditLog/{entryId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
     match /Settings/{settingId} {
       allow read: if isSuperAdmin();
       allow create, update: if isSuperAdmin() && settingId == 'payment_split' && paymentSplitOk(request.resource.data);
