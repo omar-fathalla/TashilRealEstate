@@ -1,4 +1,6 @@
 // TAQ-189: the "collected this month" card counts this month's electronic payments only.
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/collected_this_month.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
@@ -40,5 +42,16 @@ void main() {
   test('a paid invoice with no payment date counts by its due month', () {
     expect(collectedElectronicallyThisMonth([invoice('a', status: 'paid', due: DateTime(2026, 11, 1))], now), 1000);
     expect(collectedElectronicallyThisMonth([invoice('b', status: 'paid', due: DateTime(2026, 10, 1))], now), 0);
+  });
+
+  test('both "collected this month" cards use the shared calculation', () {
+    for (final path in const [
+      'lib/features/owner_portal/views/owner_financials_view.dart',
+      'lib/features/rent_collection/views/rent_collection_view.dart',
+    ]) {
+      final source = File(path).readAsStringSync();
+      expect(source, contains('collectedElectronicallyThisMonth(countryInvoices, DateTime.now())'), reason: path);
+      expect(source.contains(".where((inv) => inv.status == 'paid')\n                .fold"), isFalse, reason: path);
+    }
   });
 }

@@ -19,6 +19,7 @@ import 'package:tashil_real_estate/features/portfolio/services/portfolio_control
 import 'package:tashil_real_estate/features/portfolio/services/rent_schedule_builder.dart';
 import 'package:tashil_real_estate/features/rent_collection/models/rent_invoice_model.dart';
 import 'package:tashil_real_estate/features/rent_collection/services/rent_collection_service.dart';
+import 'package:tashil_real_estate/features/owner_portal/services/collected_this_month.dart';
 import 'package:tashil_real_estate/features/owner_portal/services/property_lifecycle_service.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/create_rent_invoice_dialog.dart';
 import 'package:tashil_real_estate/features/rent_collection/widgets/legal_warning_notice_dialog.dart';
@@ -182,9 +183,8 @@ class _RentCollectionViewState extends State<RentCollectionView> {
             final overdueCount = countryInvoices.where((inv) => inv.status == 'overdue').length;
 
             // Financial KPIs
-            final totalCollected = countryInvoices
-                .where((inv) => inv.status == 'paid')
-                .fold<double>(0.0, (sum, inv) => sum + inv.totalAmountDue);
+            // TAQ-189: this month's electronic collections only, not every paid month.
+            final totalCollected = collectedElectronicallyThisMonth(countryInvoices, DateTime.now());
 
             final totalDueSoon = countryInvoices
                 .where((inv) => inv.status == 'due_soon')
