@@ -14,6 +14,7 @@ import 'package:tashil_real_estate/core/design_system/drawer/tashil_navigation_d
 import 'package:tashil_real_estate/core/design_system/navigation_rail/tashil_navigation_rail.dart';
 import 'package:tashil_real_estate/core/widgets/app_settings_dialog.dart';
 import 'package:tashil_real_estate/core/design_system/snackbars/tashil_snackbars.dart';
+import 'package:tashil_real_estate/core/config/feature_flags.dart';
 import 'services/agency_identity.dart';
 import 'widgets/agency_profile_dialog.dart';
 import 'package:tashil_real_estate/features/fast_onboarding/widgets/fast_property_onboarding_dialog.dart';
@@ -38,7 +39,11 @@ class AgencyDashboard extends StatefulWidget {
   /// The portfolio data source. Tests pass one backed by fakes; the app uses the Firebase one.
   final PortfolioController? portfolio;
 
-  const AgencyDashboard({super.key, this.identitySource, this.portfolio});
+  /// Shows the CRM and Investor mockup tabs. Defaults to [FeatureFlags.agencyMockTabs]; tests
+  /// pass a value to cover both layouts.
+  final bool? showMockTabs;
+
+  const AgencyDashboard({super.key, this.identitySource, this.portfolio, this.showMockTabs});
 
   @override
   State<AgencyDashboard> createState() => _AgencyDashboardState();
@@ -52,6 +57,11 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
 
   late final PortfolioController _portfolio;
   late final List<Widget> _views;
+  late final bool _showMockTabs = widget.showMockTabs ?? FeatureFlags.agencyMockTabs;
+
+  /// The views the bottom navigation bar opens, in order. The CRM mockup (view 2) is left out
+  /// while it is hidden.
+  List<int> get _bottomTabs => [0, 1, if (_showMockTabs) 2, 3, 5];
 
   @override
   void initState() {
@@ -258,14 +268,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 1),
         ),
-        TashilRailDestination(
-          icon: Icons.people_outline_rounded,
-          selectedIcon: Icons.people_rounded,
-          label: loc.tr('crm'),
-          isSelected: _selectedIndex == 2,
-          isExpanded: isExpanded,
-          onTap: () => setState(() => _selectedIndex = 2),
-        ),
+        if (_showMockTabs)
+          TashilRailDestination(
+            icon: Icons.people_outline_rounded,
+            selectedIcon: Icons.people_rounded,
+            label: loc.tr('crm'),
+            isSelected: _selectedIndex == 2,
+            isExpanded: isExpanded,
+            onTap: () => setState(() => _selectedIndex = 2),
+          ),
         TashilRailDestination(
           icon: Icons.description_outlined,
           selectedIcon: Icons.description_rounded,
@@ -291,14 +302,15 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
           isExpanded: isExpanded,
           onTap: () => setState(() => _selectedIndex = 5),
         ),
-        TashilRailDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
-          label: loc.tr('investorDashboardTitle'),
-          isSelected: _selectedIndex == 6,
-          isExpanded: isExpanded,
-          onTap: () => setState(() => _selectedIndex = 6),
-        ),
+        if (_showMockTabs)
+          TashilRailDestination(
+            icon: Icons.show_chart_outlined,
+            selectedIcon: Icons.show_chart_rounded,
+            label: loc.tr('investorDashboardTitle'),
+            isSelected: _selectedIndex == 6,
+            isExpanded: isExpanded,
+            onTap: () => setState(() => _selectedIndex = 6),
+          ),
         TashilRailDestination(
           icon: Icons.inbox_outlined,
           selectedIcon: Icons.inbox_rounded,
@@ -492,10 +504,10 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
       endDrawer: _buildMobileDrawer(context, loc, colorScheme),
       body: _views[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex < 5 ? _selectedIndex : 0,
+        selectedIndex: _bottomTabs.contains(_selectedIndex) ? _bottomTabs.indexOf(_selectedIndex) : 0,
         onDestinationSelected: (index) {
           setState(() {
-            _selectedIndex = index;
+            _selectedIndex = _bottomTabs[index];
           });
         },
         destinations: [
@@ -509,11 +521,12 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             selectedIcon: const Icon(Icons.apartment_rounded),
             label: loc.tr('properties'),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.people_outline),
-            selectedIcon: const Icon(Icons.people_rounded),
-            label: loc.tr('crm'),
-          ),
+          if (_showMockTabs)
+            NavigationDestination(
+              icon: const Icon(Icons.people_outline),
+              selectedIcon: const Icon(Icons.people_rounded),
+              label: loc.tr('crm'),
+            ),
           NavigationDestination(
             icon: const Icon(Icons.description_outlined),
             selectedIcon: const Icon(Icons.description_rounded),
@@ -605,16 +618,17 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             setState(() => _selectedIndex = 1);
           },
         ),
-        TashilDrawerDestination(
-          icon: Icons.people_outline_rounded,
-          selectedIcon: Icons.people_rounded,
-          label: loc.tr('crm'),
-          isSelected: _selectedIndex == 2,
-          onTap: () {
-            Navigator.pop(context);
-            setState(() => _selectedIndex = 2);
-          },
-        ),
+        if (_showMockTabs)
+          TashilDrawerDestination(
+            icon: Icons.people_outline_rounded,
+            selectedIcon: Icons.people_rounded,
+            label: loc.tr('crm'),
+            isSelected: _selectedIndex == 2,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _selectedIndex = 2);
+            },
+          ),
         TashilDrawerDestination(
           icon: Icons.description_outlined,
           selectedIcon: Icons.description_rounded,
@@ -646,16 +660,17 @@ class _AgencyDashboardState extends State<AgencyDashboard> {
             setState(() => _selectedIndex = 5);
           },
         ),
-        TashilDrawerDestination(
-          icon: Icons.show_chart_outlined,
-          selectedIcon: Icons.show_chart_rounded,
-          label: loc.tr('investorDashboardTitle'),
-          isSelected: _selectedIndex == 6,
-          onTap: () {
-            Navigator.pop(context);
-            setState(() => _selectedIndex = 6);
-          },
-        ),
+        if (_showMockTabs)
+          TashilDrawerDestination(
+            icon: Icons.show_chart_outlined,
+            selectedIcon: Icons.show_chart_rounded,
+            label: loc.tr('investorDashboardTitle'),
+            isSelected: _selectedIndex == 6,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _selectedIndex = 6);
+            },
+          ),
         TashilDrawerDestination(
           icon: Icons.inbox_outlined,
           selectedIcon: Icons.inbox_rounded,
