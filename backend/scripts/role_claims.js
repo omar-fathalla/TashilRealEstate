@@ -26,6 +26,13 @@
  *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid>          # dry run
  *   node scripts/role_claims.js --project <projectId> --bootstrap-superadmin <uid> --apply  # writes
  *
+ * Second factor for SuperAdmin (TAQ-25, off until set). Once a SuperAdmin has enrolled a second
+ * factor, this makes the rules and callables require it for that account. It refuses accounts with
+ * no enrolled factor, so nobody is locked out. It revokes the refresh tokens, so the next sign-in
+ * uses the second factor. --clear-mfa turns it back off (break-glass):
+ *   node scripts/role_claims.js --project <projectId> --require-mfa <uid> [--apply]
+ *   node scripts/role_claims.js --project <projectId> --clear-mfa <uid> [--apply]
+ *
  * Credentials come from Application Default Credentials (gcloud auth application-default login)
  * or GOOGLE_APPLICATION_CREDENTIALS. Nothing is read from this repository.
  */
@@ -35,7 +42,7 @@ const { applyUserRole } = require("../roles");
 const { grantSelfServiceClaim } = require("../self_service_claims");
 
 function parseArgs(argv) {
-  const args = { project: "", grant: [], apply: false, backfillSelfService: false, bootstrapSuperAdmin: "" };
+  const args = { project: "", grant: [], apply: false, backfillSelfService: false, bootstrapSuperAdmin: "", requireMfa: "", clearMfa: "" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") args.project = argv[++i] || "";
@@ -43,12 +50,17 @@ function parseArgs(argv) {
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--backfill-self-service") args.backfillSelfService = true;
     else if (arg === "--bootstrap-superadmin") args.bootstrapSuperAdmin = (argv[++i] || "").trim();
+    else if (arg === "--require-mfa") args.requireMfa = (argv[++i] || "").trim();
+    else if (arg === "--clear-mfa") args.clearMfa = (argv[++i] || "").trim();
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!args.project) throw new Error("--project is required.");
-  const modes = [args.grant.length > 0, args.backfillSelfService, args.bootstrapSuperAdmin !== ""].filter(Boolean).length;
-  if (modes > 1) throw new Error("Use one of --grant, --backfill-self-service or --bootstrap-superadmin.");
-  if (argv.includes("--bootstrap-superadmin") && !args.bootstrapSuperAdmin) throw new Error("--bootstrap-superadmin needs a uid.");
+  const modes = [args.grant.length > 0, args.backfillSelfService, args.bootstrapSuperAdmin !== "", args.requireMfa !== "", args.clearMfa !== ""].filter(Boolean).length;
+  if (modes > 1) throw new Error("Use one of --grant, --backfill-self-service, --bootstrap-superadmin, --require-mfa or --clear-mfa.");
+  for (const flag of ["--bootstrap-superadmin", "--require-mfa", "--clear-mfa"]) {
+    const value = { "--bootstrap-superadmin": args.bootstrapSuperAdmin, "--require-mfa": args.requireMfa, "--clear-mfa": args.clearMfa }[flag];
+    if (argv.includes(flag) && !value) throw new Error(`${flag} needs a uid.`);
+  }
   return args;
 }
 
@@ -155,6 +167,35 @@ async function bootstrapSuperAdmin(auth, uid, apply, { applyRole = applyUserRole
   return true;
 }
 
+/** TAQ-25: require (or stop requiring) a second factor for one SuperAdmin. */
+async function setMfaRequired(auth, uid, required, apply, log = console.log) {
+  const user = await auth.getUser(uid);
+  const claims = user.customClaims || {};
+  if (required) {
+    if (claims.role !== "SuperAdmin") throw new Error(`${uid} is not a SuperAdmin; the second-factor switch only applies to SuperAdmin.`);
+    const factors = (user.multiFactor && user.multiFactor.enrolledFactors) || [];
+    if (factors.length === 0) throw new Error(`${uid} has no enrolled second factor. Enrol one in the app first, or this would lock the account out.`);
+  }
+  if (Boolean(claims.mfa_required) === required) {
+    log(`${uid}: second factor already ${required ? "required" : "not required"}.`);
+    return false;
+  }
+  log(`${uid}: ${apply ? "" : "would "}${required ? "require" : "stop requiring"} a second factor.`);
+  if (!apply) {
+    log("Dry run. Re-run with --apply to write the claim.");
+    return false;
+  }
+  const next = { ...claims };
+  if (required) next.mfa_required = true;
+  else delete next.mfa_required;
+  await auth.setCustomUserClaims(uid, next);
+  if (required) {
+    await auth.revokeRefreshTokens(uid);
+    log("Done. The account signs in again with its second factor.");
+  }
+  return true;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   admin.initializeApp({ projectId: args.project });
@@ -165,6 +206,10 @@ async function main() {
     await backfillSelfService(db, admin.auth(), args.apply);
   } else if (args.bootstrapSuperAdmin) {
     await bootstrapSuperAdmin(admin.auth(), args.bootstrapSuperAdmin, args.apply);
+  } else if (args.requireMfa) {
+    await setMfaRequired(admin.auth(), args.requireMfa, true, args.apply);
+  } else if (args.clearMfa) {
+    await setMfaRequired(admin.auth(), args.clearMfa, false, args.apply);
   } else {
     await audit(db, admin.auth());
   }
@@ -177,4 +222,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, backfillSelfService, bootstrapSuperAdmin, superAdminUids };
+module.exports = { parseArgs, backfillSelfService, bootstrapSuperAdmin, superAdminUids, setMfaRequired };

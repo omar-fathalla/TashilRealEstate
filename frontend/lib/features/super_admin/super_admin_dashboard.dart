@@ -5,6 +5,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/services/firebase_auth_service.dart';
+import 'package:tashil_real_estate/features/auth/widgets/second_factor_dialogs.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
 import 'package:tashil_real_estate/core/utils/responsive_layout.dart';
 import 'package:tashil_real_estate/features/financial_kpi_dashboard/models/financial_kpi_model.dart';
@@ -295,6 +296,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 iconSize: 20,
                 tooltip: loc.tr('aiImageModeratorTitle'),
                 onPressed: () => AiImageModeratorDialog.show(context),
+              ),
+              const SizedBox(width: 8),
+              TashilIconButton.tonal(
+                icon: Icons.verified_user_outlined,
+                size: 38,
+                iconSize: 20,
+                tooltip: loc.tr('mfaTitle'),
+                onPressed: () => SecondFactorSetupDialog.show(context),
               ),
               const SizedBox(width: 8),
               TashilIconButton.tonal(
@@ -754,6 +763,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           ],
         ),
         actions: [
+          TashilIconButton.tonal(
+            icon: Icons.verified_user_outlined,
+            size: 38,
+            iconSize: 20,
+            tooltip: loc.tr('mfaTitle'),
+            onPressed: () => SecondFactorSetupDialog.show(context),
+          ),
+          const SizedBox(width: 4),
           TashilIconButton.tonal(
             icon: Icons.tune_rounded,
             size: 38,
