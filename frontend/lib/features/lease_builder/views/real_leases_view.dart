@@ -10,6 +10,7 @@ import 'package:tashil_real_estate/core/localization/app_localizations.dart';
 import 'package:tashil_real_estate/core/localization/country_controller.dart';
 import 'package:tashil_real_estate/core/localization/locale_controller.dart';
 import 'package:tashil_real_estate/core/utils/currency_formatter.dart';
+import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.dart';
 import 'package:tashil_real_estate/features/lease_builder/widgets/create_lease_dialog.dart';
 import 'package:tashil_real_estate/features/owner_portal/widgets/record_manual_payment_dialog.dart';
 import 'package:tashil_real_estate/features/portfolio/models/portfolio_models.dart';
@@ -128,6 +129,9 @@ class _RealLeasesViewState extends State<RealLeasesView> {
 
   Widget _body(BuildContext context, String country) {
     final loc = AppLocalizations.of(context);
+    // TAQ-196: an AgencyAgent reads the agency's leases; creating, offering, withdrawing,
+    // deleting and recording payments stay with the AgencyAdmin (the server refuses them anyway).
+    final isAgent = AgencyStaffScope.isAgentOf(context);
     final colorScheme = Theme.of(context).colorScheme;
     final snapshot = widget.controller.snapshot;
     final lang = LocaleController.languageCode;
@@ -161,7 +165,7 @@ class _RealLeasesViewState extends State<RealLeasesView> {
         icon: Icons.description_outlined,
         title: loc.tr('ldEmptyTitle'),
         message: loc.tr('ldEmptyMessage'),
-        primaryActionLabel: _filter == 'all' ? loc.tr('createNewLease') : null,
+        primaryActionLabel: _filter == 'all' && !isAgent ? loc.tr('createNewLease') : null,
         primaryActionIcon: Icons.add_rounded,
         onPrimaryAction: _create,
       );
@@ -174,6 +178,7 @@ class _RealLeasesViewState extends State<RealLeasesView> {
         itemBuilder: (context, i) => _LeaseCard(
           lease: shown[i],
           busy: _busy.contains(shown[i].id),
+          readOnly: isAgent,
           onDetails: () => _details(shown[i]),
           onSendOffer: () => _run(shown[i], () => _service.sendOffer(shown[i].id), 'ldOfferSent'),
           onWithdraw: () => _run(shown[i], () => _service.withdrawOffer(shown[i].id), 'ldOfferWithdrawn'),
@@ -201,7 +206,9 @@ class _RealLeasesViewState extends State<RealLeasesView> {
               ),
             ],
           );
-          final create = TashilButton(onPressed: _create, icon: Icons.add_rounded, label: loc.tr('createNewLease'), height: 48);
+          final Widget create = isAgent
+              ? const SizedBox.shrink()
+              : TashilButton(onPressed: _create, icon: Icons.add_rounded, label: loc.tr('createNewLease'), height: 48);
           return SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 28, vertical: compact ? 20 : 28),
             child: Column(
@@ -209,7 +216,7 @@ class _RealLeasesViewState extends State<RealLeasesView> {
               children: [
                 if (compact) ...[titles, const SizedBox(height: 14), create] else Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: titles), const SizedBox(width: 16), create]),
                 const SizedBox(height: 16),
-                Align(
+                if (!isAgent) Align(
                   alignment: AlignmentDirectional.centerEnd,
                   child: TashilButton(
                     label: loc.tr('mpTitle'),
@@ -304,9 +311,13 @@ class _LeaseCard extends StatelessWidget {
   final VoidCallback onWithdraw;
   final VoidCallback onDelete;
 
+  /// An AgencyAgent sees the lease and its details only (TAQ-196).
+  final bool readOnly;
+
   const _LeaseCard({
     required this.lease,
     required this.busy,
+    this.readOnly = false,
     required this.onDetails,
     required this.onSendOffer,
     required this.onWithdraw,
@@ -368,11 +379,11 @@ class _LeaseCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 TashilButton.tonal(label: loc.tr('ldDetails'), icon: Icons.visibility_rounded, height: 48, onPressed: onDetails),
-                if (lease.isDraft) ...[
+                if (lease.isDraft && !readOnly) ...[
                   TashilButton.outlined(label: loc.tr('deleteContractBtn'), icon: Icons.delete_outline_rounded, height: 48, onPressed: busy ? null : onDelete),
                   TashilButton.filled(label: loc.tr('ldSendOffer'), icon: Icons.send_rounded, height: 48, isLoading: busy, onPressed: busy ? null : onSendOffer),
                 ],
-                if (lease.isOffer)
+                if (lease.isOffer && !readOnly)
                   TashilButton.outlined(label: loc.tr('ldWithdrawOffer'), icon: Icons.undo_rounded, height: 48, isLoading: busy, onPressed: busy ? null : onWithdraw),
               ],
             ),
