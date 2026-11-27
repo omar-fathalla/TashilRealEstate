@@ -84,6 +84,16 @@ test("TAQ-166: a missing space after a full stop is not a domain", () => {
   }
 });
 
+test("TAQ-187: capitalised domain endings that are not everyday words are still domains", () => {
+  for (const text of ["qa-homes.Com", "Example.Com", "Tashil.Online", "example . Com", "visit Example.Net today", "My-Site.Ae", "Mail me at Tashil.Org"]) {
+    assert.equal(containsContactInRequestText(text), true, text);
+  }
+  // The TAQ-166 sentences stay clean.
+  for (const text of ["I liked the photos.In the evening I can visit", "call back later.Me and my wife", "Let me know.Us two"]) {
+    assert.equal(containsContactInRequestText(text), false, text);
+  }
+});
+
 test("TAQ-167: Egyptian spellings, bracketed dots, worded and spaced bare domains and joined digit words are contacts", () => {
   for (const text of [
     "صفر واحد صفر خمسه تلاته اربعه سته سبعه تمانيه تسعه",
