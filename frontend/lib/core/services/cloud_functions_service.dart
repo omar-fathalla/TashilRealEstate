@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// Enterprise Cloud Functions caller service for Tashil Real Estate.
 /// Connects client actions directly to backend v2 Cloud Functions. Failures are thrown, never faked.
@@ -28,11 +29,11 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = functions.httpsCallable('createRentPaymentIntent');
-      final response = await callable.call<Map<String, dynamic>>({
+      final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         if (amount != null) 'amount': amount,
         if (period != null) 'period': period,
-      });
+      }));
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
       debugPrint('[CloudFunctionsService] Error calling createRentPaymentIntent: $e');
@@ -52,14 +53,14 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = functions.httpsCallable('recordManualPayment');
-      final response = await callable.call<Map<String, dynamic>>({
+      final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         'method': method,
         'reference': reference,
         'paidOn': paidOn,
         if (period != null) 'period': period,
         if (amount != null) 'amount': amount,
-      });
+      }));
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
       debugPrint('[CloudFunctionsService] Error calling recordManualPayment: $e');
@@ -75,10 +76,10 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = functions.httpsCallable('sendRentalReminder');
-      final response = await callable.call<Map<String, dynamic>>({
+      final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         'dueDate': dueDate,
-      });
+      }));
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
       debugPrint('[CloudFunctionsService] Error calling sendRentalReminder: $e');
@@ -96,12 +97,12 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = functions.httpsCallable('generateRentalInvoiceReceipt');
-      final response = await callable.call<Map<String, dynamic>>({
+      final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
         'leaseId': leaseId,
         'tenantName': tenantName,
         'amount': amount,
         'currencyCode': currencyCode,
-      });
+      }));
       return Map<String, dynamic>.from(response.data);
     } catch (e) {
       debugPrint('[CloudFunctionsService] Error calling generateRentalInvoiceReceipt: $e');

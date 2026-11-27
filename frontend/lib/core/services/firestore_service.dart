@@ -33,6 +33,26 @@ class FirestoreService {
     }
   }
 
+  /// The profile fields a first sign-in writes. `full_name` is the name the person gave, or left
+  /// out: it is never made up from the email address (TAQ-172).
+  static Map<String, dynamic> userRoleProfile({
+    required String uid,
+    required String email,
+    required String role,
+    String? fullName,
+    String? photoUrl,
+  }) {
+    final name = fullName?.trim() ?? '';
+    final photo = photoUrl?.trim() ?? '';
+    return {
+      'user_id': uid,
+      'email': email,
+      'role': role,
+      if (name.isNotEmpty) 'full_name': name,
+      if (photo.isNotEmpty) 'photo_url': photo,
+    };
+  }
+
   Future<void> setUserRole({
     required String uid,
     required String email,
@@ -42,15 +62,9 @@ class FirestoreService {
   }) async {
     try {
       final data = <String, dynamic>{
-        'user_id': uid,
-        'email': email,
-        'role': role,
-        'full_name': fullName ?? email.split('@').first,
+        ...userRoleProfile(uid: uid, email: email, role: role, fullName: fullName, photoUrl: photoUrl),
         'updated_at': FieldValue.serverTimestamp(),
       };
-      if (photoUrl != null && photoUrl.trim().isNotEmpty) {
-        data['photo_url'] = photoUrl.trim();
-      }
       await _db.collection('Users').doc(uid).set(data, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error setting user role in Firestore: $e');

@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/portfolio_models.dart';
+import 'package:tashil_real_estate/core/services/session_guard.dart';
 
 /// Where the owner and agency portals read their leases, payments, receipts and maintenance, and
 /// where they create leases. The default talks to Firebase; tests pass a fake.
@@ -100,18 +101,18 @@ class FirebasePortfolioBackend implements PortfolioBackend {
   @override
   Future<void> updateRentRow({required String leaseId, required String period, required String action, String? notes}) async {
     final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('updateRentRow');
-    await callable.call<Map<String, dynamic>>({
+    await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>({
       'leaseId': leaseId,
       'period': period,
       'action': action,
       if (notes != null) 'notes': notes,
-    });
+    }));
   }
 
   @override
   Future<Map<String, dynamic>> createLease(Map<String, dynamic> data) async {
     final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('createLease');
-    final response = await callable.call<Map<String, dynamic>>(data);
+    final response = await SessionGuard.instance.run(() => callable.call<Map<String, dynamic>>(data));
     return Map<String, dynamic>.from(response.data);
   }
 
