@@ -6,7 +6,7 @@ const assert = require("node:assert/strict");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc, deleteDoc } = require("firebase/firestore");
+const { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where } = require("firebase/firestore");
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   throw new Error("Run through `npm test` so the emulators are attached.");
@@ -57,6 +57,13 @@ test("TAQ-169 rules: an agent reads its agency's leases, rent rows, mandates, re
     await assertSucceeds(getDoc(doc(agent, p)), p);
     await assertFails(getDoc(doc(as(OTHER_AGENT), p)), `other agency: ${p}`);
   }
+});
+
+test("TAQ-194 rules: an agent lists its agency's listings, published or not, and no other agency's", async () => {
+  await db.doc("Properties/p2").set({ owner_id: "owner2", agency_id: "ag2", is_published: false, status: "vacant" });
+  const mine = await assertSucceeds(getDocs(query(collection(as(AGENT), "Properties"), where("agency_id", "==", "ag1"))));
+  assert.deepEqual(mine.docs.map((d) => d.id), ["p1"]);
+  await assertFails(getDocs(query(collection(as(AGENT), "Properties"), where("agency_id", "==", "ag2"))));
 });
 
 test("TAQ-169 rules: an agent gets no invoices, transactions or payout details", async () => {

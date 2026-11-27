@@ -18,6 +18,7 @@ import 'package:tashil_real_estate/features/agency_workspace/agency_staff_scope.
 
 /// The agency's properties (TAQ-143): the units the signed-in agency admin registered, with their
 /// real rented or vacant status. Starter samples are never shown, and a card opens the unit for editing.
+/// For an AgencyAgent the dashboard passes the agency's listings instead, read-only (TAQ-194).
 class PropertiesView extends StatelessWidget {
   final ValueListenable<List<ManagedPropertyModel>>? properties;
   final ValueListenable<bool>? hydrating;
