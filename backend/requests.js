@@ -19,7 +19,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { requireAuth, requireRole, resolveRole } = require("./authz");
+const { requireFreshAuth, requireRole, resolveRole } = require("./authz");
 const { verifyLeaseProperty, readPropertyLock, alreadyLeased } = require("./leases");
 const { appCheckEnforced } = require("./config");
 const { containsContactInRequestText } = require("./request_text_filter");
@@ -94,8 +94,8 @@ function optionalFutureDate(value, field, now) {
 }
 
 /** Signed-in only. Anonymous sessions (used for browsing) do not count. */
-function requireSignedInUser(request) {
-  const auth = requireAuth(request);
+async function requireSignedInUser(request) {
+  const auth = await requireFreshAuth(request);
   const provider = auth.token && auth.token.firebase && auth.token.firebase.sign_in_provider;
   if (provider === "anonymous") {
     throw new HttpsError("unauthenticated", "Sign in with an account to continue.");
@@ -200,7 +200,7 @@ function writeNotification(t, db, uid, data) {
 // ---------------------------------------------------------------------------------------------
 
 const requestViewing = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireSignedInUser(request);
+  const auth = await requireSignedInUser(request);
   const data = request.data || {};
   const name = requireName(data.name);
   const phone = requirePhone(data.phone);
@@ -257,7 +257,7 @@ const requestViewing = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
 });
 
 const respondToViewingRequest = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
   if (!["confirmed", "declined"].includes(data.decision)) {
@@ -319,7 +319,7 @@ const respondToViewingRequest = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, max
 // ---------------------------------------------------------------------------------------------
 
 const applyForRental = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireSignedInUser(request);
+  const auth = await requireSignedInUser(request);
   const role = await requireRole(auth, ["Tenant"]);
   const data = request.data || {};
   const name = requireName(data.name);
@@ -382,7 +382,7 @@ const applyForRental = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances
 });
 
 const decideRentalApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
   if (!["approved", "rejected"].includes(data.decision)) {
@@ -456,7 +456,7 @@ function requireMoney(value, field) {
  * to the tenant for approval.
  */
 const createLeaseFromApplication = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
   if (typeof data.applicationId !== "string" || !data.applicationId || data.applicationId.includes("/")) {

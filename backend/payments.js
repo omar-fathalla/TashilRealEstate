@@ -25,7 +25,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const { requireAuth, requireRole, loadLease, leaseAmount, leaseCountry } = require("./authz");
+const { requireFreshAuth, requireRole, loadLease, leaseAmount, leaseCountry } = require("./authz");
 const { appCheckEnforced, paymentSecrets, paymobConfig } = require("./config");
 const { START_KEYS, END_KEYS, leaseDate, assertLeasePayable } = require("./lease_state");
 const { leaseForPayment } = require("./leases");
@@ -206,7 +206,7 @@ async function loadTenantBilling(uid, lease) {
 const createRentPaymentIntent = onCall(
   { enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10, secrets: paymentSecrets() },
   async (request) => {
-    const auth = requireAuth(request);
+    const auth = await requireFreshAuth(request);
     await requireRole(auth, ["Tenant"]);
     const data = request.data || {};
 
@@ -671,7 +671,7 @@ function assertCanRecordPayment(auth, role, lease) {
 }
 
 const recordManualPayment = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "Admin", "SuperAdmin"]);
   const data = request.data || {};
 

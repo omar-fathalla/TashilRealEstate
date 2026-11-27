@@ -14,7 +14,7 @@ if (!admin.apps.length) {
 const {
   PUBLISHER_ROLES,
   PLATFORM_STAFF_ROLES,
-  requireAuth,
+  requireFreshAuth,
   requireRole,
   resolveUserAuthority,
   loadLease,
@@ -42,7 +42,7 @@ function parseDueDate(value) {
 
 // Party, tenant, amount, and currency come from the lease document, never from the caller.
 exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
   const lease = await loadLease(data.leaseId);
@@ -106,7 +106,7 @@ exports.sendRentalReminder = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxIns
 });
 
 exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 10 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   const role = await requireRole(auth, ["Owner", "AgencyAdmin", "SuperAdmin"]);
   const data = request.data || {};
   const lease = await loadLease(data.leaseId);
@@ -164,7 +164,7 @@ exports.generateRentalInvoiceReceipt = onCall({ enforceAppCheck: ENFORCE_APP_CHE
 
 // SuperAdmin-only role assignment. Elevated roles live in custom claims, which clients cannot write.
 exports.setUserRole = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
   const result = await applyUserRole({
@@ -217,7 +217,7 @@ async function claimRolesFor(uids) {
 
 // Read-only, paged, sanitized user directory for platform staff (Admin and SuperAdmin).
 exports.listUsersForAdmin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 5 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   await requireRole(auth, PLATFORM_STAFF_ROLES);
   const data = request.data || {};
   const requested = Number(data.limit);
@@ -880,7 +880,7 @@ const MARKET_INDEX_COOLDOWN_MS = 10 * 60 * 1000;
  * schedule. A country can be refreshed at most once every 10 minutes.
  */
 exports.syncMarketIndexManual = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, maxInstances: 1 }, async (request) => {
-  const auth = requireAuth(request);
+  const auth = await requireFreshAuth(request);
   await requireRole(auth, ["SuperAdmin"]);
   const data = request.data || {};
   const country = typeof data.country === "string" ? data.country.trim().toUpperCase() : "";
