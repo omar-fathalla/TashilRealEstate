@@ -290,5 +290,12 @@ test("TAQ-149: application fields are checked", async () => {
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "call me" }), /phone/);
   assert.throws(() => applicationFrom({ name: "Dune", countryCode: "AE", phone: "+97150000000", orn: "12 34/5" }), /ORN/);
   assert.equal(applicationFrom({ name: "  Dune   Realty ", countryCode: "EG", phone: "0100 000 0000" }).name, "Dune Realty");
+  // TAQ-188: a spelled-out phone number or a bare domain is refused too.
+  for (const name of ["Realty zero five zero one two three four five six seven", "صفر واحد صفر خمسه تلاته اربعه سته سبعه", "Dune Realty example.com"]) {
+    assert.throws(() => applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }), /phone, link or email/, name);
+  }
+  for (const name of ["Seven Seas Realty", "One Two Three Homes", "First Gulf Properties"]) {
+    assert.equal(applicationFrom({ name, countryCode: "AE", phone: "+97150000000" }).name, name);
+  }
   await reason(apply(caller("anon", { role: "Owner", firebase: { sign_in_provider: "anonymous" } })), "permission-denied");
 });
