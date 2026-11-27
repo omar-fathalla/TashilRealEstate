@@ -224,3 +224,18 @@ test("TAQ-14: public listings keep Storage photos as tokenless ?alt=media URLs, 
   const inline = "data:image/png;base64,iVBORw0KGgo=";
   assert.deepEqual(sanitizeForMarketplace({ pricePerMonth: 9000, imageUrls: ["assets/images/a.jpg", inline] }, "o", "p").imageUrls, ["assets/images/a.jpg", inline]);
 });
+
+test("TAQ-198: an agency name hiding a spelled-out phone or a bare domain never reaches a listing", () => {
+  const spelled = agencyListingIdentity({
+    name: "Gamma zero five zero one two three four five six",
+    names: { ar: "جاما صفر خمسه صفر واحد اتنين تلاته اربعه خمسه سته", en: "Gamma zero five zero one two three four five six" },
+  });
+  assert.equal(spelled, null, "no clean name left: the platform name is shown");
+
+  const mixed = agencyListingIdentity({ name: "Delta qa-homes.Com", names: { ar: "دلتا العقارية", en: "Delta qa-homes.com" } });
+  assert.deepEqual(mixed.names, { ar: "دلتا العقارية", en: "دلتا العقارية", hi: "دلتا العقارية" });
+
+  const fine = agencyListingIdentity({ name: "Seven Seas Realty", names: { en: "One Two Three Homes" } });
+  assert.equal(fine.names.en, "One Two Three Homes");
+  assert.equal(fine.names.ar, "Seven Seas Realty");
+});

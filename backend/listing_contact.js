@@ -4,6 +4,7 @@
  * (scripts/backfill_listing_contact.js, TAQ-161) share one definition.
  */
 const { stripContacts } = require("./contact_filter");
+const { containsContactInRequestText } = require("./request_text_filter");
 
 const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
 
@@ -35,13 +36,21 @@ const AGENCY_ORN_PATTERN = /^[A-Za-z0-9/ -]{1,40}$/;
 
 /**
  * The public face of an agency for its listings, from Agencies/{agencyId}: localized display
- * names (contact-free, falling back to `name`) and the ORN, only when the badge is on.
+ * names (contact-free, also of spelled-out phones and bare domains, falling back to `name`) and
+ * the ORN, only when the badge is on.
  * Returns null when the agency has no usable name, so the platform name is shown instead.
  */
 function agencyListingIdentity(agencyData) {
   if (!agencyData || typeof agencyData !== "object") return null;
   const names = localizedText(agencyData.names, agencyData.name, 200);
-  const fallback = cleanText(agencyData.name, 200) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
+  // TAQ-198: the AgencyAdmin edits its own profile, so a name that hides a contact the request
+  // filter catches (a spelled-out phone, a bare domain) is dropped here; with none left, the
+  // listing shows the platform name. The rules refuse most of these on write as well.
+  for (const locale of MARKETPLACE_LOCALES) {
+    if (containsContactInRequestText(names[locale])) names[locale] = "";
+  }
+  const flat = cleanText(agencyData.name, 200);
+  const fallback = (containsContactInRequestText(flat) ? "" : flat) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
   if (!fallback) return null;
   for (const locale of MARKETPLACE_LOCALES) {
     if (!names[locale]) names[locale] = fallback;

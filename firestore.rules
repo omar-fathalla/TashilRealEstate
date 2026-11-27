@@ -681,6 +681,17 @@ service cloud.firestore {
       return !(key in d) || (d[key] is string && d[key].size() <= max);
     }
 
+    // TAQ-198: an agency's name and about text show on its listings and public profile, so they
+    // also refuse what the request filter (backend/request_text_filter.js) catches beyond the
+    // listing patterns: a phone spelled out as seven or more digit words (English, Arabic in both
+    // spellings) and a bare domain (example.com, Example.Com, example . com). The endings that are also
+    // everyday words (co, me, us, in) are left to the server, which drops such a name from
+    // listings (agencyListingIdentity).
+    function agencyTextFree(text) {
+      return !text.matches('(?si)^(?:.*[^\\p{L}])?(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|صفر|واحد|واحده|واحدة|اثنين|اتنين|اثنان|إثنين|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|تلاث|اربعه|اربعة|أربعه|أربعة|اربع|أربع|خمسه|خمسة|خمس|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تسعه|تسعة|تسع)(?:[\\s\\x{a0}\\-_.,،;:]+(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|صفر|واحد|واحده|واحدة|اثنين|اتنين|اثنان|إثنين|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|تلاث|اربعه|اربعة|أربعه|أربعة|اربع|أربع|خمسه|خمسة|خمس|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تسعه|تسعة|تسع)){6,}(?:[^\\p{L}].*)?$')
+        && !text.matches('(?si)^(?:.*[^a-z0-9@.-])?[a-z0-9][a-z0-9-]*(?:[.][a-z0-9-]+)*(?:[.]|[\\s\\x{a0}]+[.][\\s\\x{a0}]+)(?:com|net|org|info|biz|io|ae|eg|app|online|site|xyz|ly|gl|uk|sa|qa|kw|edu|gov)(?:[^a-z0-9-].*)?$');
+    }
+
     // Shape of a public agency doc, and no phone, link or email in its free text (name, names,
     // about), the same filter listings use.
     function agencyProfileOk(d) {
@@ -693,7 +704,8 @@ service cloud.firestore {
         && agencyStringOk(d, 'website', 300) && agencyStringOk(d, 'city', 100)
         && names is map && names.keys().hasOnly(['ar', 'en', 'hi'])
         && names.get('ar', '').size() <= 200 && names.get('en', '').size() <= 200 && names.get('hi', '').size() <= 200
-        && contactFree([d.get('name', ''), d.get('about', '')].concat(names.values()).join(' | '));
+        && contactFree([d.get('name', ''), d.get('about', '')].concat(names.values()).join(' | '))
+        && agencyTextFree([d.get('name', ''), d.get('about', '')].concat(names.values()).join(' | '));
     }
 
     // What an agency (not staff) may do to its own badge and status: never grant, only clear, and
