@@ -38,6 +38,7 @@ void main() {
         ]),
         tapTargetSize: MaterialTapTargetSize.padded,
       ));
+      await tester.pumpAndSettle(); // the theme change animates
       for (final key in ['icon', 'text', 'filled', 'chip']) {
         final size = tester.getSize(find.byKey(ValueKey(key)));
         expect(size.height, greaterThanOrEqualTo(kMinInteractiveDimension), reason: '$key $size');
@@ -59,6 +60,7 @@ void main() {
           TashilConnectedButtonSegment(value: 'cards', label: 'Cards', icon: Icons.grid_view_rounded),
         ],
       )));
+      await tester.pumpAndSettle(); // the segment height animates
       return tester.getSize(_inkWellAround(find.text('Cards'))).height;
     }
 
