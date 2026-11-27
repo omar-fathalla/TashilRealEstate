@@ -4,7 +4,7 @@
  * (scripts/backfill_listing_contact.js, TAQ-161) share one definition.
  */
 const { stripContacts } = require("./contact_filter");
-const { containsContactInRequestText } = require("./request_text_filter");
+const { containsContactInAgencyText } = require("./agency_text_filter");
 
 const MARKETPLACE_LOCALES = ["ar", "en", "hi"];
 
@@ -47,10 +47,10 @@ function agencyListingIdentity(agencyData) {
   // filter catches (a spelled-out phone, a bare domain) is dropped here; with none left, the
   // listing shows the platform name. The rules refuse most of these on write as well.
   for (const locale of MARKETPLACE_LOCALES) {
-    if (containsContactInRequestText(names[locale])) names[locale] = "";
+    if (containsContactInAgencyText(names[locale])) names[locale] = "";
   }
   const flat = cleanText(agencyData.name, 200);
-  const fallback = (containsContactInRequestText(flat) ? "" : flat) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
+  const fallback = (containsContactInAgencyText(flat) ? "" : flat) || MARKETPLACE_LOCALES.map((l) => names[l]).find(Boolean);
   if (!fallback) return null;
   for (const locale of MARKETPLACE_LOCALES) {
     if (!names[locale]) names[locale] = fallback;
