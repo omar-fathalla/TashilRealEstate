@@ -191,6 +191,14 @@ const REFUSED = [
   ["zero five zero - twelve - thirty four - fifty six", "phone"],
   ["zero five zero and twelve and thirty four and fifty six", "phone"],
   ["zero five zero / twelve / thirty four / fifty six", "phone"],
+  // TAQ-229: a lone zero then a list of 9-11 digits, compound tens counting two digits.
+  ["Delta zero, ten, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, eleven, twenty three, forty five, sixty seven, eighty", "phone"],
+  ["Delta zero, eleven, twenty three, forty five, sixty seven", "phone"],
+  ["zero, eleven, twenty three, forty five, sixty seven", "phone"],
+  ["oh, fifty, twelve, thirty four, fifty six", "phone"],
+  ["zero, fifty, twelve, thirty, forty, fifty", "phone"],
+  ["صفر، خمسين، اتناشر، اربعة وتلاتين، ستة وخمسين", "phone"],
 ];
 
 const ALLOWED = [
@@ -397,6 +405,20 @@ const ALLOWED = [
   "Meeting point net\u2013zero homes",
   "Meeting point net\u2014zero homes",
   "Advisors at the meeting point net-worth desk",
+  // TAQ-230: lists that close with Arabic و/او (أو) or English and/or before the last item.
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين وخمسين في المية",
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين و خمسين في المية",
+  "مقدم صفر، عشرة، عشرون، ثلاثون، اربعون وخمسون في المائة",
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين أو خمسين في المية",
+  "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين، وستين شهر",
+  "Zero, twelve, twenty four, thirty six, forty eight, and sixty months",
+  "Zero, twelve, twenty four, thirty six, forty eight or sixty months",
+  "Zero, ten, twenty, thirty, forty and fifty percent",
+  "Zero, ten, twenty, thirty and forty percent",
+  "Zero, twelve, twenty four, thirty six and forty eight months",
+  "أبراج من ثلاثة عشر وأربعة عشر وخمسة عشر طابقا",
+  "خبرة خمسة وعشرين سنة، تلاتين وكيل، واربعين مشروع",
+  "عمارات عشرين وثلاثين واربعين دور",
 ];
 
 module.exports = { REFUSED, ALLOWED };

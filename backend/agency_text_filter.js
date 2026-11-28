@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-228).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-230).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -167,7 +167,12 @@ const ZERO_GROUP = reAll(` [${jsClass(ZERO_DIGITS)}]\\p{Nd}\\p{Nd} `);
 // number-word run ('!', TAQ-215/226); so does "and" ('^', TAQ-226: "Zero and twelve and twenty
 // four"). Each is applied twice, because a match takes the letter the next one needs.
 const WORD_COMMA = reAll(`(\\p{L})(?:${COMMA}\\s+|\\s+[${jsClass(HYPHENS)}]\\s+|\\s*/\\s*)(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
-const WORD_AND = reAll(`(\\p{L})\\s+(?:and|et|y)\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+// "and"/"or" (also after a comma, and Arabic او) before a teen or tens word; Arabic و before a tens
+// word after a comma ("، وستين") or after another tens word ("اربعين وخمسين"), but not after a units
+// word, where it builds one number ("اربعة وعشرين" is 24). TAQ-230.
+const WORD_AND = reAll(`(\\p{L})${COMMA}?\\s+(?:and|et|y|or|ou|او)\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+const WORD_AND_COMMA_WAW = reAll(`(\\p{L})${COMMA}\\s*و\\s*(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+const WORD_AND_TENS_WAW = reAll(`(^|[^\\p{L}])(${TENS_WORD_PATTERN})\\s+و\\s*(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
 const COMPOUND_HYPHEN = new RegExp(`[${jsClass(HYPHENS)}](${COMPOUND_TAIL_PATTERN}(?:[^\\p{L}]|$))`, "giu");
 
 /** The text with invisibles removed and Unicode full stops as '.', case kept (rules: c). */
@@ -199,8 +204,10 @@ function normaliseAgencyText(text) {
  * word (TAQ-215).
  */
 function numberMarkers(normal) {
-  return `  ${normal.replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2")
-    .replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+  return `  ${normal.replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2")
+    .replace(WORD_AND_COMMA_WAW, "$1 andbrk $2").replace(WORD_AND_COMMA_WAW, "$1 andbrk $2")
+    .replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3").replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3")
+    .replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
     .replace(/ brk /gu, " ! ")
     .replace(/ andbrk /gu, " ^ ")
     .replace(reAll(` ${TWO_DIGIT_WORD_PATTERN} `), " ## ")
@@ -222,15 +229,20 @@ const NUMBER_RUN_PATTERN = "(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#
 // commas, dashes and "and" ('!', '^') not breaking it (TAQ-221: "zero five zero, twelve, thirty
 // four", "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Starting like a phone means a 0NN group, or a zero
 // word glued to another single digit word, digit or 0NN group ("zero five", "oh five", "صفر خمسة",
-// "five zero"). A lone zero word followed by a comma or dash (TAQ-223/226: "Zero, twelve, twenty
-// four and thirty six month plans") starts one only when the run, read to its end without "and",
-// spells exactly 10 or 11 digits, a mobile number's length (TAQ-228: "zero, fifty, twelve, thirty
-// four, fifty six").
-const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){5}|~(?:[!^]?[#%*=]){4}"
-  + "|[*]!(?:!?[#%*=]){9,10}(?:[^#%*=!]|!(?:[^#%*=]|$)|$))";
+// "five zero").
+const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){5}|~(?:[!^]?[#%*=]){4})";
+// A lone zero word followed by a comma or dash (TAQ-223/226: "Zero, twelve, twenty four and thirty
+// six month plans") is a phone only when the list spells exactly 9-11 digits, counted as digits
+// (TAQ-229): a units word 1, a teen or a plain tens word 2, a tens word with its unit 2 ("thirty
+// four", "اربعة وعشرين"). A list that closes with "and"/"or"/و before its last item ('^') is a plan,
+// not a phone ("... forty eight and sixty months", "اربعين وخمسين في المية"; TAQ-230).
+const LONE_ZERO_RUN_PATTERN = "[*]!(?:!?[#%*=]){8,10}(?:[^#%*=!^]|!(?:[^#%*=^]|$)|$)";
 const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
 const ZERO_RUN = re(ZERO_RUN_PATTERN);
-const hasNumberRun = (markers) => NUMBER_RUN.test(markers) || ZERO_RUN.test(markers.replace(/[+]/g, "=="));
+const LONE_ZERO_RUN = re(LONE_ZERO_RUN_PATTERN);
+const hasNumberRun = (markers) => NUMBER_RUN.test(markers)
+  || ZERO_RUN.test(markers.replace(/[+]/g, "=="))
+  || LONE_ZERO_RUN.test(markers.replace(/[+]#/g, "==").replace(/#[+]/g, "==").replace(/[+]/g, "=="));
 const GLUED = re(GLUED_PATTERN);
 
 const END = "(?![\\p{L}])";
@@ -328,7 +340,7 @@ module.exports = {
   normaliseAgencyText,
   numberMarkers,
   RULES_FRAGMENTS: {
-    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
+    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, LONE_ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
     LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, POINT_WORDLIKE_TLD_PATTERN, COMPOUND_TAIL_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
     ABBREVIATION_WORD_TLD_PATTERN, ARABIC_TLD_PATTERN, SPOKEN_ARABIC_TLD_PATTERN, DOT_WORD_PATTERN,
     POINT_WORD_PATTERN, ABBREVIATION_PATTERN, PLACE_PATTERN,
