@@ -199,6 +199,20 @@ const REFUSED = [
   ["oh, fifty, twelve, thirty four, fifty six", "phone"],
   ["zero, fifty, twelve, thirty, forty, fifty", "phone"],
   ["صفر، خمسين، اتناشر، اربعة وتلاتين، ستة وخمسين", "phone"],
+  // TAQ-231: Arabic unit + و + tens groups side by side are one 2-digit group each.
+  ["دلتا صفر، عشرة، اتناشر، اربعة وتلاتين، ستة وخمسين، سبعين", "phone"],
+  ["دلتا صفر - عشرة - اتناشر - اربعة وتلاتين - ستة وخمسين - سبعين", "phone"],
+  ["دلتا زيرو، عشرة، اتناشر، اربعة وتلاتين، ستة وخمسين، سبعين", "phone"],
+  ["دلتا صفر، عشرة، اتناشر، اربعة و تلاتين، ستة و خمسين، سبعين", "phone"],
+  ["دلتا صفر، حداشر، تلاتة وعشرين، خمسة واربعين، سبعة وستين، تمانين", "phone"],
+  ["دلتا صفر، حداشر، تلاتة وعشرين، خمسة واربعين، سبعة وستين", "phone"],
+  // TAQ-232: a zero, a comma and a units word start a phone only inside a phone-length run.
+  ["zero, five, zero, twelve, thirty four, fifty six", "phone"],
+  ["Delta zero, five, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, six, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, one, two, three, four, five, six, seven, eight, nine", "phone"],
+  ["صفر، خمسة، صفر، اتناشر، تلاتين، اربعين", "phone"],
+  ["دلتا صفر، ستة، اتناشر، اربعة وتلاتين، ستة وخمسين، سبعين", "phone"],
 ];
 
 const ALLOWED = [
@@ -419,6 +433,18 @@ const ALLOWED = [
   "أبراج من ثلاثة عشر وأربعة عشر وخمسة عشر طابقا",
   "خبرة خمسة وعشرين سنة، تلاتين وكيل، واربعين مشروع",
   "عمارات عشرين وثلاثين واربعين دور",
+  // TAQ-231: Arabic plans with unit + و + tens groups and a final و/او.
+  "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين وستين شهر",
+  "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين، او ستين شهر",
+  "تقسيط صفر، اتناشر، اربعة وعشرين شهر",
+  // TAQ-232: month and percent plans starting 'zero, six' / 'صفر، ستة'.
+  "تقسيط على صفر، ستة، اتناشر، تمنتاشر، اربعة وعشرين شهر",
+  "Installments over zero, six, twelve, eighteen, twenty four months",
+  "Installments over zero, six, twelve, eighteen and twenty four months",
+  "Installments over zero - six - twelve - eighteen - twenty four months",
+  "Plans of zero, six, twelve, eighteen, twenty four, thirty, thirty six months",
+  "Down payment zero, five, ten, fifteen, twenty percent",
+  "مقدم صفر، خمسة، عشرة، خمستاشر، عشرين في المية",
 ];
 
 module.exports = { REFUSED, ALLOWED };

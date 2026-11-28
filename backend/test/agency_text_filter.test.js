@@ -11,14 +11,14 @@ const { REFUSED, ALLOWED } = require("./fixtures/agency_text_cases");
 
 const apply = (name) => applicationFrom({ name, countryCode: "AE", phone: "+97150000000" });
 
-test("TAQ-201/207/209/212-230: the agency filter refuses every listed variant, as the kind it is", () => {
+test("TAQ-201/207/209/212-232: the agency filter refuses every listed variant, as the kind it is", () => {
   for (const [text, kind] of REFUSED) {
     assert.equal(containsContactInAgencyText(text), true, text);
     assert.equal(agencyTextFinding(text).kind, kind, text);
   }
 });
 
-test("TAQ-201/208/209-230: legitimate agency names and about text still pass", () => {
+test("TAQ-201/208/209-232: legitimate agency names and about text still pass", () => {
   for (const text of ALLOWED) assert.equal(agencyTextFinding(text), null, text);
 });
 
