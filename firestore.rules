@@ -681,31 +681,34 @@ service cloud.firestore {
       return !(key in d) || (d[key] is string && d[key].size() <= max);
     }
 
-    // TAQ-198/201/207-213: an agency's name and about text show on its listings and public
+    // TAQ-198/201/207-216: an agency's name and about text show on its listings and public
     // profile, so they also get the agency checks of backend/agency_text_filter.js (read its header
     // for the why). The word, ending, abbreviation and code-point lists below are that file's
     // RULES_FRAGMENTS, verbatim; backend/test/agency_text_filter.test.js fails when they differ.
     //   - c: invisible characters, combining marks, harakat and tatweel removed, Unicode full stops
     //     to '.', case kept (for the checks where case tells a domain from a name).
     //   - t: c in lower case, accented Latin letters mapped to plain ones; a dot-like character
-    //     (middle dot, bullet, ...) or a comma glued between a word and an ending that is not a word
-    //     to '.' (x·com, x,com; not Buy·Sell·Rent); Arabic letter variants unified; "[.]" "(.)"
-    //     "[dot]" "(dot)" to '.'.
+    //     (middle dot, bullet, ...) glued between a word and an ending that is not a word to '.'
+    //     (x·com; not Buy·Sell·Rent); Arabic letter variants unified; "[.]" "(.)" "[dot]" "(dot)"
+    //     to '.'.
     //   - n (phone): separators (anything but letters, digits, marks; keycaps and dot-like
-    //     characters too) to spaces, then teens and tens to '##', other number words to '#', a
-    //     single digit to '%', a connector (and/et/y/و) to '&'; a connector next to a number word is
-    //     dropped. Seven '#'/'%' in a row is a phone.
-    //   - p: O, l or I touching a digit read as 0 or 1 ("O5O l234567"), then the listing phone check.
+    //     characters too) to spaces, a comma before a teen or tens word to a breaker ("Eleven, twelve"),
+    //     then teens to '##', other number words to '#', a 0-led three-digit group ("050") to '%%%',
+    //     a single digit to '%', a connector (and/et/y/و) to '&'; a connector next to a number word
+    //     is dropped. Seven '#'/'%' in a row is a phone.
+    //   - p: O, l or I touching a digit read as 0 or 1, S before a digit as 5 ("O5O l234567",
+    //     "0S0 1234567"), then the listing phone check.
     //   - e (domain): a known abbreviation before a dot (P.O, Dr, Eng, Sh, Co, ...; not St) is
     //     removed only when three or more letters follow, and a place name after a dot
     //     (Cairo.Egypt) is split off. Then refused: a dot glued to a word (or spaced before) and two
     //     letters (Latin, Cyrillic, Greek, Armenian, Coptic, Cherokee, Lisu, math or enclosed), an
-    //     Arabic ending, or a known ending spelled with spaces; "x. com" / "x · com" before an ending
-    //     that is not a word (uk/edu/gov only in lower case, on c, so "Dubai. UK investors" passes);
-    //     dot/d0t/نقطة/دوت between a word and an ending; point/punto before an ending that is not a
-    //     word; "www" as a word. On d, an abbreviation before a known ending (Dr.com, ltd.realty); on
-    //     c, before an ending that is also a company word only in lower case (co.llc and dr.homes
-    //     refused, Co.LLC and Jr.Homes pass).
+    //     Arabic ending, or a known ending spelled with spaces; "x. com" / "x · com" before com, org,
+    //     biz or xyz; dot/d0t/d.o.t/نقطة/دوت between a word and an ending; "www" as a word. On d, an
+    //     abbreviation before a known ending (Dr.com, ltd.realty). On c, only in lower case: a country
+    //     code or uk/edu/gov after ". " or a dot-like character (x. uk, x · ae; "Dubai · AE" passes);
+    //     point/punto before an ending; a comma before com/org/biz/xyz (x,com, x, com, x、com;
+    //     "Sales,Com" passes); an abbreviation before an ending that is also a company word (co.llc,
+    //     dr.homes refused; Co.LLC, Jr.Homes pass).
     function agencyTextFree(raw) {
       let c = raw.replace('[\\x{300}-\\x{36f}\\x{ad}\\x{180e}\\x{200b}-\\x{200f}\\x{2060}-\\x{2064}\\x{fe00}-\\x{fe0f}\\x{feff}\\x{64b}-\\x{65f}\\x{670}\\x{640}]', '').replace('[\\x{3002}\\x{ff61}\\x{fe52}\\x{ff0e}\\x{2024}]', '.');
       let t = c.lower()
@@ -717,20 +720,20 @@ service cloud.firestore {
         .replace('[çćĉċč]', 'c')
         .replace('[ñńņň]', 'n')
         .replace('[ýÿ]', 'y')
-        .replace('([\\p{L}\\p{N}])[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}]((?:c ?o ?m|o ?r ?g|b ?i ?z|i ?o|x ?y ?z|a ?e|e ?g|s ?a|q ?a|k ?w|l ?y)(?:[^\\p{L}]|$))', '$1.$2')
-        .replace('([\\p{L}\\p{N}]),((?:com|org|biz|xyz)(?:[^\\p{L}]|$))', '$1.$2')
+        .replace('([\\p{L}\\p{N}])[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}]((?:c ?o ?m|o ?r ?g|b ?i ?z|x ?y ?z)(?:[^\\p{L}]|$))', '$1.$2')
         .replace('[أإآٱ]', 'ا')
         .replace('ى', 'ي')
         .replace('[\\[({][\\s\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*(?:[.]|dot)[\\s\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]*[\\])}]', '.');
-      let n = ('  ' + t.replace('[\\x{20e3}\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}]', ' ').replace('[^\\p{L}\\p{N}\\p{M}]+', '  ') + '  ')
-        .replace(' (?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|diez|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر)) ', ' ## ')
+      let n = ('  ' + t.replace('(\\p{L})[\\x{2c}\\x{ff0c}\\x{3001}\\x{60c}\\x{66c}]\\s+((?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))(?:[^\\p{L}]|$))', '$1 brk $2').replace('[\\x{20e3}\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}]', ' ').replace('[^\\p{L}\\p{N}\\p{M}]+', '  ') + '  ')
+        .replace(' (?:eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|onze|douze|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر)) ', ' ## ')
         .replace(' (?:zero|oh|o|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|double|triple|un|une|deux|trois|quatre|cinq|sept|huit|neuf|dix|onze|douze|cero|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|शून्य|जीरो|एक|दो|तीन|चार|पांच|पाँच|छह|छः|छे|सात|आठ|नौ|ایک|دو|تین|چار|پانچ|چھ|سات|اٹھ|نو|[وف]?(?:صفر|زيرو|واحد|واحده|واحدة|اثنين|اتنين|اثنان|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|تلاث|اربعه|اربعة|اربع|خمسه|خمسة|خمس|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تمنيه|تمنية|تسعه|تسعة|تسع|عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|اثنا|اثني|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر)) ', ' # ')
+        .replace(' 0\\p{Nd}\\p{Nd} ', ' %%% ')
         .replace(' \\p{Nd} ', ' % ')
         .replace(' (?:and|et|y|و) ', ' & ')
         .replace('\\s+', '')
         .replace('#&', '#')
         .replace('&#', '#');
-      let p = raw.replace('[oO](\\p{Nd})', '0$1').replace('[lI](\\p{Nd})', '1$1')
+      let p = raw.replace('[oO](\\p{Nd})', '0$1').replace('[lI](\\p{Nd})', '1$1').replace('[sS](\\p{Nd})', '5$1')
         .replace('(\\p{Nd})[oO]', '$1 0').replace('(\\p{Nd})[lI]', '$1 1');
       let d = ' ' + t.replace('[\\s\\x{a0}\\x{2000}-\\x{200a}\\x{202f}\\x{3000}]+', ' ');
       let e = d.replace('([^\\p{L}\\p{N}])(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr)[.](\\p{L}{3})', '$1  $2')
@@ -738,13 +741,14 @@ service cloud.firestore {
       return !n.matches('(?s).*[#%]{7}.*')
         && !t.matches('(?s).*(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}.*')
         && !e.matches('(?s).*[\\p{L}\\p{N}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}-](?:[.]| +[.] ?)(?:[\\p{Latin}\\p{Cyrillic}\\p{Greek}\\p{Armenian}\\p{Coptic}\\p{Cherokee}\\p{Lisu}\\x{1d400}-\\x{1d7ff}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}]{2}|(?:مصر|امارات|الامارات|السعوديه|السعودية|سعودي|قطر|الاردن|عمان|البحرين|الكويت|المغرب|الجزائر|تونس|فلسطين|سوريه|سورية|شبكه|شبكة|موقع|كوم|عرب)|(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e)(?:[^\\p{L}]|$)).*')
-        && !e.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}] *)(?:c ?o ?m|o ?r ?g|b ?i ?z|i ?o|x ?y ?z|a ?e|e ?g|s ?a|q ?a|k ?w|l ?y)(?:[^\\p{L}]|$).*')
-        && !e.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:dot|d0t|نقطة|نقطه|دوت)[ _-]*(?:(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e)|(?:كوم|نت|اورج))(?:[^\\p{L}]|$).*')
-        && !e.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:point|punto)[ _-]*(?:c ?o ?m|o ?r ?g|b ?i ?z|i ?o|x ?y ?z|a ?e|e ?g|s ?a|q ?a|k ?w|l ?y)(?:[^\\p{L}]|$).*')
+        && !e.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}] *)(?:c ?o ?m|o ?r ?g|b ?i ?z|x ?y ?z)(?:[^\\p{L}]|$).*')
+        && !e.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:dot|d0t|d[.]o[.]t|نقطة|نقطه|دوت)[ _-]*(?:(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e)|(?:كوم|نت|اورج))(?:[^\\p{L}]|$).*')
         && !e.matches('(?s)(?:.*[^\\p{L}\\p{N}])?www(?:[^\\p{L}\\p{N}].*)?')
         && !d.matches('(?s).*[^\\p{L}\\p{N}](?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr)(?:[.]| +[.] ?)(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e|realty|website|estate|properties|property|rentals|agency|club|tech|pro|top|world|live)(?:[^\\p{L}]|$).*')
-        && !c.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}] *)(?:uk|edu|gov)(?:[^\\p{L}]|$).*')
-        && !c.matches('(?s)(?:.*[^\\p{L}\\p{N}])?(?i:(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr))[.](?:homes|house|apartments|villas|land|immo|city|group|global|dev|cloud|space|ltd|llc|inc|company|realestate)(?:[^\\p{L}]|$).*')
+        && !c.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}] *)(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)(?:[^\\p{L}]|$).*')
+        && !c.matches('(?s)(?:.*[^\\p{L}\\p{N}])?(?i:(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr))[.](?:homes|house|apartments|villas|land|immo|city|group|global|dev|cloud|space|ltd|llc|inc|company|realestate|rent|vip)(?:[^\\p{L}]|$).*')
+        && !c.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:point|punto)[ _-]*(?:com|org|biz|xyz|net|io|ae|eg|sa|qa|kw|ly)(?:[^\\p{L}]|$).*')
+        && !c.matches('(?s).*[\\p{L}\\p{N}](?:[\\x{2c}\\x{ff0c}\\x{3001}\\x{60c}\\x{66c}](?:com|org|biz|xyz)| ?[\\x{2c}\\x{ff0c}\\x{3001}\\x{60c}\\x{66c}] ?com)(?:[^\\p{L}]|$).*')
         && (p == raw || !contactPhone(p));
     }
 
