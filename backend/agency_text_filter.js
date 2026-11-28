@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-232).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-235).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -57,19 +57,36 @@ const ARABIC_NUMBER_WORDS = [
   "ستين", "ستون", "سبعين", "سبعون", "ثمانين", "ثمانون", "تمانين", "تسعين", "تسعون",
   "اثنا", "اثني", "حداشر", "احداشر", "اتناشر", "اطناشر", "تلتاشر", "تلطاشر", "اربعتاشر", "اربعطاشر", "خمستاشر",
   "خمسطاشر", "ستاشر", "سطاشر", "سبعتاشر", "سبعطاشر", "تمنتاشر", "تمانتاشر", "تمنطاشر", "تسعتاشر", "تسعطاشر",
+  // TAQ-233: more Egyptian and formal spellings of 11-19, feminine two and formal one.
+  "تلاتاشر", "تلاتطاشر", "ثلاثتاشر", "ثلاثطاشر", "ثلتاشر", "ثلطاشر", "تلاتتاشر", "اثناشر", "اثنطاشر", "اتنعشر", "اثنعشر", "احدعشر", "اربعاشر", "خمساشر", "سبعاشر", "تسعاشر", "طمنتاشر", "طمنطاشر", "ثمنتاشر", "ثمانتاشر", "تمانطاشر", "ثمنطاشر", "ثمانطاشر",
+  "اثنتين", "اثنتان", "اتنتين", "ثنتين", "احد", "احدي",
 ];
-const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.join("|")}))`;
+// TAQ-235: Gulf/Levantine -عش teens (احدعش، ثنعش، ثلطعش، اربعطعش، ستعش، سطعش، تسعتعش ...), طناشر, and
+// one-word formal teens (ثلاثةعشر، احدعشر، اثناعشر): a unit stem, an optional ة/ه, then a teen ending.
+// Stems and endings are chosen so that everyday words don't fit (عيش، فرش، معاش، نعش، بطش، عطش, and
+// تنعش: the bare ت+ن stem is left out on purpose).
+const ARABIC_TEEN_STEMS = "(?:ا?حد|ا[ثتط]ن[اي]?|[ثط]ن|[ثت]ل(?:ا[ثت]|[ثت]|اط|ط|ا)|ارب[اع]?|خمس|ست|سط|سبع|[تثط]ما?ن|تسع)";
+const ARABIC_TEEN_PATTERN = `${ARABIC_TEEN_STEMS}(?:ي?[ةه])?ا?[تط]?(?:اشر|عشر?)`;
+// Tens and units spelled the Egyptian/Gulf way that were missing (TAQ-235).
+const EXTRA_ARABIC_TENS = ["تلاتون", "طمانين", "طمانون"];
+const EXTRA_ARABIC_UNITS = ["تنين", "ثنين"];
+// Two-word teens ("احد عشر", "ثلاثة عشر", "اثنا عشر"): read as one teen, so a comma before one
+// breaks the group like a comma before "حداشر" (TAQ-234).
+const TWO_WORD_TEEN_UNITS = "(?:احد|احدي|اثنا|اثني|اثنتا|اثنتي|اثنتين|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|اربعه|اربعة|اربع|خمسه|خمسة|خمس"
+  + "|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تمنيه|تمنية|تسعه|تسعة|تسع)";
+const TWO_WORD_TEEN_PATTERN = `(^|[^\\p{L}])([وف]?)${TWO_WORD_TEEN_UNITS}\\s+عشر[ةه]?([^\\p{L}]|$)`;
+const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.concat(EXTRA_ARABIC_TENS, EXTRA_ARABIC_UNITS).join("|")}|${ARABIC_TEEN_PATTERN}))`;
 // Teens stand for two digits ("صفر خمسة صفر حداشر اتناشر تلتاشر" is 050111213), so they count
 // twice; they are also in the lists above. Tens count once (TAQ-215: "nineteen ninety eight",
 // "Twenty Twenty Twenty-One"), and so does عشر/عشرة, which follows a unit word ("ثلاثة عشر").
 const TWO_DIGIT_WORD_PATTERN = "(?:eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|onze|douze"
-  + "|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+  + "|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر|تلاتاشر|تلاتطاشر|ثلاثتاشر|ثلاثطاشر|ثلتاشر|ثلطاشر|تلاتتاشر|اثناشر|اثنطاشر|اتنعشر|اثنعشر|احدعشر|اربعاشر|خمساشر|سبعاشر|تسعاشر|طمنتاشر|طمنطاشر|ثمنتاشر|ثمانتاشر|تمانطاشر|ثمنطاشر|ثمانطاشر|" + ARABIC_TEEN_PATTERN + "))";
 // Teens and tens: a comma before one of these breaks a number-word run (TAQ-215: "ninety eight,
 // twenty years", "Eleven, twelve, thirteen"); a comma between single digits ("zero five zero, one
 // two three") does not.
 const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta"
-  + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون"
-  + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+  + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|تلاتون|طمانين|طمانون"
+  + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر|تلاتاشر|تلاتطاشر|ثلاثتاشر|ثلاثطاشر|ثلتاشر|ثلطاشر|تلاتتاشر|اثناشر|اثنطاشر|اتنعشر|اثنعشر|احدعشر|اربعاشر|خمساشر|سبعاشر|تسعاشر|طمنتاشر|طمنطاشر|ثمنتاشر|ثمانتاشر|تمانطاشر|ثمنطاشر|ثمانطاشر|" + ARABIC_TEEN_PATTERN + "))";
 // Zero words. A run that starts with one ("zero five zero, twelve, thirty four") is a phone even
 // when commas split it (TAQ-221), so they get their own marker '*'.
 const ZERO_WORD_PATTERN = "(?:zero|oh|o|cero|शून्य|जीरो|[وف]?(?:صفر|زيرو))";
@@ -166,6 +183,7 @@ const ZERO_GROUP = reAll(` [${jsClass(ZERO_DIGITS)}]\\p{Nd}\\p{Nd} `);
 // A comma, a spaced hyphen or dash, or a slash between a word and a teen or tens word breaks a
 // number-word run ('!', TAQ-215/226); so does "and" ('^', TAQ-226: "Zero and twelve and twenty
 // four"). Each is applied twice, because a match takes the letter the next one needs.
+const TWO_WORD_TEEN = reAll(TWO_WORD_TEEN_PATTERN);
 const WORD_COMMA = reAll(`(\\p{L})(?:${COMMA}\\s+|\\s+[${jsClass(HYPHENS)}]\\s+|\\s*/\\s*)(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
 // A comma, spaced dash or slash before a units word ('|', TAQ-232): it closes a digit group in the
 // zero checks, so "zero, six, twelve" is a list, not the "zero six" phone start.
@@ -207,7 +225,8 @@ function normaliseAgencyText(text) {
  * word (TAQ-215).
  */
 function numberMarkers(normal) {
-  return `  ${normal.replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2")
+  return `  ${normal.replace(TWO_WORD_TEEN, "$1$2حداشر$3").replace(TWO_WORD_TEEN, "$1$2حداشر$3")
+    .replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2")
     .replace(WORD_AND_COMMA_WAW, "$1 andbrk $2").replace(WORD_AND_COMMA_WAW, "$1 andbrk $2")
     .replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3").replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3")
     .replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2")
@@ -351,7 +370,7 @@ module.exports = {
   normaliseAgencyText,
   numberMarkers,
   RULES_FRAGMENTS: {
-    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, LONE_ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
+    NUMBER_WORD_PATTERN, TWO_WORD_TEEN_RULES: TWO_WORD_TEEN_PATTERN.replace(/\\/g, "\\\\"), TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, LONE_ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
     LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, POINT_WORDLIKE_TLD_PATTERN, COMPOUND_TAIL_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
     ABBREVIATION_WORD_TLD_PATTERN, ARABIC_TLD_PATTERN, SPOKEN_ARABIC_TLD_PATTERN, DOT_WORD_PATTERN,
     POINT_WORD_PATTERN, ABBREVIATION_PATTERN, PLACE_PATTERN,
