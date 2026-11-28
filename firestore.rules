@@ -681,7 +681,7 @@ service cloud.firestore {
       return !(key in d) || (d[key] is string && d[key].size() <= max);
     }
 
-    // TAQ-198/201/207-230: an agency's name and about text show on its listings and public
+    // TAQ-198/201/207-231: an agency's name and about text show on its listings and public
     // profile, so they also get the agency checks of backend/agency_text_filter.js (read its header
     // for the why). The word, ending, abbreviation and code-point lists below are that file's
     // RULES_FRAGMENTS, verbatim; backend/test/agency_text_filter.test.js fails when they differ.
@@ -747,7 +747,7 @@ service cloud.firestore {
         .replace('[.]((?:egypt|cairo|giza|alexandria|uae|sharjah|ajman|fujairah))([^\\p{L}\\p{N}.-]|$)', ' $1$2');
       return !n.matches('(?s).*(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#%*+]{3}~[#%*+]|[#%*+]{4}~).*')
         && !n.replace('[+]', '==').matches('(?s).*(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){5}|~(?:[!^]?[#%*=]){4}).*')
-        && !n.replace('[+]#', '==').replace('#[+]', '==').replace('[+]', '==').matches('(?s).*[*]!(?:!?[#%*=]){8,10}(?:[^#%*=!^]|!(?:[^#%*=^]|$)|$).*')
+        && !n.replace('#[+]', '==').replace('[+]#', '==').replace('[+]', '==').matches('(?s).*[*]!(?:!?[#%*=]){8,10}(?:[^#%*=!^]|!(?:[^#%*=^]|$)|$).*')
         && !t.matches('(?s).*(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}.*')
         && !e.matches('(?s).*[\\p{L}\\p{N}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}-](?:[.]| +[.] ?)(?:[\\p{Latin}\\p{Cyrillic}\\p{Greek}\\p{Armenian}\\p{Coptic}\\p{Cherokee}\\p{Lisu}\\x{1d400}-\\x{1d7ff}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}]{2}|(?:مصر|امارات|الامارات|السعوديه|السعودية|سعودي|قطر|الاردن|عمان|البحرين|الكويت|المغرب|الجزائر|تونس|فلسطين|سوريه|سورية|شبكه|شبكة|موقع|كوم|عرب)|(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e)(?:[^\\p{L}]|$)).*')
         && !e.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}] *)(?:c ?o ?m|o ?r ?g|b ?i ?z|x ?y ?z)(?:[^\\p{L}]|$).*')

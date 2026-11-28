@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-230).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-231).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -234,7 +234,9 @@ const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){
 // A lone zero word followed by a comma or dash (TAQ-223/226: "Zero, twelve, twenty four and thirty
 // six month plans") is a phone only when the list spells exactly 9-11 digits, counted as digits
 // (TAQ-229): a units word 1, a teen or a plain tens word 2, a tens word with its unit 2 ("thirty
-// four", "اربعة وعشرين"). A list that closes with "and"/"or"/و before its last item ('^') is a plan,
+// four", "اربعة وعشرين"). A unit right before a tens word is paired first, so Arabic groups side by side
+// ("اربعة وتلاتين، ستة وخمسين") are read 34 56, not 3 46 5 (TAQ-231); a comma or dash before a
+// tens word ('!') closes a group, so English "thirty four, fifty six" pairs as before. A list that closes with "and"/"or"/و before its last item ('^') is a plan,
 // not a phone ("... forty eight and sixty months", "اربعين وخمسين في المية"; TAQ-230).
 const LONE_ZERO_RUN_PATTERN = "[*]!(?:!?[#%*=]){8,10}(?:[^#%*=!^]|!(?:[^#%*=^]|$)|$)";
 const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
@@ -242,7 +244,7 @@ const ZERO_RUN = re(ZERO_RUN_PATTERN);
 const LONE_ZERO_RUN = re(LONE_ZERO_RUN_PATTERN);
 const hasNumberRun = (markers) => NUMBER_RUN.test(markers)
   || ZERO_RUN.test(markers.replace(/[+]/g, "=="))
-  || LONE_ZERO_RUN.test(markers.replace(/[+]#/g, "==").replace(/#[+]/g, "==").replace(/[+]/g, "=="));
+  || LONE_ZERO_RUN.test(markers.replace(/#[+]/g, "==").replace(/[+]#/g, "==").replace(/[+]/g, "=="));
 const GLUED = re(GLUED_PATTERN);
 
 const END = "(?![\\p{L}])";
