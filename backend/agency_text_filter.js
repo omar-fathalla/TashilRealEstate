@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-232).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-233).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -57,19 +57,22 @@ const ARABIC_NUMBER_WORDS = [
   "ستين", "ستون", "سبعين", "سبعون", "ثمانين", "ثمانون", "تمانين", "تسعين", "تسعون",
   "اثنا", "اثني", "حداشر", "احداشر", "اتناشر", "اطناشر", "تلتاشر", "تلطاشر", "اربعتاشر", "اربعطاشر", "خمستاشر",
   "خمسطاشر", "ستاشر", "سطاشر", "سبعتاشر", "سبعطاشر", "تمنتاشر", "تمانتاشر", "تمنطاشر", "تسعتاشر", "تسعطاشر",
+  // TAQ-233: more Egyptian and formal spellings of 11-19, feminine two and formal one.
+  "تلاتاشر", "تلاتطاشر", "ثلاثتاشر", "ثلاثطاشر", "ثلتاشر", "ثلطاشر", "تلاتتاشر", "اثناشر", "اثنطاشر", "اتنعشر", "اثنعشر", "احدعشر", "اربعاشر", "خمساشر", "سبعاشر", "تسعاشر", "طمنتاشر", "طمنطاشر", "ثمنتاشر", "ثمانتاشر", "تمانطاشر", "ثمنطاشر", "ثمانطاشر",
+  "اثنتين", "اثنتان", "اتنتين", "ثنتين", "احد", "احدي",
 ];
 const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.join("|")}))`;
 // Teens stand for two digits ("صفر خمسة صفر حداشر اتناشر تلتاشر" is 050111213), so they count
 // twice; they are also in the lists above. Tens count once (TAQ-215: "nineteen ninety eight",
 // "Twenty Twenty Twenty-One"), and so does عشر/عشرة, which follows a unit word ("ثلاثة عشر").
 const TWO_DIGIT_WORD_PATTERN = "(?:eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|onze|douze"
-  + "|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+  + "|[وف]?(?:حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر|تلاتاشر|تلاتطاشر|ثلاثتاشر|ثلاثطاشر|ثلتاشر|ثلطاشر|تلاتتاشر|اثناشر|اثنطاشر|اتنعشر|اثنعشر|احدعشر|اربعاشر|خمساشر|سبعاشر|تسعاشر|طمنتاشر|طمنطاشر|ثمنتاشر|ثمانتاشر|تمانطاشر|ثمنطاشر|ثمانطاشر))";
 // Teens and tens: a comma before one of these breaks a number-word run (TAQ-215: "ninety eight,
 // twenty years", "Eleven, twelve, thirteen"); a comma between single digits ("zero five zero, one
 // two three") does not.
 const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta"
   + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون"
-  + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+  + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر|تلاتاشر|تلاتطاشر|ثلاثتاشر|ثلاثطاشر|ثلتاشر|ثلطاشر|تلاتتاشر|اثناشر|اثنطاشر|اتنعشر|اثنعشر|احدعشر|اربعاشر|خمساشر|سبعاشر|تسعاشر|طمنتاشر|طمنطاشر|ثمنتاشر|ثمانتاشر|تمانطاشر|ثمنطاشر|ثمانطاشر))";
 // Zero words. A run that starts with one ("zero five zero, twelve, thirty four") is a phone even
 // when commas split it (TAQ-221), so they get their own marker '*'.
 const ZERO_WORD_PATTERN = "(?:zero|oh|o|cero|शून्य|जीरो|[وف]?(?:صفر|زيرو))";
