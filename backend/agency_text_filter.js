@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-221).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-225).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -73,6 +73,17 @@ const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixtee
 // Zero words. A run that starts with one ("zero five zero, twelve, thirty four") is a phone even
 // when commas split it (TAQ-221), so they get their own marker '*'.
 const ZERO_WORD_PATTERN = "(?:zero|oh|o|cero|शून्य|जीरो|[وف]?(?:صفر|زيرو))";
+// Every decimal zero (ASCII, Arabic-Indic ٠, Eastern Arabic ۰, Devanagari ०, full-width, ...): the
+// server folds digits to ASCII first, the rules can't, so a 0NN group is matched with these on both
+// sides (TAQ-225: "٠٥٠ اتناشر تلاتين اربعة").
+const ZERO_DIGITS = [
+  0x30, 0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66, 0xde6, 0xe50,
+  0xed0, 0xf20, 0x1040, 0x1090, 0x17e0, 0x1810, 0x1946, 0x19d0, 0x1a80, 0x1a90, 0x1b50, 0x1bb0, 0x1c40,
+  0x1c50, 0xa620, 0xa8d0, 0xa900, 0xa9d0, 0xa9f0, 0xaa50, 0xabf0, 0xff10, 0x104a0, 0x10d30, 0x10d40, 0x11066,
+  0x110f0, 0x11136, 0x111d0, 0x112f0, 0x11450, 0x114d0, 0x11650, 0x116c0, 0x116d0, 0x116da, 0x11730, 0x118e0,
+  0x11950, 0x11bf0, 0x11c50, 0x11d50, 0x11da0, 0x11de0, 0x11f50, 0x16130, 0x16a60, 0x16ac0, 0x16b50, 0x16d70,
+  0x1ccf0, 0x1d7ce, 0x1d7d8, 0x1d7e2, 0x1d7ec, 0x1d7f6, 0x1e140, 0x1e2f0, 0x1e4f0, 0x1e5f1, 0x1e950, 0x1fbf0,
+];
 // Commas (Latin, full-width, ideographic, Arabic, Arabic thousands separator).
 const COMMAS = [0x2c, 0xff0c, 0x3001, 0x60c, 0x66c];
 const GLUED_PATTERN = "(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}";
@@ -93,7 +104,8 @@ const LOWER_CASE_TLD_PATTERN = "(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)";
 // After "point"/"punto", lower case only ("x point com", "x point net"; not "Point Commercial").
 const POINT_TLD_PATTERN = "(?:com|org|biz|xyz)";
 // Endings that are also words or codes ("selling point net yields", TAQ-220): after "point" only
-// at the end of the text or before punctuation, not before another word.
+// at the end of the text or before punctuation, not before another word; a hyphen and a letter
+// continue the word ("point net-zero homes", TAQ-224).
 const POINT_WORDLIKE_TLD_PATTERN = "(?:net|io|ae|eg|sa|qa|kw|ly)";
 // After a comma, lower case only: glued before these, or spaced before com ("x,com", "x, com",
 // "x、com"); "Sales,Com", "Info,Biz Bay" and "Gross,net yields" pass. net is left out: "Gross,net".
@@ -143,6 +155,7 @@ const GLUED_ALT_DOT = reAll(`([\\p{L}\\p{N}])${ALT_DOT}(${STRICT_TLD_PATTERN}(?:
 const ANY_ALT_DOT = reAll(ALT_DOT);
 const PARENTHESIZED = /[\u249c-\u24b5]/gu;
 const COMMA = `[${jsClass(COMMAS)}]`;
+const ZERO_GROUP = reAll(` [${jsClass(ZERO_DIGITS)}]\\p{Nd}\\p{Nd} `);
 // A comma and space between a word and a teen or tens word breaks a number-word run (TAQ-215).
 const WORD_COMMA = reAll(`(\\p{L})${COMMA}\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
 
@@ -181,7 +194,7 @@ function numberMarkers(normal) {
     .replace(reAll(` ${TENS_WORD_PATTERN} `), " + ")
     .replace(reAll(` ${ZERO_WORD_PATTERN} `), " * ")
     .replace(reAll(` ${NUMBER_WORD_PATTERN} `), " # ")
-    .replace(/ 0\p{Nd}\p{Nd} /gu, " ~ ")
+    .replace(ZERO_GROUP, " ~ ")
     .replace(/ \p{Nd} /gu, " % ")
     .replace(reAll(` ${CONNECTOR_PATTERN} `), " & ")
     .replace(/\s+/gu, "")
@@ -192,13 +205,17 @@ function numberMarkers(normal) {
 // Seven digit markers in a row, a tens word counting once (TAQ-215: "nineteen ninety eight"). A
 // 0NN group counts as three digits once in a run, so "Units 001 002 003" is not a phone (TAQ-219).
 const NUMBER_RUN_PATTERN = "(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#%*+]{3}~[#%*+]|[#%*+]{4}~)";
-// A run that starts like a phone (a zero word, or a 0NN group) is read with each tens word as two
-// digits and with commas ('!') not breaking it (TAQ-221: "zero five zero, twelve, thirty four",
-// "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Checked on the markers with '+' turned into '##'.
-const ZERO_RUN_PATTERN = "(?:[*](?:!?[#%*]){6}|~(?:!?[#%*]){4})";
+// A run that starts like a phone is read with each tens word as two digits ('+' -> '==') and with
+// commas ('!') not breaking it (TAQ-221: "zero five zero, twelve, thirty four",
+// "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Starting like a phone means a 0NN group, or a zero word
+// glued to another single digit word, digit or 0NN group before any comma ("zero five", "oh five",
+// "صفر خمسة", "five zero"). A comma right after a lone zero word breaks the run, and a tens word
+// right after it doesn't start one (TAQ-223: "zero, ten, twenty and thirty percent down",
+// "عمولة صفر، عشرين، تلاتين").
+const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:!?[#%*=]){5}|[#%][*](?:!?[#%*=]){5}|~(?:!?[#%*=]){4})";
 const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
 const ZERO_RUN = re(ZERO_RUN_PATTERN);
-const hasNumberRun = (markers) => NUMBER_RUN.test(markers) || ZERO_RUN.test(markers.replace(/[+]/g, "##"));
+const hasNumberRun = (markers) => NUMBER_RUN.test(markers) || ZERO_RUN.test(markers.replace(/[+]/g, "=="));
 const GLUED = re(GLUED_PATTERN);
 
 const END = "(?![\\p{L}])";
@@ -208,7 +225,7 @@ const SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${STRICT_TLD_P
 const WORD_DOT = re(`[\\p{L}\\p{N}][ _-]*${DOT_WORD_PATTERN}[ _-]*(?:${SPACED_TLD_PATTERN}|${SPOKEN_ARABIC_TLD_PATTERN})${END}`);
 // On the original case (casedAgencyText):
 const LOWER_CASE_SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${LOWER_CASE_TLD_PATTERN}${END}`);
-const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*(?:${POINT_TLD_PATTERN}(?:[^\\p{L}]|$)|${POINT_WORDLIKE_TLD_PATTERN}\\s*(?:[^\\p{L}\\s]|$))`);
+const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*(?:${POINT_TLD_PATTERN}(?:[^\\p{L}]|$)|${POINT_WORDLIKE_TLD_PATTERN}\\s*(?:[^\\p{L}\\s\\u2010-]|[\\u2010-](?:[^\\p{L}]|$)|$))`);
 const COMMA_DOMAIN = re(`[\\p{L}\\p{N}](?:${COMMA}${COMMA_TLD_PATTERN}| ?${COMMA} ?com)${END}`);
 // With the i flag for the abbreviation; the ending must then be lower case (rules: (?i:abbr)[.]ending).
 const ABBREVIATION_WORD_DOMAIN = new RegExp(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}[.](${ABBREVIATION_WORD_TLD_PATTERN})${END}`, "giu");
@@ -301,5 +318,6 @@ module.exports = {
     INVISIBLES_RULES: rulesClass(INVISIBLES), FULL_STOPS_RULES: rulesClass(UNICODE_FULL_STOPS),
     ALT_DOTS_RULES: rulesClass(ALT_DOTS), LETTER_SYMBOLS_RULES: rulesClass(LETTER_SYMBOLS),
     ENCLOSED_LETTERS_RULES: rulesClass(ENCLOSED_LETTERS), COMMAS_RULES: rulesClass(COMMAS),
+    ZERO_DIGITS_RULES: rulesClass(ZERO_DIGITS),
   },
 };
