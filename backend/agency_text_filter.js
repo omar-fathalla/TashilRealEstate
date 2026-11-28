@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-231).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-232).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -167,6 +167,9 @@ const ZERO_GROUP = reAll(` [${jsClass(ZERO_DIGITS)}]\\p{Nd}\\p{Nd} `);
 // number-word run ('!', TAQ-215/226); so does "and" ('^', TAQ-226: "Zero and twelve and twenty
 // four"). Each is applied twice, because a match takes the letter the next one needs.
 const WORD_COMMA = reAll(`(\\p{L})(?:${COMMA}\\s+|\\s+[${jsClass(HYPHENS)}]\\s+|\\s*/\\s*)(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+// A comma, spaced dash or slash before a units word ('|', TAQ-232): it closes a digit group in the
+// zero checks, so "zero, six, twelve" is a list, not the "zero six" phone start.
+const UNIT_COMMA = reAll(`(\\p{L})(?:${COMMA}\\s+|\\s+[${jsClass(HYPHENS)}]\\s+|\\s*/\\s*)(${NUMBER_WORD_PATTERN}(?:[^\\p{L}]|$))`);
 // "and"/"or" (also after a comma, and Arabic او) before a teen or tens word; Arabic و before a tens
 // word after a comma ("، وستين") or after another tens word ("اربعين وخمسين"), but not after a units
 // word, where it builds one number ("اربعة وعشرين" is 24). TAQ-230.
@@ -207,9 +210,11 @@ function numberMarkers(normal) {
   return `  ${normal.replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2")
     .replace(WORD_AND_COMMA_WAW, "$1 andbrk $2").replace(WORD_AND_COMMA_WAW, "$1 andbrk $2")
     .replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3").replace(WORD_AND_TENS_WAW, "$1$2 andbrk $3")
-    .replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+    .replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2")
+    .replace(UNIT_COMMA, "$1 ubrk $2").replace(UNIT_COMMA, "$1 ubrk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
     .replace(/ brk /gu, " ! ")
     .replace(/ andbrk /gu, " ^ ")
+    .replace(/ ubrk /gu, " | ")
     .replace(reAll(` ${TWO_DIGIT_WORD_PATTERN} `), " ## ")
     .replace(reAll(` ${TENS_WORD_PATTERN} `), " + ")
     .replace(reAll(` ${ZERO_WORD_PATTERN} `), " * ")
@@ -230,7 +235,9 @@ const NUMBER_RUN_PATTERN = "(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#
 // four", "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Starting like a phone means a 0NN group, or a zero
 // word glued to another single digit word, digit or 0NN group ("zero five", "oh five", "صفر خمسة",
 // "five zero").
-const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){5}|~(?:[!^]?[#%*=]){4})";
+// A comma before a units word ('|') does not break a run that has started, but a zero word and a
+// units word with a comma between them ("zero, six") do not start one (TAQ-232).
+const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^|]?[#%*=]){5}|[#%][*](?:[!^|]?[#%*=]){5}|~(?:[!^|]?[#%*=]){4})";
 // A lone zero word followed by a comma or dash (TAQ-223/226: "Zero, twelve, twenty four and thirty
 // six month plans") is a phone only when the list spells exactly 9-11 digits, counted as digits
 // (TAQ-229): a units word 1, a teen or a plain tens word 2, a tens word with its unit 2 ("thirty
@@ -238,11 +245,13 @@ const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){
 // ("اربعة وتلاتين، ستة وخمسين") are read 34 56, not 3 46 5 (TAQ-231); a comma or dash before a
 // tens word ('!') closes a group, so English "thirty four, fifty six" pairs as before. A list that closes with "and"/"or"/و before its last item ('^') is a plan,
 // not a phone ("... forty eight and sixty months", "اربعين وخمسين في المية"; TAQ-230).
-const LONE_ZERO_RUN_PATTERN = "[*]!(?:!?[#%*=]){8,10}(?:[^#%*=!^]|!(?:[^#%*=^]|$)|$)";
+// A lone zero then a comma before a units word ("zero, six, twelve, eighteen, twenty four months")
+// is read the same way (TAQ-232).
+const LONE_ZERO_RUN_PATTERN = "[*][!|](?:[!|]?[#%*=]){8,10}(?:[^#%*=!|^]|[!|](?:[^#%*=^]|$)|$)";
 const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
 const ZERO_RUN = re(ZERO_RUN_PATTERN);
 const LONE_ZERO_RUN = re(LONE_ZERO_RUN_PATTERN);
-const hasNumberRun = (markers) => NUMBER_RUN.test(markers)
+const hasNumberRun = (markers) => NUMBER_RUN.test(markers.replace(/[|]/g, ""))
   || ZERO_RUN.test(markers.replace(/[+]/g, "=="))
   || LONE_ZERO_RUN.test(markers.replace(/#[+]/g, "==").replace(/[+]#/g, "==").replace(/[+]/g, "=="));
 const GLUED = re(GLUED_PATTERN);

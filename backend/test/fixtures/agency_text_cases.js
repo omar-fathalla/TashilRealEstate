@@ -206,6 +206,13 @@ const REFUSED = [
   ["دلتا صفر، عشرة، اتناشر، اربعة و تلاتين، ستة و خمسين، سبعين", "phone"],
   ["دلتا صفر، حداشر، تلاتة وعشرين، خمسة واربعين، سبعة وستين، تمانين", "phone"],
   ["دلتا صفر، حداشر، تلاتة وعشرين، خمسة واربعين، سبعة وستين", "phone"],
+  // TAQ-232: a zero, a comma and a units word start a phone only inside a phone-length run.
+  ["zero, five, zero, twelve, thirty four, fifty six", "phone"],
+  ["Delta zero, five, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, six, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, one, two, three, four, five, six, seven, eight, nine", "phone"],
+  ["صفر، خمسة، صفر، اتناشر، تلاتين، اربعين", "phone"],
+  ["دلتا صفر، ستة، اتناشر، اربعة وتلاتين، ستة وخمسين، سبعين", "phone"],
 ];
 
 const ALLOWED = [
@@ -430,6 +437,14 @@ const ALLOWED = [
   "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين وستين شهر",
   "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين، او ستين شهر",
   "تقسيط صفر، اتناشر، اربعة وعشرين شهر",
+  // TAQ-232: month and percent plans starting 'zero, six' / 'صفر، ستة'.
+  "تقسيط على صفر، ستة، اتناشر، تمنتاشر، اربعة وعشرين شهر",
+  "Installments over zero, six, twelve, eighteen, twenty four months",
+  "Installments over zero, six, twelve, eighteen and twenty four months",
+  "Installments over zero - six - twelve - eighteen - twenty four months",
+  "Plans of zero, six, twelve, eighteen, twenty four, thirty, thirty six months",
+  "Down payment zero, five, ten, fifteen, twenty percent",
+  "مقدم صفر، خمسة، عشرة، خمستاشر، عشرين في المية",
 ];
 
 module.exports = { REFUSED, ALLOWED };
