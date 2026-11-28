@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-235).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-236).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -62,18 +62,18 @@ const ARABIC_NUMBER_WORDS = [
   "اثنتين", "اثنتان", "اتنتين", "ثنتين", "احد", "احدي",
 ];
 // TAQ-235: Gulf/Levantine -عش teens (احدعش، ثنعش، ثلطعش، اربعطعش، ستعش، سطعش، تسعتعش ...), طناشر, and
-// one-word formal teens (ثلاثةعشر، احدعشر، اثناعشر): a unit stem, an optional ة/ه, then a teen ending.
+// one-word formal teens (ثلاثةعشر، احدعشر، اثناعشر), Levantine -تاعش/-طاعش (اربعتاعش، خمستاعش، تناعش) and اتنينعشر (TAQ-236): a unit stem, an optional ة/ه, then a teen ending.
 // Stems and endings are chosen so that everyday words don't fit (عيش، فرش، معاش، نعش، بطش، عطش, and
 // تنعش: the bare ت+ن stem is left out on purpose).
-const ARABIC_TEEN_STEMS = "(?:ا?حد|ا[ثتط]ن[اي]?|[ثط]ن|[ثت]ل(?:ا[ثت]|[ثت]|اط|ط|ا)|ارب[اع]?|خمس|ست|سط|سبع|[تثط]ما?ن|تسع)";
-const ARABIC_TEEN_PATTERN = `${ARABIC_TEEN_STEMS}(?:ي?[ةه])?ا?[تط]?(?:اشر|عشر?)`;
-// Tens and units spelled the Egyptian/Gulf way that were missing (TAQ-235).
-const EXTRA_ARABIC_TENS = ["تلاتون", "طمانين", "طمانون"];
-const EXTRA_ARABIC_UNITS = ["تنين", "ثنين"];
+const ARABIC_TEEN_STEMS = "(?:ا?حد|ا[ثتط]ن(?:ين|[اي])?|[ثط]ن|تنا|[ثت]ل(?:ا[ثت]|[ثت]|اط|ط|ا)|ارب[اع]?|خمس|ست|سط|سبع|[تثط]ما?ن|تسع)";
+const ARABIC_TEEN_PATTERN = `${ARABIC_TEEN_STEMS}(?:ي?[ةه])?[تط]?ا?[تط]?ا?(?:اشر|عشر?)`;
+// Tens and units that were missing (TAQ-235/236): تمنين/ثمنين (80), feminine two and eight.
+const EXTRA_ARABIC_TENS = ["تلاتون", "طمانين", "طمانون", "تمنين", "ثمنين", "طمنين"];
+const EXTRA_ARABIC_UNITS = ["تنين", "ثنين", "ثنتان", "تنتين", "ثمنية", "ثمنيه", "طمنية"];
 // Two-word teens ("احد عشر", "ثلاثة عشر", "اثنا عشر"): read as one teen, so a comma before one
 // breaks the group like a comma before "حداشر" (TAQ-234).
-const TWO_WORD_TEEN_UNITS = "(?:احد|احدي|اثنا|اثني|اثنتا|اثنتي|اثنتين|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|اربعه|اربعة|اربع|خمسه|خمسة|خمس"
-  + "|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تمنيه|تمنية|تسعه|تسعة|تسع)";
+const TWO_WORD_TEEN_UNITS = "(?:احد|احدي|اثنا|اثني|اثنتا|اثنتي|اثنتين|اثنتان|اتنين|اثنين|اثنان|ثنتين|ثنتان|تنتين|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|اربعه|اربعة|اربع|خمسه|خمسة|خمس"
+  + "|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تمنيه|تمنية|ثمنية|ثمنيه|طمنية|تسعه|تسعة|تسع)";
 const TWO_WORD_TEEN_PATTERN = `(^|[^\\p{L}])([وف]?)${TWO_WORD_TEEN_UNITS}\\s+عشر[ةه]?([^\\p{L}]|$)`;
 const NUMBER_WORD_PATTERN = `(?:${NUMBER_WORDS.join("|")}|[وف]?(?:${ARABIC_NUMBER_WORDS.concat(EXTRA_ARABIC_TENS, EXTRA_ARABIC_UNITS).join("|")}|${ARABIC_TEEN_PATTERN}))`;
 // Teens stand for two digits ("صفر خمسة صفر حداشر اتناشر تلتاشر" is 050111213), so they count
@@ -85,7 +85,7 @@ const TWO_DIGIT_WORD_PATTERN = "(?:eleven|twelve|thirteen|fourteen|fifteen|sixte
 // twenty years", "Eleven, twelve, thirteen"); a comma between single digits ("zero five zero, one
 // two three") does not.
 const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta"
-  + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|تلاتون|طمانين|طمانون"
+  + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|تلاتون|طمانين|طمانون|تمنين|ثمنين|طمنين"
   + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر|تلاتاشر|تلاتطاشر|ثلاثتاشر|ثلاثطاشر|ثلتاشر|ثلطاشر|تلاتتاشر|اثناشر|اثنطاشر|اتنعشر|اثنعشر|احدعشر|اربعاشر|خمساشر|سبعاشر|تسعاشر|طمنتاشر|طمنطاشر|ثمنتاشر|ثمانتاشر|تمانطاشر|ثمنطاشر|ثمانطاشر|" + ARABIC_TEEN_PATTERN + "))";
 // Zero words. A run that starts with one ("zero five zero, twelve, thirty four") is a phone even
 // when commas split it (TAQ-221), so they get their own marker '*'.
