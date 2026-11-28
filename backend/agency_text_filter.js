@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-225).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-228).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -105,8 +105,14 @@ const LOWER_CASE_TLD_PATTERN = "(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)";
 const POINT_TLD_PATTERN = "(?:com|org|biz|xyz)";
 // Endings that are also words or codes ("selling point net yields", TAQ-220): after "point" only
 // at the end of the text or before punctuation, not before another word; a hyphen and a letter
-// continue the word ("point net-zero homes", TAQ-224).
+// continue the word only in a known compound ("point net-zero homes", TAQ-224/227/228).
 const POINT_WORDLIKE_TLD_PATTERN = "(?:net|io|ae|eg|sa|qa|kw|ly)";
+// Words that make a real compound after one of those endings and a hyphen or dash ("point
+// net-zero homes", "net‑worth"; TAQ-224/227). Any other hyphenated word stays a domain form
+// ("x point net-call us", "x point io-today", TAQ-228).
+const COMPOUND_TAIL_PATTERN = "(?:zero|worth|lease|leases|yield|yields|income|area|return|returns|rent|rents|rental|price|prices|profit|profits|metering|positive|negative|gain|gains|cost|costs|value|values|carbon)";
+// Hyphen-minus and U+2010-U+2015 (hyphen, non-breaking hyphen, figure dash, en dash, em dash, bar).
+const HYPHENS = [0x2d, [0x2010, 0x2015]];
 // After a comma, lower case only: glued before these, or spaced before com ("x,com", "x, com",
 // "x、com"); "Sales,Com", "Info,Biz Bay" and "Gross,net yields" pass. net is left out: "Gross,net".
 const COMMA_TLD_PATTERN = "(?:com|org|biz|xyz)";
@@ -157,7 +163,12 @@ const PARENTHESIZED = /[\u249c-\u24b5]/gu;
 const COMMA = `[${jsClass(COMMAS)}]`;
 const ZERO_GROUP = reAll(` [${jsClass(ZERO_DIGITS)}]\\p{Nd}\\p{Nd} `);
 // A comma and space between a word and a teen or tens word breaks a number-word run (TAQ-215).
-const WORD_COMMA = reAll(`(\\p{L})${COMMA}\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+// A comma, a spaced hyphen or dash, or a slash between a word and a teen or tens word breaks a
+// number-word run ('!', TAQ-215/226); so does "and" ('^', TAQ-226: "Zero and twelve and twenty
+// four"). Each is applied twice, because a match takes the letter the next one needs.
+const WORD_COMMA = reAll(`(\\p{L})(?:${COMMA}\\s+|\\s+[${jsClass(HYPHENS)}]\\s+|\\s*/\\s*)(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+const WORD_AND = reAll(`(\\p{L})\\s+(?:and|et|y)\\s+(${TENS_WORD_PATTERN}(?:[^\\p{L}]|$))`);
+const COMPOUND_HYPHEN = new RegExp(`[${jsClass(HYPHENS)}](${COMPOUND_TAIL_PATTERN}(?:[^\\p{L}]|$))`, "giu");
 
 /** The text with invisibles removed and Unicode full stops as '.', case kept (rules: c). */
 function casedAgencyText(text) {
@@ -188,8 +199,10 @@ function normaliseAgencyText(text) {
  * word (TAQ-215).
  */
 function numberMarkers(normal) {
-  return `  ${normal.replace(WORD_COMMA, "$1 brk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+  return `  ${normal.replace(WORD_COMMA, "$1 brk $2").replace(WORD_COMMA, "$1 brk $2")
+    .replace(WORD_AND, "$1 andbrk $2").replace(WORD_AND, "$1 andbrk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
     .replace(/ brk /gu, " ! ")
+    .replace(/ andbrk /gu, " ^ ")
     .replace(reAll(` ${TWO_DIGIT_WORD_PATTERN} `), " ## ")
     .replace(reAll(` ${TENS_WORD_PATTERN} `), " + ")
     .replace(reAll(` ${ZERO_WORD_PATTERN} `), " * ")
@@ -206,13 +219,15 @@ function numberMarkers(normal) {
 // 0NN group counts as three digits once in a run, so "Units 001 002 003" is not a phone (TAQ-219).
 const NUMBER_RUN_PATTERN = "(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#%*+]{3}~[#%*+]|[#%*+]{4}~)";
 // A run that starts like a phone is read with each tens word as two digits ('+' -> '==') and with
-// commas ('!') not breaking it (TAQ-221: "zero five zero, twelve, thirty four",
-// "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Starting like a phone means a 0NN group, or a zero word
-// glued to another single digit word, digit or 0NN group before any comma ("zero five", "oh five",
-// "صفر خمسة", "five zero"). A comma right after a lone zero word breaks the run, and a tens word
-// right after it doesn't start one (TAQ-223: "zero, ten, twenty and thirty percent down",
-// "عمولة صفر، عشرين، تلاتين").
-const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:!?[#%*=]){5}|[#%][*](?:!?[#%*=]){5}|~(?:!?[#%*=]){4})";
+// commas, dashes and "and" ('!', '^') not breaking it (TAQ-221: "zero five zero, twelve, thirty
+// four", "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Starting like a phone means a 0NN group, or a zero
+// word glued to another single digit word, digit or 0NN group ("zero five", "oh five", "صفر خمسة",
+// "five zero"). A lone zero word followed by a comma or dash (TAQ-223/226: "Zero, twelve, twenty
+// four and thirty six month plans") starts one only when the run, read to its end without "and",
+// spells exactly 10 or 11 digits, a mobile number's length (TAQ-228: "zero, fifty, twelve, thirty
+// four, fifty six").
+const ZERO_RUN_PATTERN = "(?:[*][#%*~](?:[!^]?[#%*=]){5}|[#%][*](?:[!^]?[#%*=]){5}|~(?:[!^]?[#%*=]){4}"
+  + "|[*]!(?:!?[#%*=]){9,10}(?:[^#%*=!]|!(?:[^#%*=]|$)|$))";
 const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
 const ZERO_RUN = re(ZERO_RUN_PATTERN);
 const hasNumberRun = (markers) => NUMBER_RUN.test(markers) || ZERO_RUN.test(markers.replace(/[+]/g, "=="));
@@ -225,7 +240,7 @@ const SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${STRICT_TLD_P
 const WORD_DOT = re(`[\\p{L}\\p{N}][ _-]*${DOT_WORD_PATTERN}[ _-]*(?:${SPACED_TLD_PATTERN}|${SPOKEN_ARABIC_TLD_PATTERN})${END}`);
 // On the original case (casedAgencyText):
 const LOWER_CASE_SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${LOWER_CASE_TLD_PATTERN}${END}`);
-const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*(?:${POINT_TLD_PATTERN}(?:[^\\p{L}]|$)|${POINT_WORDLIKE_TLD_PATTERN}\\s*(?:[^\\p{L}\\s\\u2010-]|[\\u2010-](?:[^\\p{L}]|$)|$))`);
+const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*(?:${POINT_TLD_PATTERN}(?:[^\\p{L}]|$)|${POINT_WORDLIKE_TLD_PATTERN}\\s*(?:[^\\p{L}\\s]|$))`);
 const COMMA_DOMAIN = re(`[\\p{L}\\p{N}](?:${COMMA}${COMMA_TLD_PATTERN}| ?${COMMA} ?com)${END}`);
 // With the i flag for the abbreviation; the ending must then be lower case (rules: (?i:abbr)[.]ending).
 const ABBREVIATION_WORD_DOMAIN = new RegExp(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}[.](${ABBREVIATION_WORD_TLD_PATTERN})${END}`, "giu");
@@ -241,9 +256,11 @@ function lettersAsDigits(text) {
 
 /** The domain-like fragment in the original case, or "" (lower-case-only endings). */
 function casedDomainIn(cased) {
-  for (const pattern of [LOWER_CASE_SPACE_AFTER_DOT, POINT_WORD, COMMA_DOMAIN]) {
-    const m = cased.match(pattern);
-    if (m) return wordAround(cased, m.index, m[0].length).toLowerCase();
+  // A known compound after a hyphen is a word ("net-zero"); the point check reads it with a space.
+  const compounds = cased.replace(COMPOUND_HYPHEN, " $1");
+  for (const [pattern, text] of [[LOWER_CASE_SPACE_AFTER_DOT, cased], [POINT_WORD, compounds], [COMMA_DOMAIN, cased]]) {
+    const m = text.match(pattern);
+    if (m) return wordAround(text, m.index, m[0].length).toLowerCase();
   }
   for (const a of ` ${cased}`.matchAll(ABBREVIATION_WORD_DOMAIN)) {
     if (a[1] === a[1].toLowerCase()) return wordAround(` ${cased}`, a.index, a[0].length).toLowerCase();
@@ -312,12 +329,12 @@ module.exports = {
   numberMarkers,
   RULES_FRAGMENTS: {
     NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
-    LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, POINT_WORDLIKE_TLD_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
+    LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, POINT_WORDLIKE_TLD_PATTERN, COMPOUND_TAIL_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
     ABBREVIATION_WORD_TLD_PATTERN, ARABIC_TLD_PATTERN, SPOKEN_ARABIC_TLD_PATTERN, DOT_WORD_PATTERN,
     POINT_WORD_PATTERN, ABBREVIATION_PATTERN, PLACE_PATTERN,
     INVISIBLES_RULES: rulesClass(INVISIBLES), FULL_STOPS_RULES: rulesClass(UNICODE_FULL_STOPS),
     ALT_DOTS_RULES: rulesClass(ALT_DOTS), LETTER_SYMBOLS_RULES: rulesClass(LETTER_SYMBOLS),
     ENCLOSED_LETTERS_RULES: rulesClass(ENCLOSED_LETTERS), COMMAS_RULES: rulesClass(COMMAS),
-    ZERO_DIGITS_RULES: rulesClass(ZERO_DIGITS),
+    ZERO_DIGITS_RULES: rulesClass(ZERO_DIGITS), HYPHENS_RULES: rulesClass(HYPHENS),
   },
 };
