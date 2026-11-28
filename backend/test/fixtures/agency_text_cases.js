@@ -179,6 +179,26 @@ const REFUSED = [
   ["Delta oh five, twenty three, forty five, sixty seven", "phone"],
   // TAQ-224: a hyphen followed by a space or the end is still punctuation.
   ["Delta x point net - call us", "link"],
+  // TAQ-228: a lone zero, a comma and a 10-11 digit run is a mobile number; a hyphenated word that
+  // is not a known compound after "point net/io/ae" stays a domain form.
+  ["Delta zero, fifty, twelve, thirty four, fifty six", "phone"],
+  ["Delta zero, ten, twelve, thirty four, fifty six", "phone"],
+  ["Delta x point net-call us", "link"],
+  ["Delta x point io-today", "link"],
+  ["Delta x point ae-call", "link"],
+  ["Delta x point net--call", "link"],
+  // TAQ-226: real phones joined by dashes, slashes or "and" stay refused.
+  ["zero five zero - twelve - thirty four - fifty six", "phone"],
+  ["zero five zero and twelve and thirty four and fifty six", "phone"],
+  ["zero five zero / twelve / thirty four / fifty six", "phone"],
+  // TAQ-229: a lone zero then a list of 9-11 digits, compound tens counting two digits.
+  ["Delta zero, ten, twelve, thirty four, fifty six, seventy", "phone"],
+  ["Delta zero, eleven, twenty three, forty five, sixty seven, eighty", "phone"],
+  ["Delta zero, eleven, twenty three, forty five, sixty seven", "phone"],
+  ["zero, eleven, twenty three, forty five, sixty seven", "phone"],
+  ["oh, fifty, twelve, thirty four, fifty six", "phone"],
+  ["zero, fifty, twelve, thirty, forty, fifty", "phone"],
+  ["صفر، خمسين، اتناشر، اربعة وتلاتين، ستة وخمسين", "phone"],
 ];
 
 const ALLOWED = [
@@ -374,6 +394,31 @@ const ALLOWED = [
   // TAQ-225: Arabic-Indic and Eastern Arabic unit lists stay unit lists.
   "Shops ٠٠١، ٠٠٢، ٠٠٣",
   "Units ۰۰۱ ۰۰۲ ۰۰۳ for rent",
+  // TAQ-226: month plans joined by spaced dashes, slashes or "and".
+  "Zero - twelve - twenty four - thirty six month plans",
+  "Zero \u2013 twelve \u2013 twenty four \u2013 thirty six month plans",
+  "Zero / twelve / twenty four / thirty six month plans",
+  "Zero and twelve and twenty four and thirty six month plans",
+  "Zero, twelve, twenty four, thirty six, forty eight and sixty months",
+  // TAQ-227: net-zero with a non-breaking hyphen, en dash or em dash.
+  "Meeting point net\u2011zero homes",
+  "Meeting point net\u2013zero homes",
+  "Meeting point net\u2014zero homes",
+  "Advisors at the meeting point net-worth desk",
+  // TAQ-230: lists that close with Arabic و/او (أو) or English and/or before the last item.
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين وخمسين في المية",
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين و خمسين في المية",
+  "مقدم صفر، عشرة، عشرون، ثلاثون، اربعون وخمسون في المائة",
+  "مقدم صفر، عشرة، عشرين، تلاتين، اربعين أو خمسين في المية",
+  "تقسيط على صفر، اتناشر، اربعة وعشرين، ستة وتلاتين، وستين شهر",
+  "Zero, twelve, twenty four, thirty six, forty eight, and sixty months",
+  "Zero, twelve, twenty four, thirty six, forty eight or sixty months",
+  "Zero, ten, twenty, thirty, forty and fifty percent",
+  "Zero, ten, twenty, thirty and forty percent",
+  "Zero, twelve, twenty four, thirty six and forty eight months",
+  "أبراج من ثلاثة عشر وأربعة عشر وخمسة عشر طابقا",
+  "خبرة خمسة وعشرين سنة، تلاتين وكيل، واربعين مشروع",
+  "عمارات عشرين وثلاثين واربعين دور",
 ];
 
 module.exports = { REFUSED, ALLOWED };
