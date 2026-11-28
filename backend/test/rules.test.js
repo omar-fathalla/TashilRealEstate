@@ -651,7 +651,7 @@ test("TAQ-198: the agency name and about text refuse spelled-out phones and bare
   }
 });
 
-test("TAQ-201/207-221: the agency name and about text follow the server filter on one shared list", async () => {
+test("TAQ-201/207-225: the agency name and about text follow the server filter on one shared list", async () => {
   const { REFUSED, ALLOWED } = require("./fixtures/agency_text_cases");
   await seedAgency();
   const ref = doc(agency1Admin(), "Agencies/agency-1");

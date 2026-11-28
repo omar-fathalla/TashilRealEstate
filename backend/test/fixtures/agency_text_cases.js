@@ -170,6 +170,15 @@ const REFUSED = [
   // TAQ-220: "point" + a word-like ending at the end or before punctuation stays a domain.
   ["Delta x point net.", "link"],
   ["Visit x point io, today", "link"],
+  // TAQ-225: a 0NN group in Arabic-Indic, Eastern Arabic or Devanagari digits counts like 050.
+  ["دلتا ٠٥٠ اتناشر تلاتين اربعة", "phone"],
+  ["دلتا ۰۵۰ اتناشر تلاتين اربعة", "phone"],
+  ["Delta \u0966\u096b\u0966 twelve thirty four", "phone"],
+  // TAQ-223: a lone zero word before a comma no longer starts a phone; real prefixes still do.
+  ["Delta zero five, twelve, thirty four, fifty six", "phone"],
+  ["Delta oh five, twenty three, forty five, sixty seven", "phone"],
+  // TAQ-224: a hyphen followed by a space or the end is still punctuation.
+  ["Delta x point net - call us", "link"],
 ];
 
 const ALLOWED = [
@@ -353,6 +362,18 @@ const ALLOWED = [
   "Zero commission, twenty years, thirty agents and forty projects",
   "We have twenty five years of experience, thirty agents and forty projects",
   "خبرة خمسة وعشرين سنة، تلاتين وكيل، واربعين مشروع",
+  // TAQ-223: payment plans and percentages after a lone zero word and a comma.
+  "Payment plans with zero, ten, twenty and thirty percent down",
+  "Zero, twelve, twenty four and thirty six month plans",
+  "عمولة صفر، عشرين، تلاتين، اربعين مشروع",
+  "Zero, ten, twenty or thirty percent deposit",
+  "Zero, three, five and seven year leases",
+  // TAQ-224: a hyphen and a letter continue the word after "point net".
+  "Meeting point net-zero homes",
+  "Meeting point net\u2010zero homes",
+  // TAQ-225: Arabic-Indic and Eastern Arabic unit lists stay unit lists.
+  "Shops ٠٠١، ٠٠٢، ٠٠٣",
+  "Units ۰۰۱ ۰۰۲ ۰۰۳ for rent",
 ];
 
 module.exports = { REFUSED, ALLOWED };

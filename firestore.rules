@@ -681,7 +681,7 @@ service cloud.firestore {
       return !(key in d) || (d[key] is string && d[key].size() <= max);
     }
 
-    // TAQ-198/201/207-221: an agency's name and about text show on its listings and public
+    // TAQ-198/201/207-225: an agency's name and about text show on its listings and public
     // profile, so they also get the agency checks of backend/agency_text_filter.js (read its header
     // for the why). The word, ending, abbreviation and code-point lists below are that file's
     // RULES_FRAGMENTS, verbatim; backend/test/agency_text_filter.test.js fails when they differ.
@@ -730,7 +730,7 @@ service cloud.firestore {
         .replace(' (?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر)) ', ' + ')
         .replace(' (?:zero|oh|o|cero|शून्य|जीरो|[وف]?(?:صفر|زيرو)) ', ' * ')
         .replace(' (?:zero|oh|o|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|double|triple|un|une|deux|trois|quatre|cinq|sept|huit|neuf|dix|onze|douze|cero|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|शून्य|जीरो|एक|दो|तीन|चार|पांच|पाँच|छह|छः|छे|सात|आठ|नौ|ایک|دو|تین|چار|پانچ|چھ|سات|اٹھ|نو|[وف]?(?:صفر|زيرو|واحد|واحده|واحدة|اثنين|اتنين|اثنان|ثلاثه|ثلاثة|ثلاث|تلاته|تلاتة|تلات|تلاث|اربعه|اربعة|اربع|خمسه|خمسة|خمس|سته|ستة|ست|سبعه|سبعة|سبع|ثمانيه|ثمانية|ثماني|ثمان|تمانيه|تمانية|تماني|تمان|تمنيه|تمنية|تسعه|تسعة|تسع|عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون|اثنا|اثني|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر)) ', ' # ')
-        .replace(' 0\\p{Nd}\\p{Nd} ', ' ~ ')
+        .replace(' [\\x{30}\\x{660}\\x{6f0}\\x{7c0}\\x{966}\\x{9e6}\\x{a66}\\x{ae6}\\x{b66}\\x{be6}\\x{c66}\\x{ce6}\\x{d66}\\x{de6}\\x{e50}\\x{ed0}\\x{f20}\\x{1040}\\x{1090}\\x{17e0}\\x{1810}\\x{1946}\\x{19d0}\\x{1a80}\\x{1a90}\\x{1b50}\\x{1bb0}\\x{1c40}\\x{1c50}\\x{a620}\\x{a8d0}\\x{a900}\\x{a9d0}\\x{a9f0}\\x{aa50}\\x{abf0}\\x{ff10}\\x{104a0}\\x{10d30}\\x{10d40}\\x{11066}\\x{110f0}\\x{11136}\\x{111d0}\\x{112f0}\\x{11450}\\x{114d0}\\x{11650}\\x{116c0}\\x{116d0}\\x{116da}\\x{11730}\\x{118e0}\\x{11950}\\x{11bf0}\\x{11c50}\\x{11d50}\\x{11da0}\\x{11de0}\\x{11f50}\\x{16130}\\x{16a60}\\x{16ac0}\\x{16b50}\\x{16d70}\\x{1ccf0}\\x{1d7ce}\\x{1d7d8}\\x{1d7e2}\\x{1d7ec}\\x{1d7f6}\\x{1e140}\\x{1e2f0}\\x{1e4f0}\\x{1e5f1}\\x{1e950}\\x{1fbf0}]\\p{Nd}\\p{Nd} ', ' ~ ')
         .replace(' \\p{Nd} ', ' % ')
         .replace(' (?:and|et|y|و) ', ' & ')
         .replace('\\s+', '')
@@ -742,7 +742,7 @@ service cloud.firestore {
       let e = d.replace('([^\\p{L}\\p{N}])(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr)[.](\\p{L}{3})', '$1  $2')
         .replace('[.]((?:egypt|cairo|giza|alexandria|uae|sharjah|ajman|fujairah))([^\\p{L}\\p{N}.-]|$)', ' $1$2');
       return !n.matches('(?s).*(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#%*+]{3}~[#%*+]|[#%*+]{4}~).*')
-        && !n.replace('[+]', '##').matches('(?s).*(?:[*](?:!?[#%*]){6}|~(?:!?[#%*]){4}).*')
+        && !n.replace('[+]', '==').matches('(?s).*(?:[*][#%*~](?:!?[#%*=]){5}|[#%][*](?:!?[#%*=]){5}|~(?:!?[#%*=]){4}).*')
         && !t.matches('(?s).*(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}.*')
         && !e.matches('(?s).*[\\p{L}\\p{N}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}-](?:[.]| +[.] ?)(?:[\\p{Latin}\\p{Cyrillic}\\p{Greek}\\p{Armenian}\\p{Coptic}\\p{Cherokee}\\p{Lisu}\\x{1d400}-\\x{1d7ff}\\x{249c}-\\x{24e9}\\x{1f130}-\\x{1f189}]{2}|(?:مصر|امارات|الامارات|السعوديه|السعودية|سعودي|قطر|الاردن|عمان|البحرين|الكويت|المغرب|الجزائر|تونس|فلسطين|سوريه|سورية|شبكه|شبكة|موقع|كوم|عرب)|(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e)(?:[^\\p{L}]|$)).*')
         && !e.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}] *)(?:c ?o ?m|o ?r ?g|b ?i ?z|x ?y ?z)(?:[^\\p{L}]|$).*')
@@ -751,7 +751,7 @@ service cloud.firestore {
         && !d.matches('(?s).*[^\\p{L}\\p{N}](?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr)(?:[.]| +[.] ?)(?:c ?o ?m|n ?e ?t|o ?r ?g|i ?n ?f ?o|b ?i ?z|c ?o|i ?o|m ?e|a ?e|e ?g|a ?p ?p|o ?n ?l ?i ?n ?e|s ?i ?t ?e|x ?y ?z|l ?y|g ?l|u ?s|u ?k|i ?n|s ?a|q ?a|k ?w|e ?d ?u|g ?o ?v|s ?h ?o ?p|s ?t ?o ?r ?e|realty|website|estate|properties|property|rentals|agency|club|tech|pro|top|world|live)(?:[^\\p{L}]|$).*')
         && !c.matches('(?s).*[\\p{L}\\p{N}](?:[.] +| *[\\x{b7}\\x{2022}\\x{2219}\\x{22c5}\\x{2027}\\x{66b}\\x{6d4}\\x{30fb}\\x{ff65}\\x{2e31}\\x{a78f}\\x{25cf}\\x{25e6}\\x{2d9}\\x{318d}\\x{1427}\\x{b0}\\x{2218}] *)(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)(?:[^\\p{L}]|$).*')
         && !c.matches('(?s)(?:.*[^\\p{L}\\p{N}])?(?i:(?:p[.] ?o|dr|eng|sh|mrs|mr|ms|co|inc|ltd|no|jr|sr))[.](?:homes|house|apartments|villas|land|immo|city|group|global|dev|cloud|space|ltd|llc|inc|company|realestate|rent|vip)(?:[^\\p{L}]|$).*')
-        && !c.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:point|punto)[ _-]*(?:(?:com|org|biz|xyz)(?:[^\\p{L}]|$)|(?:net|io|ae|eg|sa|qa|kw|ly)\\s*(?:[^\\p{L}\\s]|$)).*')
+        && !c.matches('(?s).*[\\p{L}\\p{N}][ _-]*(?:point|punto)[ _-]*(?:(?:com|org|biz|xyz)(?:[^\\p{L}]|$)|(?:net|io|ae|eg|sa|qa|kw|ly)\\s*(?:[^\\p{L}\\s\\x{2010}-]|[\\x{2010}-](?:[^\\p{L}]|$)|$)).*')
         && !c.matches('(?s).*[\\p{L}\\p{N}](?:[\\x{2c}\\x{ff0c}\\x{3001}\\x{60c}\\x{66c}](?:com|org|biz|xyz)| ?[\\x{2c}\\x{ff0c}\\x{3001}\\x{60c}\\x{66c}] ?com)(?:[^\\p{L}]|$).*')
         && (p == raw || !contactPhone(p));
     }
