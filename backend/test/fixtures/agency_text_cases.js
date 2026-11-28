@@ -159,6 +159,17 @@ const REFUSED = [
   ["Floors 1, 2, 3, 4, 5, 6, 7", "phone"],
   ["Call us: zero five zero, one two three, four five six", "phone"],
   ["Delta zero, five, zero, one, two, three, four", "phone"],
+  // TAQ-221: a comma before a tens word does not break a run that starts like a phone.
+  ["zero five zero, twelve, thirty four, fifty six", "phone"],
+  ["oh five oh one, twenty three, forty five, sixty seven", "phone"],
+  ["صفر خمسة صفر، عشرين، تلاتين، اربعين", "phone"],
+  ["دلتا صفر خمسة صفر، عشرين، تلاتين، اربعين", "phone"],
+  ["zero five zero one, twenty three forty five sixty seven", "phone"],
+  ["Delta 050, twelve, thirty four, fifty six", "phone"],
+  ["Delta five zero, twelve, thirty four, fifty six", "phone"],
+  // TAQ-220: "point" + a word-like ending at the end or before punctuation stays a domain.
+  ["Delta x point net.", "link"],
+  ["Visit x point io, today", "link"],
 ];
 
 const ALLOWED = [
@@ -329,6 +340,19 @@ const ALLOWED = [
   "Flat 001 and 002",
   "Studios S1, S2 and S3",
   "Villas 5S and 6S",
+  // TAQ-219: short separated 0NN groups are unit numbers, not a phone.
+  "Shops 001, 002, 003 available",
+  "Units 001 002 003 for rent",
+  "Villas 012, 014 and 016",
+  "Plot 045, Block 7",
+  // TAQ-220: "point" followed by an ordinary word is not a dot.
+  "Our key selling point net yields above 8%",
+  "Meeting point net zero homes",
+  "Selling point: net yields of 8%",
+  // TAQ-221: zero words and commas in ordinary sentences.
+  "Zero commission, twenty years, thirty agents and forty projects",
+  "We have twenty five years of experience, thirty agents and forty projects",
+  "خبرة خمسة وعشرين سنة، تلاتين وكيل، واربعين مشروع",
 ];
 
 module.exports = { REFUSED, ALLOWED };

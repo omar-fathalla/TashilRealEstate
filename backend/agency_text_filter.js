@@ -1,6 +1,6 @@
 "use strict";
 
-// The stricter check for an agency's own name and about text (TAQ-198, 201, 207, 208, 209, 210).
+// The stricter check for an agency's own name and about text (TAQ-198, 201, 207-216, 219-221).
 // It runs the request filter (request_text_filter.js), then the agency checks below on a
 // normalised copy. firestore.rules (agencyTextFree) runs the same agency checks for direct
 // Agencies/{id} writes. The lists are exported as RULES_FRAGMENTS and
@@ -16,7 +16,10 @@
 // marker: a number word '#' (English incl. tens, 'o', 'double'; French; Spanish; Hindi; Urdu;
 // Arabic incl. tens, with an optional و/ف prefix), a single digit '%', a connector (and/et/y/و)
 // '&'. A connector counts only next to a number word. Seven markers in a row is a phone. Digit
-// groups of two or more digits never count ("Open 24/7 365, one-stop shop" passes).
+// groups of two or more digits never count ("Open 24/7 365, one-stop shop" passes), except one
+// 0NN group per run (three digits, "050 twelve thirty four"; not "Units 001 002 003", TAQ-219).
+// A comma before a teen or tens word breaks a run (TAQ-215) unless the run starts with a zero
+// word or a 0NN group; such a run counts tens as two digits (TAQ-221).
 //
 // Domain:
 //   - a word, a dot glued to it (or spaced before it), then two letters of a Latin, Cyrillic,
@@ -67,6 +70,9 @@ const TWO_DIGIT_WORD_PATTERN = "(?:eleven|twelve|thirteen|fourteen|fifteen|sixte
 const TENS_WORD_PATTERN = "(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|dix|onze|douze|vingt|trente|quarante|cinquante|soixante|diez|veinte|treinta|cuarenta|cincuenta"
   + "|[وف]?(?:عشره|عشرة|عشر|عشرين|عشرون|ثلاثين|ثلاثون|تلاتين|اربعين|اربعون|خمسين|خمسون|ستين|ستون|سبعين|سبعون|ثمانين|ثمانون|تمانين|تسعين|تسعون"
   + "|حداشر|احداشر|اتناشر|اطناشر|تلتاشر|تلطاشر|اربعتاشر|اربعطاشر|خمستاشر|خمسطاشر|ستاشر|سطاشر|سبعتاشر|سبعطاشر|تمنتاشر|تمانتاشر|تمنطاشر|تسعتاشر|تسعطاشر))";
+// Zero words. A run that starts with one ("zero five zero, twelve, thirty four") is a phone even
+// when commas split it (TAQ-221), so they get their own marker '*'.
+const ZERO_WORD_PATTERN = "(?:zero|oh|o|cero|शून्य|जीरो|[وف]?(?:صفر|زيرو))";
 // Commas (Latin, full-width, ideographic, Arabic, Arabic thousands separator).
 const COMMAS = [0x2c, 0xff0c, 0x3001, 0x60c, 0x66c];
 const GLUED_PATTERN = "(?:zero|oh|one|two|three|four|five|six|seven|eight|nine){7,}";
@@ -85,7 +91,10 @@ const STRICT_TLD_PATTERN = spaced(["com", "org", "biz", "xyz"]);
 // the original case (x. uk, x · ae, x·sa refused).
 const LOWER_CASE_TLD_PATTERN = "(?:uk|edu|gov|ae|eg|sa|qa|kw|ly|io)";
 // After "point"/"punto", lower case only ("x point com", "x point net"; not "Point Commercial").
-const POINT_TLD_PATTERN = "(?:com|org|biz|xyz|net|io|ae|eg|sa|qa|kw|ly)";
+const POINT_TLD_PATTERN = "(?:com|org|biz|xyz)";
+// Endings that are also words or codes ("selling point net yields", TAQ-220): after "point" only
+// at the end of the text or before punctuation, not before another word.
+const POINT_WORDLIKE_TLD_PATTERN = "(?:net|io|ae|eg|sa|qa|kw|ly)";
 // After a comma, lower case only: glued before these, or spaced before com ("x,com", "x, com",
 // "x、com"); "Sales,Com", "Info,Biz Bay" and "Gross,net yields" pass. net is left out: "Gross,net".
 const COMMA_TLD_PATTERN = "(?:com|org|biz|xyz)";
@@ -160,20 +169,36 @@ function normaliseAgencyText(text) {
     .replace(reAll(`[\\[({]${SPACE}*(?:[.]|dot)${SPACE}*[\\])}]`), ".");
 }
 
-/** The marker string the phone check reads: '#' number word, '%' single digit, '&' connector. */
+/**
+ * The marker string the phone check reads: '#' number word ('##' a teen), '+' a tens word, '*'
+ * zero word, '%' single digit, '~' a 0NN group (three digits), '&' connector, '!' a comma before a teen or tens
+ * word (TAQ-215).
+ */
 function numberMarkers(normal) {
   return `  ${normal.replace(WORD_COMMA, "$1 brk $2").replace(reAll(`[\\u20e3${jsClass(ALT_DOTS)}]`), " ").replace(/[^\p{L}\p{N}\p{M}]+/gu, "  ")}  `
+    .replace(/ brk /gu, " ! ")
     .replace(reAll(` ${TWO_DIGIT_WORD_PATTERN} `), " ## ")
+    .replace(reAll(` ${TENS_WORD_PATTERN} `), " + ")
+    .replace(reAll(` ${ZERO_WORD_PATTERN} `), " * ")
     .replace(reAll(` ${NUMBER_WORD_PATTERN} `), " # ")
-    .replace(/ 0\p{Nd}\p{Nd} /gu, " %%% ")
+    .replace(/ 0\p{Nd}\p{Nd} /gu, " ~ ")
     .replace(/ \p{Nd} /gu, " % ")
     .replace(reAll(` ${CONNECTOR_PATTERN} `), " & ")
     .replace(/\s+/gu, "")
-    .replace(/#&/g, "#")
-    .replace(/&#/g, "#");
+    .replace(/([#*+])&/g, "$1")
+    .replace(/&([#*+])/g, "$1");
 }
 
-const NUMBER_RUN = /[#%]{7}/;
+// Seven digit markers in a row, a tens word counting once (TAQ-215: "nineteen ninety eight"). A
+// 0NN group counts as three digits once in a run, so "Units 001 002 003" is not a phone (TAQ-219).
+const NUMBER_RUN_PATTERN = "(?:[#%*+]{7}|[#%*+]~[#%*+]{3}|[#%*+]{2}~[#%*+]{2}|[#%*+]{3}~[#%*+]|[#%*+]{4}~)";
+// A run that starts like a phone (a zero word, or a 0NN group) is read with each tens word as two
+// digits and with commas ('!') not breaking it (TAQ-221: "zero five zero, twelve, thirty four",
+// "صفر خمسة صفر، عشرين، تلاتين، اربعين"). Checked on the markers with '+' turned into '##'.
+const ZERO_RUN_PATTERN = "(?:[*](?:!?[#%*]){6}|~(?:!?[#%*]){4})";
+const NUMBER_RUN = re(NUMBER_RUN_PATTERN);
+const ZERO_RUN = re(ZERO_RUN_PATTERN);
+const hasNumberRun = (markers) => NUMBER_RUN.test(markers) || ZERO_RUN.test(markers.replace(/[+]/g, "##"));
 const GLUED = re(GLUED_PATTERN);
 
 const END = "(?![\\p{L}])";
@@ -183,7 +208,7 @@ const SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${STRICT_TLD_P
 const WORD_DOT = re(`[\\p{L}\\p{N}][ _-]*${DOT_WORD_PATTERN}[ _-]*(?:${SPACED_TLD_PATTERN}|${SPOKEN_ARABIC_TLD_PATTERN})${END}`);
 // On the original case (casedAgencyText):
 const LOWER_CASE_SPACE_AFTER_DOT = re(`[\\p{L}\\p{N}](?:[.] +| *${ALT_DOT} *)${LOWER_CASE_TLD_PATTERN}${END}`);
-const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*${POINT_TLD_PATTERN}${END}`);
+const POINT_WORD = re(`[\\p{L}\\p{N}][ _-]*${POINT_WORD_PATTERN}[ _-]*(?:${POINT_TLD_PATTERN}(?:[^\\p{L}]|$)|${POINT_WORDLIKE_TLD_PATTERN}\\s*(?:[^\\p{L}\\s]|$))`);
 const COMMA_DOMAIN = re(`[\\p{L}\\p{N}](?:${COMMA}${COMMA_TLD_PATTERN}| ?${COMMA} ?com)${END}`);
 // With the i flag for the abbreviation; the ending must then be lower case (rules: (?i:abbr)[.]ending).
 const ABBREVIATION_WORD_DOMAIN = new RegExp(`[^\\p{L}\\p{N}]${ABBREVIATION_PATTERN}[.](${ABBREVIATION_WORD_TLD_PATTERN})${END}`, "giu");
@@ -246,7 +271,7 @@ function agencyTextFinding(text) {
   const normal = normaliseAgencyText(text);
   const kind = contactKind(text) || contactKind(normal);
   const digits = lettersAsDigits(text);
-  if (kind === "phone" || NUMBER_RUN.test(numberMarkers(normal)) || GLUED.test(normal) || hasSpelledOutNumber(text)
+  if (kind === "phone" || hasNumberRun(numberMarkers(normal)) || GLUED.test(normal) || hasSpelledOutNumber(text)
     || (digits !== text && contactKind(digits) === "phone")) {
     return { kind: "phone", match: "" };
   }
@@ -269,8 +294,8 @@ module.exports = {
   normaliseAgencyText,
   numberMarkers,
   RULES_FRAGMENTS: {
-    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
-    LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
+    NUMBER_WORD_PATTERN, TWO_DIGIT_WORD_PATTERN, TENS_WORD_PATTERN, ZERO_WORD_PATTERN, NUMBER_RUN_PATTERN, ZERO_RUN_PATTERN, GLUED_PATTERN, CONNECTOR_PATTERN, SPACED_TLD_PATTERN, STRICT_TLD_PATTERN,
+    LOWER_CASE_TLD_PATTERN, POINT_TLD_PATTERN, POINT_WORDLIKE_TLD_PATTERN, COMMA_TLD_PATTERN, ABBREVIATION_TLD_PATTERN,
     ABBREVIATION_WORD_TLD_PATTERN, ARABIC_TLD_PATTERN, SPOKEN_ARABIC_TLD_PATTERN, DOT_WORD_PATTERN,
     POINT_WORD_PATTERN, ABBREVIATION_PATTERN, PLACE_PATTERN,
     INVISIBLES_RULES: rulesClass(INVISIBLES), FULL_STOPS_RULES: rulesClass(UNICODE_FULL_STOPS),
